@@ -726,3 +726,85 @@ html[lang="en"] .article-content blockquote{border-right:none;border-left:4px so
   margin-top: 10px;
 }
 .company-reg-badge i { color: #4ADE80; font-size: .65rem; }
+
+/* ================================================================
+   FULL LOGO + BETA BADGE
+   ================================================================ */
+
+/* Full logo in navbar — taller to show icon+text */
+.nav-logo img {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+}
+.navbar-inner { height: 76px; }
+
+/* Beta badge */
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #fff;
+  border-radius: var(--r-pill);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(245,158,11,.35);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.beta-badge i { font-size: .65rem; }
+
+/* Beta in navbar — small pill next to logo */
+.nav-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-logo-wrap .beta-badge {
+  font-size: .65rem;
+  padding: 2px 8px;
+}
+
+/* Hero beta row */
+.hero-beta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+/* Beta banner (top of page) */
+.beta-top-banner {
+  background: linear-gradient(90deg, #D97706, #F59E0B);
+  color: #fff;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: .8rem;
+  font-weight: 700;
+  position: relative;
+  z-index: 1001;
+}
+.beta-top-banner a {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Mobile logo */
+@media (max-width: 768px) {
+  .nav-logo img   { height: 42px; }
+  .navbar-inner   { height: 68px; }
+  .mobile-menu    { top: 68px; }
+  body            { padding-top: 0; }
+}
+
+/* Adjust hero top padding for taller navbar */
+.hero { padding-top: 76px; }
+@media (max-width: 768px) {
+  .hero { padding-top: 68px; }
+}
