@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://edmneg.com/sitemap.xml
+
+# Disallow admin/private paths (add as needed)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Crawl delay (optional, for well-behaved bots)
+Crawl-delay: 1
