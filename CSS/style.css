@@ -525,3 +525,204 @@ html[lang="en"] .article-content blockquote{border-right:none;border-left:4px so
   .burger      { display:flex; }
   .mobile-menu { display:flex; }
 }
+
+/* ================================================================
+   MOBILE-FIRST ENTERPRISE UPGRADE v2.2
+   ================================================================ */
+
+/* ── Touch targets ── */
+.btn { min-height: 44px; }
+.nav-link { min-height: 40px; display: inline-flex; align-items: center; }
+.faq-question { min-height: 52px; }
+.form-input, .form-textarea, select.form-input { min-height: 48px; }
+
+/* ── Body bottom padding on mobile for sticky CTA ── */
+@media (max-width: 768px) {
+  body { padding-bottom: 72px; }
+}
+
+/* ── Hero mobile ── */
+@media (max-width: 768px) {
+  .hero { min-height: auto; padding-top: 72px; padding-bottom: 0; }
+  .hero-grid { padding: 40px 0 32px; gap: 32px; }
+  .hero h1 { font-size: 1.875rem; }
+  .hero-desc { font-size: .9375rem; margin-bottom: 24px; }
+  .hero-actions { gap: 12px; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+  .hero-trust { gap: 12px; padding-top: 24px; }
+  .hero-trust-item { font-size: .75rem; }
+  .hero-eyebrow { font-size: .72rem; margin-bottom: 16px; }
+  .scroll-cue { display: none; }
+}
+
+/* ── Trust bar mobile ── */
+@media (max-width: 768px) {
+  .trust-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .trust-bar-inner { justify-content: flex-start; gap: 20px; padding: 0 4px; white-space: nowrap; flex-wrap: nowrap; }
+  .trust-item { font-size: .78rem; gap: 6px; flex-shrink: 0; }
+}
+
+/* ── Section titles mobile ── */
+@media (max-width: 768px) {
+  .section-padding { padding: 52px 0; }
+  .container { padding: 0 16px; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.125rem; }
+  .section-subtitle { font-size: .9375rem; margin-bottom: 32px; }
+}
+
+/* ── Feature cards mobile ── */
+@media (max-width: 768px) {
+  .feature-card { padding: 20px; }
+  .feature-icon { width: 44px; height: 44px; font-size: 1.1rem; margin-bottom: 14px; }
+  .feature-card h3 { font-size: .9375rem; }
+  .feature-card p  { font-size: .85rem; }
+}
+
+/* ── Steps mobile ── */
+@media (max-width: 768px) {
+  .step-number { width: 52px; height: 52px; font-size: 1.1rem; }
+  .step-card h4 { font-size: 1rem; }
+  .step-card p  { font-size: .85rem; }
+}
+
+/* ── Stats mobile ── */
+@media (max-width: 768px) {
+  .stats-section { padding: 40px 0; }
+  .stat-value  { font-size: 2rem; }
+  .stat-label  { font-size: .8rem; }
+  .stat-item   { padding: 16px 12px; }
+}
+
+/* ── App download mobile ── */
+@media (max-width: 768px) {
+  .app-download-grid { gap: 32px; }
+  .app-download-content p { font-size: .9375rem; }
+  .store-badge-img img    { height: 42px; }
+  .app-store-badges { gap: 12px; }
+  .app-trust-row { gap: 16px; }
+  .app-trust-item { font-size: .8rem; }
+}
+
+/* ── Partners mobile ── */
+@media (max-width: 768px) {
+  .partners-grid { gap: 12px; }
+  .partner-card  { min-width: 120px; min-height: 70px; padding: 14px 20px; }
+  .partner-card img { max-height: 40px; }
+}
+
+/* ── Testimonials mobile ── */
+@media (max-width: 768px) {
+  .testimonial-card { padding: 20px; }
+  .testimonial-text { font-size: .875rem; }
+}
+
+/* ── FAQ mobile ── */
+@media (max-width: 768px) {
+  .faq-question { padding: 16px 18px; font-size: .9rem; }
+  .faq-answer-inner { padding: 0 18px 14px; font-size: .875rem; }
+}
+
+/* ── CTA banner mobile ── */
+@media (max-width: 768px) {
+  .cta-banner { padding: 52px 0; }
+  .cta-banner h2 { font-size: 1.5rem; }
+  .cta-banner p  { font-size: .9375rem; margin-bottom: 28px; }
+  .cta-actions .btn { width: 100%; justify-content: center; }
+  .cta-actions { flex-direction: column; align-items: stretch; gap: 12px; }
+}
+
+/* ── Footer mobile ── */
+@media (max-width: 768px) {
+  .footer { padding-top: 48px; }
+  .footer-grid { gap: 28px; }
+  .footer-brand p { font-size: .8rem; }
+  .footer-col h5  { font-size: .875rem; margin-bottom: 14px; }
+  .footer-link    { font-size: .8rem; }
+  .footer-contact-item { font-size: .8rem; }
+  .footer-bottom  { padding: 20px 0; font-size: .72rem; }
+  .footer-trust-badges { gap: 8px; }
+  .footer-badge   { font-size: .68rem; padding: 4px 10px; }
+}
+
+/* ── Sticky CTA mobile ── */
+.sticky-mobile-cta {
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+}
+.sticky-cta-btn {
+  padding: 13px 20px;
+  font-size: .9rem;
+  border-radius: 12px;
+}
+
+/* ── Page hero mobile ── */
+@media (max-width: 768px) {
+  .page-hero { padding: 6rem 0 36px; }
+  .page-hero h1 { font-size: 1.75rem; }
+  .page-hero p  { font-size: .9375rem; }
+  .breadcrumb   { font-size: .78rem; }
+}
+
+/* ── Team grid mobile ── */
+@media (max-width: 768px) {
+  .team-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .team-card { padding: 20px 14px; }
+  .team-avatar { width: 68px; height: 68px; font-size: 1.375rem; }
+  .team-name   { font-size: .875rem; }
+}
+
+/* ── Contact mobile ── */
+@media (max-width: 768px) {
+  .contact-form { padding: 24px 16px; }
+  .contact-info-item { padding: 16px; gap: 12px; }
+  .contact-icon { width: 40px; height: 40px; font-size: 1rem; }
+}
+
+/* ── Legal pages mobile ── */
+@media (max-width: 768px) {
+  .legal-content h2 { font-size: 1.25rem; margin-top: 28px; }
+  .legal-content p  { font-size: .9rem; }
+  .legal-content ul li { font-size: .9rem; }
+}
+
+/* ── Blog mobile ── */
+@media (max-width: 768px) {
+  .blog-card-body { padding: 16px; }
+  .blog-card h3   { font-size: .9375rem; }
+  .blog-card-img  { height: 160px; font-size: 2.5rem; }
+  .article-content h2 { font-size: 1.25rem; }
+  .article-content p  { font-size: .9rem; }
+}
+
+/* ── Protection pages mobile ── */
+@media (max-width: 768px) {
+  .protection-card { padding: 20px; }
+  .protection-card h3 { font-size: 1rem; }
+}
+
+/* ── Scroll top mobile offset ── */
+@media (max-width: 768px) {
+  .scroll-top { bottom: 80px; left: 12px; width: 40px; height: 40px; font-size: .8rem; }
+}
+
+/* ── App desc mobile ── */
+@media (max-width: 768px) {
+  .app-desc-grid { gap: 32px; }
+  .app-features-mini { grid-template-columns: 1fr; gap: 8px; }
+  .app-feature-mini  { font-size: .82rem; padding: 9px 12px; }
+}
+
+/* ── Company registration badge ── */
+.company-reg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-pill);
+  font-size: .72rem;
+  color: rgba(255,255,255,.6);
+  margin-top: 10px;
+}
+.company-reg-badge i { color: #4ADE80; font-size: .65rem; }
