@@ -78,50 +78,7 @@ if (animatedEls.length) {
   animatedEls.forEach(el => observer.observe(el));
 }
 
-/* ─── Countdown Timer ─── */
-function initCountdown() {
-  const launchDate = new Date('2025-07-01T00:00:00').getTime();
-  const now = Date.now();
-
-  const daysEl    = document.getElementById('cd-days');
-  const hoursEl   = document.getElementById('cd-hours');
-  const minsEl    = document.getElementById('cd-mins');
-  const secsEl    = document.getElementById('cd-secs');
-  const monthsEl  = document.getElementById('cd-months');
-
-  if (!daysEl) return;
-
-  function update() {
-    const diff = Math.max(0, launchDate - Date.now());
-    if (diff === 0) {
-      [daysEl, hoursEl, minsEl, secsEl].forEach(el => { if (el) el.textContent = '00'; });
-      if (monthsEl) monthsEl.textContent = '00';
-      return;
-    }
-
-    const totalSecs  = Math.floor(diff / 1000);
-    const secs       = totalSecs % 60;
-    const totalMins  = Math.floor(totalSecs / 60);
-    const mins       = totalMins % 60;
-    const totalHours = Math.floor(totalMins / 60);
-    const hours      = totalHours % 24;
-    const totalDays  = Math.floor(totalHours / 24);
-    const months     = Math.floor(totalDays / 30);
-    const days       = totalDays % 30;
-
-    const pad = n => String(n).padStart(2, '0');
-    if (monthsEl)  monthsEl.textContent = pad(months);
-    if (daysEl)    daysEl.textContent   = pad(days);
-    if (hoursEl)   hoursEl.textContent  = pad(hours);
-    if (minsEl)    minsEl.textContent   = pad(mins);
-    if (secsEl)    secsEl.textContent   = pad(secs);
-  }
-
-  update();
-  setInterval(update, 1000);
-}
-
-initCountdown();
+/* Countdown removed — app is live */
 
 /* ─── FAQ Accordion ─── */
 document.querySelectorAll('.faq-item').forEach(item => {
@@ -205,3 +162,20 @@ if (contactForm) {
     }, 1200);
   });
 }
+
+/* ─── Sticky Mobile CTA ─── */
+(function() {
+  const cta = document.getElementById('sticky-cta');
+  if (!cta) return;
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > 300) {
+      cta.style.display = 'block';
+      cta.style.transform = y > lastScroll ? 'translateY(0)' : 'translateY(0)';
+    } else {
+      cta.style.display = 'none';
+    }
+    lastScroll = y;
+  }, { passive: true });
+})();
