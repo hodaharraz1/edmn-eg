@@ -13,7 +13,7 @@
   <link rel="icon" type="image/png" href="../Images/LOGO-text.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="../CSS/style.css" />
 
@@ -46,7 +46,13 @@
           <li><a class="nav-link active" href="faq.html">الأسئلة الشائعة</a></li>
           <li><a class="nav-link" href="contact.html">تواصل معنا</a></li>
         </ul>
-        <a href="#" class="nav-cta"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> سجل الآن مجاناً</a>
+        <div class="nav-right">
+          <button class="lang-switcher" id="lang-btn-1" aria-label="Switch language">
+            <i class="fa-solid fa-globe" aria-hidden="true"></i>
+            <span class="lang-btn-label">EN</span>
+          </button>
+          <a href="#" class="nav-cta"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> سجل الآن مجاناً</a>
+        </div>
         <button class="burger" id="burger" aria-label="فتح القائمة" aria-expanded="false"><span></span><span></span><span></span></button>
       </div>
     </nav>
@@ -58,6 +64,10 @@
       <a class="nav-link active" href="faq.html">الأسئلة الشائعة</a>
       <a class="nav-link" href="contact.html">تواصل معنا</a>
       <a class="nav-cta" href="#"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> سجل الآن مجاناً</a>
+          <button class="lang-switcher" id="lang-btn-2" style="margin-top:8px;">
+        <i class="fa-solid fa-globe"></i>
+        <span class="lang-btn-label">EN</span>
+      </button>
     </div>
   </header>
 

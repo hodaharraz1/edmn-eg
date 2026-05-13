@@ -1,22 +1,66 @@
-/* ============================================
-   EDMN | إضمن — Main JavaScript
-   ============================================ */
-
+/* ================================================================
+   EDMN | إضمن — Main JS v2.0  (bilingual + enterprise)
+   ================================================================ */
 'use strict';
 
-/* ─── Navigation ─── */
-const navbar  = document.getElementById('navbar');
-const burger  = document.getElementById('burger');
-const mobileMenu = document.getElementById('mobile-menu');
+/* ── Language Switcher ── */
+const LANG_KEY = 'edmn-lang';
 
-// Scroll → add shadow to navbar
+function setLanguage(lang, save = true) {
+  const html = document.documentElement;
+  html.lang = lang;
+  html.dir  = lang === 'en' ? 'ltr' : 'rtl';
+  if (save) localStorage.setItem(LANG_KEY, lang);
+
+  // Update switcher button text
+  document.querySelectorAll('.lang-btn-label').forEach(el => {
+    el.textContent = lang === 'ar' ? 'EN' : 'عر';
+  });
+
+  // Update aria-label on switcher
+  document.querySelectorAll('.lang-switcher').forEach(btn => {
+    btn.setAttribute('aria-label', lang === 'ar' ? 'Switch to English' : 'التبديل للعربية');
+  });
+
+  // Update nav active states (page might have both ar/en nav link text)
+  document.querySelectorAll('[data-ar][data-en]').forEach(el => {
+    el.textContent = lang === 'ar' ? el.dataset.ar : el.dataset.en;
+  });
+}
+
+function initLanguage() {
+  const saved = localStorage.getItem(LANG_KEY);
+  const preferred = saved || (navigator.language.startsWith('ar') ? 'ar' : 'ar'); // default AR
+  setLanguage(preferred, false);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initLanguage();
+
+  document.querySelectorAll('.lang-switcher').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const current = document.documentElement.lang;
+      setLanguage(current === 'ar' ? 'en' : 'ar');
+    });
+  });
+});
+
+/* ── Navbar scroll shadow ── */
+const navbar = document.getElementById('navbar');
+const scrollTopBtn = document.getElementById('scroll-top');
+const stickyCta = document.getElementById('sticky-cta');
+
 window.addEventListener('scroll', () => {
-  if (!navbar) return;
-  navbar.classList.toggle('scrolled', window.scrollY > 20);
-  scrollTopBtn && scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+  const y = window.scrollY;
+  if (navbar)      navbar.classList.toggle('scrolled', y > 20);
+  if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > 400);
+  if (stickyCta)   stickyCta.style.display = y > 300 ? 'block' : 'none';
 }, { passive: true });
 
-// Mobile menu toggle
+/* ── Mobile menu ── */
+const burger     = document.getElementById('burger');
+const mobileMenu = document.getElementById('mobile-menu');
+
 if (burger && mobileMenu) {
   burger.addEventListener('click', () => {
     const open = burger.classList.toggle('open');
@@ -26,156 +70,94 @@ if (burger && mobileMenu) {
     burger.setAttribute('aria-expanded', open);
   });
 
-  // Close on link click
   mobileMenu.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      burger.classList.remove('open');
-      mobileMenu.classList.remove('open');
-      mobileMenu.style.display = 'none';
-      document.body.style.overflow = '';
-      burger.setAttribute('aria-expanded', 'false');
-    });
+    link.addEventListener('click', closeMobileMenu);
   });
 
-  // Close on backdrop click
   mobileMenu.addEventListener('click', e => {
-    if (e.target === mobileMenu) {
-      burger.classList.remove('open');
-      mobileMenu.classList.remove('open');
-      mobileMenu.style.display = 'none';
-      document.body.style.overflow = '';
-    }
+    if (e.target === mobileMenu) closeMobileMenu();
   });
 }
 
-// Active nav link based on current page
-const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-document.querySelectorAll('.nav-link').forEach(link => {
-  const href = link.getAttribute('href')?.split('/').pop() || '';
-  if (href === currentPath || (currentPath === 'index.html' && href === '' ) ) {
-    link.classList.add('active');
-  }
-});
+function closeMobileMenu() {
+  burger?.classList.remove('open');
+  mobileMenu?.classList.remove('open');
+  if (mobileMenu) mobileMenu.style.display = 'none';
+  document.body.style.overflow = '';
+  burger?.setAttribute('aria-expanded', 'false');
+}
 
-/* ─── Scroll to Top ─── */
-const scrollTopBtn = document.getElementById('scroll-top');
+/* ── Scroll to top ── */
 if (scrollTopBtn) {
   scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
-/* ─── Intersection Observer — Scroll Animations ─── */
-const animatedEls = document.querySelectorAll('.fade-up, .fade-in, .slide-right, .slide-left');
-if (animatedEls.length) {
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+/* ── Active nav link ── */
+const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+document.querySelectorAll('.nav-link').forEach(link => {
+  const href = link.getAttribute('href')?.split('/').pop() || '';
+  if (href === currentPage) link.classList.add('active');
+});
 
-  animatedEls.forEach(el => observer.observe(el));
+/* ── Intersection Observer — scroll animations ── */
+const animEls = document.querySelectorAll('.fade-up,.fade-in,.slide-right,.slide-left');
+if (animEls.length) {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.10, rootMargin: '0px 0px -40px 0px' });
+  animEls.forEach(el => io.observe(el));
 }
 
-/* Countdown removed — app is live */
-
-/* ─── FAQ Accordion ─── */
+/* ── FAQ Accordion ── */
 document.querySelectorAll('.faq-item').forEach(item => {
-  const question = item.querySelector('.faq-question');
-  const answer   = item.querySelector('.faq-answer');
-  if (!question || !answer) return;
+  const q = item.querySelector('.faq-question');
+  if (!q) return;
 
-  question.addEventListener('click', () => {
+  q.setAttribute('tabindex', '0');
+  q.setAttribute('role', 'button');
+
+  q.addEventListener('click', () => {
     const isOpen = item.classList.contains('open');
-
-    // Close all
-    document.querySelectorAll('.faq-item.open').forEach(openItem => {
-      openItem.classList.remove('open');
-      openItem.querySelector('.faq-answer').style.maxHeight = null;
-    });
-
-    // Open clicked (if it wasn't already open)
-    if (!isOpen) {
-      item.classList.add('open');
-    }
+    document.querySelectorAll('.faq-item.open').forEach(o => o.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+    q.setAttribute('aria-expanded', !isOpen);
   });
 
-  // Keyboard support
-  question.setAttribute('tabindex', '0');
-  question.setAttribute('role', 'button');
-  question.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); question.click(); }
+  q.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.click(); }
   });
 });
 
-/* ─── Counter Animation ─── */
+/* ── Counter animation ── */
 function animateCounter(el) {
-  const target = parseInt(el.dataset.target || el.textContent, 10);
-  const suffix = el.dataset.suffix || '';
-  const duration = 1800;
-  const start = performance.now();
-
-  function step(now) {
-    const progress = Math.min((now - start) / duration, 1);
-    const ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+  const target  = parseInt(el.dataset.target || el.textContent, 10);
+  const suffix  = el.dataset.suffix || '';
+  const dur     = 1800;
+  const start   = performance.now();
+  const step = now => {
+    const p = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
     el.textContent = Math.floor(ease * target) + suffix;
-    if (progress < 1) requestAnimationFrame(step);
-  }
-
+    if (p < 1) requestAnimationFrame(step);
+  };
   requestAnimationFrame(step);
 }
 
 const counters = document.querySelectorAll('.counter');
 if (counters.length) {
-  const counterObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        animateCounter(entry.target);
-        counterObserver.unobserve(entry.target);
-      }
-    });
+  const cio = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); cio.unobserve(e.target); } });
   }, { threshold: 0.5 });
-
-  counters.forEach(el => counterObserver.observe(el));
+  counters.forEach(el => cio.observe(el));
 }
 
-/* ─── Contact Form ─── */
+/* ── Contact form (Formspree handles submission natively) ── */
 const contactForm = document.getElementById('contact-form');
-if (contactForm) {
-  contactForm.addEventListener('submit', e => {
-    e.preventDefault();
+if (contactForm && contactForm.getAttribute('action')?.includes('formspree')) {
+  contactForm.addEventListener('submit', () => {
     const btn = contactForm.querySelector('[type="submit"]');
-    const original = btn.textContent;
-    btn.textContent = 'جاري الإرسال...';
-    btn.disabled = true;
-
-    setTimeout(() => {
-      btn.textContent = 'تم الإرسال بنجاح ✓';
-      btn.style.background = '#166534';
-      setTimeout(() => {
-        btn.textContent = original;
-        btn.disabled = false;
-        btn.style.background = '';
-        contactForm.reset();
-      }, 3000);
-    }, 1200);
+    if (btn) { btn.disabled = true; btn.textContent = '...جاري الإرسال'; }
   });
 }
-
-/* ─── Sticky Mobile CTA ─── */
-(function() {
-  const cta = document.getElementById('sticky-cta');
-  if (!cta) return;
-  let lastScroll = 0;
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    if (y > 300) {
-      cta.style.display = 'block';
-      cta.style.transform = y > lastScroll ? 'translateY(0)' : 'translateY(0)';
-    } else {
-      cta.style.display = 'none';
-    }
-    lastScroll = y;
-  }, { passive: true });
-})();
