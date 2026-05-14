@@ -44,7 +44,7 @@
     })();
   </script>
 </head>
-<body>
+<body data-page="faq">
 
   <div class="beta-top-banner" role="alert">
     <span class="ar-text">🧪 إضمن في مرحلة تجريبية — <a href="mailto:info@edmneg.com">شاركنا رأيك</a></span>
@@ -98,7 +98,7 @@
             <span aria-hidden="true"><i class="fa-solid fa-chevron-left"></i></span>
             <span class="current">الأسئلة الشائعة</span>
           </nav>
-          <h1 id="page-title" class="fade-up">الأسئلة الشائعة</h1>
+          <h1 id="page-title" class="fade-up" data-t="hero.title" data-ns="faq">الأسئلة الشائعة</h1>
           <p class="fade-up delay-1">إجابات واضحة وشاملة على كل تساؤلاتك حول تطبيق إضمن</p>
         </div>
       </div>
@@ -325,7 +325,7 @@
         <!-- Still have questions CTA -->
         <div class="card text-center fade-up" style="padding:3rem;border:2px dashed var(--border);">
           <div style="font-size:2.5rem;margin-bottom:1rem;" aria-hidden="true">💬</div>
-          <h3 style="color:var(--primary);margin-bottom:.75rem;">لم تجد إجابة لسؤالك؟</h3>
+          <h3 style="color:var(--primary);margin-bottom:.75rem;"><span data-t="still.title" data-ns="faq">لم تجد إجابة لسؤالك؟</span></h3>
           <p style="margin-bottom:2rem;">تواصل معنا مباشرة وسيرد عليك فريق الدعم في أقرب وقت ممكن</p>
           <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
             <a href="contact.html" class="btn btn-primary"><i class="fa-solid fa-envelope" aria-hidden="true"></i> راسلنا الآن</a>
@@ -436,6 +436,7 @@
   </footer>
 
   <button class="scroll-top" id="scroll-top" aria-label="العودة لأعلى الصفحة"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+    <script src="../JavaScript/translations.js" defer></script>
   <script src="../JavaScript/main.js" defer></script>
 </body>
 </html>

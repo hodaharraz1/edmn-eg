@@ -23,6 +23,9 @@ function setLanguage(lang, save) {
   if (save !== false) {
     try { localStorage.setItem(LANG_KEY, lang); } catch(e) {}
   }
+
+  /* Apply data-t translations */
+  if (window.applyTranslations) window.applyTranslations(lang);
 }
 
 /* ── Init language from localStorage ── */

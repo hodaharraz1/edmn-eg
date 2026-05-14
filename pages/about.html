@@ -50,7 +50,7 @@
     })();
   </script>
 </head>
-<body>
+<body data-page="about">
 
   <!-- NAV -->
   <div class="beta-top-banner" role="alert">
@@ -111,9 +111,9 @@
             <span aria-hidden="true"><i class="fa-solid fa-chevron-left"></i></span>
             <span class="current">نبذة عنا</span>
           </nav>
-          <h1 id="page-title" class="fade-up">من نحن؟</h1>
+          <h1 id="page-title" class="fade-up" data-t="hero.title">من نحن؟</h1>
           <p class="fade-up delay-1">
-            إضمن هي أكثر من مجرد تطبيق — هي منظومة متكاملة توفر خدمات ضمان مالي تُحدث فرقاً حقيقياً في حياة المشترين والبائعين
+            <span data-t="hero.desc" data-ns="about">إضمن هي أكثر من مجرد تطبيق — هي منظومة متكاملة توفر خدمات ضمان مالي تُحدث فرقاً حقيقياً في حياة المشترين والبائعين</span>
           </p>
         </div>
       </div>
@@ -128,8 +128,8 @@
                  alt="تطبيق إضمن على الهاتف المحمول" width="320" height="480" loading="lazy" />
           </div>
           <div class="app-desc-content slide-left">
-            <span class="section-tag">هويتنا</span>
-            <h2 id="who-heading">الأمان المالي على بُعد تطبيق في جوالك</h2>
+            <span class="section-tag" data-t="tag.identity" data-ns="about">هويتنا</span>
+            <h2 id="who-heading"><span data-t="s1.title" data-ns="about">الأمان المالي على بُعد تطبيق في جوالك</span></h2>
             <p>
               إضمن هي منصة وساطة مالية رائدة تهدف إلى ضمان أمان كل عملية بيع وشراء إلكترونية في مصر. نعمل كطرف ثالث محايد وموثوق يحفظ أموال المشتري حتى تُنجز الصفقة بالكامل، ثم يُحوّلها للبائع.
             </p>
@@ -148,8 +148,8 @@
     <section class="section-padding" style="background:var(--bg);" aria-labelledby="problem-heading">
       <div class="container">
         <div class="text-center" style="margin-bottom:3rem;">
-          <span class="section-tag fade-in">المشكلة والحل</span>
-          <h2 id="problem-heading" class="section-title fade-up delay-1">لماذا وُجد إضمن؟</h2>
+          <span class="section-tag fade-in" data-t="tag.problem" data-ns="about">المشكلة والحل</span>
+          <h2 id="problem-heading" class="section-title fade-up delay-1"><span data-t="s2.title" data-ns="about">لماذا وُجد إضمن؟</span></h2>
           <p class="section-subtitle fade-up delay-2">
             رأينا مشكلة حقيقية تؤثر على ملايين المصريين يومياً، فقررنا إيجاد حل حقيقي وعملي
           </p>
@@ -217,8 +217,8 @@
     <section class="section-padding" style="background:var(--bg-alt);" aria-labelledby="vision-heading">
       <div class="container">
         <div class="text-center" style="margin-bottom:3rem;">
-          <span class="section-tag fade-in">رؤيتنا ومهمتنا</span>
-          <h2 id="vision-heading" class="section-title fade-up delay-1">نسعى لقيادة التحول الرقمي الآمن</h2>
+          <span class="section-tag fade-in" data-t="tag.vision" data-ns="about">رؤيتنا ومهمتنا</span>
+          <h2 id="vision-heading" class="section-title fade-up delay-1"><span data-t="s3.title" data-ns="about">نسعى لقيادة التحول الرقمي الآمن</span></h2>
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2rem;">
@@ -363,6 +363,7 @@
     <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
   </button>
 
+    <script src="../JavaScript/translations.js" defer></script>
   <script src="../JavaScript/main.js" defer></script>
 </body>
 </html>
