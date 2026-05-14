@@ -13,6 +13,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" media="print" onload="this.media='all'" />
   <link rel="stylesheet" href="../CSS/style.css" />
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 <body>
 
@@ -83,7 +95,7 @@
           <h2>1. التعريفات</h2>
           <ul>
             <li><strong>"إضمن" أو "الشركة":</strong> شركة إضمن إي جي ش.ذ.م.م المالكة والمشغّلة للتطبيق والموقع الإلكتروني.</li>
-            <li><strong>"المستخدم":</strong> أي شخص يسجّل أو يستخدم خدمات إضمن سواء كمشترٍ أو بائع.</li>
+            <li><strong>"المستخدم":</strong> أي شخص يسجّل أو يستخدم خدمات إضمن سواء كمشتري أو بائع.</li>
             <li><strong>"المعاملة":</strong> أي عملية بيع أو شراء أو تقديم خدمة يتم تأمينها عبر إضمن.</li>
             <li><strong>"حساب الضمان":</strong> الحساب الآمن الذي تحتفظ فيه إضمن بالأموال ريثما تكتمل المعاملة.</li>
           </ul>

@@ -28,6 +28,18 @@
     "publisher": {"@type": "Organization", "name": "إضمن EDMN", "logo": {"@type": "ImageObject", "url": "https://hodaharraz1.github.io/edmn-eg/Images/LOGO 1 1.png"}}
   }
   </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 <body>
   <div class="beta-top-banner" role="alert">

@@ -33,6 +33,18 @@
     }
   }
   </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 <body>
 

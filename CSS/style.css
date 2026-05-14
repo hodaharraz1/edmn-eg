@@ -808,3 +808,155 @@ html[lang="en"] .article-content blockquote{border-right:none;border-left:4px so
 @media (max-width: 768px) {
   .hero { padding-top: 68px; }
 }
+
+/* ================================================================
+   MOBILE FIX v2.3 — Inner pages comprehensive
+   ================================================================ */
+
+/* ── Global mobile containers ── */
+@media (max-width: 768px) {
+  * { box-sizing: border-box; }
+  body { overflow-x: hidden; width: 100%; }
+  .container { padding: 0 14px; max-width: 100%; }
+  img { max-width: 100%; height: auto; }
+
+  /* Force single column on all 2-col grids */
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns: repeat(3"],
+  [style*="grid-template-columns: repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns: 2fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── About page mobile ── */
+@media (max-width: 768px) {
+  .app-desc-grid { grid-template-columns:1fr!important; gap:24px; text-align:center; }
+  .app-desc-image { order:-1; }
+  .app-desc-image img { max-height:260px; margin:0 auto; }
+  .app-desc-image::before { width:240px; height:240px; }
+  .app-desc-content p { font-size:.9rem; }
+  .app-features-mini { grid-template-columns:1fr!important; }
+}
+
+/* ── Why-us & protection pages mobile ── */
+@media (max-width: 768px) {
+  .protection-grid { grid-template-columns:1fr!important; gap:12px; }
+  .protection-card { padding:18px; }
+  /* Comparison table scrollable */
+  [style*="overflow-x:auto"] table,
+  div[style*="overflow-x"] { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 480px; font-size:.8rem; }
+  table th, table td { padding:.625rem .75rem!important; }
+}
+
+/* ── How it works page mobile ── */
+@media (max-width: 768px) {
+  /* Step cards — was 2-col grid with connectors */
+  .steps-grid { grid-template-columns:1fr!important; gap:20px; }
+  .steps-grid::before { display:none; }
+  /* Fee comparison — was side by side */
+  div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr!important; }
+  /* Fee card values */
+  div[style*="font-size:4rem"] { font-size:3rem!important; }
+  /* 3-col dispute cards */
+  div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns:1fr!important; }
+}
+
+/* ── FAQ page mobile ── */
+@media (max-width: 768px) {
+  .faq-grid { grid-template-columns:1fr!important; }
+  .faq-question { font-size:.875rem; padding:14px 16px; gap:8px; }
+  .faq-answer-inner { padding:0 16px 14px; font-size:.85rem; }
+  .faq-icon { width:24px; height:24px; flex-shrink:0; }
+  /* Category headings */
+  h2[style*="font-size:1.375rem"] { font-size:1.1rem!important; }
+}
+
+/* ── Contact page mobile ── */
+@media (max-width: 768px) {
+  .contact-grid { grid-template-columns:1fr!important; gap:24px; }
+  .contact-form { padding:20px 14px; border-radius:var(--r-lg); }
+  .form-input, .form-textarea, select.form-input { font-size:.9rem; }
+  /* 2-col name/phone row */
+  div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr!important; }
+  .contact-info-item { padding:14px; gap:10px; }
+}
+
+/* ── Legal pages mobile ── */
+@media (max-width: 768px) {
+  .legal-content { padding:0; }
+  .legal-content h2 { font-size:1.1rem; margin-top:24px; }
+  .legal-content p, .legal-content li { font-size:.875rem; line-height:1.7; }
+  /* Summary cards in refund policy */
+  div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns:1fr!important; gap:10px; }
+  div[style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns:1fr!important; }
+}
+
+/* ── Blog pages mobile ── */
+@media (max-width: 768px) {
+  .blog-grid { grid-template-columns:1fr!important; }
+  .article-content { padding:0; }
+  .article-meta { gap:12px; flex-wrap:wrap; }
+  .article-meta-item { font-size:.8rem; }
+}
+
+/* ── Footer mobile ── */
+@media (max-width: 768px) {
+  .footer-grid { grid-template-columns:1fr!important; gap:24px; }
+  .footer-bottom { flex-direction:column; text-align:center; gap:8px; }
+  .footer-bottom-links { justify-content:center; }
+  .footer-col h5 { margin-bottom:10px; }
+  .company-reg-badge { font-size:.68rem; }
+}
+
+/* ── Beta banner mobile ── */
+@media (max-width: 768px) {
+  .beta-top-banner { font-size:.72rem; padding:7px 12px; }
+}
+
+/* ── Inline grids with px gaps mobile ── */
+@media (max-width: 768px) {
+  div[style*="display:grid"],
+  div[style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Page hero mobile extras ── */
+@media (max-width: 768px) {
+  .page-hero { padding: 5.5rem 0 28px; }
+  .page-hero h1 { font-size:1.625rem; letter-spacing:-.01em; }
+  .page-hero p { font-size:.9rem; padding:0 4px; }
+}
+
+/* ── Buyer/Seller protection hero badges mobile ── */
+@media (max-width: 768px) {
+  div[style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns:1fr 1fr!important; gap:10px; }
+  div[style*="grid-template-columns: repeat(4"] { grid-template-columns:1fr 1fr!important; gap:10px; }
+}
+
+/* ── Inner page card stacks mobile ── */
+@media (max-width: 768px) {
+  .card { padding:18px!important; }
+  .card div[style*="display:flex"][style*="align-items:flex-start"] {
+    gap:12px;
+  }
+  div[style*="width:60px"][style*="height:60px"],
+  div[style*="width:64px"][style*="height:64px"] {
+    width:48px!important; height:48px!important;
+    font-size:1.1rem!important; flex-shrink:0;
+  }
+}
+
+/* ── Nav logo wrap mobile ── */
+@media (max-width: 768px) {
+  .nav-logo-wrap { gap:6px; }
+  .nav-logo img  { height:40px; }
+}

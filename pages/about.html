@@ -37,6 +37,18 @@
     }
   }
   </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 <body>
 
@@ -52,7 +64,6 @@
         <div class="nav-logo-wrap"><a href="../index.html" class="nav-logo" aria-label="الصفحة الرئيسية">
           <img src="../Images/LOGO 1 1.png" alt="شعار إضمن" width="130" height="44" loading="eager" />
           </a>
-          <span class="beta-badge"><i class="fa-solid fa-flask" aria-hidden="true"></i><span class="ar-text">تجريبي</span><span class="en-text">Beta</span></span>
         </div>
         <ul class="nav-links" role="list">
           <li><a class="nav-link" href="../index.html">الرئيسية</a></li>

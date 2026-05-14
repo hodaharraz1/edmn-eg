@@ -66,6 +66,18 @@
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"ما هو تطبيق إضمن؟","acceptedAnswer":{"@type":"Answer","text":"إضمن هو تطبيق وساطة مالية يعمل كطرف ثالث موثوق بين البائع والمشتري لضمان أمان المعاملات المالية عبر الإنترنت في مصر."}},{"@type":"Question","name":"كيف يحمي إضمن أموالي؟","acceptedAnswer":{"@type":"Answer","text":"يحتفظ إضمن بالأموال في حساب ضمان آمن حتى يتأكد المشتري من استلام المنتج، ثم يحوّل المبلغ للبائع."}},{"@type":"Question","name":"ما رسوم إضمن؟","acceptedAnswer":{"@type":"Answer","text":"رسوم إضمن: 5% للأفراد و3% للتجار من قيمة المعاملة. لا رسوم خفية."}},{"@type":"Question","name":"What is EDMN?","acceptedAnswer":{"@type":"Answer","text":"EDMN (إضمن) is Egypt's first secure escrow and financial intermediary app, protecting both buyers and sellers in online transactions."}}]}
   </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 
 <body>
@@ -84,10 +96,6 @@
           <a href="index.html" class="nav-logo" aria-label="إضمن EDMN">
             <img src="Images/LOGO 1 1.png" alt="شعار إضمن EDMN" width="52" height="52" loading="eager" />
           </a>
-          <span class="beta-badge" aria-label="نسخة تجريبية">
-            <i class="fa-solid fa-flask" aria-hidden="true"></i>
-            <span class="ar-text">تجريبي</span><span class="en-text">Beta</span>
-          </span>
         </div>
 
         <ul class="nav-links" role="list">
@@ -145,12 +153,10 @@
           <div class="hero-content">
             <div class="hero-beta-row">
               <div class="hero-eyebrow" style="margin-bottom:0;">
-                <span class="hero-eyebrow-dot" aria-hidden="true"></span>
                 <span class="ar-text">منصة الوساطة المالية الأولى في مصر</span>
                 <span class="en-text">Egypt's First Escrow Platform</span>
               </div>
               <span class="beta-badge">
-                <i class="fa-solid fa-flask" aria-hidden="true"></i>
                 <span class="ar-text">نسخة تجريبية</span><span class="en-text">Beta</span>
               </span>
             </div>
@@ -470,7 +476,6 @@
             </p>
             <div style="margin-bottom:12px;" class="fade-up delay-3">
               <span class="beta-badge">
-                <i class="fa-solid fa-flask" aria-hidden="true"></i>
                 <span class="ar-text">متاح الآن — نسخة تجريبية مجانية</span>
                 <span class="en-text">Available Now — Free Beta</span>
               </span>
@@ -530,54 +535,6 @@
       </div>
     </section>
 
-    <!-- ════ TESTIMONIALS ════ -->
-    <section class="testimonials-section section-padding" aria-labelledby="test-h2">
-      <div class="container">
-        <div class="text-center" style="margin-bottom:48px;">
-          <span class="section-tag fade-in">
-            <span class="ar-text">آراء العملاء</span>
-            <span class="en-text">Customer Reviews</span>
-          </span>
-          <h2 id="test-h2" class="section-title fade-up delay-1">
-            <span class="ar-text">ماذا يقول مستخدمو إضمن؟</span>
-            <span class="en-text">What EDMN Users Say</span>
-          </h2>
-        </div>
-        <div class="testimonials-grid">
-          <article class="testimonial-card fade-up delay-1">
-            <div class="testimonial-stars" aria-label="5 نجوم">
-              <i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i>
-            </div>
-            <p class="testimonial-text">"كنت خايف أدفع لبائع ما بعرفوش على الإنترنت، بس مع إضمن اتعاملت بكل راحة. الأموال اتحفظت حتى وصلتلي البضاعة!"</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar" aria-hidden="true">م</div>
-              <div><div class="testimonial-name">محمد أحمد</div><div class="testimonial-role"><span class="ar-text">مشتري — القاهرة</span><span class="en-text">Buyer — Cairo</span></div></div>
-            </div>
-          </article>
-          <article class="testimonial-card fade-up delay-2">
-            <div class="testimonial-stars" aria-label="5 نجوم">
-              <i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i>
-            </div>
-            <p class="testimonial-text">"كبائعة، إضمن أعطاني ثقة إني هاخد فلوسي على طول ما المشتري يأكد الاستلام. مش محتاجة أقلق تاني."</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar" aria-hidden="true">س</div>
-              <div><div class="testimonial-name">سارة علي</div><div class="testimonial-role"><span class="ar-text">بائعة — الإسكندرية</span><span class="en-text">Seller — Alexandria</span></div></div>
-            </div>
-          </article>
-          <article class="testimonial-card fade-up delay-3">
-            <div class="testimonial-stars" aria-label="5 نجوم">
-              <i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i><i class="fa-solid fa-star" aria-hidden="true"></i>
-            </div>
-            <p class="testimonial-text">"خدمة العملاء ممتازة وسريعة الرد. التطبيق سهل الاستخدام وبيوفر حماية حقيقية لأموالي."</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar" aria-hidden="true">أ</div>
-              <div><div class="testimonial-name">أحمد خالد</div><div class="testimonial-role"><span class="ar-text">رجل أعمال — الجيزة</span><span class="en-text">Business Owner — Giza</span></div></div>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
     <!-- ════ FAQ ════ -->
     <section class="faq-section section-padding" id="faq" aria-labelledby="faq-h2">
       <div class="container">
@@ -609,7 +566,7 @@
 
           <div class="faq-item fade-up delay-2">
             <button class="faq-question" aria-expanded="false">
-              <span class="ar-text">كيف يحمي إضمن أموالي كمشترٍ؟</span>
+              <span class="ar-text">كيف يحمي إضمن أموالي كمشتري؟</span>
               <span class="en-text">How does EDMN protect me as a buyer?</span>
               <span class="faq-icon" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
             </button>

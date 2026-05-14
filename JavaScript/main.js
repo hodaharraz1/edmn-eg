@@ -1,50 +1,39 @@
 /* ================================================================
-   EDMN | إضمن — Main JS v2.1  (bilingual fixed + enterprise)
+   EDMN | إضمن — Main JS v2.3
    ================================================================ */
 'use strict';
 
-/* ── Language Switcher ── */
-const LANG_KEY = 'edmn-lang';
+var LANG_KEY = 'edmn-lang';
 
+/* ── Set language (called early + on toggle) ── */
 function setLanguage(lang, save) {
-  if (save === undefined) save = true;
-  const html = document.documentElement;
-
-  // Set direction and lang
+  var html = document.documentElement;
   html.setAttribute('lang', lang);
   html.setAttribute('dir', lang === 'en' ? 'ltr' : 'rtl');
 
-  // Update ALL switcher buttons text
+  /* Update all switcher button labels */
   document.querySelectorAll('.lang-btn-label').forEach(function(el) {
     el.textContent = lang === 'ar' ? 'EN' : 'عر';
   });
-
-  // Update aria-label
   document.querySelectorAll('.lang-switcher').forEach(function(btn) {
     btn.setAttribute('aria-label',
       lang === 'ar' ? 'Switch to English' : 'التبديل للعربية');
   });
 
-  // Save preference
-  if (save) {
+  if (save !== false) {
     try { localStorage.setItem(LANG_KEY, lang); } catch(e) {}
   }
 }
 
+/* ── Init language from localStorage ── */
 function initLanguage() {
   var saved;
   try { saved = localStorage.getItem(LANG_KEY); } catch(e) {}
-  // Default is Arabic (already set in HTML), only switch if saved EN
-  if (saved === 'en') {
-    setLanguage('en', false);
-  }
-  // Update button label for default Arabic
-  document.querySelectorAll('.lang-btn-label').forEach(function(el) {
-    el.textContent = 'EN';
-  });
+  var lang = (saved === 'en') ? 'en' : 'ar';
+  setLanguage(lang, false);
 }
 
-// Wire up all lang switcher buttons (desktop + mobile)
+/* ── Wire all lang switcher buttons ── */
 function initLangSwitcher() {
   document.querySelectorAll('.lang-switcher').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -54,30 +43,26 @@ function initLangSwitcher() {
   });
 }
 
-/* ── Navbar scroll shadow ── */
+/* ── Navbar shadow on scroll ── */
 var navbar      = document.getElementById('navbar');
 var scrollTopBtn = document.getElementById('scroll-top');
 var stickyCta   = document.getElementById('sticky-cta');
 
 window.addEventListener('scroll', function() {
   var y = window.scrollY;
-  if (navbar)      navbar.classList.toggle('scrolled', y > 20);
+  if (navbar)       navbar.classList.toggle('scrolled', y > 20);
   if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > 400);
-  if (stickyCta)   stickyCta.style.display = y > 300 ? 'block' : 'none';
+  if (stickyCta)    stickyCta.style.display = y > 300 ? 'block' : 'none';
 }, { passive: true });
 
 /* ── Mobile menu ── */
-var burger      = document.getElementById('burger');
-var mobileMenu  = document.getElementById('mobile-menu');
+var burger     = document.getElementById('burger');
+var mobileMenu = document.getElementById('mobile-menu');
 
 function closeMobileMenu() {
-  if (burger)     burger.classList.remove('open');
-  if (mobileMenu) {
-    mobileMenu.classList.remove('open');
-    mobileMenu.style.display = 'none';
-  }
+  if (burger)     { burger.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }
+  if (mobileMenu) { mobileMenu.classList.remove('open'); mobileMenu.style.display = 'none'; }
   document.body.style.overflow = '';
-  if (burger) burger.setAttribute('aria-expanded', 'false');
 }
 
 if (burger && mobileMenu) {
@@ -86,16 +71,10 @@ if (burger && mobileMenu) {
     mobileMenu.classList.toggle('open', open);
     mobileMenu.style.display = open ? 'flex' : 'none';
     document.body.style.overflow = open ? 'hidden' : '';
-    burger.setAttribute('aria-expanded', open);
+    burger.setAttribute('aria-expanded', String(open));
   });
-
-  mobileMenu.querySelectorAll('a').forEach(function(link) {
-    link.addEventListener('click', closeMobileMenu);
-  });
-
-  mobileMenu.addEventListener('click', function(e) {
-    if (e.target === mobileMenu) closeMobileMenu();
-  });
+  mobileMenu.querySelectorAll('a').forEach(function(l){ l.addEventListener('click', closeMobileMenu); });
+  mobileMenu.addEventListener('click', function(e){ if (e.target === mobileMenu) closeMobileMenu(); });
 }
 
 /* ── Scroll to top ── */
@@ -112,42 +91,33 @@ document.querySelectorAll('.nav-link').forEach(function(link) {
   if (href === currentPage) link.classList.add('active');
 });
 
-/* ── Intersection Observer — scroll animations ── */
-var animEls = document.querySelectorAll('.fade-up,.fade-in,.slide-right,.slide-left');
-if (animEls.length && 'IntersectionObserver' in window) {
+/* ── Scroll animations ── */
+if ('IntersectionObserver' in window) {
+  var animEls = document.querySelectorAll('.fade-up,.fade-in,.slide-right,.slide-left');
   var io = new IntersectionObserver(function(entries) {
     entries.forEach(function(e) {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        io.unobserve(e.target);
-      }
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
     });
-  }, { threshold: 0.10, rootMargin: '0px 0px -40px 0px' });
+  }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
   animEls.forEach(function(el) { io.observe(el); });
 }
 
-/* ── FAQ Accordion ── */
+/* ── FAQ accordion ── */
 document.querySelectorAll('.faq-item').forEach(function(item) {
   var q = item.querySelector('.faq-question');
   if (!q) return;
-  q.setAttribute('tabindex', '0');
-  q.setAttribute('role', 'button');
-
+  q.setAttribute('tabindex','0'); q.setAttribute('role','button');
   q.addEventListener('click', function() {
-    var isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item.open').forEach(function(o) {
+    var wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(function(o){
       o.classList.remove('open');
       var oq = o.querySelector('.faq-question');
-      if (oq) oq.setAttribute('aria-expanded', 'false');
+      if (oq) oq.setAttribute('aria-expanded','false');
     });
-    if (!isOpen) {
-      item.classList.add('open');
-      q.setAttribute('aria-expanded', 'true');
-    }
+    if (!wasOpen) { item.classList.add('open'); q.setAttribute('aria-expanded','true'); }
   });
-
-  q.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); q.click(); }
+  q.addEventListener('keydown', function(e){
+    if (e.key==='Enter'||e.key===' '){ e.preventDefault(); q.click(); }
   });
 });
 
@@ -155,28 +125,24 @@ document.querySelectorAll('.faq-item').forEach(function(item) {
 function animateCounter(el) {
   var target = parseInt(el.dataset.target || el.textContent, 10);
   var suffix = el.dataset.suffix || '';
-  var dur    = 1800;
   var start  = performance.now();
   function step(now) {
-    var p    = Math.min((now - start) / dur, 1);
+    var p    = Math.min((now - start) / 1800, 1);
     var ease = 1 - Math.pow(1 - p, 3);
     el.textContent = Math.floor(ease * target) + suffix;
     if (p < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
-
-var counters = document.querySelectorAll('.counter');
-if (counters.length && 'IntersectionObserver' in window) {
-  var cio = new IntersectionObserver(function(entries) {
-    entries.forEach(function(e) {
-      if (e.isIntersecting) { animateCounter(e.target); cio.unobserve(e.target); }
-    });
+if ('IntersectionObserver' in window) {
+  var counters = document.querySelectorAll('.counter');
+  var cio = new IntersectionObserver(function(e){
+    e.forEach(function(x){ if(x.isIntersecting){ animateCounter(x.target); cio.unobserve(x.target); }});
   }, { threshold: 0.5 });
-  counters.forEach(function(el) { cio.observe(el); });
+  counters.forEach(function(el){ cio.observe(el); });
 }
 
-/* ── INIT ── */
+/* ── Init on DOM ready ── */
 document.addEventListener('DOMContentLoaded', function() {
   initLanguage();
   initLangSwitcher();

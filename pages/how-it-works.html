@@ -31,6 +31,18 @@
     ]
   }
   </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
+  </script>
 </head>
 <body>
 
@@ -170,7 +182,7 @@
             <p style="margin-bottom:1rem;">بمجرد تأكيد المشتري للاستلام:</p>
             <ul style="list-style:none;display:flex;flex-direction:column;gap:.625rem;">
               <li style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);"><i class="fa-solid fa-check" style="color:#D97706;" aria-hidden="true"></i> يُحرَّر المبلغ من حساب الضمان</li>
-              <li style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);"><i class="fa-solid fa-check" style="color:#D97706;" aria-hidden="true"></i> يُخصم رسم إضمن (5% أفراد / 3% تجار)</li>
+              <li style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);"><i class="fa-solid fa-check" style="color:#D97706;" aria-hidden="true"></i> يُخصم رسم إضمن فقط على الإيداع/السحب (5% أفراد / 3% تجار) — المعاملات مجانية</li>
               <li style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);"><i class="fa-solid fa-check" style="color:#D97706;" aria-hidden="true"></i> يُحوَّل الصافي فوراً لحساب البائع</li>
               <li style="display:flex;align-items:center;gap:.5rem;color:var(--text-secondary);"><i class="fa-solid fa-check" style="color:#D97706;" aria-hidden="true"></i> تُغلق المعاملة بنجاح للطرفين</li>
             </ul>

@@ -23,13 +23,25 @@
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "ما هو تطبيق إضمن؟", "acceptedAnswer": { "@type": "Answer", "text": "إضمن هو تطبيق وساطة مالية يعمل كطرف ثالث موثوق بين البائع والمشتري لضمان أمان المعاملات المالية عبر الإنترنت في مصر." } },
-      { "@type": "Question", "name": "كيف يحمي إضمن أموالي كمشترٍ؟", "acceptedAnswer": { "@type": "Answer", "text": "أموالك محفوظة في حساب ضمان آمن ولا تُحوَّل للبائع إلا بعد تأكيدك باستلام المنتج أو الخدمة بالشكل المتفق عليه." } },
+      { "@type": "Question", "name": "كيف يحمي إضمن أموالي كمشتري؟", "acceptedAnswer": { "@type": "Answer", "text": "أموالك محفوظة في حساب ضمان آمن ولا تُحوَّل للبائع إلا بعد تأكيدك باستلام المنتج أو الخدمة بالشكل المتفق عليه." } },
       { "@type": "Question", "name": "ما هي رسوم استخدام إضمن؟", "acceptedAnswer": { "@type": "Answer", "text": "رسوم إضمن شفافة وتنافسية: 5% من قيمة المعاملة للأفراد، و3% للتجار. لا توجد رسوم خفية." } },
       { "@type": "Question", "name": "هل إضمن متاح على iOS وAndroid؟", "acceptedAnswer": { "@type": "Answer", "text": "نعم، إضمن متاح على كلا المنصتين حالياً في مرحلة الاختبار، مع الإطلاق الرسمي المتوقع في منتصف 2025." } },
       { "@type": "Question", "name": "ماذا يحدث إذا لم يُسلَّم المنتج؟", "acceptedAnswer": { "@type": "Answer", "text": "إذا لم يستلم المشتري المنتج، يمكنه فتح نزاع وسيتدخل فريق إضمن لمراجعة الحالة واسترداد أمواله." } },
       { "@type": "Question", "name": "هل يمكنني استرداد أموالي؟", "acceptedAnswer": { "@type": "Answer", "text": "نعم، في حالة عدم تسليم المنتج أو الخدمة المتفق عليها، يمكن طلب الاسترداد وفق سياسة الاسترداد المعتمدة." } }
     ]
   }
+  </script>
+  <!-- Language init: runs before paint to avoid flash -->
+  <script>
+    (function(){
+      try {
+        var l = localStorage.getItem('edmn-lang');
+        if (l === 'en') {
+          document.documentElement.setAttribute('lang','en');
+          document.documentElement.setAttribute('dir','ltr');
+        }
+      } catch(e){}
+    })();
   </script>
 </head>
 <body>
@@ -146,7 +158,7 @@
 
             <div class="faq-item fade-up delay-1">
               <button class="faq-question" aria-expanded="false">
-                كيف يحمي إضمن أموالي كمشترٍ؟
+                كيف يحمي إضمن أموالي كمشتري؟
                 <span class="faq-icon" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
               </button>
               <div class="faq-answer" role="region">
@@ -191,7 +203,7 @@
                 <span class="faq-icon" aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
               </button>
               <div class="faq-answer" role="region">
-                <div class="faq-answer-inner">رسوم إضمن شفافة ومباشرة: <strong>5% للأفراد، و3% للتجار</strong> من إجمالي قيمة المعاملة. مثال: صفقة بـ 1,000 جنيه = 50 جنيهاً للأفراد أو 30 جنيهاً للتجار فقط. لا توجد رسوم خفية أو تكاليف إضافية.</div>
+                <div class="faq-answer-inner">العمولة تُطبَّق فقط على <strong>الإيداع والسحب</strong>: 5% للأفراد — 3% للتجار. أما جميع المعاملات بين البائع والمشتري فهي <strong>مجانية تماماً</strong>. مثال عملي: تودع 5,000 جنيه (تدفع عمولة مرة واحدة)، ثم تجري 4 معاملات مختلفة بدون أي رسوم إضافية.</div>
               </div>
             </div>
 
