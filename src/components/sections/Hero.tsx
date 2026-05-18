@@ -1,251 +1,336 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
-import { motion, type Transition } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ShieldCheck, UserPlus, PlayCircle, ChevronDown, Star, Lock, BadgeCheck } from 'lucide-react';
-
-const spring: Transition = { type: 'tween', duration: 0.55, ease: 'easeOut' };
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (d: number) => ({ opacity: 1, y: 0, transition: { ...spring, delay: d } }),
-};
-const fadeIn = {
-  hidden: { opacity: 0 },
-  visible: (d: number) => ({ opacity: 1, transition: { ...spring, delay: d, duration: 0.7 } }),
-};
+import { ShieldCheck, UserPlus, PlayCircle, BadgeCheck, Lock, Star, ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function Hero() {
   const t = useTranslations('hero');
   const locale = useLocale();
   const isAr = locale === 'ar';
-  const getHref = (href: string) => isAr ? href : `/en${href}`;
+  const Arrow = isAr ? ArrowLeft : ArrowRight;
 
   return (
     <section
-      className="relative overflow-hidden bg-gradient-to-br from-[#EBF2FC] via-[#F8FBFF] to-white"
-      style={{ paddingTop: '130px', paddingBottom: '60px' }}
+      style={{
+        background: 'linear-gradient(135deg, #EBF2FC 0%, #F0F7FF 40%, #ffffff 100%)',
+        paddingTop: '130px',
+        paddingBottom: '80px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
       aria-labelledby="hero-heading"
     >
-      {/* BG Blobs */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute -top-32 -start-32 w-[500px] h-[500px] bg-[#1A57A1]/8 rounded-full blur-[100px]" />
-        <div className="absolute -bottom-32 -end-32 w-[500px] h-[500px] bg-[#F0171A]/5 rounded-full blur-[100px]" />
-      </div>
+      {/* Subtle grid pattern */}
+      <div style={{
+        position: 'absolute', inset: 0, opacity: 0.03, pointerEvents: 'none',
+        backgroundImage: 'radial-gradient(#1A57A1 1px, transparent 1px)',
+        backgroundSize: '32px 32px',
+      }} aria-hidden="true" />
 
-      <div className="container relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      {/* Blue glow top-right */}
+      <div style={{
+        position: 'absolute', top: '-100px', right: '-100px',
+        width: '500px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(26,87,161,0.12) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} aria-hidden="true" />
 
-          {/* ─── LEFT / Content ─── */}
-          <div className={`flex flex-col ${isAr ? 'items-end text-end' : 'items-start text-start'} items-center text-center lg:items-start lg:text-start`}
-               style={{ direction: isAr ? 'rtl' : 'ltr' }}>
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '60px',
+          alignItems: 'center',
+        }}>
 
-            {/* Trust badge */}
-            <motion.div custom={0} initial="hidden" animate="visible" variants={fadeIn}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#1A57A1]/20 rounded-full text-[#1A57A1] text-sm font-bold mb-6 shadow-sm">
-              <ShieldCheck size={15} className="text-[#1A57A1]" />
+          {/* ── CONTENT ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{ order: isAr ? 2 : 1 }}
+          >
+            {/* Badge */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '6px 16px',
+              background: 'rgba(26,87,161,0.08)', border: '1px solid rgba(26,87,161,0.2)',
+              borderRadius: '100px', marginBottom: '20px',
+              color: '#1A57A1', fontSize: '13px', fontWeight: 700,
+            }}>
+              <ShieldCheck size={14} />
               {t('badge')}
-            </motion.div>
+            </div>
 
-            {/* Headline */}
-            <motion.h1 id="hero-heading" custom={0.1} initial="hidden" animate="visible" variants={fadeUp}
-              className="font-extrabold text-[#1F2937] mb-5 leading-[1.15]"
-              style={{ fontSize: 'clamp(2rem, 4.5vw, 3.2rem)' }}>
+            {/* H1 */}
+            <h1
+              id="hero-heading"
+              style={{
+                fontSize: 'clamp(2.1rem, 5vw, 3.4rem)',
+                fontWeight: 900,
+                lineHeight: 1.15,
+                color: '#0F172A',
+                marginBottom: '20px',
+              }}
+            >
               {t('title')}{' '}
-              <span className="text-[#F0171A]">{t('titleHighlight')}</span>
+              <span style={{ color: '#F0171A' }}>{t('titleHighlight')}</span>
               <br />
-              <span className="text-[#1A57A1]">{t('titleEnd')}</span>
-              {isAr && <span className="ms-2">👌</span>}
-            </motion.h1>
+              <span style={{
+                background: 'linear-gradient(135deg, #1A57A1, #2B72D0)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                {t('titleEnd')}
+              </span>
+            </h1>
 
             {/* Description */}
-            <motion.p custom={0.2} initial="hidden" animate="visible" variants={fadeUp}
-              className="text-[#4B5563] text-lg leading-relaxed mb-8 max-w-md">
+            <p style={{
+              fontSize: '17px', lineHeight: 1.75,
+              color: '#475569', marginBottom: '32px', maxWidth: '480px',
+            }}>
               {t('desc')}
-            </motion.p>
+            </p>
 
-            {/* CTA Buttons */}
-            <motion.div custom={0.3} initial="hidden" animate="visible" variants={fadeUp}
-              className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mb-8">
-              <Link href="#"
-                className="flex items-center justify-center gap-2 px-7 py-3.5 bg-[#F0171A] text-white rounded-xl font-bold text-base
-                           shadow-[0_4px_20px_rgba(240,23,26,.35)] hover:bg-[#C8141C] hover:-translate-y-0.5
-                           hover:shadow-[0_8px_28px_rgba(240,23,26,.45)] transition-all active:scale-95">
-                <UserPlus size={18} />
+            {/* CTAs */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '32px' }}>
+              <Link href="#" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '14px 28px',
+                background: '#F0171A',
+                color: 'white', borderRadius: '12px',
+                fontWeight: 700, fontSize: '15px',
+                boxShadow: '0 4px 20px rgba(240,23,26,0.35)',
+                textDecoration: 'none', transition: 'all 0.2s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#C8141C')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#F0171A')}
+              >
+                <UserPlus size={17} />
                 {t('cta')}
               </Link>
-              <Link href={getHref('/how-it-works')}
-                className="flex items-center justify-center gap-2 px-7 py-3.5 bg-white text-[#1A57A1]
-                           border-2 border-[#1A57A1] rounded-xl font-bold text-base
-                           hover:bg-[#EBF2FC] hover:-translate-y-0.5 transition-all active:scale-95">
-                <PlayCircle size={18} />
+              <Link href={isAr ? '/how-it-works' : '/en/how-it-works'} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '14px 28px',
+                background: 'white', color: '#1A57A1',
+                border: '2px solid #1A57A1', borderRadius: '12px',
+                fontWeight: 700, fontSize: '15px',
+                textDecoration: 'none', transition: 'all 0.2s',
+              }}>
+                <PlayCircle size={17} />
                 {t('ctaSecondary')}
               </Link>
-            </motion.div>
+            </div>
 
-            {/* App Store badges */}
-            <motion.div custom={0.4} initial="hidden" animate="visible" variants={fadeUp}
-              className="flex gap-3 mb-8">
+            {/* App Badges */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '32px', flexWrap: 'wrap' }}>
               {[
-                { icon: '🍎', label: 'App Store', sub: t('availableOn') },
-                { icon: '▶', label: 'Google Play', sub: t('downloadFrom') },
+                { icon: '🍎', label: 'App Store', sub: isAr ? 'متاح على' : 'Available on' },
+                { icon: '▶', label: 'Google Play', sub: isAr ? 'حمّل من' : 'Get it on' },
               ].map(({ icon, label, sub }) => (
-                <Link key={label} href="#"
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#1F2937] text-white rounded-xl
-                             hover:bg-[#374151] transition-all hover:-translate-y-0.5 shadow-md min-w-[140px]">
-                  <span className="text-xl leading-none">{icon}</span>
+                <Link key={label} href="#" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 18px',
+                  background: '#1F2937', color: 'white',
+                  borderRadius: '12px', textDecoration: 'none',
+                  minWidth: '145px', transition: 'background 0.2s',
+                }}>
+                  <span style={{ fontSize: '20px' }}>{icon}</span>
                   <div>
-                    <p className="text-[9px] text-gray-400 leading-none">{sub}</p>
-                    <p className="font-bold text-sm leading-snug mt-0.5">{label}</p>
+                    <div style={{ fontSize: '10px', color: '#9CA3AF', lineHeight: 1 }}>{sub}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>{label}</div>
                   </div>
                 </Link>
               ))}
-            </motion.div>
+            </div>
 
-            {/* Mini Stats */}
-            <motion.div custom={0.5} initial="hidden" animate="visible" variants={fadeUp}
-              className="flex items-center gap-6 pt-5 border-t border-gray-200">
+            {/* Stats Row */}
+            <div style={{
+              display: 'flex', gap: '28px',
+              paddingTop: '20px', borderTop: '1px solid #E2E8F0',
+            }}>
               {[
-                { v: '5%/3%', l: isAr ? 'أفراد / تجار' : 'Ind. / Business' },
+                { v: '5% / 3%', l: isAr ? 'أفراد / تجار' : 'Ind. / Business' },
                 { v: '3+', l: isAr ? 'شركاء' : 'Partners' },
                 { v: '100%', l: isAr ? 'حماية' : 'Protection' },
               ].map(({ v, l }) => (
-                <div key={l} className="text-center">
-                  <p className="text-xl font-extrabold text-[#1A57A1]">{v}</p>
-                  <p className="text-[11px] text-[#6B7280] mt-0.5">{l}</p>
+                <div key={l}>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#1A57A1' }}>{v}</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{l}</div>
                 </div>
               ))}
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
 
-          {/* ─── RIGHT / Phone ─── */}
-          <motion.div custom={0.1} initial="hidden" animate="visible" variants={fadeIn}
-            className="flex items-center justify-center order-first lg:order-last"
-            aria-hidden="true">
+          {/* ── VISUAL ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+            style={{
+              order: isAr ? 1 : 2,
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+            }}
+          >
+            {/* Card-based visual instead of phone mockup */}
+            <div style={{ position: 'relative', width: '340px', maxWidth: '100%' }}>
 
-            <div className="relative" style={{ width: '260px' }}>
-              {/* Glow */}
-              <div className="absolute inset-4 bg-[#1A57A1]/20 rounded-full blur-3xl -z-10" />
-
-              {/* Phone */}
-              <div className="animate-float w-full" style={{ height: '520px' }}>
-                <div className="w-full h-full bg-gradient-to-b from-[#1A57A1] to-[#0E3A72]
-                                rounded-[40px] shadow-[0_20px_60px_rgba(26,87,161,.5)] p-[9px]">
-                  <div className="w-full h-full bg-white rounded-[33px] overflow-hidden flex flex-col">
-
-                    {/* Status bar */}
-                    <div className="flex items-center justify-between px-5 pt-3.5 pb-1 flex-shrink-0">
-                      <span className="text-[10px] font-bold text-[#1F2937]">9:41</span>
-                      <div className="w-14 h-[18px] bg-black rounded-full" />
-                      <div className="flex items-end gap-0.5">
-                        {[6,8,10].map((h, i) => (
-                          <div key={i} className="w-1 bg-[#1F2937] rounded-sm" style={{ height: h, opacity: 0.4 + i * 0.3 }} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* App bar */}
-                    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 flex-shrink-0">
-                      <span className="font-extrabold text-[#1A57A1] text-[15px]">إضمن</span>
-                      <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">Beta</span>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex flex-col gap-3 p-4 flex-1 overflow-hidden">
-
-                      {/* Balance */}
-                      <div className="bg-gradient-to-br from-[#1A57A1] to-[#2B72D0] rounded-2xl p-4 text-white flex-shrink-0
-                                      shadow-[0_4px_16px_rgba(26,87,161,.3)]">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="text-[10px] opacity-70">رصيد الضمان</p>
-                          <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                            <Lock size={9} className="text-white" />
-                          </div>
-                        </div>
-                        <p className="text-[22px] font-extrabold">5,000 ج</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                          <p className="text-[9px] opacity-70">محمي ومؤمّن</p>
-                        </div>
-                      </div>
-
-                      {/* Steps */}
-                      <div className="flex flex-col gap-2 flex-shrink-0">
-                        <p className="text-[10px] font-bold text-[#6B7280]">حالة الصفقة</p>
-                        {[
-                          { label: 'الاتفاق على الشروط', state: 'done' },
-                          { label: 'إيداع المبلغ', state: 'done' },
-                          { label: 'التسليم والاستلام', state: 'active' },
-                          { label: 'تحويل للبائع', state: 'pending' },
-                        ].map(({ label, state }, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold flex-shrink-0
-                              ${state === 'done' ? 'bg-green-100 text-green-600' :
-                                state === 'active' ? 'bg-[#EBF2FC] text-[#1A57A1] ring-1 ring-[#1A57A1]' :
-                                'bg-gray-100 text-gray-400'}`}>
-                              {state === 'done' ? '✓' : i + 1}
-                            </div>
-                            <span className={`text-[10px] leading-none
-                              ${state === 'done' ? 'text-green-600 line-through' :
-                                state === 'active' ? 'text-[#1A57A1] font-bold' : 'text-gray-400'}`}>
-                              {label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Confirm button */}
-                      <div className="mt-auto bg-[#F0171A] text-white rounded-xl py-2.5 text-center
-                                      text-[11px] font-extrabold shadow-[0_4px_12px_rgba(240,23,26,.3)] flex-shrink-0">
-                        تأكيد الاستلام ✓
-                      </div>
-                    </div>
+              {/* Main card */}
+              <div style={{
+                background: 'white',
+                borderRadius: '24px',
+                padding: '28px',
+                boxShadow: '0 20px 60px rgba(26,87,161,0.15)',
+                border: '1px solid rgba(26,87,161,0.08)',
+              }}>
+                {/* Card header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', color: '#64748B' }}>{isAr ? 'رصيد الضمان' : 'Escrow Balance'}</div>
+                    <div style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A' }}>5,000 ج</div>
+                  </div>
+                  <div style={{
+                    width: '48px', height: '48px',
+                    background: 'linear-gradient(135deg, #1A57A1, #2B72D0)',
+                    borderRadius: '16px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Lock size={22} color="white" />
                   </div>
                 </div>
-              </div>
 
-              {/* Floating badges */}
-              <div className="absolute -top-2 -end-10 bg-white rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,.12)]
-                              border border-gray-100 px-3 py-2 flex items-center gap-2">
-                <div className="w-7 h-7 bg-green-50 rounded-xl flex items-center justify-center">
-                  <ShieldCheck size={13} className="text-green-500" />
+                {/* Progress bar */}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B', marginBottom: '8px' }}>
+                    <span>{isAr ? 'تقدم الصفقة' : 'Deal Progress'}</span>
+                    <span style={{ color: '#1A57A1', fontWeight: 700 }}>75%</span>
+                  </div>
+                  <div style={{ height: '8px', background: '#F1F5F9', borderRadius: '100px', overflow: 'hidden' }}>
+                    <div style={{
+                      width: '75%', height: '100%',
+                      background: 'linear-gradient(90deg, #1A57A1, #2B72D0)',
+                      borderRadius: '100px',
+                    }} />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[8px] text-gray-400 leading-none">أموالك</p>
-                  <p className="text-[10px] font-extrabold text-[#1F2937] leading-tight">100% محمية</p>
-                </div>
-              </div>
 
-              <div className="absolute -bottom-2 -start-10 bg-white rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,.12)]
-                              border border-gray-100 px-3 py-2 flex items-center gap-2">
-                <div className="w-7 h-7 bg-[#EBF2FC] rounded-xl flex items-center justify-center">
-                  <BadgeCheck size={13} className="text-[#1A57A1]" />
-                </div>
-                <div>
-                  <p className="text-[8px] text-gray-400 leading-none">تشفير</p>
-                  <p className="text-[10px] font-extrabold text-[#1F2937] leading-tight">بنكي آمن</p>
-                </div>
-              </div>
-
-              <div className="absolute top-1/3 -start-14 bg-white rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,.12)]
-                              border border-gray-100 px-3 py-2">
-                <div className="flex gap-0.5 mb-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={8} className="text-amber-400 fill-amber-400" />
+                {/* Steps */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    { label: isAr ? 'الاتفاق على الشروط' : 'Agreement', state: 'done' },
+                    { label: isAr ? 'إيداع المبلغ' : 'Deposit Funds', state: 'done' },
+                    { label: isAr ? 'التسليم والاستلام' : 'Delivery', state: 'active' },
+                    { label: isAr ? 'تحويل للبائع' : 'Release to Seller', state: 'pending' },
+                  ].map(({ label, state }, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: 800,
+                        background: state === 'done' ? '#DCFCE7' : state === 'active' ? '#EBF2FC' : '#F8FAFC',
+                        color: state === 'done' ? '#16A34A' : state === 'active' ? '#1A57A1' : '#94A3B8',
+                        border: state === 'active' ? '2px solid #1A57A1' : '2px solid transparent',
+                      }}>
+                        {state === 'done' ? '✓' : i + 1}
+                      </div>
+                      <span style={{
+                        fontSize: '13px', fontWeight: state === 'active' ? 700 : 500,
+                        color: state === 'done' ? '#16A34A' : state === 'active' ? '#1A57A1' : '#94A3B8',
+                        textDecoration: state === 'done' ? 'line-through' : 'none',
+                      }}>
+                        {label}
+                      </span>
+                      {state === 'active' && (
+                        <div style={{
+                          marginRight: 'auto', marginLeft: 'auto',
+                          fontSize: '10px', background: '#EBF2FC',
+                          color: '#1A57A1', padding: '2px 8px',
+                          borderRadius: '100px', fontWeight: 700,
+                        }}>
+                          {isAr ? 'جاري' : 'Active'}
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
-                <p className="text-[10px] font-extrabold text-[#1F2937]">5.0 ★</p>
+
+                {/* Action button */}
+                <button style={{
+                  width: '100%', marginTop: '20px',
+                  padding: '13px', background: '#F0171A',
+                  color: 'white', borderRadius: '12px',
+                  fontWeight: 700, fontSize: '14px',
+                  border: 'none', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(240,23,26,0.3)',
+                }}>
+                  {isAr ? '✓ تأكيد الاستلام' : '✓ Confirm Receipt'}
+                </button>
               </div>
+
+              {/* Floating badge 1 */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute', top: '-16px',
+                  [isAr ? 'left' : 'right']: '-16px',
+                  background: 'white', borderRadius: '16px',
+                  padding: '10px 14px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                  border: '1px solid #F0FDF4',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}
+              >
+                <div style={{
+                  width: '32px', height: '32px', background: '#DCFCE7',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <ShieldCheck size={16} color="#16A34A" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#64748B' }}>{isAr ? 'أموالك' : 'Your funds'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>
+                    {isAr ? '100% محمية' : '100% Protected'}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Floating badge 2 */}
+              <motion.div
+                animate={{ y: [0, 6, 0] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                style={{
+                  position: 'absolute', bottom: '-16px',
+                  [isAr ? 'right' : 'left']: '-16px',
+                  background: 'white', borderRadius: '16px',
+                  padding: '10px 14px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.10)',
+                  border: '1px solid #EFF6FF',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}
+              >
+                <div style={{
+                  width: '32px', height: '32px', background: '#EBF2FC',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <BadgeCheck size={16} color="#1A57A1" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#64748B' }}>{isAr ? 'تشفير' : 'Encryption'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>
+                    {isAr ? 'بنكي آمن' : 'Bank-Grade'}
+                  </div>
+                </div>
+              </motion.div>
+
             </div>
           </motion.div>
 
         </div>
-      </div>
-
-      {/* Scroll indicator */}
-      <div className="flex flex-col items-center gap-1 mt-12 text-[#9CA3AF] text-xs" aria-hidden="true">
-        <span>{t('scrollMore')}</span>
-        <ChevronDown size={14} className="animate-bounce" />
       </div>
     </section>
   );
