@@ -13,7 +13,7 @@ export default function Hero() {
   const getHref = (h: string) => isAr ? h : `/en${h}`;
 
   return (
-    <section className="bg-hero relative overflow-hidden" style={{ paddingTop: '130px', paddingBottom: '80px' }}>
+    <section className="bg-hero relative overflow-hidden" style={{ paddingTop: '90px', paddingBottom: '80px' }}>
 
       {/* Subtle noise texture overlay */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.015]"

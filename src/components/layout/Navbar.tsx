@@ -61,17 +61,7 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-[1000]">
-      {/* Beta Banner */}
-      {betaVisible && (
-        <div className="beta-banner flex items-center justify-center gap-3">
-          <span>{tb('banner')}</span>
-          <button onClick={() => setBetaVisible(false)}
-            className="opacity-60 hover:opacity-100 transition-opacity ms-2"
-            aria-label="إغلاق">
-            <X size={13} />
-          </button>
-        </div>
-      )}
+      {/* Beta Banner — hidden for now */}
 
       {/* Navbar */}
       <nav className={cn(
@@ -134,7 +124,7 @@ export default function Navbar() {
         'lg:hidden fixed inset-x-0 navbar-blur border-b border-black/[0.06] z-[999]',
         'transition-all duration-300',
         menuOpen ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none -translate-y-2',
-      )} style={{ top: betaVisible ? '98px' : '60px' }}>
+      )} style={{ top: '60px' }}>
         <div className="container py-5 flex flex-col gap-1">
           {navLinks.map(({ key, href }) => (
             <Link key={key} href={getHref(href)} onClick={closeMenu}
@@ -159,7 +149,7 @@ export default function Navbar() {
 
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/20 z-[998]"
-          style={{ top: betaVisible ? '98px' : '60px' }}
+          style={{ top: '60px' }}
           onClick={closeMenu} aria-hidden="true" />
       )}
     </header>

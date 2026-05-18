@@ -44,7 +44,7 @@ const sections = [
 export default function TermsPage() {
   return (
     <>
-      <section className="pt-32 pb-12 bg-gradient-to-br from-[#EBF2FC] to-white">
+      <section style={{ paddingTop: "100px", paddingBottom: "48px", background: "linear-gradient(180deg,#f5f5f7 0%,#ffffff 100%)" }}>
         <div className="container max-w-3xl">
           <SectionTag>قانوني</SectionTag>
           <h1 className="text-[#1A57A1] mt-2 mb-3">الشروط والأحكام</h1>
