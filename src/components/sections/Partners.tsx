@@ -2,51 +2,44 @@
 
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import SectionTag from '@/components/ui/SectionTag';
 
 const partners = [
-  { nameAr: 'بنك مصر',  nameEn: 'Banque Misr', emoji: '🏦', color: 'from-green-50 to-emerald-50', border: 'hover:border-green-200' },
-  { nameAr: 'فوري',     nameEn: 'Fawry',        emoji: '💳', color: 'from-orange-50 to-amber-50',  border: 'hover:border-orange-200' },
-  { nameAr: 'ValU',     nameEn: 'ValU',          emoji: '💎', color: 'from-purple-50 to-violet-50', border: 'hover:border-purple-200' },
+  { nameAr: 'بنك مصر',  nameEn: 'Banque Misr', emoji: '🏦' },
+  { nameAr: 'فوري',     nameEn: 'Fawry',        emoji: '💳' },
+  { nameAr: 'ValU',     nameEn: 'ValU',          emoji: '💎' },
 ];
 
 export default function Partners() {
   const t = useTranslations('partners');
-
   return (
-    <section className="section-padding bg-[#F9FAFB]" aria-labelledby="partners-heading">
+    <section className="section-md" style={{ background: 'white' }}>
       <div className="container">
-        <div className="text-center mb-12">
-          <SectionTag>{t('tag')}</SectionTag>
-          <h2 id="partners-heading" className="text-[#1A57A1] mb-3">{t('title')}</h2>
-          <p className="text-[#6B7280] text-lg max-w-xl mx-auto">{t('subtitle')}</p>
+        <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+          <p className="text-eyebrow" style={{ color: '#86868b', marginBottom: '12px' }}>{t('tag')}</p>
+          <h2 className="text-display-md" style={{ color: '#1d1d1f', marginBottom: '12px' }}>{t('title')}</h2>
+          <p className="text-body-lg" style={{ color: '#6e6e73', maxWidth: '480px', margin: '0 auto' }}>{t('subtitle')}</p>
         </div>
-
-        <div className="flex flex-wrap justify-center gap-5 max-w-3xl mx-auto">
-          {partners.map(({ nameAr, nameEn, emoji, color, border }, i) => (
-            <motion.div
-              key={nameAr}
-              initial={{ opacity: 0, scale: 0.95 }}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          {partners.map(({ nameAr, nameEn, emoji }, i) => (
+            <motion.div key={nameAr}
+              initial={{ opacity: 0, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 0.35, delay: i * 0.1, type: 'tween' }}
-              className={`flex flex-col items-center gap-3 px-10 py-7 flex-1 min-w-[180px]
-                          bg-gradient-to-br ${color} border border-[#E5E7EB] ${border}
-                          rounded-2xl hover:shadow-[0_8px_32px_rgba(0,0,0,.08)]
-                          hover:-translate-y-1 transition-all duration-300 cursor-default`}
-            >
-              <span className="text-5xl">{emoji}</span>
-              <div className="text-center">
-                <p className="font-extrabold text-[#1F2937] text-lg leading-tight">{nameAr}</p>
-                <p className="text-sm text-[#6B7280] mt-0.5">{nameEn}</p>
-              </div>
+              style={{
+                background: '#f5f5f7', borderRadius: '20px',
+                padding: '32px 48px', textAlign: 'center',
+                border: '1px solid rgba(0,0,0,0.05)',
+                transition: 'all 0.3s ease', cursor: 'default',
+                minWidth: '200px', flex: '1 1 180px', maxWidth: '280px',
+              }}
+              whileHover={{ y: -4, boxShadow: '0 12px 40px rgba(0,0,0,0.08)', backgroundColor: 'white' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>{emoji}</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#1d1d1f' }}>{nameAr}</div>
+              <div style={{ fontSize: '13px', color: '#86868b', marginTop: '4px' }}>{nameEn}</div>
             </motion.div>
           ))}
         </div>
-
-        <p className="text-center text-sm text-[#9CA3AF] mt-8">
-          ✓ شراكات رسمية وموثقة
-        </p>
       </div>
     </section>
   );

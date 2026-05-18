@@ -1,52 +1,46 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { Mail, Phone, MapPin } from 'lucide-react';
 
-const FacebookIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-  </svg>
-);
-const LinkedinIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
-    <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
-  </svg>
-);
+const FB = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>;
+const LI = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4V9h4v1.7A4 4 0 0 1 16 8zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>;
 
 export default function Footer() {
-  const t = useTranslations('footer');
-  const tn = useTranslations('nav');
+  const t    = useTranslations('footer');
+  const tn   = useTranslations('nav');
   const locale = useLocale();
   const year = new Date().getFullYear();
-  const getHref = (href: string) => locale === 'ar' ? href : `/en${href}`;
+  const getHref = (h: string) => locale === 'ar' ? h : `/en${h}`;
 
   return (
-    <footer className="bg-[#111827] text-white" role="contentinfo">
-      <div className="container py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+    <footer style={{ background: '#1d1d1f', color: 'white' }}>
+      <div className="container" style={{ padding: '64px 24px 40px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '48px', marginBottom: '48px' }}>
 
           {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link href={getHref('/')}
-              className="inline-flex items-center gap-2 mb-4 rounded-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none">
-              <span className="text-white font-extrabold text-2xl">إضمن</span>
-              <span className="text-[#F0171A] font-bold text-2xl">EDMN</span>
-            </Link>
-            <p className="text-gray-400 text-sm leading-relaxed mb-5 max-w-[260px]">
+          <div style={{ gridColumn: 'span 1' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <Image src="/logo.png" alt="إضمن EDMN" width={100} height={32} style={{ filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
+            </div>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '240px', marginBottom: '20px' }}>
               {t('desc')}
             </p>
-            <div className="flex gap-2.5">
+            <div style={{ display: 'flex', gap: '8px' }}>
               {[
-                { icon: <FacebookIcon />, href: 'https://www.facebook.com/share/1Ebp9L869e/', label: t('facebook') },
-                { icon: <LinkedinIcon />, href: 'https://www.linkedin.com/company/edmneg/', label: t('linkedin') },
-              ].map(({ icon, href, label }) => (
-                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                   aria-label={label}
-                   className="w-8 h-8 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center
-                              text-gray-400 hover:bg-[#1A57A1] hover:text-white hover:border-[#1A57A1]
-                              transition-all duration-200">
-                  {icon}
+                { Icon: FB, href: 'https://www.facebook.com/share/1Ebp9L869e/', label: t('facebook') },
+                { Icon: LI, href: 'https://www.linkedin.com/company/edmneg/', label: t('linkedin') },
+              ].map(({ Icon, href, label }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
+                  style={{
+                    width: '32px', height: '32px', borderRadius: '10px',
+                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'rgba(255,255,255,0.5)', transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#1A57A1'; e.currentTarget.style.color = 'white'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}>
+                  <Icon />
                 </a>
               ))}
             </div>
@@ -54,80 +48,69 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h5 className="font-bold text-white mb-4 text-sm uppercase tracking-wider">{t('quickLinks')}</h5>
-            <nav className="flex flex-col gap-2.5" aria-label={locale === 'ar' ? 'روابط سريعة' : 'Quick links'}>
-              {[
-                { label: tn('home'), href: '/' },
-                { label: tn('about'), href: '/about' },
-                { label: tn('whyUs'), href: '/why-us' },
-                { label: tn('howItWorks'), href: '/how-it-works' },
-                { label: tn('faq'), href: '/faq' },
-                { label: tn('blog'), href: '/blog' },
-              ].map(({ label, href }) => (
+            <h5 style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '20px' }}>{t('quickLinks')}</h5>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[['home','/'],['whyUs','/why-us'],['howItWorks','/how-it-works'],['faq','/faq'],['blog','/blog']].map(([key, href]) => (
                 <Link key={href} href={getHref(href)}
-                  className="text-gray-400 hover:text-white text-sm transition-colors hover:translate-x-0.5 rtl:hover:-translate-x-0.5 inline-flex">
-                  {label}
+                  style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
+                  {tn(key as any)}
                 </Link>
               ))}
-            </nav>
+            </div>
           </div>
 
           {/* Legal */}
           <div>
-            <h5 className="font-bold text-white mb-4 text-sm uppercase tracking-wider">{t('legal')}</h5>
-            <nav className="flex flex-col gap-2.5">
-              {[
-                { label: t('privacy'), href: '/privacy-policy' },
-                { label: t('terms'), href: '/terms' },
-                { label: t('refund'), href: '/refund-policy' },
-              ].map(({ label, href }) => (
+            <h5 style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '20px' }}>{t('legal')}</h5>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {[[t('privacy'),'/privacy-policy'],[t('terms'),'/terms'],[t('refund'),'/refund-policy']].map(([label, href]) => (
                 <Link key={href} href={getHref(href)}
-                  className="text-gray-400 hover:text-white text-sm transition-colors inline-flex">
+                  style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
                   {label}
                 </Link>
               ))}
-            </nav>
-            <div className="mt-5 pt-4 border-t border-white/8">
-              <p className="text-xs text-gray-500">{t('cr')}</p>
             </div>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', marginTop: '20px' }}>{t('cr')}</p>
           </div>
 
           {/* Contact */}
           <div>
-            <h5 className="font-bold text-white mb-4 text-sm uppercase tracking-wider">{t('contactUs')}</h5>
-            <div className="flex flex-col gap-3.5">
+            <h5 style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '20px' }}>{t('contactUs')}</h5>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { icon: <Phone size={14} className="text-[#1A57A1] flex-shrink-0 mt-0.5" />, text: '+20 111 234 5661', href: 'tel:+201112345661' },
-                { icon: <Mail size={14} className="text-[#1A57A1] flex-shrink-0 mt-0.5" />, text: 'info@edmneg.com', href: 'mailto:info@edmneg.com' },
-                { icon: <MapPin size={14} className="text-[#1A57A1] flex-shrink-0 mt-0.5" />, text: 'الإسكندرية، مصر', href: null },
-              ].map(({ icon, text, href }, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  {icon}
-                  {href ? (
-                    <a href={href} className="text-gray-400 hover:text-white text-sm transition-colors">{text}</a>
-                  ) : (
-                    <span className="text-gray-400 text-sm">{text}</span>
-                  )}
+                { Icon: Phone, text: '+20 111 234 5661', href: 'tel:+201112345661' },
+                { Icon: Mail,  text: 'info@edmneg.com',  href: 'mailto:info@edmneg.com' },
+                { Icon: MapPin,text: 'الإسكندرية، مصر',  href: null },
+              ].map(({ Icon, text, href }, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Icon size={13} color="rgba(255,255,255,0.3)" />
+                  {href
+                    ? <a href={href} style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)', transition: 'color 0.2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>{text}</a>
+                    : <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>{text}</span>
+                  }
                 </div>
               ))}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom bar */}
-      <div className="border-t border-white/8">
-        <div className="container py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-gray-500 text-xs">
+        {/* Bottom bar */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>
             {t('copyright', { year })}
           </p>
-          <div className="flex items-center gap-5">
-            {[
-              { label: t('privacy'), href: '/privacy-policy' },
-              { label: t('terms'), href: '/terms' },
-            ].map(({ label, href }) => (
+          <div style={{ display: 'flex', gap: '20px' }}>
+            {[[t('privacy'),'/privacy-policy'],[t('terms'),'/terms']].map(([label, href]) => (
               <Link key={href} href={getHref(href)}
-                className="text-gray-500 hover:text-gray-300 text-xs transition-colors">
+                style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)', transition: 'color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}>
                 {label}
               </Link>
             ))}
