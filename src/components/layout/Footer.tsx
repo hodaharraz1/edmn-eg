@@ -23,7 +23,7 @@ export default function Footer() {
           {/* Brand */}
           <div style={{ gridColumn: 'span 1' }}>
             <div style={{ marginBottom: '16px' }}>
-              <Image src="/logo.png" alt="إضمن EDMN" width={100} height={32} style={{ filter: 'brightness(0) invert(1)', objectFit: 'contain' }} />
+              <Image src="/logo.png" alt="إضمن EDMN" width={110} height={36} style={{ objectFit: 'contain' }} />
             </div>
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.7, maxWidth: '240px', marginBottom: '20px' }}>
               {t('desc')}

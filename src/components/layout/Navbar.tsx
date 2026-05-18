@@ -85,8 +85,7 @@ export default function Navbar() {
 
             {/* Logo */}
             <Link href={getHref('/')} className="flex-shrink-0 flex items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1A57A1]">
-              <Image src="/logo.png" alt="إضمن EDMN" width={110} height={36} className="object-contain" priority />
-              <span className="text-[11px] font-bold bg-[#1A57A1] text-white px-2 py-0.5 rounded-full">Beta</span>
+              <Image src="/logo.png" alt="إضمن EDMN" width={120} height={40} className="object-contain" priority />
             </Link>
 
             {/* Desktop Links */}
