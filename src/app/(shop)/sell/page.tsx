@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { BadgeCheck, BarChart3, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { asc, eq, isNotNull } from 'drizzle-orm';
@@ -79,7 +80,7 @@ export default async function SellLanding() {
         </div>
         <div className="card p-6">
           <h2 className="mb-3 text-lg font-bold">العمولات حسب التصنيف</h2>
-          <p className="mb-3 text-xs text-muted">عمولة على قيمة المنتجات فقط، تُحسب عند البيع ولا تتغير على الطلبات السابقة. القيم الحالية قابلة للتحديث من الإدارة — <a href="/legal/fees" className="underline">التفاصيل</a>.</p>
+          <p className="mb-3 text-xs text-muted">عمولة على قيمة المنتجات فقط، تُحسب عند البيع ولا تتغير على الطلبات السابقة. القيم الحالية قابلة للتحديث من الإدارة — <Link href="/legal/fees" className="underline">التفاصيل</Link>.</p>
           <ul className="grid grid-cols-2 gap-2 text-sm">
             {rules.map((r) => <li key={r.name} className="flex justify-between rounded-lg bg-page px-3 py-2"><span>{r.name}</span><span className="font-semibold">{bpsToPercentString(r.bps)}%</span></li>)}
           </ul>

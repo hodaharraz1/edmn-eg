@@ -87,6 +87,7 @@ export const LABELS = {
   payoutType: { BANK_ACCOUNT: 'حساب بنكي', INSTAPAY: 'إنستاباي', MOBILE_WALLET: 'محفظة موبايل' } as Record<string, string>,
   condition: { NEW: 'جديد', USED: 'مستعمل' } as Record<string, string>,
   usedGrade: { LIKE_NEW: 'كالجديد', VERY_GOOD: 'جيد جداً', GOOD: 'جيد', ACCEPTABLE: 'مقبول' } as Record<string, string>,
+  disputeDecision: { FULL_REFUND: 'استرداد كامل للعميل', PARTIAL_REFUND: 'استرداد جزئي', RETURN_REQUIRED: 'يلزم إرجاع المنتج أولاً', REPLACEMENT: 'استبدال المنتج', RELEASE_TO_SELLER: 'إتاحة المستحقات للبائع', REJECT_CLAIM: 'رفض المطالبة' } as Record<string, string>,
   sellerType: { INDIVIDUAL: 'فرد', BUSINESS: 'شركة / نشاط تجاري' } as Record<string, string>,
   returnReason: {
     CHANGED_MIND: 'غيّرت رأيي',

@@ -30,7 +30,6 @@ export default async function Customer360(props: PageProps<'/admin/customers/[id
     db.select().from(disputes).where(or(eq(disputes.claimantUserId, id), eq(disputes.respondentUserId, id))).orderBy(desc(disputes.createdAt)).limit(10),
     db.select().from(auditLogs).where(or(eq(auditLogs.actorUserId, id), and(eq(auditLogs.entityType, 'user'), eq(auditLogs.entityId, id)))).orderBy(desc(auditLogs.createdAt)).limit(30),
   ]);
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="card p-4 text-sm"><h2 className="mb-2 font-bold">{title}</h2>{children}</section>;
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'العملاء', href: '/admin/customers' }, { label: u.fullName }]} />} title={u.fullName} description={`عميل منذ ${formatDate(u.createdAt)}`} actions={<Badge tone={u.status === 'ACTIVE' ? 'success' : 'danger'}>{u.status}</Badge>} />
@@ -62,4 +61,8 @@ export default async function Customer360(props: PageProps<'/admin/customers/[id
       <Section title="سجل النشاط">{activity.map((a) => <p key={a.id} className="text-xs"><code>{a.action}</code> · {formatDate(a.createdAt, true)} {a.ip && <span className="text-muted ltr">({a.ip})</span>}</p>)}</Section>
     </div>
   );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="card p-4 text-sm"><h2 className="mb-2 font-bold">{title}</h2>{children}</section>;
 }

@@ -86,6 +86,13 @@ export async function requireAdmin(): Promise<Actor> {
   return adminActor(s.user.id, { ...(await requestMeta()), sessionId: s.session.id, stepUpAt: s.session.stepUpAt });
 }
 
+/** Admin actor for route handlers (returns null instead of redirecting). */
+export async function getAdminActor(): Promise<Actor | null> {
+  const s = await getAdminSession();
+  if (!s || !s.session.mfaVerifiedAt) return null;
+  return adminActor(s.user.id, { ...(await requestMeta()), sessionId: s.session.id, stepUpAt: s.session.stepUpAt });
+}
+
 /** Guest cart token (random, HttpOnly). Only its hash is stored server-side. */
 export async function guestCartToken(create: boolean): Promise<string | null> {
   const jar = await cookies();

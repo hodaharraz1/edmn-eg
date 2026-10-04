@@ -22,9 +22,6 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
   }
   const r = g.ret;
   const ceiling = await returnRefundCeiling(db, r, false);
-  const Op = ({ op, children, variant }: { op: string; children: React.ReactNode; variant?: 'primary' | 'outline' | 'danger' }) => (
-    <ActionForm action={sellerReturnAction}><input type="hidden" name="returnId" value={r.id} /><input type="hidden" name="op" value={op} /><SubmitButton variant={variant ?? 'primary'}>{children}</SubmitButton></ActionForm>
-  );
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'المرتجعات', href: '/seller/returns' }, { label: `#${r.number}` }]} />} title={`مرتجع #${r.number}`} description={`الطلب ${g.orderLabel}`} actions={<StatusChip status={r.status} />} />
@@ -50,8 +47,8 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
           </ActionForm>
         </div>
       )}
-      {['APPROVED', 'RETURN_IN_TRANSIT'].includes(r.status) && <Op op="received">استلمت المرتجع</Op>}
-      {r.status === 'RECEIVED' && <Op op="inspect" variant="outline">بدء الفحص</Op>}
+      {['APPROVED', 'RETURN_IN_TRANSIT'].includes(r.status) && <Op returnId={r.id} op="received">استلمت المرتجع</Op>}
+      {r.status === 'RECEIVED' && <Op returnId={r.id} op="inspect" variant="outline">بدء الفحص</Op>}
       {['RECEIVED', 'INSPECTION'].includes(r.status) && (
         <div className="grid gap-4 md:grid-cols-2">
           <ActionForm action={sellerReturnAction} className="card space-y-3 p-5">
@@ -76,4 +73,8 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
       )}
     </div>
   );
+}
+
+function Op({ returnId, op, children, variant }: { returnId: string; op: string; children: React.ReactNode; variant?: 'primary' | 'outline' | 'danger' }) {
+  return <ActionForm action={sellerReturnAction}><input type="hidden" name="returnId" value={returnId} /><input type="hidden" name="op" value={op} /><SubmitButton variant={variant ?? 'primary'}>{children}</SubmitButton></ActionForm>;
 }
