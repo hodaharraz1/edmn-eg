@@ -9,6 +9,7 @@ export interface ActionState {
   fieldErrors?: Record<string, string[]>;
   message?: string;
   data?: Record<string, unknown>;
+  code?: string;
   /** monotonically changes so the client can re-show identical messages */
   at?: number;
 }
@@ -25,7 +26,7 @@ export async function runAction(fn: () => Promise<ActionState | void>): Promise<
   } catch (e) {
     if (isDomainError(e)) {
       if (e.code === 'INVALID_STATE' || e.code === 'FORBIDDEN') logger.warn('action.rejected', { code: e.code, detail: e.detail as Record<string, unknown> });
-      return { ok: false, error: e.message, fieldErrors: e.fieldErrors, at: Date.now() };
+      return { ok: false, error: e.message, fieldErrors: e.fieldErrors, code: e.code, at: Date.now() };
     }
     const ref = Math.random().toString(36).slice(2, 10).toUpperCase();
     logger.error('action.failed', { ref, error: e as Error });
