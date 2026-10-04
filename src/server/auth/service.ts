@@ -255,9 +255,12 @@ export async function changePassword(userId: string, current: string, next: stri
   const problem = passwordProblems(next, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY);
   if (problem) throw validation(problem);
   const hash = await hashPassword(next);
-  await db.transaction(async (tx) => {
+  /** Every existing session (all devices) is invalidated; the current device gets a fresh session. */
+  return db.transaction(async (tx) => {
     await tx.update(users).set({ passwordHash: hash, passwordChangedAt: new Date() }).where(eq(users.id, userId));
+    await tx.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
     await audit(tx, { ...anon(meta), userId }, { action: 'auth.password_changed', entityType: 'user', entityId: userId });
+    return { token: await createSession(tx, userId, 'WEB', meta) };
   });
 }
 

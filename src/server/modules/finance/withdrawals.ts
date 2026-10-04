@@ -5,7 +5,8 @@ import { requirePermission, requireSeller, requireStepUp, SYSTEM_ACTOR, type Act
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import { ledgerAdjustments, refunds, sellers, settlements, withdrawalRequests, users, dealPayouts, externalDeals } from '@/server/db/schema';
+import { ledgerAdjustments, refunds, sellerPayoutMethods, sellers, settlements, withdrawalRequests, users, dealPayouts, externalDeals } from '@/server/db/schema';
+import { decryptJson } from '@/server/core/crypto';
 import { notify } from '@/server/modules/notifications/notify';
 import { activePayoutMethod } from '@/server/modules/sellers/service';
 import { getSetting } from '@/server/modules/settings';
@@ -415,4 +416,48 @@ export async function withdrawalQueue(statuses: string[], limit = 50, offset = 0
 
 export async function sellerWithdrawals(sellerId: string) {
   return db.select().from(withdrawalRequests).where(eq(withdrawalRequests.sellerId, sellerId)).orderBy(desc(withdrawalRequests.createdAt)).limit(100);
+}
+
+/* ───────── Payout details for the person executing the transfer ───────── */
+
+const PAYOUT_FIELD_LABELS: Record<string, string> = {
+  type: 'النوع',
+  holderName: 'اسم صاحب الحساب',
+  bankName: 'البنك',
+  accountNumber: 'رقم الحساب',
+  iban: 'IBAN',
+  instapayAddress: 'عنوان إنستاباي',
+  walletProvider: 'مزود المحفظة',
+  walletNumber: 'رقم المحفظة',
+};
+
+function labelled(details: Record<string, unknown>): { label: string; value: string }[] {
+  return Object.entries(details)
+    .filter(([k, v]) => k in PAYOUT_FIELD_LABELS && v !== undefined && v !== null && String(v).trim() !== '')
+    .map(([k, v]) => ({ label: PAYOUT_FIELD_LABELS[k], value: String(v) }));
+}
+
+/**
+ * Full (decrypted) payout destination of a withdrawal or an external-deal payout. Only for staff who
+ * execute transfers, after a fresh 2FA step-up; every reveal is audit-logged.
+ */
+export async function revealPayoutDetails(actor: Actor, kind: 'withdrawal' | 'deal_payout', id: string) {
+  requirePermission(actor, kind === 'withdrawal' ? 'withdrawals.pay' : 'deals.payout');
+  requireStepUp(actor);
+  let details: Record<string, unknown>;
+  if (kind === 'withdrawal') {
+    const [w] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, id));
+    if (!w?.payoutMethodId) throw notFound('طلب السحب');
+    const [pm] = await db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId));
+    if (!pm) throw notFound('وسيلة السحب');
+    details = { type: pm.type, holderName: pm.holderName, ...decryptJson<Record<string, unknown>>(pm.detailsEnc) };
+  } else {
+    const [p] = await db.select().from(dealPayouts).where(eq(dealPayouts.id, id));
+    if (!p) throw notFound('المستحق');
+    const [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, p.dealId));
+    if (!d?.sellerPayoutEnc) throw notFound('بيانات الصرف');
+    details = { type: d.sellerPayoutType, ...decryptJson<Record<string, unknown>>(d.sellerPayoutEnc) };
+  }
+  await audit(db, actor, { action: 'payout.details_revealed', entityType: kind, entityId: id });
+  return labelled(details);
 }

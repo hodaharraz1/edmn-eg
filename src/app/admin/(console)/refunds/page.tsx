@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { desc, eq } from 'drizzle-orm';
 import { Banknote } from 'lucide-react';
-import { refundPaidAction } from '@/app/_actions/admin';
+import { refundPaidAction, revealPayoutAction } from '@/app/_actions/admin';
+import { RevealPayout } from '@/app/_components/reveal-id';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
@@ -62,6 +63,7 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
               <span className="flex items-center gap-2"><b>{formatEGP(p.amount)}</b><StatusChip status={p.status} /></span>
             </div>
             {p.paidReference && <p className="mt-1 text-xs text-muted">مرجع {p.paidReference} · {formatDate(p.paidAt, true)}</p>}
+            {p.status === 'PENDING' && canPayout && <div className="mt-2"><RevealPayout action={revealPayoutAction} kind="deal_payout" id={p.id} back="/admin/refunds?tab=deals" /></div>}
             {p.status === 'PENDING' && canPayout && <PayForm kind="deal" id={p.id} />}
           </li>
         ))}</ul>

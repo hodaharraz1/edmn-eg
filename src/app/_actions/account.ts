@@ -14,7 +14,8 @@ import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { fileOf, filesOf, int, runAction, str, type ActionState } from '@/server/web/action';
-import { requestMeta, requireCustomer } from '@/server/web/session';
+import { requestMeta, requireCustomer, setSessionCookie, WEB_COOKIE } from '@/server/web/session';
+import { env } from '@/server/core/env';
 
 export async function confirmReceiptAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireCustomer('/account/orders');
@@ -144,7 +145,8 @@ export async function changePasswordAction(_p: ActionState, fd: FormData): Promi
   const actor = await requireCustomer('/account/security');
   if (str(fd, 'next') !== str(fd, 'confirm')) return { ok: false, error: 'كلمتا المرور غير متطابقتين', at: Date.now() };
   return runAction(async () => {
-    await changePassword(actor.userId!, str(fd, 'current'), str(fd, 'next'), { ...(await requestMeta()) });
+    const { token } = await changePassword(actor.userId!, str(fd, 'current'), str(fd, 'next'), { ...(await requestMeta()) });
+    await setSessionCookie(WEB_COOKIE, token, env().SESSION_TTL_HOURS);
     return { message: 'تم تغيير كلمة المرور. تم تسجيل خروج الأجهزة الأخرى.' };
   });
 }

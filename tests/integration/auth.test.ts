@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { beginTotpEnrollment, login, register, resolveSession, verifyTotpForUser } from '@/server/auth/service';
+import { beginTotpEnrollment, changePassword, login, register, resolveSession, verifyTotpForUser } from '@/server/auth/service';
 import { totpCode } from '@/server/auth/totp';
 import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
@@ -39,6 +39,17 @@ describe('auth hardening', () => {
       const r = await register({ fullName: 'مستخدم جديد', email: `reg-${n}-${i}@test.local`, phone: `010${n}`, password: 'Test@12345' }, { ip: `10.0.0.${i}`, userAgent: 'vitest' });
       expect(await resolveSession(r.token, 'WEB')).not.toBeNull();
     }
+  });
+
+  it('changing the password signs out every other session but keeps the current device signed in', async () => {
+    const u = await makeUser();
+    const a = await login(u.email!, 'Test@12345', 'WEB', meta);
+    const b = await login(u.email!, 'Test@12345', 'WEB', meta);
+    const { token } = await changePassword(u.id, 'Test@12345', 'New@Pass2026', meta);
+    expect(await resolveSession(a.token, 'WEB')).toBeNull();
+    expect(await resolveSession(b.token, 'WEB')).toBeNull();
+    expect(await resolveSession(token, 'WEB')).not.toBeNull();
+    await expect(login(u.email!, 'Test@12345', 'WEB', meta)).rejects.toThrow();
   });
 
   it('rejects a wrong password with a generic error', async () => {

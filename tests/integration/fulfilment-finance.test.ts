@@ -6,7 +6,8 @@ import { auditLogs, journalEntries, orderItems, orders, productVariants, refunds
 import { cancelSellerOrder, confirmReceipt, confirmSellerOrder, markShipped, saveShipment, sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
 import { createRule } from '@/server/modules/finance/commissions';
 import { accountBalance, reconcile, sellerBalances } from '@/server/modules/finance/ledger';
-import { approveWithdrawal, cancelWithdrawal, createAdjustment, decideAdjustment, markRefundPaid, markWithdrawalPaid, rejectWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
+import { approveWithdrawal, cancelWithdrawal, createAdjustment, decideAdjustment, markRefundPaid, markWithdrawalPaid, rejectWithdrawal, requestWithdrawal, revealPayoutDetails } from '@/server/modules/finance/withdrawals';
+import { adminActor } from '@/server/auth/actors';
 import { addPayoutMethod } from '@/server/modules/sellers/service';
 import { checkout, categoryId, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
@@ -148,6 +149,22 @@ describe('withdrawals', () => {
     expect(w2.withdrawal.id).toBe(w1.withdrawal.id);
     const b = await sellerBalances(db, s.actor.sellerId!);
     expect(b.reserved).toBe(200_00);
+  });
+
+  it('full payout details are revealed only to payout operators after step-up, and the reveal is audited', async () => {
+    const { s } = await sellerWithAvailable();
+    const { withdrawal } = await requestWithdrawal(s.actor, { amount: '150', clientKey: randomUUID() });
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    const operator = await makeAdmin(['FINANCE_OPERATOR']);
+    await expect(revealPayoutDetails(checker, 'withdrawal', withdrawal.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const stale = await adminActor(operator.userId!, { stepUpAt: new Date(Date.now() - 3600_000) });
+    await expect(revealPayoutDetails(stale, 'withdrawal', withdrawal.id)).rejects.toMatchObject({ code: 'STEP_UP_REQUIRED' });
+    const rows = await revealPayoutDetails(operator, 'withdrawal', withdrawal.id);
+    expect(rows.length).toBeGreaterThan(1);
+    expect(withdrawal.payoutMasked).toContain('•');
+    expect(rows.some((r) => !r.value.includes('•'))).toBe(true);
+    const logs = await db.select().from(auditLogs).where(eq(auditLogs.entityId, withdrawal.id));
+    expect(logs.some((l) => l.action === 'payout.details_revealed' && l.actorUserId === operator.userId)).toBe(true);
   });
 
   it('EDGE 12 — two concurrent withdrawals cannot spend the same available balance', async () => {

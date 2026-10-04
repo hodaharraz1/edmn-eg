@@ -15,7 +15,7 @@ import { addPolicyRule, saveAttribute, saveBrand, saveCategory, setCategoryAttri
 import { moderateProduct, moderateRevision, type ModerationDecision } from '@/server/modules/catalog/products';
 import { cancelSellerOrder, confirmReceipt, setFinancialHold } from '@/server/modules/commerce/fulfilment';
 import { createRule, setRuleEnabled } from '@/server/modules/finance/commissions';
-import { approveWithdrawal, createAdjustment, decideAdjustment, markDealPayoutPaid, markRefundPaid, markWithdrawalPaid, markWithdrawalProcessing, rejectWithdrawal, reviewWithdrawal, runScheduledSettlement } from '@/server/modules/finance/withdrawals';
+import { approveWithdrawal, createAdjustment, decideAdjustment, markDealPayoutPaid, markRefundPaid, markWithdrawalPaid, markWithdrawalProcessing, revealPayoutDetails, rejectWithdrawal, reviewWithdrawal, runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { confirmPayment, rejectPayment, saveDestination, startReview, updatePaymentMethod } from '@/server/modules/payments/service';
 import { addDisputeMessage, assignDispute, closeDispute, resolveDispute, setDisputeStatus } from '@/server/modules/postpurchase/disputes';
 import { acceptReturnRefund, approveReturn, rejectReturn } from '@/server/modules/postpurchase/returns';
@@ -218,6 +218,12 @@ export async function withdrawalAdminAction(_p: ActionState, fd: FormData) {
     else if (op === 'reject') await rejectWithdrawal(a, id, str(fd, 'reason'));
     return done();
   }, ['/admin/withdrawals', `/admin/withdrawals/${str(fd, 'withdrawalId')}`]);
+}
+export async function revealPayoutAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const rows = await revealPayoutDetails(a, str(fd, 'kind') === 'deal_payout' ? 'deal_payout' : 'withdrawal', str(fd, 'id'));
+    return { data: { payout: rows } };
+  });
 }
 export async function refundPaidAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {

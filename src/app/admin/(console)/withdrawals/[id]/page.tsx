@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { asc, eq, inArray } from 'drizzle-orm';
-import { withdrawalAdminAction } from '@/app/_actions/admin';
+import { revealPayoutAction, withdrawalAdminAction } from '@/app/_actions/admin';
+import { RevealPayout } from '@/app/_components/reveal-id';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
@@ -50,7 +51,12 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           { label: 'أرصدة البائع الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` },
           ...(w.rejectReason ? [{ label: 'سبب الرفض', value: w.rejectReason }] : []),
         ]} />
-        <p className="mt-3 text-xs text-muted">لعرض رقم الحساب كاملاً للتحويل استخدم «كشف بيانات الصرف» في ملف البائع (يتطلب تحقق إضافي ويُسجّل).</p>
+        {canPay && ['APPROVED', 'PROCESSING'].includes(w.status) && (
+          <div className="mt-3 border-t border-line pt-3">
+            <RevealPayout action={revealPayoutAction} kind="withdrawal" id={w.id} back={`/admin/withdrawals/${w.id}`} />
+            <p className="mt-1 text-xs text-muted">يتطلب تحققاً إضافياً حديثاً (2FA) وكل عملية عرض مسجّلة في سجل التدقيق.</p>
+          </div>
+        )}
       </section>
       <div className="grid gap-4 md:grid-cols-2">
         {canApprove && w.status === 'REQUESTED' && <ActionForm action={withdrawalAdminAction} className="card p-5">{hidden}<input type="hidden" name="op" value="review" /><SubmitButton variant="outline">بدء المراجعة</SubmitButton></ActionForm>}
