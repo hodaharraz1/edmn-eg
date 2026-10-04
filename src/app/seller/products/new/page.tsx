@@ -3,7 +3,7 @@ import { SellerStatusGate } from '@/app/_components/seller-gate';
 import { db } from '@/server/db/client';
 import { categoryTree } from '@/server/modules/catalog/taxonomy';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Stepper } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
@@ -14,7 +14,7 @@ export const metadata = { title: 'إضافة منتج' };
 
 
 export default async function NewProductPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const tree = await categoryTree(db, { activeOnly: true });
   type N = (typeof tree)[number];

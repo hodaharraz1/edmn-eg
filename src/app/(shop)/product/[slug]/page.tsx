@@ -21,7 +21,7 @@ import { JsonLd, absoluteUrl, breadcrumbJsonLd } from '@/app/_components/seo';
 
 export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
   const d = await productDetailBySlug(decodeURIComponent((await props.params).slug));
-  if (!d || !d.visible) return { title: 'منتج غير متاح', robots: { index: false } };
+  if (!d || !d.visible) return { title: d?.product.publishedAt ? 'منتج غير متاح' : 'غير موجود', robots: { index: false } };
   const img = d.images[0] ? mediaUrl(d.images[0].key, 'md') : undefined;
   return {
     title: d.product.seoTitle || d.product.titleAr,
@@ -35,7 +35,9 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const { slug } = await props.params;
   const sp = await props.searchParams;
   const d = await productDetailBySlug(decodeURIComponent(slug));
-  if (!d) notFound();
+  // Listings that were never approved/published are not public, even by direct URL. Previously published
+  // listings (later archived/suspended) keep an "unavailable" page so past buyers' links still resolve.
+  if (!d || (!d.visible && !d.product.publishedAt)) notFound();
   const p = d.product;
   const variantId = typeof sp.v === 'string' ? sp.v : undefined;
   const v = d.variants.find((x) => x.id === variantId) ?? d.variants.find((x) => x.stockOnHand - x.reserved > 0) ?? d.variants[0];

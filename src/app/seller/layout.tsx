@@ -6,7 +6,7 @@ import { SellerNav } from '@/app/_components/seller-nav';
 import { Drawer } from '@/ui/client';
 import { Logo } from '@/ui/logo';
 import { StatusChip } from '@/ui/feedback';
-import { requireSellerActor, currentUser } from '@/server/web/session';
+import { requireSellerActor, requireUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 import { db } from '@/server/db/client';
 import { stores } from '@/server/db/schema';
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: { default: 'مركز البائع', t
 
 export default async function SellerLayout({ children }: { children: React.ReactNode }) {
   const actor = await requireSellerActor('/seller');
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const [store] = await db.select({ name: stores.name, slug: stores.slug }).from(stores).where(eq(stores.sellerId, actor.sellerId!));
   return (

@@ -2,12 +2,12 @@ import { LogOut, Store } from 'lucide-react';
 import Link from 'next/link';
 import { logoutAction } from '@/app/_actions/shop';
 import { AccountNav } from '@/app/_components/account-nav';
-import { requireCustomer, currentUser } from '@/server/web/session';
+import { requireCustomer, requireUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   await requireCustomer('/account');
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const seller = await sellerContextForUser(user.id);
   return (
     <div className="container-page grid grid-cols-1 gap-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)]">

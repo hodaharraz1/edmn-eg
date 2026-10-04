@@ -6,7 +6,7 @@ import { sellerBalances } from '@/server/modules/finance/ledger';
 import { sellerWithdrawals } from '@/server/modules/finance/withdrawals';
 import { activePayoutMethod, sellerContextForUser } from '@/server/modules/sellers/service';
 import { getSetting } from '@/server/modules/settings';
-import { currentUser, requireSellerActor } from '@/server/web/session';
+import { requireUser, requireSellerActor } from '@/server/web/session';
 import { formatDate, formatEGP, toInputAmount } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
@@ -19,7 +19,7 @@ export const metadata = { title: 'السحوبات' };
 
 export default async function WithdrawalsPage() {
   const actor = await requireSellerActor('/seller/withdrawals');
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const [b, list, pm, min, mode, days, sla] = await Promise.all([
     sellerBalances(db, actor.sellerId!),

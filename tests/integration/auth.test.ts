@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { beginTotpEnrollment, login, resolveSession, verifyTotpForUser } from '@/server/auth/service';
+import { beginTotpEnrollment, login, register, resolveSession, verifyTotpForUser } from '@/server/auth/service';
 import { totpCode } from '@/server/auth/totp';
 import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
@@ -28,6 +28,14 @@ describe('auth hardening', () => {
     const s = await resolveSession(r.token, 'ADMIN');
     expect(s?.session.mfaVerifiedAt).toBeNull();
     expect(await resolveSession(r.token, 'WEB')).toBeNull();
+  });
+
+  it('a session created at registration is immediately valid (no clock race with passwordChangedAt)', async () => {
+    for (let i = 0; i < 15; i++) {
+      const n = String(Date.now() + i).slice(-8);
+      const r = await register({ fullName: 'مستخدم جديد', email: `reg-${n}-${i}@test.local`, phone: `010${n}`, password: 'Test@12345' }, { ip: `10.0.0.${i}`, userAgent: 'vitest' });
+      expect(await resolveSession(r.token, 'WEB')).not.toBeNull();
+    }
   });
 
   it('rejects a wrong password with a generic error', async () => {

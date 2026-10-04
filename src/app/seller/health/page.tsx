@@ -1,7 +1,7 @@
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { db } from '@/server/db/client';
 import { riskFlags } from '@/server/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -14,7 +14,7 @@ export const metadata = { title: 'صحة الحساب' };
 const TARGETS = { cancellation: 0.025, returns: 0.1, onTime: 0.9, rating: 4 };
 
 export default async function HealthPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const d = await sellerDashboard(ctx.seller.id, rangeFromPreset('90d'));
   const flags = await db.select().from(riskFlags).where(and(eq(riskFlags.entityType, 'seller'), eq(riskFlags.entityId, ctx.seller.id), eq(riskFlags.status, 'OPEN')));

@@ -49,7 +49,7 @@ export async function register(input: z.input<typeof registerSchema>, meta: Requ
 
   const passwordHash = await hashPassword(password);
   return db.transaction(async (tx) => {
-    const [user] = await tx.insert(users).values({ fullName, email, phone, passwordHash, passwordChangedAt: new Date() }).returning();
+    const [user] = await tx.insert(users).values({ fullName, email, phone, passwordHash }).returning();
     await audit(tx, { ...anon(meta), userId: user.id, type: 'CUSTOMER' }, { action: 'auth.register', entityType: 'user', entityId: user.id });
     const token = await createSession(tx, user.id, 'WEB', meta);
     return { user, token };
@@ -63,6 +63,8 @@ export async function createSession(conn: Parameters<typeof audit>[0], userId: s
   const ttlHours = scope === 'ADMIN' ? env().ADMIN_SESSION_TTL_HOURS : env().SESSION_TTL_HOURS;
   await conn.insert(sessions).values({
     id: sha256(token),
+    // Application clock (not the DB transaction start) so it is always >= a passwordChangedAt set in the same flow.
+    createdAt: new Date(),
     userId,
     scope,
     ip: meta.ip ?? null,

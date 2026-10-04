@@ -9,7 +9,7 @@ import { myAddresses } from '@/server/modules/customers/addresses';
 import { enabledPaymentMethods } from '@/server/modules/payments/service';
 import { getSetting } from '@/server/modules/settings';
 import { allGovernorates } from '@/server/web/context';
-import { currentUser, requireCustomer } from '@/server/web/session';
+import { requireUser, requireCustomer } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { LinkButton } from '@/ui/button';
@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: 'إتمام الشراء', robots: { 
 
 export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   await requireCustomer('/checkout');
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const sp = await props.searchParams;
   const addrs = await myAddresses(user.id);
   const chosen = addrs.find((a) => a.id === sp.address) ?? addrs.find((a) => a.isDefault) ?? addrs[0];

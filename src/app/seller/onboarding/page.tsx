@@ -7,7 +7,7 @@ import { sellerDocuments, sellerPayoutMethods, stores } from '@/server/db/schema
 import { applicationChecklist, sellerContextForUser } from '@/server/modules/sellers/service';
 import { getSetting } from '@/server/modules/settings';
 import { allGovernorates } from '@/server/web/context';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { FileInput } from '@/ui/client';
@@ -21,7 +21,7 @@ export const metadata = { title: 'طلب الانضمام كبائع' };
 const STEPS = ['الهوية والعنوان', 'بيانات النشاط', 'المتجر', 'الوثائق', 'استلام الأرباح', 'المراجعة والإرسال'];
 
 export default async function OnboardingPage(props: PageProps<'/seller/onboarding'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const s = ctx.seller;
   if (!['DRAFT', 'MORE_INFO_REQUIRED'].includes(s.status)) redirect('/seller');

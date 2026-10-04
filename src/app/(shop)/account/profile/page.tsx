@@ -1,5 +1,5 @@
 import { updateProfileAction } from '@/app/_actions/account';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Field, Input } from '@/ui/form';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 export const metadata = { title: 'الملف الشخصي' };
 
 export default async function ProfilePage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   return (
     <div className="space-y-4">
       <PageHeader title="الملف الشخصي" />

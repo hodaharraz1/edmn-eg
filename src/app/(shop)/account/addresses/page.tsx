@@ -3,7 +3,7 @@ import { archiveAddressAction } from '@/app/_actions/account';
 import { AddressForm } from '@/app/_components/address-form';
 import { myAddresses } from '@/server/modules/customers/addresses';
 import { allGovernorates } from '@/server/web/context';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { ConfirmSubmit } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Badge, EmptyState } from '@/ui/feedback';
@@ -11,7 +11,7 @@ import { Badge, EmptyState } from '@/ui/feedback';
 export const metadata = { title: 'العناوين' };
 
 export default async function AddressesPage(props: PageProps<'/account/addresses'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const sp = await props.searchParams;
   const list = await myAddresses(user.id);
   const govs = await allGovernorates();

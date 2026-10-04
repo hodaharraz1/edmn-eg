@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { LifeBuoy } from 'lucide-react';
 import { myTickets } from '@/server/modules/support/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { LinkButton } from '@/ui/button';
@@ -11,7 +11,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'الدعم الفني' };
 
 export default async function SupportPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const list = await myTickets(user.id);
   return (
     <div>

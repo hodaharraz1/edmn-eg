@@ -4,7 +4,7 @@ import { Bell } from 'lucide-react';
 import { markNotificationsReadAction } from '@/app/_actions/account';
 import { db } from '@/server/db/client';
 import { notifications } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { Button } from '@/ui/button';
 import { PageHeader } from '@/ui/data';
@@ -13,7 +13,7 @@ import { EmptyState } from '@/ui/feedback';
 export const metadata = { title: 'الإشعارات' };
 
 export default async function NotificationsPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const list = await db.select().from(notifications).where(eq(notifications.userId, user.id)).orderBy(desc(notifications.createdAt)).limit(100);
   return (
     <div>

@@ -3,7 +3,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { Clock, Package, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { externalDeals, orders, payments, sellerOrders } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
 import { LinkButton } from '@/ui/button';
 import { PageHeader, StatCard } from '@/ui/data';
@@ -12,7 +12,7 @@ import { LogOut } from 'lucide-react';
 import { logoutAction } from '@/app/_actions/shop';
 
 export default async function AccountDashboard() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const [recent, awaitingPay, toConfirm, deals] = await Promise.all([
     db.select().from(orders).where(eq(orders.customerId, user.id)).orderBy(desc(orders.placedAt)).limit(5),
     db.select({ o: orders, p: payments }).from(orders).innerJoin(payments, eq(payments.orderId, orders.id)).where(and(eq(orders.customerId, user.id), inArray(payments.status, ['AWAITING_PAYMENT', 'REJECTED']), eq(orders.status, 'PENDING_PAYMENT'))),

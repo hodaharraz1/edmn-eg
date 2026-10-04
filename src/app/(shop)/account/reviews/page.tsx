@@ -3,7 +3,7 @@ import { Star } from 'lucide-react';
 import { productReviewAction, sellerReviewAction } from '@/app/_actions/account';
 import { db } from '@/server/db/client';
 import { orderItems, orders, productReviews, sellerOrders, sellerReviews, stores } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Stars } from '@/ui/commerce';
@@ -25,7 +25,7 @@ function RatingSelect({ name, label, required }: { name: string; label: string; 
 }
 
 export default async function MyReviewsPage(props: PageProps<'/account/reviews'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const sp = await props.searchParams;
   const delivered = await db
     .select({ so: sellerOrders, number: orders.number, store: stores.name })

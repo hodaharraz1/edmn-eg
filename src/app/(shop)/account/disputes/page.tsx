@@ -3,7 +3,7 @@ import { desc, eq, or } from 'drizzle-orm';
 import { Scale } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { disputes } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/ui/data';
 import { EmptyState, StatusChip } from '@/ui/feedback';
@@ -11,7 +11,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'النزاعات' };
 
 export default async function DisputesPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const list = await db.select().from(disputes).where(or(eq(disputes.claimantUserId, user.id), eq(disputes.respondentUserId, user.id))).orderBy(desc(disputes.createdAt));
   return (
     <div>

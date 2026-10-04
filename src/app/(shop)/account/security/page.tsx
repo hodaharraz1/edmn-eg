@@ -2,7 +2,7 @@ import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { changePasswordAction, confirmCodeAction, sendCodeAction } from '@/app/_actions/account';
 import { db } from '@/server/db/client';
 import { sessions } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
@@ -12,7 +12,7 @@ import { Field, FormSection, Input } from '@/ui/form';
 export const metadata = { title: 'الأمان' };
 
 export default async function SecurityPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const active = await db.select().from(sessions).where(and(eq(sessions.userId, user.id), isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date()))).orderBy(desc(sessions.lastSeenAt)).limit(10);
   return (
     <div className="space-y-4">

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { dealsForUser } from '@/server/modules/deals/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
 import { LinkButton } from '@/ui/button';
 import { PageHeader } from '@/ui/data';
@@ -10,7 +10,7 @@ import { Badge, EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'الصفقات المحمية' };
 
 export default async function DealsPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const list = await dealsForUser(user.id);
   return (
     <div>

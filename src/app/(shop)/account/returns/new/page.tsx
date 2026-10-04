@@ -4,7 +4,7 @@ import { requestReturnAction } from '@/app/_actions/account';
 import { db } from '@/server/db/client';
 import { orders, orderItems, sellerOrders, stores } from '@/server/db/schema';
 import { returnWindow } from '@/server/modules/postpurchase/returns';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { RETURN_REASONS } from '@/domain/machines';
 import { formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
@@ -17,7 +17,7 @@ import { Field, Select, Textarea } from '@/ui/form';
 export const metadata = { title: 'طلب إرجاع' };
 
 export default async function NewReturnPage(props: PageProps<'/account/returns/new'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const soId = (await props.searchParams).so;
   if (typeof soId !== 'string' || !/^[0-9a-f-]{36}$/.test(soId)) notFound();
   const [row] = await db.select({ so: sellerOrders, order: orders, store: stores.name }).from(sellerOrders).innerJoin(orders, eq(orders.id, sellerOrders.orderId)).innerJoin(stores, eq(stores.sellerId, sellerOrders.sellerId)).where(eq(sellerOrders.id, soId));

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { RotateCcw } from 'lucide-react';
 import { returnsForCustomer } from '@/server/modules/postpurchase/returns';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { PageHeader } from '@/ui/data';
@@ -10,7 +10,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'المرتجعات' };
 
 export default async function ReturnsPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const list = await returnsForCustomer(user.id);
   return (
     <div>

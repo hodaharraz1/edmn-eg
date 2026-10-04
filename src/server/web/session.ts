@@ -49,6 +49,16 @@ export async function currentUser() {
   return (await getWebSession())?.user ?? null;
 }
 
+/**
+ * Signed-in user for pages. Layout guards and pages render concurrently in the App Router, so a
+ * page must never assume its layout already redirected an anonymous visitor.
+ */
+export async function requireUser(next = '/account') {
+  const user = await currentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  return user;
+}
+
 export async function customerActorOrNull(): Promise<Actor | null> {
   const s = await getWebSession();
   if (!s) return null;

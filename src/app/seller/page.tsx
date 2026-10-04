@@ -5,7 +5,7 @@ import { RangeFilter } from '@/app/_components/range-filter';
 import { SellerStatusGate } from '@/app/_components/seller-gate';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatEGP, formatNumber } from '@/lib/format';
 import { BarChart, PageHeader, StatCard } from '@/ui/data';
 
@@ -13,7 +13,7 @@ export const metadata = { title: 'لوحة التحكم' };
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 
 export default async function SellerDashboard(props: PageProps<'/seller'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   if (ctx.seller.status === 'DRAFT') redirect('/seller/onboarding');
   const sp = await props.searchParams;

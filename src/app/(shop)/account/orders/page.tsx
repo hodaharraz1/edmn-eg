@@ -3,7 +3,7 @@ import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { Package } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { orders, sellerOrders, stores } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
 import { LinkButton } from '@/ui/button';
 import { PageHeader, Pagination } from '@/ui/data';
@@ -12,7 +12,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'طلباتي' };
 
 export default async function OrdersPage(props: PageProps<'/account/orders'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const sp = await props.searchParams;
   const page = Math.max(1, Number(sp.page) || 1);
   const [list, [{ n }]] = await Promise.all([

@@ -4,7 +4,7 @@ import { dealStepAction, inviteSellerAction } from '@/app/_actions/deals';
 import { db } from '@/server/db/client';
 import { externalDeals } from '@/server/db/schema';
 import { dealProblems } from '@/server/modules/deals/service';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate, formatEGP, toInputAmount } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { FileInput } from '@/ui/client';
@@ -18,7 +18,7 @@ export const metadata = { title: 'صفقة محمية جديدة' };
 const STEPS = ['المنتج', 'البائع', 'السعر والشروط', 'التسليم', 'شروط خاصة', 'مراجعة ودعوة البائع'];
 
 export default async function NewDealWizard(props: PageProps<'/account/deals/new'>) {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const sp = await props.searchParams;
   const dealId = typeof sp.deal === 'string' ? sp.deal : '';
   let step = Math.min(6, Math.max(1, Number(sp.step) || 1));

@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { payoutMethodAction, sellerTotpAction, staffAction } from '@/app/_actions/seller';
 import { db } from '@/server/db/client';
 import { sellerMembers, sellerPayoutMethods, users } from '@/server/db/schema';
-import { requireSellerActor, currentUser } from '@/server/web/session';
+import { requireSellerActor, requireUser } from '@/server/web/session';
 import { formatDate } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { SELLER_MEMBER_ROLES } from '@/domain/machines';
@@ -16,7 +16,7 @@ export const metadata = { title: 'الإعدادات' };
 
 export default async function SellerSettings() {
   const actor = await requireSellerActor('/seller/settings');
-  const user = (await currentUser())!;
+  const user = await requireUser('/seller');
   const isOwner = actor.sellerPermissions?.has('staff.manage');
   const [methods, members] = await Promise.all([
     db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.sellerId, actor.sellerId!)).orderBy(desc(sellerPayoutMethods.createdAt)),

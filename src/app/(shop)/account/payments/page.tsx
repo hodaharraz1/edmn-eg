@@ -3,7 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { Wallet } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { externalDeals, orders, payments, refunds } from '@/server/db/schema';
-import { currentUser } from '@/server/web/session';
+import { requireUser } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { DataTable, PageHeader } from '@/ui/data';
@@ -12,7 +12,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 export const metadata = { title: 'المدفوعات' };
 
 export default async function PaymentsPage() {
-  const user = (await currentUser())!;
+  const user = await requireUser('/account');
   const rows = await db
     .select({ p: payments, orderNumber: orders.number, dealNumber: externalDeals.number })
     .from(payments)
