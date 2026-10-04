@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { hashPassword, passwordProblems, STAFF_POLICY } from '@/server/auth/password';
-import { requirePermission } from '@/server/core/actor';
+import { requirePermission, requireStepUp } from '@/server/core/actor';
 import { parseEgp, parsePercentToBps } from '@/server/core/money';
 import { validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
@@ -304,6 +304,7 @@ export async function settingAction(_p: ActionState, fd: FormData) {
 export async function rolePermissionAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     requirePermission(a, 'roles.manage');
+    requireStepUp(a);
     const role = str(fd, 'role');
     if (role === 'SUPER_ADMIN') throw validation('لا يمكن تعديل صلاحيات المدير العام');
     const perms = fd.getAll('perm').map(String).filter((p): p is Permission => (ALL_PERMISSIONS as string[]).includes(p));
@@ -319,6 +320,7 @@ export async function rolePermissionAction(_p: ActionState, fd: FormData) {
 export async function staffUserAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     requirePermission(a, 'roles.manage');
+    requireStepUp(a);
     const op = str(fd, 'op');
     if (op === 'create') {
       const email = str(fd, 'email').toLowerCase();

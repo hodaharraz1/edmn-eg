@@ -22,7 +22,7 @@ export default async function Roles(props: PageProps<'/admin/roles'>) {
   const ur = await db.select().from(userRoles);
   return (
     <div className="space-y-4">
-      <PageHeader title="الأدوار والصلاحيات" description="يُتحقق من الصلاحيات على الخادم في كل إجراء؛ إخفاء عناصر القائمة ليس وسيلة الحماية. كل تغيير يُسجّل في سجل التدقيق." />
+      <PageHeader title="الأدوار والصلاحيات" description="يُتحقق من الصلاحيات على الخادم في كل إجراء؛ إخفاء عناصر القائمة ليس وسيلة الحماية. كل تغيير يتطلب تحققاً إضافياً حديثاً (2FA) ويُسجّل في سجل التدقيق." />
       <Tabs active={tab} tabs={[{ key: 'staff', label: 'فريق العمل', href: '/admin/roles' }, { key: 'matrix', label: 'مصفوفة الصلاحيات', href: '/admin/roles?tab=matrix' }]} />
       {tab === 'staff' && (
         <>
@@ -38,13 +38,13 @@ export default async function Roles(props: PageProps<'/admin/roles'>) {
                   {u.id !== actor.userId && (
                     <div className="flex flex-wrap gap-2">
                       <ActionForm action={staffUserAction} className="flex gap-2">
-                        <input type="hidden" name="userId" value={u.id} />
+                        <input type="hidden" name="userId" value={u.id} /><input type="hidden" name="back" value="/admin/roles" />
                         <Select name="role" className="w-auto" aria-label="الدور">{roleList.map((r) => <option key={r.code} value={r.code}>{r.nameAr}</option>)}</Select>
                         <SubmitButton size="sm" variant="outline" name="op" value="grant">منح</SubmitButton>
                         <SubmitButton size="sm" variant="ghost" name="op" value="revoke">سحب</SubmitButton>
                       </ActionForm>
                       <ActionForm action={staffUserAction}>
-                        <input type="hidden" name="userId" value={u.id} /><input type="hidden" name="op" value="disable" /><input type="hidden" name="status" value={u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'} />
+                        <input type="hidden" name="userId" value={u.id} /><input type="hidden" name="back" value="/admin/roles" /><input type="hidden" name="op" value="disable" /><input type="hidden" name="status" value={u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'} />
                         <SubmitButton size="sm" variant={u.status === 'ACTIVE' ? 'danger' : 'outline'}>{u.status === 'ACTIVE' ? 'تعطيل الحساب' : 'إعادة التفعيل'}</SubmitButton>
                       </ActionForm>
                     </div>
@@ -54,7 +54,7 @@ export default async function Roles(props: PageProps<'/admin/roles'>) {
             })}
           </ul>
           <ActionForm action={staffUserAction} className="card grid gap-3 p-5 md:grid-cols-2" resetOnSuccess>
-            <input type="hidden" name="op" value="create" />
+            <input type="hidden" name="op" value="create" /><input type="hidden" name="back" value="/admin/roles" />
             <h2 className="font-bold md:col-span-2">إضافة موظف</h2>
             <Field label="الاسم" required><Input name="fullName" required /></Field>
             <Field label="البريد" required><Input name="email" type="email" required className="ltr" /></Field>
@@ -75,7 +75,7 @@ export default async function Roles(props: PageProps<'/admin/roles'>) {
                 <summary className="cursor-pointer"><b>{r.nameAr}</b> <span className="ltr text-xs text-muted">{r.code}</span> · {has.size} صلاحية</summary>
                 {r.code === 'SUPER_ADMIN' ? <p className="mt-2 text-sm text-muted">كل الصلاحيات.</p> : (
                   <ActionForm action={rolePermissionAction} className="mt-3 space-y-3">
-                    <input type="hidden" name="role" value={r.code} />
+                    <input type="hidden" name="role" value={r.code} /><input type="hidden" name="back" value="/admin/roles?tab=matrix" />
                     <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{ALL_PERMISSIONS.map((p) => <Checkbox key={p} name="perm" value={p} defaultChecked={has.has(p)} label={<span>{PERMISSIONS[p]} <span className="ltr text-[10px] text-muted">{p}</span></span>} />)}</div>
                     <div className="flex gap-2"><Input name="reason" required minLength={3} placeholder="سبب التعديل" className="w-72" aria-label="السبب" /><SubmitButton size="sm">حفظ</SubmitButton></div>
                   </ActionForm>

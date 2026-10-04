@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireUser, type Actor } from '@/server/core/actor';
+import { requirePermission, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -244,6 +244,7 @@ export const destinationSchema = z.object({
 
 export async function saveDestination(actor: Actor, id: string | null, input: z.input<typeof destinationSchema>, reason: string) {
   requirePermission(actor, 'payments.destinations.manage');
+  requireStepUp(actor); // changing where customers send money is a high-risk operation
   const why = requireReason(reason);
   const d = parse(destinationSchema, input);
   const required: Record<string, string[]> = {
@@ -268,6 +269,7 @@ export async function saveDestination(actor: Actor, id: string | null, input: z.
 
 export async function updatePaymentMethod(actor: Actor, code: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH', input: { isEnabled: boolean; instructionsAr: string; sortOrder: number }, reason: string) {
   requirePermission(actor, 'payments.destinations.manage');
+  requireStepUp(actor);
   const why = requireReason(reason);
   await db.transaction(async (tx) => {
     const [old] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, code)).for('update');

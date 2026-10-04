@@ -4,6 +4,9 @@ import { beginTotpEnrollment, login, register, resolveSession, verifyTotpForUser
 import { totpCode } from '@/server/auth/totp';
 import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
+import { adminActor } from '@/server/auth/actors';
+import { saveDestination } from '@/server/modules/payments/service';
+import { updateSetting } from '@/server/modules/settings';
 import { makeUser } from '../helpers/factory';
 
 const meta = { ip: '127.0.0.1', userAgent: 'vitest' };
@@ -41,5 +44,17 @@ describe('auth hardening', () => {
   it('rejects a wrong password with a generic error', async () => {
     const u = await makeUser();
     await expect(login(u.email!, 'wrong-password', 'WEB', meta)).rejects.toThrow();
+  });
+
+  it('high-risk admin operations require a recent 2FA step-up', async () => {
+    const u = await makeUser({ staff: true, roles: ['SUPER_ADMIN'] });
+    const stale = await adminActor(u.id, { stepUpAt: new Date(Date.now() - 60 * 60_000) });
+    const fresh = await adminActor(u.id, { stepUpAt: new Date() });
+    const dest = { methodCode: 'INSTAPAY' as const, label: 'حساب اختبار', details: { instapayAddress: 'test@instapay', accountName: 'EDMN TEST' }, isEnabled: false, sortOrder: 9 };
+    await expect(saveDestination(stale, null, dest, 'اختبار')).rejects.toMatchObject({ code: 'STEP_UP_REQUIRED' });
+    await expect(updateSetting(stale, 'withdrawals.dualControlThreshold', 1_000_000, 'اختبار')).rejects.toMatchObject({ code: 'STEP_UP_REQUIRED' });
+    // Non-sensitive settings do not need step-up; sensitive ones succeed after step-up.
+    await expect(updateSetting(stale, 'marketplace.supportPhone', '01000000000', 'اختبار')).resolves.toBeUndefined();
+    await expect(updateSetting(fresh, 'withdrawals.dualControlThreshold', 5_000_000, 'اختبار')).resolves.toBeUndefined();
   });
 });

@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireSeller, requireUser, type Actor } from '@/server/core/actor';
+import { requirePermission, requireSeller, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
 import { decryptJson, encrypt, encryptJson, mask } from '@/server/core/crypto';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { isValidEgyptNationalId, normalizeEgyptMobile, slugify } from '@/server/core/text';
@@ -554,6 +554,7 @@ export async function removeStaffMember(actor: Actor, userId: string) {
 /** Reveal a seller's national ID to an authorized reviewer. Every reveal is audited. */
 export async function revealNationalId(actor: Actor, sellerId: string): Promise<string> {
   requirePermission(actor, 'sellers.documents.view');
+  requireStepUp(actor);
   return db.transaction(async (tx) => {
     const [s] = await tx.select().from(sellers).where(eq(sellers.id, sellerId));
     if (!s?.nationalIdEnc) throw notFound('الرقم القومي');

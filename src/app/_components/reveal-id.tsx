@@ -11,7 +11,7 @@ function Value() {
 export function RevealNationalId({ action, sellerId }: { action: FormAction; sellerId: string }) {
   return (
     <ActionForm action={action} className="flex flex-wrap items-center gap-2">
-      <input type="hidden" name="sellerId" value={sellerId} />
+      <input type="hidden" name="sellerId" value={sellerId} /><input type="hidden" name="back" value={`/admin/sellers/${sellerId}`} />
       <SubmitButton size="sm" variant="outline">كشف الرقم القومي (مسجل)</SubmitButton>
       <Value />
     </ActionForm>

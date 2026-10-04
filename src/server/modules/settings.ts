@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, type Actor } from '@/server/core/actor';
+import { requirePermission, type Actor, requireStepUp } from '@/server/core/actor';
 import { validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { systemSettings } from '@/server/db/schema';
@@ -58,6 +58,11 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payout.changeRequiresReview',
   'payout.changeHoldHours',
   'deals.feeBps',
+  'deals.feePayer',
+  'settlement.mode',
+  'settlement.daysOfMonth',
+  'settlement.minimumAmount',
+  'withdrawals.slaBusinessHours',
 ];
 
 export function settingDefault<K extends SettingKey>(key: K): SettingValue<K> {
@@ -84,6 +89,7 @@ export async function getAllSettings(conn: DbOrTx = db): Promise<{ [K in Setting
 
 export async function updateSetting(actor: Actor, key: SettingKey, value: unknown, reason: string): Promise<void> {
   requirePermission(actor, 'settings.manage');
+  if (SENSITIVE_SETTINGS.includes(key)) requireStepUp(actor);
   const schema = SETTINGS_SCHEMA[key];
   if (!schema) throw validation('إعداد غير معروف');
   const parsed = schema.safeParse(value);
