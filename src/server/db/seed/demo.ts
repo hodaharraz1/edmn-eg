@@ -17,6 +17,9 @@ import { confirmPayment, startReview, submitProof } from '@/server/modules/payme
 import { confirmReceipt, confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
 import { approveWithdrawal, markWithdrawalPaid, markWithdrawalProcessing, requestWithdrawal } from '@/server/modules/finance/withdrawals';
 import { createProductReview, createSellerReview } from '@/server/modules/reviews/service';
+import { requestReturn } from '@/server/modules/postpurchase/returns';
+import { openDispute } from '@/server/modules/postpurchase/disputes';
+import { openTicket } from '@/server/modules/support/service';
 import { addPayoutMethod, decideSeller, saveBusiness, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 import { createDeal, inviteSeller, saveDealStep, acceptInvitation, startDealPayment } from '@/server/modules/deals/service';
 import { orderItems, sellerOrders, payments, paymentSubmissions, productVariants } from '@/server/db/schema';
@@ -295,6 +298,17 @@ export async function seedDemo() {
     await ship(so.id, 'J&T Express');
     await confirmReceipt(o5.ca, so.id);
   }
+
+  // ── Post-purchase examples for the operations queues
+  // Omar asks to return the fashion item from order 5 (change of mind, within the return window).
+  const o5s = await sos(o5.order.id);
+  const fashionSo = o5s.find((x) => x.sellerId === fashion.sellerId)!;
+  const [fashionItem] = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, fashionSo.id));
+  await requestReturn(o5.ca, { sellerOrderId: fashionSo.id, reason: 'CHANGED_MIND', description: 'المقاس أكبر من المتوقع وأرغب في إرجاع المنتج كما هو بحالته الأصلية.', items: [{ orderItemId: fashionItem.id, quantity: 1 }] });
+  // Mona opens a dispute on the shipped (not yet received) part of order 2 → seller funds stay held.
+  await openDispute(o2.ca, { sellerOrderId: o2s[0].id, reasonCode: 'ITEM_NOT_RECEIVED', description: 'رقم التتبع لا يظهر أي تحديث منذ أيام والبائع لا يرد على الرسائل.' });
+  // A support ticket from Ahmed about his unpaid order.
+  await openTicket(o1.ca, { type: 'PAYMENT', subject: 'استفسار عن طريقة الدفع بإنستاباي', body: 'هل يمكنني الدفع من حساب إنستاباي باسم زوجتي؟ وما المدة المتاحة للدفع؟', relatedType: 'order', relatedId: '' });
 
   // ── Withdrawals: one paid (maker/checker), one pending
   const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
