@@ -52,6 +52,16 @@ export function orderLabel(number: number, suffix?: string) {
 export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSchema>) {
   const customerId = requireUser(actor);
   const d = parse(checkoutSchema, input);
+  try {
+    return await placeOrderTx(actor, customerId, d);
+  } catch (e) {
+    // The customer has now been shown the current prices: accept them so the next review passes.
+    if (e instanceof DomainError && e.code === 'CONFLICT') await acknowledgePrices(db, { userId: customerId });
+    throw e;
+  }
+}
+
+async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof checkoutSchema>) {
   return db.transaction(async (tx) => {
     // Serialize concurrent checkouts of the same customer, then check idempotency.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'checkout:' + customerId}))`);
@@ -85,7 +95,6 @@ export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSch
     }
     if (problems.length) throw new DomainError('INVALID_STATE', problems.join('، '));
     if (priced.grandTotal !== d.expectedTotal || priced.groups.some((g) => g.lines.some((l) => l.issues.includes('PRICE_CHANGED')))) {
-      await acknowledgePrices(tx, { userId: customerId });
       throw new DomainError('CONFLICT', 'تغيّرت الأسعار أو تكلفة الشحن. يرجى مراجعة الإجمالي الجديد ثم التأكيد مرة أخرى');
     }
 

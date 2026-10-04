@@ -23,7 +23,12 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
-    "test:all": "npm run typecheck && npm run lint && npm run test && npm run test:e2e"
+    "test:all": "npm run typecheck && npm run lint && npm run test && npm run test:e2e",
+    "db:seed:demo": "tsx scripts/seed.ts --demo",
+    "db:setup": "npm run db:migrate && npm run db:seed:demo",
+    "ledger:check": "tsx scripts/ledger-check.ts",
+    "admin:totp": "tsx scripts/admin-totp.ts",
+    "worker:once": "tsx scripts/worker.ts --once"
   },
   "dependencies": {
     "clsx": "^2.1.1",

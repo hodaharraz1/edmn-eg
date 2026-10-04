@@ -77,8 +77,8 @@ export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
   if (q) {
     const terms = q.split(' ').filter(Boolean).map((t) => t.replace(/[':&|!()*\\]/g, '')).filter(Boolean);
     const tsq = terms.map((t) => `${t}:*`).join(' & ');
-    where.push(sql`(${products.searchVector} @@ to_tsquery('simple', ${tsq}) or similarity(${products.searchText}, ${q}) > 0.25 or ${products.searchText} ilike ${'%' + q + '%'})`);
-    rank = sql`(ts_rank(${products.searchVector}, to_tsquery('simple', ${tsq})) + similarity(${products.searchText}, ${q}))`;
+    where.push(sql`(${products.searchVector} @@ to_tsquery('simple', ${tsq}) or word_similarity(${q}, ${products.searchText}) > 0.45 or ${products.searchText} ilike ${'%' + q + '%'})`);
+    rank = sql`(ts_rank(${products.searchVector}, to_tsquery('simple', ${tsq})) + word_similarity(${q}, ${products.searchText}))`;
   }
   if (query.categoryId) where.push(sql`${products.categoryId} in (select id from categories where ${query.categoryId}::uuid = any(path))`);
   if (query.brandIds?.length) where.push(inArray(products.brandId, query.brandIds));
