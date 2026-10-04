@@ -1,0 +1,126 @@
+@import 'tailwindcss';
+
+/* ───────────────────────── EDMN design tokens ─────────────────────────
+   Built around the official logo colours (deep blue + red). Red is reserved for the
+   protected-deal identity and urgent states; commerce UI is predominantly blue/neutral. */
+@theme {
+  --font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, 'Noto Sans Arabic', system-ui, sans-serif;
+
+  --color-brand-950: #061a3d;
+  --color-brand-900: #0a2a5e;
+  --color-brand-800: #0d3678;
+  --color-brand-700: #0f3f8c;
+  --color-brand-600: #1452b3;
+  --color-brand-500: #1e66d0;
+  --color-brand-400: #4f8be0;
+  --color-brand-200: #bcd2f3;
+  --color-brand-100: #e6eefb;
+  --color-brand-50: #f3f7fd;
+
+  --color-accent-700: #b3122a;
+  --color-accent-600: #d7263d;
+  --color-accent-100: #fde6e9;
+  --color-accent-50: #fff4f5;
+
+  --color-deal-600: #c2410c;
+  --color-deal-100: #ffedd5;
+
+  --color-ink: #0f172a;
+  --color-muted: #5b6474;
+  --color-line: #e3e8ef;
+  --color-page: #f5f7fa;
+
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 10px 30px rgb(15 23 42 / 0.12);
+
+  --breakpoint-xs: 26rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+  /* Arabic needs slightly more line-height and no letter-spacing */
+  :lang(ar) h1,
+  :lang(ar) h2,
+  :lang(ar) h3 {
+    letter-spacing: 0;
+    line-height: 1.35;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Numbers/codes inside RTL text */
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  input[type='number']::-webkit-inner-spin-button {
+    opacity: 0.6;
+  }
+  dialog::backdrop {
+    background: rgb(15 23 42 / 0.45);
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .prose-ar p {
+    margin-block: 0.6em;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #eef1f5 25%, #f7f9fb 37%, #eef1f5 63%);
+    background-size: 400% 100%;
+    animation: skeleton 1.4s ease infinite;
+  }
+}
+
+@keyframes skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

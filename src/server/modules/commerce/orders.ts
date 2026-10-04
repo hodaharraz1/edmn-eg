@@ -203,7 +203,7 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     await notify(tx, {
       event: 'ORDER_CREATED',
       userIds: [customerId],
-      vars: { order: order.number, amount: formatEGP(order.grandTotal), due: dueAt.toLocaleString('ar-EG') },
+      vars: { order: order.number, amount: formatEGP(order.grandTotal), due: dueAt.toLocaleString('ar-EG-u-nu-latn') },
       link: `/account/orders/${order.id}`,
     });
     return { order, created: true };

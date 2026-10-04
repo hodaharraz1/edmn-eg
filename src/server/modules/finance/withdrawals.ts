@@ -54,7 +54,7 @@ export async function requestWithdrawal(
     const [seller] = await tx.select().from(sellers).where(eq(sellers.id, sellerId)).for('update');
     if (!seller || !['APPROVED', 'RESTRICTED'].includes(seller.status)) throw new DomainError('FORBIDDEN', 'السحب غير متاح لحالة حسابك الحالية');
     if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) {
-      throw invalidState(`تم تغيير بيانات السحب مؤخراً. السحب متاح بعد ${seller.payoutHoldUntil.toLocaleString('ar-EG')}`);
+      throw invalidState(`تم تغيير بيانات السحب مؤخراً. السحب متاح بعد ${seller.payoutHoldUntil.toLocaleString('ar-EG-u-nu-latn')}`);
     }
     const min = await getSetting('withdrawals.minimumAmount', tx);
     if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);

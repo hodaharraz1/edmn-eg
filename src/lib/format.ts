@@ -1,6 +1,6 @@
 /** Client-safe formatting helpers (no server imports). Money values are integer piasters. */
-const egp = new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const egpFixed = new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const egp = new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const egpFixed = new Intl.NumberFormat('ar-EG-u-nu-latn', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function formatEGP(minor: number | null | undefined, opts: { fixed?: boolean } = {}): string {
   if (minor === null || minor === undefined) return '—';
@@ -10,13 +10,13 @@ export function formatEGP(minor: number | null | undefined, opts: { fixed?: bool
 
 export function formatNumber(n: number | string | null | undefined): string {
   if (n === null || n === undefined) return '—';
-  return new Intl.NumberFormat('ar-EG').format(Number(n));
+  return new Intl.NumberFormat('ar-EG-u-nu-latn').format(Number(n));
 }
 
 export function formatDate(d: Date | string | null | undefined, withTime = false): string {
   if (!d) return '—';
   const date = typeof d === 'string' ? new Date(d) : d;
-  return new Intl.DateTimeFormat('ar-EG', {
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

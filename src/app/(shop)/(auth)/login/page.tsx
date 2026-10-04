@@ -1,0 +1,42 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { loginAction } from '@/app/_actions/auth';
+import { ActionForm, SubmitButton } from '@/ui/action-form';
+import { Field, Input } from '@/ui/form';
+import { Alert } from '@/ui/feedback';
+import { currentUser } from '@/server/web/session';
+
+export const metadata: Metadata = { title: 'تسجيل الدخول', robots: { index: false } };
+
+export default async function LoginPage(props: PageProps<'/login'>) {
+  const sp = await props.searchParams;
+  const next = typeof sp.next === 'string' ? sp.next : '/';
+  if (await currentUser()) redirect(next.startsWith('/') && !next.startsWith('//') ? next : '/');
+  return (
+    <>
+      <h1 className="mb-1 text-xl font-bold">تسجيل الدخول</h1>
+      <p className="mb-6 text-sm text-muted">أهلاً بك في اضمن. سجّل دخولك لمتابعة طلباتك.</p>
+      {sp.reset && <Alert tone="success" className="mb-4">تم تغيير كلمة المرور. سجّل دخولك بكلمة المرور الجديدة.</Alert>}
+      <ActionForm action={loginAction} className="space-y-4">
+        <input type="hidden" name="next" value={next} />
+        <Field label="البريد الإلكتروني أو رقم الموبايل" htmlFor="identifier" required>
+          <Input id="identifier" name="identifier" autoComplete="username" required dir="ltr" className="text-start" />
+        </Field>
+        <Field label="كلمة المرور" htmlFor="password" required>
+          <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        </Field>
+        <div className="flex justify-end text-sm">
+          <Link href="/forgot-password" className="text-brand-700 hover:underline">نسيت كلمة المرور؟</Link>
+        </div>
+        <SubmitButton className="w-full" size="lg" pendingText="جارٍ الدخول…">تسجيل الدخول</SubmitButton>
+      </ActionForm>
+      <p className="mt-6 text-center text-sm">
+        ليس لديك حساب؟{' '}
+        <Link href={`/register?next=${encodeURIComponent(next)}`} className="font-semibold text-brand-700 hover:underline">
+          أنشئ حساباً جديداً
+        </Link>
+      </p>
+    </>
+  );
+}
