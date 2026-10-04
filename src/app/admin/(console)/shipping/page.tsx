@@ -50,7 +50,7 @@ export default async function ShippingEvidence(props: PageProps<'/admin/shipping
       <form className="card grid gap-2 p-3 sm:grid-cols-5" role="search">
         <Input name="q" defaultValue={q} placeholder="رقم الطلب / البائع / العميل / الشركة / التتبع" aria-label="بحث" className="sm:col-span-2" />
         <Select name="status" defaultValue={status} aria-label="الحالة"><option value="">كل الحالات</option>{SHIPMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</Select>
-        <div className="flex gap-2 sm:col-span-2"><Input type="date" name="from" defaultValue={from} aria-label="من" /><Input type="date" name="to" defaultValue={to} aria-label="إلى" /><button className={buttonClass('primary', 'md')}>بحث</button></div>
+        <div className="flex flex-wrap gap-2 sm:col-span-2 sm:flex-nowrap"><Input type="date" name="from" defaultValue={from} aria-label="من" /><Input type="date" name="to" defaultValue={to} aria-label="إلى" /><button className={buttonClass('primary', 'md')}>بحث</button></div>
       </form>
       <DataTable rows={rows} rowKey={(r) => r.s.id} empty={<EmptyState icon={Truck} title="لا توجد شحنات مطابقة" />} columns={[
         { key: 'o', header: 'الطلب', cell: (r) => <Link className="font-semibold text-brand-700" href={`/admin/orders/${r.orderId}`}>#{r.orderNumber}-{r.suffix}</Link> },

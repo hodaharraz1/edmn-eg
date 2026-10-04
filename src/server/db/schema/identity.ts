@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid, bigserial } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, enumCheck, ts, updatedAt } from './_helpers';
 
 export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DISABLED'] as const;
@@ -19,6 +19,8 @@ export const users = pgTable(
     phoneVerifiedAt: ts(),
     totpSecretEnc: text(),
     totpEnabledAt: ts(),
+    /** Last accepted TOTP time-step; a code is accepted at most once (replay protection). */
+    totpLastStep: bigint({ mode: 'number' }),
     passwordChangedAt: ts(),
     lastLoginAt: ts(),
     failedLoginCount: integer().notNull().default(0),

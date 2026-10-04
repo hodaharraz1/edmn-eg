@@ -249,7 +249,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         </section>
       </div>
 
-      <section id="reviews" className="card grid gap-6 p-5 lg:grid-cols-[260px_1fr]">
+      <section id="reviews" className="card grid gap-6 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-3">
           <h2 className="text-lg font-bold">تقييمات المنتج</h2>
           <div className="flex items-center gap-2">

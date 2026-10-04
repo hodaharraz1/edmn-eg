@@ -52,12 +52,18 @@ export function totpCode(secret: string, time = Date.now(), step = 30): string {
 }
 
 export function verifyTotp(secret: string, code: string, window = 1, time = Date.now()): boolean {
+  return matchTotpStep(secret, code, window, time) !== null;
+}
+
+/** Returns the 30-second time-step the code matches (±window), or null. Used for replay protection. */
+export function matchTotpStep(secret: string, code: string, window = 1, time = Date.now()): number | null {
   const c = code.replace(/\s/g, '');
-  if (!/^\d{6}$/.test(c)) return false;
+  if (!/^\d{6}$/.test(c)) return null;
   for (let i = -window; i <= window; i++) {
-    if (totpCode(secret, time + i * 30_000) === c) return true;
+    const t = time + i * 30_000;
+    if (totpCode(secret, t) === c) return Math.floor(t / 30_000);
   }
-  return false;
+  return null;
 }
 
 export function otpauthUri(secret: string, account: string, issuer = 'EDMN Admin'): string {

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useActionState, useContext, useEffect, useRef, type ReactNode } from 'react';
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef, type FormEvent, type ReactNode } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -18,10 +18,15 @@ export interface ClientActionState {
 export type FormAction = (prev: ClientActionState, fd: FormData) => Promise<ClientActionState>;
 
 const FormStateCtx = createContext<ClientActionState>({});
+const PendingCtx = createContext(false);
 
 /**
  * Progressive-enhancement form bound to a server action. Shows a summary error, per-field errors
  * (via <FieldError/>), a success message, and disables the submit button while pending.
+ *
+ * With JavaScript, submission is dispatched manually so React does not auto-reset the form: on a
+ * validation error the user keeps what they typed (and selected files). Without JavaScript the
+ * native `action` still works.
  */
 export function ActionForm({
   action,
@@ -40,7 +45,7 @@ export function ActionForm({
   encType?: 'multipart/form-data';
   id?: string;
 }) {
-  const [state, formAction] = useActionState(action, {} as ClientActionState);
+  const [state, formAction, isPending] = useActionState(action, {} as ClientActionState);
   const ref = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -48,9 +53,17 @@ export function ActionForm({
     if (state.at && (state.error || state.ok)) alertRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [state, resetOnSuccess]);
   const msg = state.ok ? (state.message ?? successMessage) : undefined;
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isPending) return;
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+    const fd = new FormData(e.currentTarget, submitter);
+    startTransition(() => formAction(fd));
+  };
   return (
     <FormStateCtx.Provider value={state}>
-      <form ref={ref} action={formAction} className={className} encType={encType} id={id} noValidate={false}>
+      <PendingCtx.Provider value={isPending}>
+      <form ref={ref} action={formAction} onSubmit={onSubmit} className={className} encType={encType} id={id} noValidate={false}>
         <div ref={alertRef} aria-live="polite">
           {state.error && (
             <Alert tone="danger" className="mb-4" key={state.at}>
@@ -65,6 +78,7 @@ export function ActionForm({
         </div>
         {children}
       </form>
+      </PendingCtx.Provider>
     </FormStateCtx.Provider>
   );
 }
@@ -84,8 +98,14 @@ export function FieldError({ name }: { name: string }) {
   );
 }
 
+function usePending() {
+  const status = useFormStatus();
+  const manual = useContext(PendingCtx);
+  return status.pending || manual;
+}
+
 export function SubmitButton({ children, variant, size, className, pendingText, name, value, formNoValidate }: { children: ReactNode; variant?: ButtonVariant; size?: ButtonSize; className?: string; pendingText?: string; name?: string; value?: string; formNoValidate?: boolean }) {
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <button type="submit" disabled={pending} aria-busy={pending} name={name} value={value} formNoValidate={formNoValidate} className={buttonClass(variant, size, className)}>
       {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
@@ -96,7 +116,7 @@ export function SubmitButton({ children, variant, size, className, pendingText, 
 
 /** Submit button that asks for confirmation first (destructive / financial actions). */
 export function ConfirmSubmit({ children, confirm, variant = 'danger', size, className }: { children: ReactNode; confirm: string; variant?: ButtonVariant; size?: ButtonSize; className?: string }) {
-  const { pending } = useFormStatus();
+  const pending = usePending();
   return (
     <button
       type="submit"

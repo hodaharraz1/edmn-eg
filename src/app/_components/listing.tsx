@@ -149,14 +149,14 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
   const result = await searchProducts(query);
   const filters = <Filters path={path} sp={sp} categoryId={base.categoryId} hideBrand={hideBrand} />;
   return (
-    <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden lg:block">
         <div className="card sticky top-32 p-4">{filters}</div>
       </aside>
       <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted">{result.total.toLocaleString('ar-EG-u-nu-latn')} منتج · التوصيل إلى {gov?.nameAr}</p>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <Drawer
               title="تصفية النتائج"
               trigger={
@@ -167,7 +167,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
             >
               {filters}
             </Drawer>
-            <nav aria-label="ترتيب" className="scrollbar-none flex gap-1 overflow-x-auto">
+            <nav aria-label="ترتيب" className="scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto">
               {SORTS.map((s) => (
                 <Link
                   key={s}

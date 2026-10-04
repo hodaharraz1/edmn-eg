@@ -89,7 +89,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
       .map((i) => ({ href: i.href, label: i.label, badge: i.badgeKey ? Number(counts[i.badgeKey]) : undefined })),
   })).filter((g) => g.items.length);
   return (
-    <div className="lg:grid lg:grid-cols-[250px_1fr]">
+    <div className="lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden h-dvh overflow-y-auto bg-slate-900 p-4 lg:sticky lg:top-0 lg:block">
         <div className="mb-4 text-white"><Logo href="/admin" /></div>
         <AdminNav groups={groups} />

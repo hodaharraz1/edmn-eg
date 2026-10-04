@@ -22,7 +22,7 @@ export default async function SellerSupport(props: PageProps<'/seller/support'>)
   const openId = typeof sp.t === 'string' ? sp.t : null;
   const thread = openId ? await ticketThread(actor, openId).catch(() => null) : null;
   return (
-    <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+    <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
       <div className="space-y-3">
         <PageHeader title="دعم البائعين" />
         <ul className="card divide-y divide-line">

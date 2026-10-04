@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
 import type { Actor } from '@/server/core/actor';
@@ -12,7 +12,7 @@ import { authTokens, sessions, users } from '@/server/db/schema';
 import { sendDirect } from '@/server/modules/notifications/notify';
 import { CUSTOMER_POLICY, STAFF_POLICY, dummyVerify, hashPassword, passwordProblems, verifyPassword } from './password';
 import { enforce } from './rate-limit';
-import { generateTotpSecret, verifyTotp } from './totp';
+import { generateTotpSecret, matchTotpStep } from './totp';
 
 const MAX_FAILED = 8;
 const LOCK_MINUTES = 15;
@@ -170,9 +170,18 @@ export async function verifyTotpForUser(userId: string, code: string, meta: Requ
   await enforce(`totp:${userId}`, 8, 300);
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   if (!user?.totpSecretEnc) return false;
-  const ok = verifyTotp(decrypt(user.totpSecretEnc), code);
+  const step = matchTotpStep(decrypt(user.totpSecretEnc), code);
+  let ok = step !== null;
   await db.transaction(async (tx) => {
-    if (ok && !user.totpEnabledAt) await tx.update(users).set({ totpEnabledAt: new Date() }).where(eq(users.id, userId));
+    if (ok) {
+      // Each code is single-use: atomically advance the last accepted step; a replayed/older code updates nothing.
+      const advanced = await tx
+        .update(users)
+        .set({ totpLastStep: step, ...(user.totpEnabledAt ? {} : { totpEnabledAt: new Date() }) })
+        .where(and(eq(users.id, userId), or(isNull(users.totpLastStep), lt(users.totpLastStep, step!))))
+        .returning({ id: users.id });
+      ok = advanced.length === 1;
+    }
     await audit(tx, { ...anon(meta), userId }, { action: ok ? 'auth.totp_verified' : 'auth.totp_failed', entityType: 'user', entityId: userId });
   });
   return ok;

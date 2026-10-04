@@ -63,7 +63,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
   async function Overview() {
     const docs = canDocs ? await db.select().from(sellerDocuments).where(eq(sellerDocuments.sellerId, s.id)).orderBy(desc(sellerDocuments.createdAt)) : [];
     return (
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <section className="card space-y-3 p-5">
             <h2 className="font-bold">الهوية</h2>

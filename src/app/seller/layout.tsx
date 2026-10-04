@@ -20,7 +20,7 @@ export default async function SellerLayout({ children }: { children: React.React
   const ctx = (await sellerContextForUser(user.id))!;
   const [store] = await db.select({ name: stores.name, slug: stores.slug }).from(stores).where(eq(stores.sellerId, actor.sellerId!));
   return (
-    <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_1fr]">
+    <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="hidden bg-brand-950 p-4 lg:flex lg:flex-col lg:gap-4">
         <Logo href="/seller" className="text-white" />
         <div className="rounded-lg bg-white/10 p-3 text-xs text-white">

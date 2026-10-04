@@ -45,7 +45,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   return (
     <div className="container-page py-6">
       <PageHeader title="إتمام الشراء" description="العنوان ← التوصيل ← طريقة الدفع ← المراجعة" />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <section className="card p-5">
             <h2 className="mb-3 flex items-center gap-2 font-bold"><MapPin className="size-5 text-brand-600" /> 1. عنوان التوصيل</h2>

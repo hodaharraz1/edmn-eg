@@ -43,7 +43,7 @@ export default async function AdminProductReview(props: PageProps<'/admin/produc
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'المنتجات', href: '/admin/products' }, { label: p.titleAr }]} />} title={p.titleAr} description={`${row.store.name} · أُرسل ${formatDate(p.submittedAt, true)}`} actions={<><StatusChip status={p.status} />{p.needsEnhancedReview && <Badge tone="danger">مراجعة معززة</Badge>}</>} />
       {(verdict.blocked.length > 0 || verdict.review.length > 0) && <Alert tone="warning" title="تنبيهات سياسة المنتجات">{[...verdict.blocked.map((v) => `محظور: ${v.reasonCode} (${v.pattern})`), ...verdict.review.map((v) => `مراجعة: ${v.reasonCode} (${v.pattern})`)].join(' · ')}</Alert>}
-      <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <section className="card p-4">
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">

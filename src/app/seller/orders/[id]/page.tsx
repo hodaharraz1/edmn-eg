@@ -37,7 +37,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
       {so.status === 'PAID' && <Alert tone="warning" title="طلب جديد بانتظار تأكيدك">أكّد الطلب ثم جهّزه للشحن خلال {so.processingDays ?? 2} يوم عمل.</Alert>}
       {so.financialHold && <Alert tone="danger">يوجد تجميد إداري على مستحقات هذا الطلب: {so.holdReason}</Alert>}
       {dispute && <Alert tone="danger" title={`نزاع مفتوح #${dispute.number}`}>{dispute.description}</Alert>}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="card p-5">
           <h2 className="mb-3 font-bold">المنتجات</h2>
           <ul className="divide-y divide-line text-sm">

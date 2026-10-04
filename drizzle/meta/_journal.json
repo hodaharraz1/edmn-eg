@@ -15,6 +15,13 @@
       "when": 1791116473578,
       "tag": "0001_integrity_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791123071719,
+      "tag": "0002_totp_replay",
+      "breakpoints": true
     }
   ]
 }

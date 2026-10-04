@@ -19,7 +19,7 @@ export default async function BrandsAdmin(props: PageProps<'/admin/brands'>) {
   const rows = await db.select({ b: brands, logo: files.storageKey }).from(brands).leftJoin(files, eq(files.id, brands.logoFileId)).orderBy(asc(brands.name));
   const editing = rows.find((r) => r.b.id === sp.edit)?.b;
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div>
         <PageHeader title="العلامات التجارية" />
         <DataTable rows={rows} rowKey={(r) => r.b.id} columns={[

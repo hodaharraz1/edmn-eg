@@ -26,7 +26,7 @@ export default async function CategoriesAdmin(props: PageProps<'/admin/categorie
   const attrs = await db.select().from(attributes).orderBy(asc(attributes.nameAr));
   const linked = editing ? await db.select({ ca: categoryAttributes, a: attributes }).from(categoryAttributes).innerJoin(attributes, eq(attributes.id, categoryAttributes.attributeId)).where(eq(categoryAttributes.categoryId, editing.id)) : [];
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div>
         <PageHeader title="التصنيفات" description={`التغيير هنا لا يحتاج نشر كود. العمولة الافتراضية: ${defRule ? bpsToPercentString(defRule.percentBps) : '—'}% — إدارة العمولات من صفحة العمولات.`} />
         <div className="card divide-y divide-line">

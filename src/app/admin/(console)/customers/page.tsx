@@ -23,7 +23,7 @@ export default async function Customers(props: PageProps<'/admin/customers'>) {
   return (
     <div>
       <PageHeader title="العملاء" />
-      <form className="mb-4 flex gap-2"><input name="q" defaultValue={q} placeholder="بحث بالاسم أو البريد أو الهاتف" className="h-9 flex-1 rounded-lg border border-line bg-white px-3 text-sm" /><button className="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white">بحث</button></form>
+      <form className="mb-4 flex gap-2"><input name="q" defaultValue={q} placeholder="بحث بالاسم أو البريد أو الهاتف" className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-white px-3 text-sm" /><button className="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white">بحث</button></form>
       <DataTable rows={rows} rowKey={(r) => r.u.id} columns={[
         { key: 'n', header: 'الاسم', cell: (r) => <Link href={`/admin/customers/${r.u.id}`} className="font-semibold text-brand-700 hover:underline">{r.u.fullName}</Link> },
         { key: 'e', header: 'البريد', cell: (r) => <span className="ltr text-xs">{r.u.email}</span> },

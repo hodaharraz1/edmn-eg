@@ -10,8 +10,8 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const user = (await currentUser())!;
   const seller = await sellerContextForUser(user.id);
   return (
-    <div className="container-page grid gap-6 py-6 lg:grid-cols-[220px_1fr]">
-      <aside className="space-y-3">
+    <div className="container-page grid grid-cols-1 gap-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <aside className="min-w-0 space-y-3">
         <div className="hidden rounded-xl bg-white p-4 shadow-sm ring-1 ring-line lg:block">
           <p className="text-xs text-muted">مرحباً</p>
           <p className="font-bold">{user.fullName}</p>

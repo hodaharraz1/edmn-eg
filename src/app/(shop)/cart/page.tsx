@@ -38,7 +38,7 @@ export default async function CartPage() {
   return (
     <div className="container-page py-6">
       <PageHeader title={`سلة التسوق (${cart.itemCount})`} description={`التوصيل إلى ${gov?.nameAr} · الطلبات من أكثر من متجر تُشحن بشكل منفصل من كل بائع.`} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {cart.groups.map((g) => (
             <section key={g.sellerId} className="card overflow-hidden">
