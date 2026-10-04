@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
-import { sellerMachine, type SellerStatus, type SellerType, type PayoutType, type SellerDocumentKind } from '@/domain/machines';
+import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, requireUser, type Actor } from '@/server/core/actor';
 import { decryptJson, encrypt, encryptJson, mask } from '@/server/core/crypto';

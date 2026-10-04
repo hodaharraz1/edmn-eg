@@ -173,6 +173,20 @@ export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: bo
   });
 }
 
+/** Issue a fresh invitation link (revokes the previous one). Only the buyer, only while INVITED. */
+export async function refreshInvitation(actor: Actor, dealId: string) {
+  return db.transaction(async (tx) => {
+    const deal = await lockBuyerDeal(tx, actor, dealId);
+    if (deal.status !== 'INVITED') throw invalidState('لا يمكن إنشاء رابط دعوة جديد في الحالة الحالية');
+    const token = randomToken(32);
+    const ttl = await getSetting('deals.invitationTtlHours', tx);
+    await tx.update(dealInvitations).set({ status: 'REVOKED' }).where(and(eq(dealInvitations.dealId, deal.id), eq(dealInvitations.status, 'PENDING')));
+    await tx.insert(dealInvitations).values({ dealId: deal.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + ttl * 3600_000) });
+    await audit(tx, actor, { action: 'deal.invitation_refreshed', entityType: 'external_deal', entityId: deal.id });
+    return { link: `${env().APP_URL}/deal-invite/${token}` };
+  });
+}
+
 /** Look up an invitation by raw token (constant-time via hash lookup; tokens are 256-bit random). */
 export async function invitationByToken(token: string) {
   if (!token || token.length < 30 || token.length > 100) return null;
