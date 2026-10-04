@@ -1,0 +1,107 @@
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+import { audit } from '@/server/audit/audit';
+import { requirePermission, type Actor } from '@/server/core/actor';
+import { validation } from '@/server/core/errors';
+import { db, type DbOrTx } from '@/server/db/client';
+import { systemSettings } from '@/server/db/schema';
+
+/**
+ * Typed business configuration. Defaults below are DEVELOPMENT/BENCHMARK values and are editable
+ * by authorized admins at runtime (audited). Nothing here is a final business or legal decision.
+ */
+export const SETTINGS_SCHEMA = {
+  'marketplace.name': z.string().min(1).default('اضمن | EDMN'),
+  'marketplace.supportEmail': z.string().default(''),
+  'marketplace.supportPhone': z.string().default(''),
+  'marketplace.maintenanceMode': z.boolean().default(false),
+  /** Hours a customer has to pay (or submit proof) before an unpaid order expires and stock is released. */
+  'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
+  'withdrawals.minimumAmount': z.number().int().min(0).default(10000), // 100 EGP in piasters
+  'withdrawals.slaBusinessHours': z.number().int().min(1).max(240).default(48),
+  /** Withdrawals at/above this amount require approver ≠ payer (maker/checker). */
+  'withdrawals.dualControlThreshold': z.number().int().min(0).default(5_000_000), // 50,000 EGP
+  /** Ledger adjustments at/above this absolute amount require a second approver (all adjustments do by default). */
+  'ledger.adjustmentDualControlThreshold': z.number().int().min(0).default(0),
+  'settlement.mode': z.enum(['ON_REQUEST', 'SCHEDULED', 'HYBRID']).default('HYBRID'),
+  'settlement.daysOfMonth': z.array(z.number().int().min(1).max(28)).default([1, 15]),
+  'settlement.minimumAmount': z.number().int().min(0).default(10000),
+  'payout.changeRequiresReview': z.boolean().default(true),
+  'payout.changeHoldHours': z.number().int().min(0).max(720).default(24),
+  'sellers.requireEmailVerification': z.boolean().default(false),
+  'sellers.businessRequiredDocuments': z
+    .array(z.enum(['COMMERCIAL_REGISTRATION', 'TAX_CARD', 'AUTHORIZATION_LETTER']))
+    .default(['COMMERCIAL_REGISTRATION', 'TAX_CARD']),
+  'products.requireModeration': z.boolean().default(true),
+  'products.minImages': z.number().int().min(1).max(10).default(1),
+  'products.minActualImagesForUsed': z.number().int().min(1).max(10).default(2),
+  /** Statutory return window shown to customers — SUBJECT TO LEGAL REVIEW, do not treat as legal advice. */
+  'returns.statutoryWindowDays': z.number().int().min(0).max(90).default(14),
+  /** Days after shipment without buyer confirmation before the order is flagged for operations follow-up. */
+  'orders.deliveryFollowUpDays': z.number().int().min(1).max(60).default(10),
+  /** Days after delivery confirmation before a seller order is marked COMPLETED. */
+  'orders.completionDays': z.number().int().min(0).max(60).default(14),
+  'deals.feeBps': z.number().int().min(0).max(5000).default(0),
+  'deals.feePayer': z.enum(['SELLER', 'BUYER']).default('SELLER'),
+  'deals.invitationTtlHours': z.number().int().min(1).max(720).default(168),
+  'uploads.maxImageMb': z.number().min(1).max(25).default(8),
+  'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
+} as const;
+
+export type SettingKey = keyof typeof SETTINGS_SCHEMA;
+export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA)[K]>;
+
+export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
+  'withdrawals.dualControlThreshold',
+  'ledger.adjustmentDualControlThreshold',
+  'withdrawals.minimumAmount',
+  'payout.changeRequiresReview',
+  'payout.changeHoldHours',
+  'deals.feeBps',
+];
+
+export function settingDefault<K extends SettingKey>(key: K): SettingValue<K> {
+  return SETTINGS_SCHEMA[key].parse(undefined) as SettingValue<K>;
+}
+
+export async function getSetting<K extends SettingKey>(key: K, conn: DbOrTx = db): Promise<SettingValue<K>> {
+  const [row] = await conn.select().from(systemSettings).where(eq(systemSettings.key, key));
+  if (!row) return settingDefault(key);
+  const parsed = SETTINGS_SCHEMA[key].safeParse(row.value);
+  return (parsed.success ? parsed.data : settingDefault(key)) as SettingValue<K>;
+}
+
+export async function getAllSettings(conn: DbOrTx = db): Promise<{ [K in SettingKey]: SettingValue<K> }> {
+  const rows = await conn.select().from(systemSettings);
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(SETTINGS_SCHEMA) as SettingKey[]) {
+    const parsed = SETTINGS_SCHEMA[key].safeParse(map.get(key));
+    out[key] = parsed.success ? parsed.data : settingDefault(key);
+  }
+  return out as { [K in SettingKey]: SettingValue<K> };
+}
+
+export async function updateSetting(actor: Actor, key: SettingKey, value: unknown, reason: string): Promise<void> {
+  requirePermission(actor, 'settings.manage');
+  const schema = SETTINGS_SCHEMA[key];
+  if (!schema) throw validation('إعداد غير معروف');
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw validation('قيمة غير صالحة لهذا الإعداد');
+  if (!reason || reason.trim().length < 3) throw validation('يجب ذكر سبب التعديل');
+  await db.transaction(async (tx) => {
+    const old = await getSetting(key, tx);
+    await tx
+      .insert(systemSettings)
+      .values({ key, value: parsed.data as object, updatedBy: actor.userId })
+      .onConflictDoUpdate({ target: systemSettings.key, set: { value: parsed.data as object, updatedBy: actor.userId, updatedAt: new Date() } });
+    await audit(tx, actor, {
+      action: 'settings.update',
+      entityType: 'system_setting',
+      entityId: key,
+      oldValues: { value: old },
+      newValues: { value: parsed.data },
+      reason,
+    });
+  });
+}
