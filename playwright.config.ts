@@ -6,6 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
  * Set E2E_SKIP_BUILD=1 to reuse an existing `.next` build.
  */
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+/** Set E2E_BASE_URL to run against a deployed environment (e.g. staging). No local server is started then. */
+const REMOTE = process.env.E2E_BASE_URL;
 const DB = process.env.E2E_DATABASE_URL ?? 'postgresql://edmn:edmn@localhost:5432/edmn_e2e';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH ?? (process.env.PLAYWRIGHT_BROWSERS_PATH === '/opt/pw-browsers' ? '/opt/pw-browsers/chromium' : undefined);
 
@@ -19,14 +21,14 @@ export default defineConfig({
   reporter: [['list']],
   globalSetup: './tests/e2e/global-setup.ts',
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: REMOTE ?? `http://localhost:${PORT}`,
     locale: 'ar-EG',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
+  webServer: REMOTE ? undefined : {
     command: `${process.env.E2E_SKIP_BUILD ? '' : 'npx next build && '}npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
     timeout: 300_000,

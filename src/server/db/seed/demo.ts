@@ -25,10 +25,28 @@ import { createDeal, inviteSeller, saveDealStep, acceptInvitation, startDealPaym
 import { orderItems, sellerOrders, payments, paymentSubmissions, productVariants } from '@/server/db/schema';
 import { demoDocument, demoImage } from './demo-images';
 
-/** Development-only TOTP secret for demo staff accounts. NEVER used in production. */
+/** Development-only credentials for demo accounts (public in this repository). NEVER used in production or staging. */
 export const DEMO_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
 export const DEMO_PASSWORD = 'Demo@12345';
 export const DEMO_ADMIN_PASSWORD = 'Admin@Edmn#2026';
+
+/**
+ * Credentials used by the demo seed. On a public STAGING deployment the repository defaults above are
+ * public knowledge, so staging must supply its own secrets through the hosting provider's
+ * environment (STAGING_DEMO_PASSWORD, STAGING_ADMIN_PASSWORD, STAGING_TOTP_SECRET).
+ */
+export function demoCredentials(): { password: string; adminPassword: string; totpSecret: string; staging: boolean } {
+  if (process.env.EDMN_ENVIRONMENT !== 'staging') return { password: DEMO_PASSWORD, adminPassword: DEMO_ADMIN_PASSWORD, totpSecret: DEMO_TOTP_SECRET, staging: false };
+  const password = process.env.STAGING_DEMO_PASSWORD ?? '';
+  const adminPassword = process.env.STAGING_ADMIN_PASSWORD ?? '';
+  const totpSecret = (process.env.STAGING_TOTP_SECRET ?? '').toUpperCase();
+  const problems: string[] = [];
+  if (password.length < 10 || password === DEMO_PASSWORD) problems.push('STAGING_DEMO_PASSWORD (≥ 10 chars, not the repository default)');
+  if (adminPassword.length < 14 || adminPassword === DEMO_ADMIN_PASSWORD) problems.push('STAGING_ADMIN_PASSWORD (≥ 14 chars, not the repository default)');
+  if (!/^[A-Z2-7]{32,}$/.test(totpSecret) || totpSecret === DEMO_TOTP_SECRET) problems.push('STAGING_TOTP_SECRET (base32, ≥ 32 chars, not the repository default)');
+  if (problems.length) throw new Error(`Staging demo seed needs its own secrets:\n- ${problems.join('\n- ')}`);
+  return { password, adminPassword, totpSecret, staging: true };
+}
 
 async function user(email: string, fullName: string, phone: string, opts: { staff?: boolean; roles?: string[]; password?: string } = {}) {
   const [existing] = await db.select().from(users).where(eq(users.email, email));
@@ -39,12 +57,12 @@ async function user(email: string, fullName: string, phone: string, opts: { staf
       email,
       fullName,
       phone,
-      passwordHash: await hashPassword(opts.password ?? DEMO_PASSWORD),
+      passwordHash: await hashPassword(opts.password ?? demoCredentials().password),
       passwordChangedAt: new Date(Date.now() - 86400_000),
       isStaff: !!opts.staff,
       emailVerifiedAt: new Date(),
       phoneVerifiedAt: new Date(),
-      ...(opts.staff ? { totpSecretEnc: encrypt(DEMO_TOTP_SECRET), totpEnabledAt: new Date() } : {}),
+      ...(opts.staff ? { totpSecretEnc: encrypt(demoCredentials().totpSecret), totpEnabledAt: new Date() } : {}),
     })
     .returning();
   for (const r of opts.roles ?? []) await db.insert(userRoles).values({ userId: u.id, roleCode: r }).onConflictDoNothing();
@@ -173,13 +191,13 @@ export async function seedDemo() {
   if (already) return { skipped: true };
 
   // ── Staff
-  const admin = await user('admin@edmn.local', 'مدير النظام (تجريبي)', '+201000000001', { staff: true, roles: ['SUPER_ADMIN'], password: DEMO_ADMIN_PASSWORD });
-  await user('ops@edmn.local', 'مدير العمليات (تجريبي)', '+201000000002', { staff: true, roles: ['OPERATIONS_MANAGER'], password: DEMO_ADMIN_PASSWORD });
-  await user('payments@edmn.local', 'مراجع المدفوعات (تجريبي)', '+201000000003', { staff: true, roles: ['PAYMENT_REVIEWER'], password: DEMO_ADMIN_PASSWORD });
-  const checker = await user('checker@edmn.local', 'المراجع المالي (تجريبي)', '+201000000004', { staff: true, roles: ['FINANCE_CHECKER'], password: DEMO_ADMIN_PASSWORD });
-  const operator = await user('finance@edmn.local', 'المنفذ المالي (تجريبي)', '+201000000005', { staff: true, roles: ['FINANCE_OPERATOR'], password: DEMO_ADMIN_PASSWORD });
-  await user('support@edmn.local', 'خدمة العملاء (تجريبي)', '+201000000006', { staff: true, roles: ['CUSTOMER_SUPPORT'], password: DEMO_ADMIN_PASSWORD });
-  await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: DEMO_ADMIN_PASSWORD });
+  const admin = await user('admin@edmn.local', 'مدير النظام (تجريبي)', '+201000000001', { staff: true, roles: ['SUPER_ADMIN'], password: demoCredentials().adminPassword });
+  await user('ops@edmn.local', 'مدير العمليات (تجريبي)', '+201000000002', { staff: true, roles: ['OPERATIONS_MANAGER'], password: demoCredentials().adminPassword });
+  await user('payments@edmn.local', 'مراجع المدفوعات (تجريبي)', '+201000000003', { staff: true, roles: ['PAYMENT_REVIEWER'], password: demoCredentials().adminPassword });
+  const checker = await user('checker@edmn.local', 'المراجع المالي (تجريبي)', '+201000000004', { staff: true, roles: ['FINANCE_CHECKER'], password: demoCredentials().adminPassword });
+  const operator = await user('finance@edmn.local', 'المنفذ المالي (تجريبي)', '+201000000005', { staff: true, roles: ['FINANCE_OPERATOR'], password: demoCredentials().adminPassword });
+  await user('support@edmn.local', 'خدمة العملاء (تجريبي)', '+201000000006', { staff: true, roles: ['CUSTOMER_SUPPORT'], password: demoCredentials().adminPassword });
+  await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: demoCredentials().adminPassword });
   const A = await adminActor(admin.id, { stepUpAt: new Date() });
 
   // ── Payment destinations: clearly-marked DEMO placeholders (replace from Admin → Payments before launch)

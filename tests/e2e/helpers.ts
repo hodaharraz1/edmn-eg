@@ -2,9 +2,10 @@ import { expect, type Browser, type Page } from '@playwright/test';
 import { Client } from 'pg';
 import { totpCode } from '../../src/server/auth/totp';
 // Mirrors the development-only demo seed (src/server/db/seed/demo.ts).
-const DEMO_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
-export const DEMO_PASSWORD = 'Demo@12345';
-const DEMO_ADMIN_PASSWORD = 'Admin@Edmn#2026';
+// When running against a deployed staging URL these come from the environment (never committed).
+const DEMO_TOTP_SECRET = process.env.STAGING_TOTP_SECRET ?? 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
+export const DEMO_PASSWORD = process.env.STAGING_DEMO_PASSWORD ?? 'Demo@12345';
+const DEMO_ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? 'Admin@Edmn#2026';
 
 export const DB_URL = process.env.E2E_DATABASE_URL ?? 'postgresql://edmn:edmn@localhost:5432/edmn_e2e';
 

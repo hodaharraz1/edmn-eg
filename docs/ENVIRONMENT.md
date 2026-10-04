@@ -40,7 +40,17 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `WORKER_POLL_MS` | `5000` | | Worker loop interval |
 | `NEXT_PUBLIC_LOGO_URL` | empty | when the official logo exists | Official logo URL/path; empty shows the neutral placeholder |
 
-Playwright extras: `E2E_PORT` (default 3100), `E2E_SKIP_BUILD=1`, `PLAYWRIGHT_CHROMIUM_PATH`.
+Staging-only variables (a public staging deployment must never reuse the repository's demo credentials):
+
+| Variable | Description |
+|---|---|
+| `EDMN_ENVIRONMENT` | `staging` marks a public test deployment: visible staging banner, `noindex` + `robots.txt: Disallow /`, demo seed allowed with `NODE_ENV=production` |
+| `SEED_DEMO` | `true` → `scripts/start.sh` runs the (idempotent) demo seed on boot; staging only |
+| `STAGING_DEMO_PASSWORD` | password for all staging demo customers/sellers (≥ 10 chars, generated) |
+| `STAGING_ADMIN_PASSWORD` | password for all staging staff accounts (≥ 14 chars, generated) |
+| `STAGING_TOTP_SECRET` | base32 TOTP secret for staging staff 2FA (≥ 32 chars, generated); add it to an authenticator app |
+
+Playwright extras: `E2E_PORT` (default 3100), `E2E_SKIP_BUILD=1`, `PLAYWRIGHT_CHROMIUM_PATH`, `E2E_BASE_URL` (run against a deployed URL — no local server, **no database reset**).
 
 ## Production safety checks
 

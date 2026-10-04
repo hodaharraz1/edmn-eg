@@ -7,12 +7,15 @@ async function main() {
   const ref = await seedReference();
   console.log('✓ reference data', ref);
   if (demo) {
-    if (process.env.NODE_ENV === 'production' && !process.argv.includes('--i-know-this-is-not-production')) {
-      throw new Error('Refusing to load DEMO commerce data with NODE_ENV=production');
+    // Demo data is allowed on development machines and on explicitly-marked STAGING deployments only.
+    if (process.env.NODE_ENV === 'production' && process.env.EDMN_ENVIRONMENT !== 'staging') {
+      throw new Error('Refusing to load DEMO commerce data with NODE_ENV=production (set EDMN_ENVIRONMENT=staging only on a staging deployment)');
     }
-    const { seedDemo, DEMO_PASSWORD, DEMO_ADMIN_PASSWORD, DEMO_TOTP_SECRET } = await import('../src/server/db/seed/demo');
+    const { seedDemo, demoCredentials, DEMO_PASSWORD, DEMO_ADMIN_PASSWORD, DEMO_TOTP_SECRET } = await import('../src/server/db/seed/demo');
+    const staging = demoCredentials().staging; // validates staging secrets before writing anything
     const res = await seedDemo();
     if (res.skipped) console.log('• demo data already present — skipped');
+    else if (staging) console.log('✓ STAGING demo data', res, '— credentials come from the STAGING_* environment variables (never printed)');
     else {
       console.log('✓ demo data', res);
       console.log(`
