@@ -369,3 +369,13 @@ export async function customerStatusAction(_p: ActionState, fd: FormData) {
     return done();
   }, [`/admin/customers/${str(fd, 'userId')}`]);
 }
+
+/** Operations hold on an external deal (deals.manage + step-up, audited). */
+export async function dealHoldAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { setDealFinancialHold } = await import('@/server/modules/deals/service');
+    const hold = str(fd, 'hold') === '1';
+    await setDealFinancialHold(a, str(fd, 'dealId'), hold, str(fd, 'reason'));
+    return done(hold ? 'تم إيقاف الصرف للصفقة لحين المراجعة' : 'تم رفع الإيقاف عن الصفقة');
+  }, ['/admin/deals', `/admin/deals/${str(fd, 'dealId')}`]);
+}

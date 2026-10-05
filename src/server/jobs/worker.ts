@@ -5,14 +5,14 @@ import { jobs, outboundMessages } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
 import { completeDeliveredOrders, flagUnconfirmedDeliveries } from '@/server/modules/commerce/fulfilment';
-import { expireDealInvitations, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
+import { expireDealInvitations, expireDeliveryOtps, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { providerFor } from '@/server/modules/notifications/providers';
 
 type Handler = (payload: Record<string, unknown>) => Promise<unknown>;
 
 /** Events whose message body carries a one-time code, reset link or invitation link. */
-export const SECRET_EVENTS = ['ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED'];
+export const SECRET_EVENTS = ['ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED', 'DEAL_DELIVERY_OTP'];
 export const REDACTED_BODY = '[تم حذف المحتوى الأمني (رمز/رابط) بعد الإرسال أو انتهاء الصلاحية]';
 
 /**
@@ -21,7 +21,7 @@ export const REDACTED_BODY = '[تم حذف المحتوى الأمني (رمز/�
  */
 export async function redactExpiredSecrets() {
   const r = await db.execute(sql`update outbound_messages set body = ${REDACTED_BODY}
-    where event in ('ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED') and body <> ${REDACTED_BODY} and created_at < now() - interval '1 hour'`);
+    where event in ('ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED', 'DEAL_DELIVERY_OTP') and body <> ${REDACTED_BODY} and created_at < now() - interval '1 hour'`);
   return r.rowCount ?? 0;
 }
 
@@ -32,7 +32,7 @@ export async function flushOutbound(limit = 50) {
   for (const m of pending) {
     try {
       const p = await providerFor(m.channel);
-      await p.send({ recipient: m.recipient, subject: m.subject, body: m.body });
+      await p.send({ recipient: m.recipient, subject: m.subject, body: m.body, secret: SECRET_EVENTS.includes(m.event ?? '') });
       // Once a real provider has delivered it, a message carrying a code or secret link is redacted at rest.
       const redact = !p.name.startsWith('log') && SECRET_EVENTS.includes(m.event ?? '');
       await db
@@ -64,6 +64,7 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   { name: 'orders.complete_delivered', everyMs: 60 * 60_000, run: () => completeDeliveredOrders() },
   { name: 'deals.flag_unconfirmed', everyMs: 60 * 60_000, run: () => flagDealsAwaitingConfirmation() },
   { name: 'deals.expire_invitations', everyMs: 60 * 60_000, run: () => expireDealInvitations() },
+  { name: 'deals.expire_delivery_otps', everyMs: 15 * 60_000, run: () => expireDeliveryOtps() },
   { name: 'settlement.scheduled', everyMs: 60 * 60_000, run: () => runScheduledSettlement() },
   { name: 'outbound.flush', everyMs: 60_000, run: () => flushOutbound() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },

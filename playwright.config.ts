@@ -34,6 +34,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/api/health`,
     timeout: 300_000,
     reuseExistingServer: false,
-    env: { DATABASE_URL: DB, APP_URL: `https://localhost:${PORT}`, STORAGE_LOCAL_ROOT: './.e2e-storage', MAIL_DRIVER: 'log', SMS_DRIVER: 'log' },
+    env: { DATABASE_URL: DB, APP_URL: `https://localhost:${PORT}`, EDMN_ENVIRONMENT: 'staging', STORAGE_LOCAL_ROOT: './.e2e-storage', MAIL_DRIVER: 'log', SMS_DRIVER: 'log' },
   },
 });

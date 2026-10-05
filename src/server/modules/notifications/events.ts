@@ -32,7 +32,11 @@ export const EVENT_TEMPLATES = {
   EXTERNAL_DEAL_ACCEPTED: { title: 'البائع وافق على الصفقة', body: 'وافق البائع على الصفقة #{{deal}}. يرجى إتمام الدفع.', sms: true },
   EXTERNAL_DEAL_REJECTED: { title: 'البائع رفض الصفقة', body: 'رفض البائع الصفقة #{{deal}}. السبب: {{reason}}', sms: false },
   EXTERNAL_DEAL_ACTIVE: { title: 'الصفقة أصبحت نشطة', body: 'تم تأكيد الدفع للصفقة #{{deal}}. يمكن للبائع الآن تسليم المنتج.', sms: true },
-  EXTERNAL_DEAL_DELIVERED: { title: 'البائع أعلن التسليم', body: 'أعلن البائع تسليم الصفقة #{{deal}}. يرجى الفحص ثم تأكيد الاستلام أو فتح نزاع.', sms: true },
+  EXTERNAL_DEAL_DELIVERED: { title: 'البائع شحن الصفقة', body: 'سجّل البائع شحن الصفقة #{{deal}}. عند الاستلام أعطِ رمز الاستلام للبائع أو المندوب فقط بعد استلام المنتج فعليًا.', sms: false },
+  /** Carries the one-time code: sent by SMS to the buyer only, redacted at rest after delivery / expiry, never logged. */
+  DEAL_DELIVERY_OTP: { title: 'رمز استلام الصفقة', body: 'رمز استلام صفقة اضمن #{{deal}}: {{code}} — لا تعطه لأحد إلا عند استلام المنتج فعليًا. صالح حتى {{expires}}.', sms: true },
+  DEAL_HANDOVER_VERIFIED: { title: 'تم التحقق من التسليم', body: 'تم التحقق من تسليم الصفقة #{{deal}}. افحص المنتج ثم اختر: استلمت والمنتج مطابق، أو توجد مشكلة، أو لم أستلم.', sms: false },
+  DEAL_DELIVERY_REVIEW: { title: 'الصفقة قيد مراجعة العمليات', body: 'الصفقة #{{deal}} محوّلة لمراجعة فريق العمليات، والمبلغ محجوز لحين القرار.', sms: false },
   EXTERNAL_DEAL_COMPLETED: { title: 'اكتملت الصفقة', body: 'اكتملت الصفقة #{{deal}}. شكراً لاستخدامك اضمن.', sms: false },
   SUPPORT_REPLY: { title: 'رد جديد على تذكرة الدعم', body: 'هناك رد جديد على التذكرة #{{ticket}}.', sms: false },
   REVIEW_RECEIVED: { title: 'تقييم جديد', body: 'حصلت على تقييم جديد ({{rating}}/5).', sms: false },

@@ -1,17 +1,23 @@
-import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision } from '@/domain/machines';
 import { audit, recordTransition } from '@/server/audit/audit';
-import { requireUser, SYSTEM_ACTOR, type Actor, hasPermission } from '@/server/core/actor';
-import { encryptJson, randomToken, sha256 } from '@/server/core/crypto';
+import { requireStepUp, requireUser, SYSTEM_ACTOR, type Actor, hasPermission } from '@/server/core/actor';
+import { decryptJson, encryptJson, randomToken, sha256 } from '@/server/core/crypto';
+import { randomUUID } from 'node:crypto';
+import { enforce, hit } from '@/server/auth/rate-limit';
+import { deliveryCodeHash, deliveryCodeMatches, deliveryOtpTestMode, generateDeliveryCode } from './delivery-otp';
+import { formatDate } from '@/lib/format';
 import { env } from '@/server/core/env';
-import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
+import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { applyBps, parseEgp } from '@/server/core/money';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
-import { dealEvidence, dealInvitations, dealPayouts, dealTermsVersions, externalDeals, governorates, legalAcceptances, paymentDestinations, paymentMethods, payments, refunds, users } from '@/server/db/schema';
+import { dealDeliveryOtps, dealEvidence, dealInvitations, dealPayouts, dealTermsVersions, externalDeals, governorates, legalAcceptances, paymentDestinations, paymentMethods, payments, refunds, riskFlags, users } from '@/server/db/schema';
 import { postEntry } from '@/server/modules/finance/ledger';
 import { notify } from '@/server/modules/notifications/notify';
+import { enqueueJob } from '@/server/jobs/queue';
+import { outboundMessages } from '@/server/db/schema';
 import { decryptLocation, encryptLocation, locationFromValues, locationSchema, toStoredLocation } from '@/server/modules/locations';
 import { payoutMask, payoutSchema, currentLegalVersion, type PayoutInput } from '@/server/modules/sellers/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
@@ -593,9 +599,230 @@ export async function markDealDelivered(actor: Actor, dealId: string, note: stri
       const s = await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data: f.data, originalName: f.name });
       await tx.insert(dealEvidence).values({ dealId: deal.id, fileId: s.id, kind: 'DELIVERY_PROOF', uploadedBy: userId, note: note.slice(0, 300) });
     }
-    await moveDeal(tx, actor, deal, 'DELIVERED', { deliveredAt: new Date(), deliveryNote: note?.trim() || null });
-    await audit(tx, actor, { action: 'deal.delivered', entityType: 'external_deal', entityId: deal.id });
-    await notify(tx, { event: 'EXTERNAL_DEAL_DELIVERED', userIds: [deal.buyerId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}` });
+    // "Delivered" here means shipped / out for handover. It moves NO money; the buyer's handover code
+    // is issued now and must be verified at the physical handover.
+    await moveDeal(tx, actor, deal, 'DELIVERED', { deliveredAt: new Date(), deliveryNote: note?.trim() || null, deliveryAttempt: deal.deliveryAttempt + 1 });
+    await audit(tx, actor, { action: 'deal.shipped', entityType: 'external_deal', entityId: deal.id, newValues: { deliveryAttempt: deal.deliveryAttempt + 1, proofFiles: proof.length } });
+    await notify(tx, { event: 'EXTERNAL_DEAL_DELIVERED', userIds: [deal.buyerId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
+    await issueDeliveryOtpTx(tx, actor, { ...deal, deliveryAttempt: deal.deliveryAttempt + 1 }, 'deal.delivery_otp_issued');
+  });
+}
+
+/* ───────── Delivery handover OTP ───────── */
+
+const ACTIVE_OTP = (dealId: string) => and(eq(dealDeliveryOtps.dealId, dealId), isNull(dealDeliveryOtps.usedAt), isNull(dealDeliveryOtps.invalidatedAt));
+
+/**
+ * Issue a fresh handover code for the BUYER (any previous usable code is invalidated first). The code
+ * goes to the buyer by SMS through the notification abstraction; only its HMAC is stored. Nothing in
+ * the return value, audit log, in-app notification or logs contains the code.
+ */
+async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAction: 'deal.delivery_otp_issued' | 'deal.delivery_otp_regenerated') {
+  const prev = await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'REGENERATED' }).where(ACTIVE_OTP(deal.id)).returning({ id: dealDeliveryOtps.id });
+  const ttlHours = await getSetting('deals.deliveryOtpTtlHours', tx);
+  const maxAttempts = await getSetting('deals.deliveryOtpMaxAttempts', tx);
+  const id = randomUUID();
+  const code = generateDeliveryCode();
+  const expiresAt = new Date(Date.now() + ttlHours * 3600_000);
+  await tx.insert(dealDeliveryOtps).values({
+    id,
+    dealId: deal.id,
+    buyerId: deal.buyerId,
+    deliveryAttempt: Math.max(1, deal.deliveryAttempt),
+    codeHash: deliveryCodeHash(deal.id, id, code),
+    testCodeEnc: deliveryOtpTestMode() ? encryptJson(code) : null,
+    expiresAt,
+    maxAttempts,
+    issuedBy: actor.userId ?? null,
+  });
+  const [buyer] = await tx.select({ phone: users.phone }).from(users).where(eq(users.id, deal.buyerId));
+  if (buyer?.phone) {
+    const body = `رمز استلام صفقة اضمن #${dealRef(deal.number)}: ${code} — لا تعطه لأحد إلا عند استلام المنتج فعليًا. صالح حتى ${formatDate(expiresAt, true)}.`;
+    await tx.insert(outboundMessages).values({ channel: 'SMS', recipient: buyer.phone, body, event: 'DEAL_DELIVERY_OTP' });
+    await enqueueJob(tx, 'outbound.flush', {}, { dedupeKey: 'outbound.flush' });
+  }
+  await audit(tx, actor, { action: auditAction, entityType: 'external_deal', entityId: deal.id, newValues: { otpId: id, deliveryAttempt: Math.max(1, deal.deliveryAttempt), expiresAt: expiresAt.toISOString(), maxAttempts, invalidatedPrevious: prev.length } });
+  return { otpId: id, expiresAt };
+}
+
+/** Buyer (or the bound seller, on the buyer's behalf) asks for a new code; it is always sent to the BUYER. */
+export async function regenerateDeliveryOtp(actor: Actor, dealId: string) {
+  const userId = requireUser(actor);
+  if (!(await hit(`deal-otp-issue:${dealId}`, 5, 3600))) throw new DomainError('RATE_LIMITED', 'طلبت رموزًا كثيرة. حاول مرة أخرى بعد قليل');
+  return db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
+    if (!deal) throw notFound('الصفقة');
+    if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
+    if (deal.status !== 'DELIVERED') throw invalidState('رمز الاستلام متاح فقط بعد الشحن وقبل التحقق من التسليم');
+    const r = await issueDeliveryOtpTx(tx, actor, deal, 'deal.delivery_otp_regenerated');
+    return { expiresAt: r.expiresAt };
+  });
+}
+
+type VerifyOutcome = { ok: true } | { ok: false; error: DomainError };
+
+/**
+ * The seller / courier enters the code the buyer handed over. Rate-limited per deal and per user,
+ * limited attempts per code, single use, row-locked (concurrent submissions verify at most once).
+ * Success moves the deal to DELIVERY_HANDOVER_VERIFIED only — funds stay held.
+ */
+export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: string) {
+  const userId = requireUser(actor);
+  await enforce(`deal-otp-verify:${dealId}`, 10, 900);
+  await enforce(`deal-otp-verify-user:${userId}`, 20, 900);
+  const candidate = String(code ?? '').trim();
+  const outcome: VerifyOutcome = await db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
+    if (!deal) return { ok: false, error: notFound('الصفقة') };
+    if (deal.sellerUserId !== userId) return { ok: false, error: forbidden('إدخال رمز الاستلام متاح لبائع الصفقة فقط') };
+    if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'تم التحقق من التسليم مسبقًا' : 'لا يمكن التحقق من التسليم في حالة الصفقة الحالية') };
+    const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id)).for('update');
+    if (!otp || otp.buyerId !== deal.buyerId) return { ok: false, error: invalidState('لا يوجد رمز صالح. اطلب من المشتري رمزًا جديدًا') };
+    const now = new Date();
+    if (otp.expiresAt <= now) {
+      await tx.update(dealDeliveryOtps).set({ invalidatedAt: now, invalidReason: 'EXPIRED' }).where(eq(dealDeliveryOtps.id, otp.id));
+      await audit(tx, actor, { action: 'deal.delivery_otp_expired', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id } });
+      return { ok: false, error: invalidState('انتهت صلاحية رمز الاستلام. اطلب رمزًا جديدًا') };
+    }
+    const attempts = otp.attempts + 1;
+    if (!deliveryCodeMatches(otp.codeHash, deal.id, otp.id, candidate)) {
+      const locked = attempts >= otp.maxAttempts;
+      await tx
+        .update(dealDeliveryOtps)
+        .set({ attempts, lastAttemptAt: now, ...(locked ? { invalidatedAt: now, invalidReason: 'LOCKED' as const } : {}) })
+        .where(eq(dealDeliveryOtps.id, otp.id));
+      await audit(tx, actor, { action: 'deal.delivery_otp_failed', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, maxAttempts: otp.maxAttempts, locked } });
+      return {
+        ok: false,
+        error: validation(locked ? 'تم تجاوز عدد المحاولات. اطلب من المشتري رمزًا جديدًا' : `رمز الاستلام غير صحيح (متبقٍ ${otp.maxAttempts - attempts} محاولة)`),
+      };
+    }
+    await tx.update(dealDeliveryOtps).set({ attempts, lastAttemptAt: now, usedAt: now, usedBy: userId }).where(eq(dealDeliveryOtps.id, otp.id));
+    await moveDeal(tx, actor, deal, 'DELIVERY_HANDOVER_VERIFIED', { handoverVerifiedAt: now, handoverOtpId: otp.id });
+    await audit(tx, actor, { action: 'deal.delivery_otp_verified', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, deliveryAttempt: otp.deliveryAttempt } });
+    await notify(tx, { event: 'DEAL_HANDOVER_VERIFIED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
+    return { ok: true };
+  });
+  if (!outcome.ok) throw outcome.error;
+  return { status: 'DELIVERY_HANDOVER_VERIFIED' as const };
+}
+
+/**
+ * The BUYER's view of the current code: status, expiry and attempts left. The code itself is returned
+ * only in staging / development test mode (production never keeps a recoverable copy). Never callable
+ * by the seller or anyone else.
+ */
+export async function deliveryOtpForBuyer(actor: Actor, dealId: string) {
+  const userId = requireUser(actor);
+  const [deal] = await db.select({ buyerId: externalDeals.buyerId, status: externalDeals.status }).from(externalDeals).where(eq(externalDeals.id, dealId));
+  if (!deal) throw notFound('الصفقة');
+  if (deal.buyerId !== userId) throw forbidden();
+  if (deal.status !== 'DELIVERED') return null;
+  const [otp] = await db.select().from(dealDeliveryOtps).where(ACTIVE_OTP(dealId));
+  if (!otp || otp.buyerId !== userId) return { active: false as const };
+  const expired = otp.expiresAt <= new Date();
+  return {
+    active: !expired,
+    expiresAt: otp.expiresAt,
+    attemptsLeft: otp.maxAttempts - otp.attempts,
+    testCode: !expired && deliveryOtpTestMode() && otp.testCodeEnc ? decryptJson<string>(otp.testCodeEnc) : null,
+  };
+}
+
+/** Handover evidence for parties / staff — never includes the code or its hash. */
+export async function deliveryOtpEvents(dealId: string) {
+  return db
+    .select({
+      id: dealDeliveryOtps.id,
+      deliveryAttempt: dealDeliveryOtps.deliveryAttempt,
+      createdAt: dealDeliveryOtps.createdAt,
+      expiresAt: dealDeliveryOtps.expiresAt,
+      attempts: dealDeliveryOtps.attempts,
+      maxAttempts: dealDeliveryOtps.maxAttempts,
+      lastAttemptAt: dealDeliveryOtps.lastAttemptAt,
+      usedAt: dealDeliveryOtps.usedAt,
+      invalidatedAt: dealDeliveryOtps.invalidatedAt,
+      invalidReason: dealDeliveryOtps.invalidReason,
+    })
+    .from(dealDeliveryOtps)
+    .where(eq(dealDeliveryOtps.dealId, dealId))
+    .orderBy(asc(dealDeliveryOtps.createdAt));
+}
+
+/** Job: mark lapsed handover codes EXPIRED (audited). */
+export async function expireDeliveryOtps(now = new Date()) {
+  const rows = await db.select({ id: dealDeliveryOtps.id, dealId: dealDeliveryOtps.dealId }).from(dealDeliveryOtps).where(and(isNull(dealDeliveryOtps.usedAt), isNull(dealDeliveryOtps.invalidatedAt), lt(dealDeliveryOtps.expiresAt, now)));
+  for (const r of rows) {
+    await db.transaction(async (tx) => {
+      const n = await tx.update(dealDeliveryOtps).set({ invalidatedAt: now, invalidReason: 'EXPIRED' }).where(and(eq(dealDeliveryOtps.id, r.id), isNull(dealDeliveryOtps.usedAt), isNull(dealDeliveryOtps.invalidatedAt))).returning({ id: dealDeliveryOtps.id });
+      if (n.length) await audit(tx, SYSTEM_ACTOR, { action: 'deal.delivery_otp_expired', entityType: 'external_deal', entityId: r.dealId, newValues: { otpId: r.id } });
+    });
+  }
+  return rows.length;
+}
+
+const HOLD_FLAG_CODES = ['DELIVERY_CONFLICT', 'DELIVERY_EXCEPTION', 'ADMIN_HOLD'];
+
+async function openDeliveryReview(tx: DbOrTx, actor: Actor, deal: Deal, kind: 'DELIVERY_CONFLICT' | 'DELIVERY_EXCEPTION', description: string) {
+  const { openDisputeTx } = await import('@/server/modules/postpurchase/disputes');
+  const dispute = await openDisputeTx(tx, actor, { dealId: deal.id, reasonCode: kind, description, claimantUserId: actor.userId! });
+  await tx.insert(riskFlags).values({
+    entityType: 'external_deal',
+    entityId: deal.id,
+    code: kind,
+    severity: 'HIGH',
+    note: kind === 'DELIVERY_CONFLICT' ? 'المشتري أفاد بعدم الاستلام رغم التحقق برمز الاستلام' : 'تعذر إتمام التحقق برمز الاستلام',
+    meta: { disputeId: dispute.id, handoverOtpId: deal.handoverOtpId, handoverVerifiedAt: deal.handoverVerifiedAt?.toISOString() ?? null },
+    createdBy: actor.userId ?? null,
+  });
+  await audit(tx, actor, { action: kind === 'DELIVERY_CONFLICT' ? 'deal.delivery_conflict' : 'deal.delivery_exception', entityType: 'external_deal', entityId: deal.id, newValues: { disputeId: dispute.id } });
+  await notify(tx, { event: 'DEAL_DELIVERY_REVIEW', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
+  return dispute;
+}
+
+/**
+ * Buyer: "لم أستلم المنتج فعليًا". After a verified handover this is a DELIVERY_CONFLICT: the OTP is
+ * evidence, not a judgment — funds stay held and Operations decides through the dispute.
+ */
+export async function reportNotReceived(actor: Actor, dealId: string, description: string) {
+  const why = requireReason(description);
+  return db.transaction(async (tx) => {
+    const deal = await lockBuyerDeal(tx, actor, dealId);
+    if (!['DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('لا يمكن الإبلاغ عن عدم الاستلام في حالة الصفقة الحالية');
+    await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
+    if (deal.handoverVerifiedAt) {
+      await tx.update(externalDeals).set({ deliveryConflictAt: new Date() }).where(eq(externalDeals.id, deal.id));
+      return { conflict: true, dispute: await openDeliveryReview(tx, actor, deal, 'DELIVERY_CONFLICT', why) };
+    }
+    const { openDisputeTx } = await import('@/server/modules/postpurchase/disputes');
+    return { conflict: false, dispute: await openDisputeTx(tx, actor, { dealId: deal.id, reasonCode: 'NOT_RECEIVED', description: why, claimantUserId: actor.userId! }) };
+  });
+}
+
+/** Buyer or seller: the code cannot be used (no phone / lost / courier issue) → Operations review. Never releases funds. */
+export async function reportDeliveryException(actor: Actor, dealId: string, description: string) {
+  const userId = requireUser(actor);
+  const why = requireReason(description);
+  return db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
+    if (!deal) throw notFound('الصفقة');
+    if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
+    if (deal.status !== 'DELIVERED') throw invalidState('طلب المراجعة متاح بعد الشحن وقبل التحقق من التسليم');
+    await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
+    return openDeliveryReview(tx, actor, deal, 'DELIVERY_EXCEPTION', why);
+  });
+}
+
+/** Operations hold on a deal (admin, step-up). While held, the buyer's confirmation cannot release the payout. */
+export async function setDealFinancialHold(actor: Actor, dealId: string, hold: boolean, reason: string) {
+  if (!hasPermission(actor, 'deals.manage')) throw forbidden();
+  requireStepUp(actor);
+  const why = requireReason(reason);
+  await db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
+    if (!deal) throw notFound('الصفقة');
+    await tx.update(externalDeals).set({ financialHold: hold }).where(eq(externalDeals.id, deal.id));
+    await audit(tx, actor, { action: hold ? 'deal.hold_set' : 'deal.hold_released', entityType: 'external_deal', entityId: deal.id, reason: why });
   });
 }
 
@@ -629,13 +856,28 @@ async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundTo
   }
 }
 
-/** Buyer confirms receipt → deal COMPLETED; seller payout becomes payable. Idempotent. */
+/**
+ * Buyer: "استلمت والمنتج مطابق" (explicit, after a VERIFIED handover). Only this — never the OTP, the
+ * waybill, tracking or GPS — makes the seller's net amount payable, and only when payment is confirmed,
+ * there is no dispute, no Operations hold and no open hold risk flag. Exactly once (row lock +
+ * idempotent settlement key).
+ */
 export async function confirmDealReceipt(actor: Actor, dealId: string) {
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status === 'COMPLETED') return { alreadyCompleted: true };
-    if (deal.status !== 'DELIVERED' && deal.status !== 'BUYER_CONFIRMATION_PENDING') throw invalidState('لا يمكن تأكيد الاستلام قبل أن يعلن البائع التسليم');
-    await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date() });
+    if (deal.status !== 'DELIVERY_HANDOVER_VERIFIED' && deal.status !== 'BUYER_CONFIRMATION_PENDING') {
+      throw invalidState(deal.status === 'DELIVERED' ? 'يجب التحقق من التسليم برمز الاستلام أولًا' : 'لا يمكن تأكيد الاستلام في حالة الصفقة الحالية');
+    }
+    if (!deal.handoverVerifiedAt || !deal.handoverOtpId) throw invalidState('يجب التحقق من التسليم برمز الاستلام أولًا');
+    const [pay] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.dealId, deal.id));
+    if (pay?.status !== 'CONFIRMED') throw invalidState('لم يتم تأكيد الدفع لهذه الصفقة');
+    if (deal.financialHold) throw invalidState('الصفقة موقوفة لمراجعة فريق العمليات');
+    const holds = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, HOLD_FLAG_CODES)));
+    if (holds.length) throw invalidState('الصفقة قيد مراجعة فريق العمليات');
+    const now = new Date();
+    await moveDeal(tx, actor, deal, 'BUYER_CONFIRMED_RECEIPT', { buyerConfirmedAt: now });
+    await moveDeal(tx, actor, { ...deal, status: 'BUYER_CONFIRMED_RECEIPT' }, 'COMPLETED', { completedAt: now });
     await postDealCompletion(tx, actor, deal);
     await audit(tx, actor, { action: 'deal.receipt_confirmed', entityType: 'external_deal', entityId: deal.id });
     await notify(tx, { event: 'EXTERNAL_DEAL_COMPLETED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}` });
@@ -683,13 +925,14 @@ export async function onDealRefundPaid(_tx: DbOrTx, _actor: Actor, _dealId: stri
 
 /** Job: inspection period over without buyer action → flag for operations (no automatic release). */
 export async function flagDealsAwaitingConfirmation(now = new Date()) {
-  const rows = await db.select().from(externalDeals).where(eq(externalDeals.status, 'DELIVERED'));
+  // The inspection period starts at the verified handover; the buyer still has to choose explicitly.
+  const rows = await db.select().from(externalDeals).where(eq(externalDeals.status, 'DELIVERY_HANDOVER_VERIFIED'));
   let n = 0;
   for (const deal of rows) {
-    if (!deal.deliveredAt || deal.deliveredAt.getTime() + deal.inspectionDays * 86400_000 > now.getTime()) continue;
+    if (!deal.handoverVerifiedAt || deal.handoverVerifiedAt.getTime() + deal.inspectionDays * 86400_000 > now.getTime()) continue;
     await db.transaction(async (tx) => {
       const [d] = await tx.select().from(externalDeals).where(eq(externalDeals.id, deal.id)).for('update');
-      if (d.status !== 'DELIVERED') return;
+      if (d.status !== 'DELIVERY_HANDOVER_VERIFIED') return;
       await moveDeal(tx, SYSTEM_ACTOR, d, 'BUYER_CONFIRMATION_PENDING', {}, 'انتهت مدة الفحص دون تأكيد');
       await notify(tx, { event: 'DELIVERY_FOLLOW_UP', userIds: [d.buyerId], vars: { order: `صفقة ${d.number}` }, link: `/account/deals/${d.id}` });
       n++;
@@ -716,7 +959,7 @@ export async function dealGraph(actor: Actor, dealId: string) {
   const [buyer] = await db.select({ fullName: users.fullName }).from(users).where(eq(users.id, deal.buyerId));
   // Location privacy: each party always sees their own location; the counterparty's location only
   // once the buyer's payment is confirmed (ACTIVE onwards); staff with deals.view see both.
-  const paidStage = ['ACTIVE', 'DELIVERED', 'BUYER_CONFIRMATION_PENDING', 'COMPLETED', 'DISPUTED', 'REFUNDED'].includes(deal.status);
+  const paidStage = ['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING', 'BUYER_CONFIRMED_RECEIPT', 'COMPLETED', 'DISPUTED', 'REFUNDED'].includes(deal.status);
   const buyerLocation = role === 'BUYER' || role === 'ADMIN' || (role === 'SELLER' && paidStage) ? decryptLocation(deal.buyerLocationEnc) : null;
   const sellerLocation = role === 'SELLER' || role === 'ADMIN' || (role === 'BUYER' && paidStage) ? decryptLocation(deal.sellerLocationEnc) : null;
   // Never hand encrypted blobs or payout ciphertext to the page layer.

@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { DEAL_STATUSES, INVITATION_STATUSES, PAYOUT_TYPES } from '@/domain/machines';
 import { createdAt, enumCheck, money, ts, updatedAt } from './_helpers';
 import { files } from './files';
@@ -52,6 +52,14 @@ export const externalDeals = pgTable(
     agreedTerms: jsonb().$type<Record<string, unknown>>(),
     agreedVersion: integer(),
     agreedAt: ts(),
+    // Delivery handover (OTP). Physical handover evidence only — never acceptance of the goods.
+    deliveryAttempt: integer().notNull().default(0),
+    handoverVerifiedAt: ts(),
+    handoverOtpId: uuid(),
+    buyerConfirmedAt: ts(),
+    deliveryConflictAt: ts(),
+    /** Operations hold: while true the buyer's confirmation cannot make the payout payable. */
+    financialHold: boolean().notNull().default(false),
     // Step 3 — price & terms
     unitPrice: money(),
     totalAmount: money(),
@@ -193,5 +201,44 @@ export const dealTermsVersions = pgTable(
     uniqueIndex('deal_terms_versions_uq').on(t.dealId, t.version),
     enumCheck('deal_terms_versions_status_chk', t.status, DEAL_TERMS_STATUSES),
     check('deal_terms_versions_by_chk', sql`${t.proposedBy} in ('SELLER','BUYER')`),
+  ],
+);
+
+/**
+ * Delivery OTP: a one-time 6-digit code that the BUYER hands to the seller/courier at physical
+ * handover. Only an HMAC of the code is stored (bound to deal + OTP id). `testCodeEnc` is filled only
+ * on staging / development so the authenticated buyer can see a clearly-labelled test code while no
+ * SMS provider is configured; it is never set in production.
+ */
+export const DELIVERY_OTP_INVALID_REASONS = ['REGENERATED', 'EXPIRED', 'LOCKED', 'CLOSED'] as const;
+export const dealDeliveryOtps = pgTable(
+  'deal_delivery_otps',
+  {
+    id: uuid().primaryKey(),
+    dealId: uuid()
+      .notNull()
+      .references(() => externalDeals.id),
+    buyerId: uuid()
+      .notNull()
+      .references(() => users.id),
+    deliveryAttempt: integer().notNull(),
+    codeHash: text().notNull(),
+    testCodeEnc: text(),
+    expiresAt: ts().notNull(),
+    attempts: integer().notNull().default(0),
+    maxAttempts: integer().notNull(),
+    lastAttemptAt: ts(),
+    usedAt: ts(),
+    usedBy: uuid().references(() => users.id),
+    invalidatedAt: ts(),
+    invalidReason: text({ enum: DELIVERY_OTP_INVALID_REASONS }),
+    issuedBy: uuid().references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('deal_delivery_otps_deal_idx').on(t.dealId, t.createdAt),
+    // At most one usable code per deal at any time.
+    uniqueIndex('deal_delivery_otps_active_uq').on(t.dealId).where(sql`${t.usedAt} is null and ${t.invalidatedAt} is null`),
+    check('deal_delivery_otps_attempts_chk', sql`${t.attempts} >= 0 and ${t.attempts} <= ${t.maxAttempts}`),
   ],
 );

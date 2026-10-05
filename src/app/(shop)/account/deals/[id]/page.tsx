@@ -10,6 +10,10 @@ import {
   dealConfirmAction,
   dealDeliveredAction,
   dealProofAction,
+  regenerateDeliveryOtpAction,
+  reportDeliveryExceptionAction,
+  reportNotReceivedAction,
+  verifyDeliveryOtpAction,
   refreshInviteAction,
   rejectInviteAction,
   revokeInviteAction,
@@ -17,7 +21,7 @@ import {
   sellerOfferAction,
   startDealPaymentAction,
 } from '@/app/_actions/deals';
-import { dealGraph, termsHistory, type Terms } from '@/server/modules/deals/service';
+import { dealGraph, deliveryOtpEvents, deliveryOtpForBuyer, termsHistory, type Terms } from '@/server/modules/deals/service';
 import { enabledPaymentMethods, submissionsFor } from '@/server/modules/payments/service';
 import { getSetting } from '@/server/modules/settings';
 import type { StoredLocation } from '@/server/modules/locations';
@@ -65,6 +69,10 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
     getSetting('returns.mandatoryRightsNotice'),
     db.select({ phone: users.phone, email: users.email, phoneVerifiedAt: users.phoneVerifiedAt, emailVerifiedAt: users.emailVerifiedAt, fullName: users.fullName }).from(users).where(eq(users.id, actor.userId!)),
   ]);
+  // The buyer's handover code (staging test mode only shows the code itself). Never loaded for the seller.
+  const otpView = role === 'BUYER' && deal.status === 'DELIVERED' ? await deliveryOtpForBuyer(actor, deal.id) : null;
+  const otpEvents = deal.deliveryAttempt > 0 ? await deliveryOtpEvents(deal.id) : [];
+  const handoverOpen = deal.status === 'DELIVERY_HANDOVER_VERIFIED' || deal.status === 'BUYER_CONFIRMATION_PENDING';
   const flash = role === 'BUYER' && deal.status === 'INVITED' ? (await cookies()).get(`edmn_inv_${deal.id}`)?.value : undefined;
   const inviteLink = flash && /^[A-Za-z0-9_-]{30,100}$/.test(flash) ? `${APP_URL}/deal/invite/${flash}` : null;
   const govName = (gid?: number | null) => govs.find((x) => x.id === gid)?.nameAr ?? '—';
@@ -82,7 +90,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات المحمية', href: '/account/deals' }, { label: g.ref }]} />}
         title={deal.title}
         description={`صفقة محمية · ${g.ref}`}
-        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'أنت المشتري' : 'أنت البائع'}</Badge><StatusChip status={deal.status} /></>}
+        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'أنت المشتري' : 'أنت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} /></>}
       />
 
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}
@@ -277,7 +285,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {deal.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info">إثبات الدفع قيد التحقق من فريق اضمن.</Alert>}
       {deal.status === 'ACTIVE' && isBuyer && (
         <Alert tone="success" title="الصفقة نشطة">
-          تم تأكيد استلام اضمن للدفع. لن يُتاح مستحق البائع إلا بعد تأكيدك الاستلام أو انتهاء مدة الفحص المتفق عليها.
+          تم تأكيد استلام اضمن للدفع. لن يُتاح مستحق البائع إلا بعد التحقق من التسليم برمز الاستلام ثم تأكيدك أن المنتج مطابق.
           {!dispute && <span className="mt-2 block"><Link href={`/account/disputes/new?deal=${deal.id}&reason=NOT_RECEIVED`} className="underline">لم أستلم حتى الآن</Link></span>}
         </Alert>
       )}
@@ -285,30 +293,119 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isSeller && deal.status === 'ACTIVE' && (
         <ActionForm action={dealDeliveredAction} className="card space-y-3 p-5" encType="multipart/form-data">
           <input type="hidden" name="dealId" value={deal.id} />
-          <Alert tone="success">تم تأكيد دفع المشتري لدى اضمن. سلّم المنتج حسب الاتفاق ثم سجّل التسليم.</Alert>
-          <Field label="تفاصيل التسليم" htmlFor="note"><Textarea id="note" name="note" rows={2} placeholder="تم الشحن عبر… رقم البوليصة…" /></Field>
-          <FileInput name="proof" multiple label="إثبات التسليم (بوليصة / صورة)" accept="image/jpeg,image/png,image/webp,application/pdf" />
-          <SubmitButton>تسجيل التسليم</SubmitButton>
+          <Alert tone="success">تم تأكيد دفع المشتري لدى اضمن. اشحن المنتج حسب الاتفاق ثم سجّل الشحن. عند التسليم الفعلي سيعطيك المشتري رمز الاستلام.</Alert>
+          <Field label="تفاصيل الشحن" htmlFor="note"><Textarea id="note" name="note" rows={2} placeholder="تم الشحن عبر… رقم البوليصة…" /></Field>
+          <FileInput name="proof" multiple label="إثبات الشحن (بوليصة / صورة)" accept="image/jpeg,image/png,image/webp,application/pdf" />
+          <SubmitButton>تسجيل الشحن</SubmitButton>
         </ActionForm>
       )}
 
-      {/* ── Buyer: delivery outcome (the return policy never blocks a problem report) ── */}
-      {isBuyer && (deal.status === 'DELIVERED' || deal.status === 'BUYER_CONFIRMATION_PENDING') && !dispute && (
+      {/* ── Buyer: handover code (belongs to the buyer; never shown to the seller) ── */}
+      {isBuyer && deal.status === 'DELIVERED' && !dispute && (
+        <section className="card space-y-3 border-brand-200 p-5" data-testid="buyer-handover-code">
+          <h2 className="font-bold">رمز الاستلام</h2>
+          <p className="text-sm">سجّل البائع الشحن في {formatDate(deal.deliveredAt, true)}. {deal.deliveryNote}</p>
+          <p className="text-sm">أعطِ الرمز للبائع أو المندوب <strong>فقط عند استلام المنتج فعليًا</strong>. الرمز يثبت التسليم فقط، ولا يعني موافقتك على حالة المنتج، ولا يُصرف أي مبلغ للبائع به.</p>
+          {otpView?.active ? (
+            <>
+              {otpView.testCode ? (
+                <div className="rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 p-3 text-center" data-testid="staging-otp">
+                  <p className="text-xs font-bold text-amber-900">رمز تجريبي — بيئة Staging</p>
+                  <p className="mt-1 text-3xl font-bold tracking-[0.4em] ltr" data-testid="staging-otp-code">{otpView.testCode}</p>
+                  <p className="text-[11px] text-amber-900">في الإنتاج يصلك الرمز برسالة SMS فقط.</p>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-page p-2 text-sm">أرسلنا الرمز برسالة SMS على رقم موبايلك.</p>
+              )}
+              <p className="text-xs text-muted">صالح حتى {formatDate(otpView.expiresAt ?? null, true)} · المحاولات المتبقية {otpView.attemptsLeft}</p>
+            </>
+          ) : (
+            <p className="rounded-lg bg-amber-50 p-2 text-sm">لا يوجد رمز صالح حاليًا (انتهت صلاحيته أو تم تجاوز المحاولات). اطلب رمزًا جديدًا.</p>
+          )}
+          <ActionForm action={regenerateDeliveryOtpAction}>
+            <input type="hidden" name="dealId" value={deal.id} />
+            <SubmitButton variant="outline" size="sm">إرسال رمز جديد</SubmitButton>
+          </ActionForm>
+          <details className="rounded-lg border border-line p-3 text-sm">
+            <summary className="cursor-pointer font-semibold">لم يصلني المنتج / مشكلة في التسليم</summary>
+            <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
+              <input type="hidden" name="dealId" value={deal.id} />
+              <Field label="اشرح ما حدث" htmlFor="nr-desc" required><Textarea id="nr-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">فتح نزاع عدم الاستلام</SubmitButton>
+            </ActionForm>
+          </details>
+        </section>
+      )}
+
+      {/* ── Seller: handover verification. There is NO "buyer received" button for the seller. ── */}
+      {isSeller && deal.status === 'DELIVERED' && !dispute && (
+        <section className="card space-y-3 border-brand-200 p-5" data-testid="handover-verify">
+          <h2 className="font-bold">تأكيد تسليم الصفقة</h2>
+          <p className="text-sm text-muted">عند تسليم المنتج للمشتري يدًا بيد أو عبر المندوب، اطلب منه رمز الاستلام وأدخله هنا. الرمز يصل للمشتري فقط.</p>
+          <ActionForm action={verifyDeliveryOtpAction} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <input type="hidden" name="dealId" value={deal.id} />
+            <Field label="رمز الاستلام" htmlFor="otp-code" className="sm:flex-1"><Input id="otp-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required dir="ltr" className="text-center text-lg tracking-[0.3em]" /></Field>
+            <SubmitButton size="lg">تأكيد الرمز</SubmitButton>
+          </ActionForm>
+          <div className="flex flex-wrap gap-2">
+            <ActionForm action={regenerateDeliveryOtpAction}>
+              <input type="hidden" name="dealId" value={deal.id} />
+              <SubmitButton variant="ghost" size="sm">إعادة إرسال رمز جديد للمشتري</SubmitButton>
+            </ActionForm>
+          </div>
+          <details className="rounded-lg border border-line p-3 text-sm">
+            <summary className="cursor-pointer font-semibold">تعذر التحقق بالرمز؟</summary>
+            <ActionForm action={reportDeliveryExceptionAction} className="mt-2 space-y-2">
+              <input type="hidden" name="dealId" value={deal.id} />
+              <Field label="سبب تعذر التحقق" htmlFor="ex-desc" required><Textarea id="ex-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">طلب مراجعة فريق العمليات</SubmitButton>
+            </ActionForm>
+          </details>
+        </section>
+      )}
+
+      {isSeller && handoverOpen && !dispute && (
+        <Alert tone="success" title="تم التحقق من تسليم المنتج للمشتري.">بانتظار تأكيد المشتري لمطابقة المنتج. مستحقك غير متاح للصرف حتى يؤكد المشتري أو يصدر قرار فريق العمليات.</Alert>
+      )}
+
+      {/* ── Buyer: explicit final choice after a verified handover (OTP ≠ acceptance) ── */}
+      {isBuyer && handoverOpen && !dispute && (
         <section className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
-          <p className="text-sm">أعلن البائع التسليم في {formatDate(deal.deliveredAt, true)}. {deal.deliveryNote}</p>
-          <p className="text-sm font-semibold">افحص المنتج خلال {deal.inspectionDays} يوم. عند التأكيد سيتم صرف المبلغ للبائع.</p>
+          <p className="font-semibold">تم التحقق من تسليم المنتج للمشتري.</p>
+          <p className="text-sm">افحص المنتج خلال {deal.inspectionDays} يوم ثم اختر. لن يُتاح أي مبلغ للبائع إلا إذا اخترت «استلمت والمنتج مطابق».</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={dealConfirmAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
-              <SubmitButton variant="success" size="lg" className="w-full">استلمت والمنتج مطابق</SubmitButton>
+              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="بتأكيدك أن المنتج مطابق سيُتاح مستحق البائع للصرف، ولن يمكنك فتح نزاع على عدم المطابقة بعد ذلك إلا وفق حقوقك القانونية. هل أنت متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
             </ActionForm>
             <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت ولكن توجد مشكلة</LinkButton>
-            <LinkButton href={`/account/disputes/new?deal=${deal.id}&reason=NOT_RECEIVED`} variant="ghost" size="lg" className="sm:flex-1">لم أستلم</LinkButton>
           </div>
+          <details className="rounded-lg border border-line bg-white p-3 text-sm">
+            <summary className="cursor-pointer font-semibold">لم أستلم المنتج فعليًا</summary>
+            <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
+              <input type="hidden" name="dealId" value={deal.id} />
+              <p className="text-xs text-muted">سيتم إيقاف أي صرف وتحويل الصفقة لمراجعة فريق العمليات (تعارض في التسليم).</p>
+              <Field label="اشرح ما حدث" htmlFor="conflict-desc" required><Textarea id="conflict-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">إرسال البلاغ</SubmitButton>
+            </ActionForm>
+          </details>
         </section>
       )}
-      {['ACTIVE', 'DELIVERED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status) && !dispute && isSeller && (
+      {['ACTIVE', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status) && !dispute && isSeller && (
         <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> الإبلاغ عن مشكلة</LinkButton>
+      )}
+      {otpEvents.length > 0 && (
+        <details className="card p-4 text-sm" data-testid="handover-history">
+          <summary className="cursor-pointer font-semibold">سجل رموز الاستلام ({otpEvents.length})</summary>
+          <ul className="mt-2 space-y-1 text-xs">
+            {otpEvents.map((o) => (
+              <li key={o.id}>
+                أُصدر {formatDate(o.createdAt, true)} · المحاولات {o.attempts}/{o.maxAttempts} ·{' '}
+                {o.usedAt ? `تم التحقق ${formatDate(o.usedAt, true)}` : o.invalidatedAt ? `غير صالح (${OTP_REASON[o.invalidReason ?? ''] ?? o.invalidReason})` : `صالح حتى ${formatDate(o.expiresAt, true)}`}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {dispute && <LinkButton href={`/account/disputes/${dispute.id}`} variant="secondary">متابعة النزاع #{dispute.number}</LinkButton>}
       {deal.status === 'COMPLETED' && <Alert tone="success" title="اكتملت الصفقة">{isSeller ? `سيتم تحويل مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} إلى ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'تم التحويل' : 'قيد التحويل'}` : 'شكراً لاستخدامك اضمن.'}</Alert>}
@@ -344,6 +441,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
   );
 }
 
+const OTP_REASON: Record<string, string> = { REGENERATED: 'استُبدل برمز جديد', EXPIRED: 'انتهت صلاحيته', LOCKED: 'تجاوز المحاولات', CLOSED: 'أُغلق للمراجعة' };
 const VERSION_STATUS: Record<string, string> = { PROPOSED: 'بانتظار الرد', ACCEPTED: 'تم الاتفاق', REJECTED: 'مرفوضة', SUPERSEDED: 'استُبدلت' };
 
 function TermsTable({ t }: { t: Terms }) {

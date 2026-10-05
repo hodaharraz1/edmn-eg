@@ -43,6 +43,13 @@
       "when": 1791202866089,
       "tag": "0005_deals_terms_location_returns",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791208376865,
+      "tag": "0006_deal_delivery_otp",
+      "breakpoints": true
     }
   ]
 }

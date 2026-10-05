@@ -22,7 +22,13 @@ describe('state machines', () => {
     expect(paymentMachine.can('REJECTED', 'PAYMENT_SUBMITTED')).toBe(true);
     expect(shipmentMachine.can('SHIPPED', 'DELIVERED')).toBe(true);
     expect(returnMachine.can('INSPECTION', 'REFUND_PENDING')).toBe(true);
-    expect(dealMachine.can('DELIVERED', 'COMPLETED')).toBe(true);
+    // Shipped → verified handover (OTP) → buyer's explicit confirmation → completed.
+    expect(dealMachine.can('DELIVERED', 'DELIVERY_HANDOVER_VERIFIED')).toBe(true);
+    expect(dealMachine.can('DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMED_RECEIPT')).toBe(true);
+    expect(dealMachine.can('BUYER_CONFIRMED_RECEIPT', 'COMPLETED')).toBe(true);
+    // No shortcut from "shipped" or from the OTP straight to completion / release.
+    expect(dealMachine.can('DELIVERED', 'COMPLETED')).toBe(false);
+    expect(dealMachine.can('DELIVERY_HANDOVER_VERIFIED', 'COMPLETED')).toBe(false);
     expect(disputeMachine.can('OPEN', 'RESOLVED')).toBe(true);
     expect(withdrawalMachine.can('APPROVED', 'PAID')).toBe(true);
   });

@@ -54,6 +54,12 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   PAYMENT_PENDING: { ar: 'بانتظار الدفع', tone: 'warning' },
   ACTIVE: { ar: 'نشطة', tone: 'brand' },
   BUYER_CONFIRMATION_PENDING: { ar: 'بانتظار تأكيد المشتري', tone: 'warning' },
+  SELLER_JOINED: { ar: 'انضم البائع', tone: 'info' },
+  OFFER_PENDING_BUYER: { ar: 'عرض بانتظار المشتري', tone: 'warning' },
+  CHANGE_REQUESTED: { ar: 'طلب تعديل', tone: 'warning' },
+  DEAL_SHIPPED: { ar: 'تم الشحن — بانتظار التسليم', tone: 'info' },
+  DELIVERY_HANDOVER_VERIFIED: { ar: 'تم التحقق من التسليم', tone: 'brand' },
+  BUYER_CONFIRMED_RECEIPT: { ar: 'أكد المشتري الاستلام', tone: 'success' },
   // Disputes
   OPEN: { ar: 'مفتوح', tone: 'warning' },
   AWAITING_INFORMATION: { ar: 'بانتظار معلومات', tone: 'warning' },

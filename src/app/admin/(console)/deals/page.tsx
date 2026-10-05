@@ -10,7 +10,7 @@ import { EmptyState, StatusChip } from '@/ui/feedback';
 
 export const metadata = { title: 'الصفقات الخارجية المحمية' };
 const GROUPS = {
-  active: ['INVITED', 'ACCEPTED', 'PAYMENT_PENDING', 'PAYMENT_UNDER_REVIEW', 'ACTIVE', 'DELIVERED', 'BUYER_CONFIRMATION_PENDING'],
+  active: ['INVITED', 'ACCEPTED', 'PAYMENT_PENDING', 'PAYMENT_UNDER_REVIEW', 'ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING', 'SELLER_JOINED', 'OFFER_PENDING_BUYER', 'CHANGE_REQUESTED'],
   disputed: ['DISPUTED'],
   done: ['COMPLETED', 'REFUNDED', 'CANCELLED'],
   draft: ['DRAFT'],

@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import { refreshInvitation, addDealPhotos, cancelDeal, claimInvitation, confirmDealReceipt, createDeal, inviteSeller, markDealDelivered, rejectInvitation, respondToChangeRequest, respondToOffer, revokeInvitation, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
+import { regenerateDeliveryOtp, reportDeliveryException, reportNotReceived, verifyDeliveryOtp, refreshInvitation, addDealPhotos, cancelDeal, claimInvitation, confirmDealReceipt, createDeal, inviteSeller, markDealDelivered, rejectInvitation, respondToChangeRequest, respondToOffer, revokeInvitation, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
 import { returnPolicyFromValues } from '@/domain/return-policy';
 import { submitProof } from '@/server/modules/payments/service';
 import { bool, fileOf, filesOf, int, runAction, str, type ActionState } from '@/server/web/action';
@@ -198,5 +198,53 @@ export async function rejectInviteAction(_p: ActionState, fd: FormData): Promise
     return { message: 'تم إبلاغ المشتري برفض الصفقة.' };
   });
   if (dealId) revalidatePath(`/account/deals/${dealId}`);
+  return res;
+}
+
+/** Seller / courier enters the buyer's handover code at physical handover. Moves no money. */
+export async function verifyDeliveryOtpAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/deals');
+  const dealId = str(fd, 'dealId');
+  const res = await runAction(async () => {
+    await verifyDeliveryOtp(actor, dealId, str(fd, 'code'));
+    return { message: 'تم التحقق من تسليم المنتج للمشتري.' };
+  });
+  revalidatePath(`/account/deals/${dealId}`);
+  return res;
+}
+
+/** New handover code (always delivered to the BUYER); the previous one stops working. */
+export async function regenerateDeliveryOtpAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/deals');
+  const dealId = str(fd, 'dealId');
+  const res = await runAction(async () => {
+    await regenerateDeliveryOtp(actor, dealId);
+    return { message: 'تم إصدار رمز استلام جديد وإرساله للمشتري. الرمز السابق لم يعد صالحًا.' };
+  });
+  revalidatePath(`/account/deals/${dealId}`);
+  return res;
+}
+
+/** Buyer: "لم أستلم المنتج فعليًا" — a delivery conflict after a verified handover; funds stay held. */
+export async function reportNotReceivedAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/deals');
+  const dealId = str(fd, 'dealId');
+  const res = await runAction(async () => {
+    const r = await reportNotReceived(actor, dealId, str(fd, 'description'));
+    return { message: r.conflict ? 'تم تسجيل البلاغ وتحويل الصفقة لمراجعة فريق العمليات. المبلغ محجوز لحين القرار.' : 'تم فتح نزاع عدم الاستلام. المبلغ محجوز لحين القرار.' };
+  });
+  revalidatePath(`/account/deals/${dealId}`);
+  return res;
+}
+
+/** Buyer or seller: the handover code cannot be used → Operations review (never an automatic release). */
+export async function reportDeliveryExceptionAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/deals');
+  const dealId = str(fd, 'dealId');
+  const res = await runAction(async () => {
+    await reportDeliveryException(actor, dealId, str(fd, 'description'));
+    return { message: 'تم تحويل التسليم لمراجعة فريق العمليات. لن يُصرف أي مبلغ قبل القرار.' };
+  });
+  revalidatePath(`/account/deals/${dealId}`);
   return res;
 }

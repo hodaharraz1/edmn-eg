@@ -3,7 +3,7 @@ import { logger } from '@/server/core/logger';
 
 export interface OutboundProvider {
   name: string;
-  send(msg: { recipient: string; subject?: string | null; body: string }): Promise<void>;
+  send(msg: { recipient: string; subject?: string | null; body: string; secret?: boolean }): Promise<void>;
 }
 
 const logProvider = (channel: string): OutboundProvider => ({
@@ -14,8 +14,9 @@ const logProvider = (channel: string): OutboundProvider => ({
       channel,
       to: msg.recipient.replace(/.(?=.{4})/g, '•'),
       subject: msg.subject,
-      // Bodies (which may contain one-time codes) are only echoed outside production.
-      ...(process.env.NODE_ENV !== 'production' ? { text: msg.body } : {}),
+      // Bodies are only echoed outside production, and messages carrying a code or secret link are
+      // never echoed anywhere (they live only in outbound_messages until redacted).
+      ...(process.env.NODE_ENV !== 'production' && !msg.secret ? { text: msg.body } : {}),
     });
   },
 });

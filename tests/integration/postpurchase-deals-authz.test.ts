@@ -10,7 +10,7 @@ import { sellerBalances } from '@/server/modules/finance/ledger';
 import { acceptReturnRefund, approveReturn, customerShipsReturn, markReturnReceived, requestReturn, startInspection } from '@/server/modules/postpurchase/returns';
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
 import { createProductReview, moderateReview } from '@/server/modules/reviews/service';
-import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
+import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, deliveryOtpForBuyer, verifyDeliveryOtp, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { canReadPrivateFile } from '@/server/storage/access';
 import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
@@ -160,6 +160,8 @@ describe('external protected deals', () => {
     expect(d.status).toBe('ACTIVE');
     await expect(markDealDelivered(buyer, deal.id, 'تم')).rejects.toThrow(/صلاحية/);
     await markDealDelivered(seller, deal.id, 'تم التسليم يداً بيد');
+    await expect(confirmDealReceipt(buyer, deal.id)).rejects.toThrow(/رمز الاستلام/); // handover not verified yet
+    await verifyDeliveryOtp(seller, deal.id, (await deliveryOtpForBuyer(buyer, deal.id))!.testCode!);
     await confirmDealReceipt(buyer, deal.id);
     const again = await confirmDealReceipt(buyer, deal.id);
     expect(again.alreadyCompleted).toBe(true);

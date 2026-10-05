@@ -203,28 +203,181 @@ test('buyer pays and admin verifies; addresses become visible to the parties', a
   await expect(page.getByTestId('deal-locations')).toContainText('شارع فيصل الرئيسي');
 });
 
-test('seller delivers, buyer confirms "received and as described", payout becomes payable and is paid', async ({ browser }) => {
+test('seller ships → buyer gets the handover code → seller verifies it; funds stay unavailable', async ({ browser }) => {
   const seller = await sellerPage(browser);
   await seller.goto(`/account/deals/${dealId}`);
   await expect(seller.getByTestId('deal-locations')).toContainText('شارع عباس العقاد');
   await seller.locator('textarea[name=note]').fill('تم الشحن عبر شركة الشحن، بوليصة 12345.');
-  await seller.getByRole('button', { name: 'تسجيل التسليم' }).click();
+  await seller.getByRole('button', { name: 'تسجيل الشحن' }).click();
   await expect.poll(status).toBe('DELIVERED');
+  // The seller never sees the code — there is only an input and no "buyer received" button.
+  await seller.reload();
+  await expect(seller.getByTestId('handover-verify')).toBeVisible();
+  await expect(seller.getByTestId('staging-otp')).toHaveCount(0);
+  await expect(seller.getByRole('button', { name: /استلم/ })).toHaveCount(0);
+
+  const code = await buyerHandoverCode(browser, dealId);
+  expect(await seller.content()).not.toContain(code);
+  await seller.locator('input[name=code]').fill(code === '000000' ? '111111' : '000000');
+  await seller.getByRole('button', { name: 'تأكيد الرمز' }).click();
+  await expect(seller.getByText(/رمز الاستلام غير صحيح/)).toBeVisible();
+  await seller.locator('input[name=code]').fill(code);
+  await seller.getByRole('button', { name: 'تأكيد الرمز' }).click();
+  await expect.poll(status).toBe('DELIVERY_HANDOVER_VERIFIED');
+  await seller.reload();
+  await expect(seller.getByText('تم التحقق من تسليم المنتج للمشتري.')).toBeVisible();
+  // OTP alone releases nothing.
+  expect(await q(`select id from deal_payouts where deal_id = $1`, [dealId])).toHaveLength(0);
+  expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
+});
+
+test('buyer explicitly confirms "received and as described" → payout payable exactly once and paid', async ({ browser }) => {
   const buyer = await customerLogin(browser, 'ahmed@demo.edmn.local');
+  acceptDialogs(buyer);
   await buyer.goto(`/account/deals/${dealId}`);
   const choice = buyer.getByTestId('delivery-choice');
+  await expect(choice.getByText('تم التحقق من تسليم المنتج للمشتري.')).toBeVisible();
   await expect(choice.getByRole('link', { name: /استلمت ولكن توجد مشكلة/ })).toBeVisible();
-  await expect(choice.getByRole('link', { name: 'لم أستلم' })).toBeVisible();
+  await expect(choice.getByText('لم أستلم المنتج فعليًا')).toBeVisible();
   await choice.getByRole('button', { name: 'استلمت والمنتج مطابق' }).click();
   await expect.poll(status).toBe('COMPLETED');
-  const [po] = await q<{ id: string; amount: string; status: string }>(`select id, amount, status from deal_payouts where deal_id = $1`, [dealId]);
+  const pos = await q<{ id: string; amount: string; status: string }>(`select id, amount, status from deal_payouts where deal_id = $1`, [dealId]);
+  expect(pos).toHaveLength(1);
+  const [po] = pos;
   const [d] = await q<{ r: string }>(`select seller_receives r from external_deals where id = $1`, [dealId]);
   expect(po.status).toBe('PENDING');
   expect(po.amount).toBe(d.r);
-  const admin = await adminLogin(browser, 'finance@edmn.local');
+  // A second confirmation (replay) changes nothing.
+  await buyer.reload();
+  await expect(buyer.getByTestId('delivery-choice')).toHaveCount(0);
+  expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(1);
+  // Super-admin: views the handover evidence (never the code) and records the payout.
+  const admin = await adminLogin(browser);
+  await admin.goto(`/admin/deals/${dealId}`);
+  await expect(admin.getByTestId('admin-handover')).toContainText('deal.delivery_otp_verified');
+  await expect(admin.getByTestId('admin-handover')).toContainText('deal.delivery_otp_failed');
+  expect(await admin.content()).not.toContain('codeHash');
   await admin.goto('/admin/refunds?tab=deals');
   const card = admin.locator('li', { hasText: `صفقة #` }).filter({ has: admin.locator(`input[name=id][value="${po.id}"]`) });
   await card.locator('input[name=reference]').fill('PAYOUT-E2E-1');
   await card.getByRole('button', { name: 'تسجيل الصرف' }).click();
   await expect.poll(async () => (await q<{ status: string }>(`select status from deal_payouts where id = $1`, [po.id]))[0].status).toBe('PAID');
 });
+
+/* ── Second deal (existing seller account): OTP handover → buyer reports a problem → funds stay held ── */
+let deal2 = '';
+const status2 = async () => (await q<{ status: string }>(`select status from external_deals where id = $1`, [deal2]))[0]?.status;
+
+test('second deal reaches ACTIVE with the existing seller account (login path)', async ({ browser }) => {
+  const buyer = await customerLogin(browser, 'ahmed@demo.edmn.local');
+  await buyer.goto('/account/deals/new');
+  await buyer.locator('input[name=title]').fill('سماعة لاسلكية مستعملة');
+  await buyer.locator('textarea[name=description]').fill('سماعة بحالة جيدة مع علبة الشحن والكابل الأصلي.');
+  await next(buyer);
+  await buyer.waitForURL(/step=2/);
+  deal2 = new URL(buyer.url()).searchParams.get('deal')!;
+  await buyer.locator('input[name=unitPrice]').fill('1200');
+  await next(buyer);
+  await buyer.waitForURL(/step=3/);
+  await buyer.locator('input[name=deliveryMethod]').fill('تسليم يد بيد');
+  await buyer.locator('input[name=deliveryDeadline]').fill(new Date(Date.now() + 4 * 86400_000).toISOString().slice(0, 10));
+  await next(buyer);
+  await buyer.waitForURL(/step=4/);
+  await next(buyer);
+  await buyer.waitForURL(/step=5/);
+  await buyer.locator('select[name=loc_governorateId]').selectOption({ index: 1 });
+  await buyer.locator('input[name=loc_city]').fill('مدينة نصر');
+  await buyer.locator('input[name=loc_street]').fill('شارع مكرم عبيد');
+  await next(buyer);
+  await buyer.waitForURL(/step=6/);
+  await buyer.locator('input[name=acceptTerms]').check();
+  await buyer.getByRole('button', { name: 'إنشاء طلب الصفقة' }).click();
+  await buyer.waitForURL(new RegExp(`/account/deals/${deal2}$`));
+  const link2 = await buyer.getByTestId('invite-link').inputValue();
+
+  const seller = await sellerPage(browser);
+  await seller.goto(link2.replace(/^https?:\/\/[^/]+/, ''));
+  await seller.getByRole('button', { name: 'قبول ومتابعة' }).click();
+  await seller.waitForURL(new RegExp(`/account/deals/${deal2}$`));
+  const form = seller.getByTestId('seller-offer-form');
+  await form.locator('select[name=loc_governorateId]').selectOption({ index: 2 });
+  await form.locator('input[name=loc_city]').fill('الهرم');
+  await form.locator('input[name=loc_street]').fill('شارع فيصل الرئيسي');
+  await form.locator('input[name=processingDays]').fill('1');
+  await form.locator('textarea[name=defects]').fill('خدوش خفيفة على العلبة');
+  await form.locator('input[name=rp_type][value=NONE]').check();
+  await form.locator('input[name=instapayAddress]').fill('karim.e2e@instapay');
+  await form.locator('input[name=acceptTerms]').check();
+  await form.getByRole('button', { name: 'إرسال العرض للمشتري' }).click();
+  await expect.poll(status2).toBe('OFFER_PENDING_BUYER');
+
+  await buyer.goto(`/account/deals/${deal2}`);
+  await buyer.getByTestId('offer-review').getByRole('button', { name: 'موافق على العرض' }).click();
+  await expect.poll(status2).toBe('PAYMENT_PENDING');
+  await buyer.reload();
+  await buyer.getByRole('button', { name: 'متابعة' }).click();
+  await expect.poll(async () => (await q(`select id from payments where deal_id = $1`, [deal2])).length).toBe(1);
+  await buyer.reload();
+  await buyer.locator('input[name=reference]').fill('VC-E2E-7777');
+  await buyer.locator('input[name=proof]').setInputFiles({ name: 'vc.png', mimeType: 'image/png', buffer: await png() });
+  await buyer.getByRole('button', { name: 'رفع إثبات الدفع' }).click();
+  await expect.poll(status2).toBe('PAYMENT_UNDER_REVIEW');
+  const [p] = await q<{ id: string }>(`select id from payments where deal_id = $1`, [deal2]);
+  const admin = await adminLogin(browser, 'payments@edmn.local');
+  acceptDialogs(admin);
+  await admin.goto(`/admin/payments/${p.id}`);
+  await admin.getByRole('button', { name: /تأكيد الدفع/ }).click();
+  await expect.poll(status2).toBe('ACTIVE');
+});
+
+test('OTP handover then "received but there is a problem" → dispute, funds stay held', async ({ browser }) => {
+  const seller = await sellerPage(browser);
+  await seller.goto(`/account/deals/${deal2}`);
+  await seller.locator('textarea[name=note]').fill('تم التسليم يدًا بيد.');
+  await seller.getByRole('button', { name: 'تسجيل الشحن' }).click();
+  await expect.poll(status2).toBe('DELIVERED');
+  const code = await buyerHandoverCode(browser, deal2);
+  await seller.reload();
+  await seller.locator('input[name=code]').fill(code);
+  await seller.getByRole('button', { name: 'تأكيد الرمز' }).click();
+  await expect.poll(status2).toBe('DELIVERY_HANDOVER_VERIFIED');
+
+  const buyer = await customerLogin(browser, 'ahmed@demo.edmn.local');
+  await buyer.goto(`/account/deals/${deal2}`);
+  await buyer.getByTestId('delivery-choice').getByRole('link', { name: /استلمت ولكن توجد مشكلة/ }).click();
+  await buyer.waitForURL(/\/account\/disputes\/new/);
+  await buyer.locator('select[name=reasonCode]').selectOption('NOT_AS_DESCRIBED');
+  await buyer.locator('textarea[name=description]').fill('السماعة اليمنى لا تعمل نهائيًا رغم أن العرض لم يذكر ذلك.');
+  await buyer.getByRole('button', { name: 'فتح النزاع' }).click();
+  await expect.poll(status2).toBe('DISPUTED');
+  expect(await q(`select id from deal_payouts where deal_id = $1`, [deal2])).toHaveLength(0);
+  expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [deal2])).toHaveLength(0);
+  await buyer.goto(`/account/deals/${deal2}`);
+  await expect(buyer.getByTestId('delivery-choice')).toHaveCount(0);
+});
+
+test('ledger stays balanced after both deals', async () => {
+  const [t] = await q<{ dr: string; cr: string }>(`select coalesce(sum(debit),0) dr, coalesce(sum(credit),0) cr from journal_lines`);
+  expect(t.dr).toBe(t.cr);
+  const drift = await q(`select a.id from ledger_accounts a left join journal_lines l on l.account_id = a.id group by a.id
+    having a.balance <> coalesce(sum(case when a.type in ('ASSET','EXPENSE') then l.debit - l.credit else l.credit - l.debit end), 0)`);
+  expect(drift).toHaveLength(0);
+});
+
+/** The buyer reads their own code from the deal page (staging test display — only the buyer sees it). */
+async function buyerHandoverCode(browser: Parameters<typeof customerLogin>[0], id: string) {
+  const buyer = await customerLogin(browser, 'ahmed@demo.edmn.local');
+  await buyer.goto(`/account/deals/${id}`);
+  const box = buyer.getByTestId('staging-otp');
+  await expect(box).toContainText('رمز تجريبي — بيئة Staging');
+  const code = (await buyer.getByTestId('staging-otp-code').innerText()).trim();
+  expect(code).toMatch(/^\d{6}$/);
+  // Anonymous visitors get no code (redirected to login).
+  const anon = await (await browser.newContext({ locale: 'ar-EG' })).newPage();
+  await anon.goto(`/account/deals/${id}`);
+  await anon.waitForURL(/\/login/);
+  await expect(anon.getByTestId('staging-otp')).toHaveCount(0);
+  expect(await anon.content()).not.toContain(code);
+  await anon.context().close();
+  return code;
+}

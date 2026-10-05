@@ -53,6 +53,9 @@ export const SETTINGS_SCHEMA = {
   'deals.feeBps': z.number().int().min(0).max(5000).default(0),
   'deals.feePayer': z.enum(['SELLER', 'BUYER']).default('SELLER'),
   'deals.invitationTtlHours': z.number().int().min(1).max(720).default(168),
+  /** Delivery handover OTP lifetime and wrong-code limit (a new code can be requested afterwards). */
+  'deals.deliveryOtpTtlHours': z.number().int().min(1).max(336).default(72),
+  'deals.deliveryOtpMaxAttempts': z.number().int().min(3).max(10).default(5),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;

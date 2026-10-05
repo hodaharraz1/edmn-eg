@@ -75,7 +75,7 @@ export async function openDisputeTx(
     const isBuyer = deal.buyerId === actor.userId;
     const isSeller = deal.sellerUserId === actor.userId;
     if (!isBuyer && !isSeller) throw forbidden();
-    if (!['ACTIVE', 'DELIVERED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('لا يمكن فتح نزاع على الصفقة في حالتها الحالية');
+    if (!['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('لا يمكن فتح نزاع على الصفقة في حالتها الحالية');
     input.claimantUserId = actor.userId!;
     respondentUserId = isBuyer ? deal.sellerUserId : deal.buyerId;
     await transition(tx, actor, dealMachine, deal.id, deal.status, 'DISPUTED', input.description.slice(0, 200));
