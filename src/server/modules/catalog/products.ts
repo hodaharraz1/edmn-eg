@@ -18,6 +18,7 @@ import {
   productRevisions,
   productVariants,
   products,
+  sellerShippingRates,
   sellers,
 } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
@@ -382,6 +383,8 @@ export async function submissionProblems(conn: DbOrTx, p: Product): Promise<stri
   }
   const variants = await conn.select().from(productVariants).where(and(eq(productVariants.productId, p.id), eq(productVariants.isActive, true)));
   if (!variants.length) problems.push('أضف السعر والكمية');
+  const shipsTo = await conn.select({ g: sellerShippingRates.governorateId }).from(sellerShippingRates).where(and(eq(sellerShippingRates.sellerId, p.sellerId), eq(sellerShippingRates.enabled, true))).limit(1);
+  if (!shipsTo.length) problems.push('فعّل الشحن لمحافظة واحدة على الأقل من صفحة الشحن');
   if (!p.returnPolicyConfirmed) problems.push('حدد سياسة الاسترجاع للمنتج (خطوة الشحن والإرجاع)');
   if (p.categoryId) {
     const schema = await effectiveAttributes(conn, p.categoryId);

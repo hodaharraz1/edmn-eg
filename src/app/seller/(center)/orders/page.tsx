@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { ShoppingBag } from 'lucide-react';
 import { db } from '@/server/db/client';
@@ -21,6 +22,8 @@ const TABS: [string, string, SellerOrderStatus[]][] = [
 
 export default async function SellerOrders(props: PageProps<'/seller/orders'>) {
   const actor = await requireSellerActor('/seller/orders');
+  // Customer names, phones and addresses are only for members who handle orders.
+  if (!actor.sellerPermissions?.has('orders.manage')) return <SellerForbidden />;
   const sp = await props.searchParams;
   const tab = TABS.find((t) => t[0] === sp.tab) ?? TABS[0];
   const rows = await db

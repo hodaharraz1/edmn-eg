@@ -39,10 +39,13 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
       if (hasPermission(actor, 'returns.manage') || hasPermission(actor, 'disputes.manage')) return true;
       return one(sql`
         select 1 from return_evidence re join returns r on r.id = re.return_id join sellers s on s.id = r.seller_id
-        where re.file_id = ${f.id} and (r.customer_id = ${uid} or s.owner_user_id = ${uid})`);
+        left join seller_members m on m.seller_id = r.seller_id and m.user_id = ${uid} and m.is_active
+        where re.file_id = ${f.id} and (r.customer_id = ${uid} or s.owner_user_id = ${uid} or m.user_id is not null)`);
     case 'DISPUTE_EVIDENCE':
       if (hasPermission(actor, 'disputes.manage')) return true;
-      return one(sql`select 1 from dispute_evidence de join disputes d on d.id = de.dispute_id where de.file_id = ${f.id} and (d.claimant_user_id = ${uid} or d.respondent_user_id = ${uid})`);
+      return one(sql`select 1 from dispute_evidence de join disputes d on d.id = de.dispute_id
+        left join seller_members m on m.seller_id = d.respondent_seller_id and m.user_id = ${uid} and m.is_active
+        where de.file_id = ${f.id} and (d.claimant_user_id = ${uid} or d.respondent_user_id = ${uid} or m.user_id is not null)`);
     case 'DEAL_EVIDENCE':
       if (hasPermission(actor, 'deals.view')) return true;
       return one(sql`select 1 from deal_evidence de join external_deals d on d.id = de.deal_id where de.file_id = ${f.id} and (d.buyer_id = ${uid} or d.seller_user_id = ${uid})`);

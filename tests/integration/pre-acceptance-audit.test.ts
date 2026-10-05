@@ -200,3 +200,55 @@ describe('pre-acceptance audit — environment safety', () => {
     expect(() => assertDemoSeedAllowed({ DATABASE_URL: 'postgresql://edmn:edmn@localhost:5432/edmn_e2e' })).not.toThrow();
   });
 });
+
+describe('pre-acceptance audit — marketplace & seller center fixes', () => {
+  it('a product cannot be submitted while the seller ships to no governorate', async () => {
+    const { sellerShippingRates } = await import('@/server/db/schema');
+    const { submitForReview } = await import('@/server/modules/catalog/products');
+    const s = await makeSeller(admin);
+    const { productId } = await makeProduct(s.actor, admin, { approve: false });
+    await db.update(sellerShippingRates).set({ enabled: false }).where(eq(sellerShippingRates.sellerId, s.actor.sellerId!));
+    await expect(submitForReview(s.actor, productId)).rejects.toThrow(/الشحن/);
+  });
+
+  it('store members without orders.manage cannot open order details (customer PII); evidence is readable by active store members', async () => {
+    const { sellerActor } = await import('@/server/auth/actors');
+    const { sellerOrderForSeller } = await import('@/server/modules/commerce/fulfilment');
+    const { requestReturn } = await import('@/server/modules/postpurchase/returns');
+    const { canReadPrivateFile } = await import('@/server/storage/access');
+    const { returnEvidence, returns: returnsT, orderItems } = await import('@/server/db/schema');
+    const s = await makeSeller(admin);
+    const finUser = await makeUser();
+    const opsUser = await makeUser();
+    await db.insert(sellerMembers).values([
+      { sellerId: s.actor.sellerId!, userId: finUser.id, role: 'FINANCE', isActive: true },
+      { sellerId: s.actor.sellerId!, userId: opsUser.id, role: 'ORDER_MANAGER', isActive: true },
+    ]);
+    const fin = (await sellerActor(finUser.id))!;
+    const ops = (await sellerActor(opsUser.id))!;
+    const p = await makeProduct(s.actor, admin, { price: 200_00 });
+    const c = await makeCustomer();
+    const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
+    await submitAndConfirm(c, order.id, admin);
+    const [so] = await sellerOrdersOf(order.id);
+    await expect(sellerOrderForSeller(fin, so.id)).rejects.toThrow(/صلاحية/);
+    expect((await sellerOrderForSeller(ops, so.id)).so.id).toBe(so.id);
+    await shipIt(s.actor, so.id);
+    await confirmReceipt(c.actor, so.id);
+    const [item] = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+    const ret = await requestReturn(c.actor, { sellerOrderId: so.id, reason: 'DAMAGED', description: 'وصل المنتج مكسورًا بالكامل', items: [{ orderItemId: item.id, quantity: 1 }] }, [{ data: await png(), name: 'd.png' }]);
+    const [ev] = await db.select().from(returnEvidence).where(eq(returnEvidence.returnId, ret.id));
+    expect(await canReadPrivateFile(ops, ev.fileId)).toBe(true);
+    const stranger = customerActor((await makeUser()).id);
+    expect(await canReadPrivateFile(stranger, ev.fileId)).toBe(false);
+    void returnsT;
+  });
+
+  it('customers cannot reply to a closed support ticket', async () => {
+    const { openTicket, replyToTicket, updateTicket } = await import('@/server/modules/support/service');
+    const c = await makeCustomer();
+    const t = await openTicket(c.actor, { type: 'ACCOUNT', subject: 'مشكلة في الحساب', body: 'لا أستطيع تعديل بيانات الحساب الخاصة بي' });
+    await updateTicket(admin, t.id, { status: 'CLOSED' });
+    await expect(replyToTicket(c.actor, t.id, 'رد بعد الإغلاق')).rejects.toThrow(/مغلقة/);
+  });
+});

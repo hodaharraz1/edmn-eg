@@ -313,7 +313,7 @@ export async function completeDeliveredOrders(now = new Date()) {
 /* ───────── Reads ───────── */
 
 export async function sellerOrderForSeller(actor: Actor, soId: string) {
-  const sellerId = requireSeller(actor);
+  const sellerId = requireSeller(actor, 'orders.manage');
   const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
   if (!so) throw notFound('الطلب');
   if (so.sellerId !== sellerId) throw forbidden();

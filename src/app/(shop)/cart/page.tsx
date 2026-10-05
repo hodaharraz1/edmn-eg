@@ -34,7 +34,10 @@ export default async function CartPage() {
       </div>
     );
   }
-  const blocking = cart.groups.some((g) => g.lines.some((l) => l.issues.some((i) => i !== 'PRICE_CHANGED')));
+  // Shipping is re-checked at checkout against the chosen delivery address, so a mismatch with the
+  // browsing governorate warns here but does not block checkout.
+  const blocking = cart.groups.some((g) => g.lines.some((l) => l.issues.some((i) => i !== 'PRICE_CHANGED' && i !== 'NO_SHIPPING')));
+  const shippingWarning = cart.groups.some((g) => g.lines.some((l) => l.issues.includes('NO_SHIPPING')));
   return (
     <div className="container-page py-6">
       <PageHeader title={`سلة التسوق (${cart.itemCount})`} description={`التوصيل إلى ${gov?.nameAr} · الطلبات من أكثر من متجر تُشحن بشكل منفصل من كل بائع.`} />
@@ -96,6 +99,7 @@ export default async function CartPage() {
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             {blocking && <Alert tone="warning">يرجى معالجة المنتجات غير المتاحة قبل إتمام الشراء.</Alert>}
+            {shippingWarning && !blocking && <Alert tone="info">بعض البائعين لا يشحنون إلى {gov?.nameAr}. سيتم التحقق من الشحن حسب عنوان التوصيل الذي تختاره عند إتمام الشراء.</Alert>}
             <LinkButton href={user ? '/checkout' : '/login?next=/checkout'} size="lg" className={`w-full ${blocking ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={blocking}>
               إتمام الشراء
             </LinkButton>

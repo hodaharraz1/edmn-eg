@@ -59,7 +59,6 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
   const crumbs = [{ label: 'الرئيسية', href: '/' }, ...d.breadcrumbs.map((c) => ({ label: c.nameAr, href: `/category/${c.slug}` })), { label: p.titleAr }];
   const positive = d.seller.ratingCount ? Math.round((d.seller.positiveCount / d.seller.ratingCount) * 100) : null;
-  const optionKeys = [...new Set(d.variants.flatMap((x) => Object.keys(x.options ?? {})))];
 
   const productLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -116,7 +115,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           </div>
           {p.condition === 'USED' && (
             <p className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
-              <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل <span className="font-semibold" dir="ltr">USED</span>
+              <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل
               <span className="font-normal">— راجع إفصاح الحالة والعيوب قبل الشراء</span>
             </p>
           )}
@@ -136,7 +135,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة إن وجدت. مصاريف الشحن تُحسب عند الدفع.</p>
           </div>
 
-          {optionKeys.length > 0 && d.variants.length > 1 && (
+          {d.variants.length > 1 && (
             <div className="space-y-2">
               <p className="text-sm font-semibold">اختر النوع:</p>
               <div className="flex flex-wrap gap-2">
@@ -188,7 +187,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           <div className="card space-y-4 p-4">
             <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} />
             <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
-            <p className="text-xs text-muted">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة)</p>
+            <p className="text-xs text-muted">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة أو من القائمة على الموبايل)</p>
             <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
               {available > 5 ? 'متوفر' : available > 0 ? `متبقي ${available} فقط` : 'نفدت الكمية'}
             </p>

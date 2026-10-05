@@ -67,7 +67,8 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
         const evs = ship ? events.filter((e) => e.shipmentId === ship.id).sort((a, b) => +a.occurredAt - +b.occurredAt) : [];
         const ret = rets.filter((r) => r.sellerOrderId === so.id);
         const dsp = disp.find((d) => d.sellerOrderId === so.id);
-        const stepIdx = STEPS.indexOf(so.status as (typeof STEPS)[number]);
+        // PROCESSING sits between "confirmed" and "ready to ship"; COMPLETED is past delivery.
+        const stepIdx = so.status === 'PROCESSING' ? 1 : so.status === 'COMPLETED' ? STEPS.length - 1 : STEPS.indexOf(so.status as (typeof STEPS)[number]);
         const delivered = so.status === 'DELIVERED' || so.status === 'COMPLETED';
         return (
           <section key={so.id} className="card overflow-hidden">

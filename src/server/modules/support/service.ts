@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ticketMachine, type TicketStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { hasPermission, requirePermission, requireUser, type Actor } from '@/server/core/actor';
-import { forbidden, notFound, validation } from '@/server/core/errors';
+import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db } from '@/server/db/client';
 import { supportMessages, supportTickets, users } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
@@ -54,6 +54,7 @@ export async function replyToTicket(actor: Actor, ticketId: string, body: string
   if (!text || text.length < 2) throw validation('اكتب ردك');
   const { t, staff } = await loadTicket(actor, ticketId);
   if (opts.internal && !staff) throw forbidden();
+  if (!staff && t.status === 'CLOSED') throw invalidState('هذه التذكرة مغلقة. افتح تذكرة جديدة إذا احتجت مساعدة');
   await db.transaction(async (tx) => {
     const file = opts.attachment ? await storeUpload(tx, actor, { purpose: 'SUPPORT_ATTACHMENT', data: opts.attachment.data, originalName: opts.attachment.name }) : null;
     await tx.insert(supportMessages).values({ ticketId: t.id, authorUserId: actor.userId!, body: text.slice(0, 5000), isStaff: staff, isInternal: !!opts.internal, attachmentFileId: file?.id ?? null });

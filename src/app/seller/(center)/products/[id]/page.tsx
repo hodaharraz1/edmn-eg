@@ -60,7 +60,7 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
       {p.status === 'REJECTED' && <Alert tone="danger" title="المنتج يحتاج تعديلات قبل النشر">{p.statusReason}</Alert>}
       {p.status === 'SUSPENDED' && <Alert tone="danger" title="المنتج موقوف من الإدارة">{p.statusReason}</Alert>}
       {locked && p.status !== 'SUSPENDED' && p.status !== 'ARCHIVED' && (
-        <Alert tone="info" title="المنتج قيد المراجعة" action={<form action={productControlAction}><input type="hidden" name="productId" value={p.id} /><input type="hidden" name="op" value="withdraw" /><button className="text-xs underline">سحب للتعديل</button></form>}>لا يمكن تعديل المنتج أثناء المراجعة.</Alert>
+        <Alert tone="info" title="المنتج قيد المراجعة" action={p.status === 'SUBMITTED' ? <form action={productControlAction}><input type="hidden" name="productId" value={p.id} /><input type="hidden" name="op" value="withdraw" /><button className="text-xs underline">سحب للتعديل</button></form> : undefined}>لا يمكن تعديل المنتج أثناء المراجعة.</Alert>
       )}
       {approved && <Alert tone="info">المنتج معتمد. تعديل الأسعار والمخزون يُطبق فوراً، أما تعديل البيانات الأساسية أو الصور فيُرسل للمراجعة دون إيقاف الإعلان الحالي.</Alert>}
       {rev && <Alert tone="warning" title="يوجد تعديل قيد المراجعة">الحقول المعدلة: {rev.changedFields.join('، ')}</Alert>}
@@ -178,7 +178,9 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
                 <legend className="px-1 text-xs font-semibold text-muted">{v ? v.label || `الخيار ${idx + 1}` : 'خيار جديد'}</legend>
                 {optionAttrs.map((a) => (
                   <Field key={a.attr.id} label={a.attr.nameAr} htmlFor={`opt_${a.attr.code}_${key}`}>
-                    <Select id={`opt_${a.attr.code}_${key}`} name={`opt_${a.attr.code}_${key}`} defaultValue={v?.options?.[a.attr.code] ?? ''} disabled={!!v && approved}>
+                    {/* A disabled select is not submitted: keep the locked option value so price/stock edits still save. */}
+                    {!!v && approved && v.options?.[a.attr.code] ? <input type="hidden" name={`opt_${a.attr.code}_${key}`} value={v.options[a.attr.code]} /> : null}
+                    <Select id={`opt_${a.attr.code}_${key}`} name={!!v && approved ? undefined : `opt_${a.attr.code}_${key}`} defaultValue={v?.options?.[a.attr.code] ?? ''} disabled={!!v && approved}>
                       <option value="">—</option>
                       {a.options.map((o) => <option key={o.value} value={o.value}>{o.labelAr}</option>)}
                     </Select>

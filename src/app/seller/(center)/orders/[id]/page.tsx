@@ -5,6 +5,7 @@ import { sellerOrderAction, sellerDisputeMessageAction, shipmentAction } from '@
 import { db } from '@/server/db/client';
 import { disputes, returns } from '@/server/db/schema';
 import { sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
+import { disputeGraph } from '@/server/modules/postpurchase/disputes';
 import { isDomainError } from '@/server/core/errors';
 import { requireSellerActor } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
@@ -29,6 +30,8 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
   const addr = order.shippingAddress as Record<string, string | null>;
   const [dispute] = await db.select().from(disputes).where(eq(disputes.sellerOrderId, so.id));
   const rets = await db.select().from(returns).where(eq(returns.sellerOrderId, so.id));
+  // The seller (respondent) reads the dispute thread here; internal staff notes are filtered out by disputeGraph.
+  const thread = dispute ? await disputeGraph(actor, dispute.id).catch(() => null) : null;
   const canShipEdit = ['SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED'].includes(so.status);
   const today = new Date().toISOString().slice(0, 10);
   return (
@@ -107,6 +110,27 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
       )}
 
       {rets.length > 0 && <section className="card p-5 text-sm"><h2 className="mb-2 font-bold">المرتجعات</h2>{rets.map((r) => <Link key={r.id} href={`/seller/returns/${r.id}`} className="block text-brand-700 hover:underline">مرتجع #{r.number} — <StatusChip status={r.status} /></Link>)}</section>}
+
+      {thread && (
+        <section className="card space-y-3 p-5 text-sm" data-testid="seller-dispute-thread">
+          <h2 className="font-bold">النزاع #{thread.dispute.number} <StatusChip status={thread.dispute.status} /></h2>
+          <p className="whitespace-pre-line rounded-lg bg-page p-3">{thread.dispute.description}</p>
+          {thread.evidence.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {thread.evidence.map((e, i) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" rel="noopener noreferrer" className="text-brand-700 underline">دليل {i + 1}</a>)}
+            </div>
+          )}
+          <ul className="space-y-2">
+            {thread.messages.map(({ m, author }) => (
+              <li key={m.id} className={`rounded-lg border p-2 ${m.authorRole === 'ADMIN' ? 'border-brand-200 bg-brand-50' : 'border-line'}`}>
+                <p className="text-xs text-muted">{m.authorRole === 'ADMIN' ? 'فريق اضمن' : author} · {formatDate(m.createdAt, true)}</p>
+                <p className="whitespace-pre-line">{m.body}</p>
+              </li>
+            ))}
+          </ul>
+          {thread.dispute.decisionNote && <Alert tone="info" title="قرار فريق اضمن">{thread.dispute.decisionNote}</Alert>}
+        </section>
+      )}
 
       {dispute && ['OPEN', 'UNDER_REVIEW', 'AWAITING_INFORMATION'].includes(dispute.status) && (
         <ActionForm action={sellerDisputeMessageAction} className="card space-y-2 p-5" resetOnSuccess encType="multipart/form-data">

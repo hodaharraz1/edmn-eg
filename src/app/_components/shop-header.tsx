@@ -20,12 +20,27 @@ export async function ShopHeader({ q }: { q?: string }) {
           }
         >
           <nav className="space-y-1 text-ink">
+            <form action={setGovernorateAction} className="mb-2 space-y-2 rounded-lg border border-line p-3" data-testid="mobile-governorate">
+              <label htmlFor="gov-select-mobile" className="flex items-center gap-1 text-xs font-semibold">
+                <MapPin className="size-4" aria-hidden /> التوصيل إلى: {gov?.nameAr}
+              </label>
+              <select id="gov-select-mobile" name="governorateId" defaultValue={gov?.id} className="h-10 w-full rounded-lg border border-line px-2 text-sm">
+                {govs.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nameAr}
+                  </option>
+                ))}
+              </select>
+              <button className="h-10 w-full rounded-lg bg-brand-700 text-sm font-semibold text-white">تغيير محافظة التوصيل</button>
+            </form>
             <Link href="/protected-deal" className="flex items-center gap-2 rounded-lg bg-accent-50 p-3 font-semibold text-accent-700">
               <ShieldCheck className="size-5" /> {t('nav.protectedDeal')}
             </Link>
             {[
               ['/deals', t('nav.deals')],
               ['/best-sellers', t('nav.bestSellers')],
+              ['/search?condition=USED', 'المستعمل'],
+              ['/account/wishlist', 'المفضلة'],
               ['/stores', t('nav.stores')],
               ['/sell', t('nav.sell')],
             ].map(([href, l]) => (

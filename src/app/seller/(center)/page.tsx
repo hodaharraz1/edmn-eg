@@ -27,6 +27,8 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
     );
   }
   const d = await sellerDashboard(ctx.seller.id, rangeFromPreset(preset));
+  // Balances are shown only to members allowed to see finance (owners, managers, finance role).
+  const canSeeFinance = ctx.permissions.has('finance.view');
   return (
     <div className="space-y-6">
       <PageHeader title="لوحة التحكم" description="نظرة سريعة على أداء متجرك" actions={<RangeFilter path="/seller" active={preset} />} />
@@ -34,8 +36,8 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="مبيعات اليوم" value={formatEGP(d.todaySales)} icon={<CircleDollarSign className="size-5" />} />
         <StatCard label="الطلبات (الفترة)" value={formatNumber(d.orders)} hint={`متوسط الطلب ${formatEGP(d.aov)}`} icon={<ShoppingBag className="size-5" />} />
-        <StatCard label="الرصيد المتاح" value={formatEGP(d.balances.available)} icon={<Wallet className="size-5" />} tone="success" href="/seller/balance" />
-        <StatCard label="الرصيد المعلق" value={formatEGP(d.balances.pending)} hint="بانتظار تأكيد العملاء الاستلام" icon={<Clock className="size-5" />} tone="warning" href="/seller/balance" />
+        {canSeeFinance && <StatCard label="الرصيد المتاح" value={formatEGP(d.balances.available)} icon={<Wallet className="size-5" />} tone="success" href="/seller/balance" />}
+        {canSeeFinance && <StatCard label="الرصيد المعلق" value={formatEGP(d.balances.pending)} hint="بانتظار تأكيد العملاء الاستلام" icon={<Clock className="size-5" />} tone="warning" href="/seller/balance" />}
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label="بانتظار تأكيدك" value={d.pendingConfirmation} tone={d.pendingConfirmation ? 'danger' : 'neutral'} icon={<AlertTriangle className="size-5" />} href="/seller/orders?tab=new" />

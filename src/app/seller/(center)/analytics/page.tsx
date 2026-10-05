@@ -1,4 +1,5 @@
 import { RangeFilter } from '@/app/_components/range-filter';
+import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { requireSellerActor } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
@@ -8,6 +9,8 @@ export const metadata = { title: 'التحليلات' };
 
 export default async function SellerAnalytics(props: PageProps<'/seller/analytics'>) {
   const actor = await requireSellerActor('/seller/analytics');
+  // Sales and net figures are financial data: same permission as the finance pages.
+  if (!actor.sellerPermissions?.has('finance.view')) return <SellerForbidden />;
   const sp = await props.searchParams;
   const preset = typeof sp.range === 'string' ? sp.range : '30d';
   const d = await sellerDashboard(actor.sellerId!, rangeFromPreset(preset));

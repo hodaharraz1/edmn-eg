@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { label } from '@/lib/i18n/labels';
 import Link from 'next/link';
 import { ExternalLink, LogOut, Menu } from 'lucide-react';
 import { logoutAction } from '@/app/_actions/shop';
@@ -26,7 +27,7 @@ export default async function SellerLayout({ children }: { children: React.React
         <div className="space-y-1"><Logo href="/seller" className="text-white" label="مركز بائعي اضمن" /><p className="text-[11px] font-semibold tracking-wide text-amber-300" dir="ltr">EDMN Seller Center</p></div>
         <div className="rounded-lg bg-white/10 p-3 text-xs text-white">
           <p className="truncate font-semibold">{store?.name ?? 'متجري'}</p>
-          <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : ctx.role}</span></div>
+          <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : label('sellerRole', ctx.role)}</span></div>
         </div>
         <div className="flex-1 overflow-y-auto"><SellerNav /></div>
         <form action={logoutAction}><button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10"><LogOut className="size-4" /> خروج</button></form>
