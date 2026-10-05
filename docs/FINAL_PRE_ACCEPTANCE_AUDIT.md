@@ -91,10 +91,23 @@ There is **no open P0 or P1.**
 | Lint | 0 problems |
 | Typecheck | 0 errors |
 | Integration + unit (PostgreSQL) | **177 / 177** (16 files), incl. 26 security-gate, 24 delivery-OTP, 24 deal/return-policy and 12 pre-acceptance regression tests |
-| Local E2E (production build) | **34 / 34** (after scoping one storefront locator that matched the new hidden drawer link) |
-| Deployed staging E2E | see below |
-| Production build | Vercel deployment of `a751cbc` **READY** (staging banner, `/api/health` 200) |
-| Ledger reconciliation | see below |
+| Local E2E (production build) | **34 / 34** (clean run, after scoping one storefront locator that matched the new hidden mobile-drawer link) |
+| Deployed staging E2E | **34 / 34** on https://edmn-staging.vercel.app (final run on deployment `4c1929e`, 13.0 min) |
+| Production build | Vercel deployments `a751cbc` and `4c1929e` **READY** (staging banner, `/api/health` 200) |
+| Ledger reconciliation (staging, read-only) | 41 accounts, **0 projection mismatches**, 88 entries / 215 lines, debits **496,844.00 EGP** = credits **496,844.00 EGP**, **difference 0**, 0 unbalanced entries, real money **off** |
+
+**Staging run history (for transparency).** Earlier full staging runs in this audit had one failure each, and none was a functional regression:
+1. A seller-page assertion and a buyer "accept offer" click ran before the page had hydrated on slow serverless cold starts. The deal spec now waits for network idle after every navigation.
+2. One transient Vercel 502 on a legacy deal page. The same page returned 200 six times out of six when probed directly with the buyer's session.
+
+The final full run passed 34/34.
+
+## Test data cleanliness
+
+- **Public listings.** E2E runs create isolated fixtures: e2e accounts (21 on staging, none public), deals, orders and payments. **No E2E product is publicly listed** on staging (0 of 21 LIVE products).
+- **Presentation data.** Demo / pilot presentation data comes only from the staging seed, using env-provided credentials.
+- **Nothing deleted.** No existing staging data was deleted or reset.
+- **Recommendation.** If the owner wants a pristine staging for the acceptance test, approve a one-time archive of `@e2e.local` fixtures. This needs explicit approval and was **not done**.
 
 ## Fixes made during the audit
 
