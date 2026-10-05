@@ -187,14 +187,14 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           <div className="card space-y-4 p-4">
             <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} />
             <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
-            <p className="text-xs text-muted">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة أو من القائمة على الموبايل)</p>
+            <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة)</p>
             <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
               {available > 5 ? 'متوفر' : available > 0 ? `متبقي ${available} فقط` : 'نفدت الكمية'}
             </p>
             {d.visible && v && available > 0 && shipFee !== null ? (
               <AddToCartForm variantId={v.id} max={available} />
             ) : d.visible && shipFee === null ? (
-              <Alert tone="warning">البائع لا يشحن إلى محافظتك حالياً.</Alert>
+              <Alert tone="warning">البائع لا يشحن إلى هذه المحافظة حالياً.</Alert>
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>

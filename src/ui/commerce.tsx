@@ -151,9 +151,9 @@ export function SellerCard({ s }: { s: { name: string; slug: string; logoKey?: s
 
 export function DeliveryLine({ fee, min, max }: { fee: number | null; min: number | null; max: number | null }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm">
+    <span className="inline-flex items-center gap-1.5 text-sm" data-testid="delivery-line">
       <Truck className="size-4 text-brand-600" aria-hidden />
-      {fee === null ? 'لا يشحن لمحافظتك' : fee === 0 ? 'شحن مجاني' : `الشحن ${formatEGP(fee)}`}
+      {fee === null ? 'البائع لا يشحن إلى هذه المحافظة حالياً' : fee === 0 ? 'شحن مجاني' : `الشحن ${formatEGP(fee)}`}
       {min !== null && max !== null && <span className="text-muted">· خلال {min === max ? min : `${min}–${max}`} أيام عمل</span>}
     </span>
   );

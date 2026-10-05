@@ -19,7 +19,7 @@ const ISSUE_TEXT: Record<string, string> = {
   SELLER_UNAVAILABLE: 'المتجر غير متاح حالياً',
   INSUFFICIENT_STOCK: 'الكمية المطلوبة أكبر من المتوفر',
   PRICE_CHANGED: 'تغيّر السعر منذ أضفته للسلة',
-  NO_SHIPPING: 'البائع لا يشحن لمحافظتك',
+  NO_SHIPPING: 'البائع لا يشحن إلى هذه المحافظة حالياً',
 };
 
 export default async function CartPage() {

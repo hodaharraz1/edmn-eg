@@ -8,7 +8,7 @@ import { cartView } from '@/server/modules/commerce/cart';
 import { myAddresses } from '@/server/modules/customers/addresses';
 import { enabledPaymentMethods } from '@/server/modules/payments/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
-import { allGovernorates } from '@/server/web/context';
+import { allGovernorates, deliveryGovernorate } from '@/server/web/context';
 import { requireUser, requireCustomer } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
 import { returnPolicySummary } from '@/domain/return-policy';
@@ -29,6 +29,9 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   const addrs = await myAddresses(user.id);
   const chosen = addrs.find((a) => a.id === sp.address) ?? addrs.find((a) => a.isDefault) ?? addrs[0];
   const govs = await allGovernorates();
+  // The checkout address is authoritative for shipping; the header governorate is only browsing context.
+  const browsingGov = await deliveryGovernorate();
+  const chosenGov = chosen ? govs.find((g) => g.id === chosen.governorateId) : undefined;
   const cart = await cartView({ userId: user.id }, chosen?.governorateId ?? null);
   const methods = await enabledPaymentMethods();
   const windowHours = await getSetting('payments.paymentWindowHours');
@@ -45,6 +48,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   const problems = cart.groups.flatMap((g) => g.lines.filter((l) => l.issues.some((i) => i !== 'PRICE_CHANGED')).map((l) => ({ g, l })));
   const priceChanged = cart.groups.some((g) => g.lines.some((l) => l.issues.includes('PRICE_CHANGED')));
   const step = !chosen ? 1 : 2;
+  const noShipping = cart.groups.some((g) => g.lines.some((l) => l.issues.includes('NO_SHIPPING')));
 
   return (
     <div className="container-page py-6">
@@ -76,12 +80,16 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
             <>
               <section className="card p-5">
                 <h2 className="mb-3 flex items-center gap-2 font-bold"><Truck className="size-5 text-brand-600" /> 2. التوصيل ({cart.groups.length} شحنة)</h2>
+                <p className="mb-3 rounded-lg bg-brand-50 p-2 text-xs text-brand-900" data-testid="checkout-shipping-basis">
+                  الشحن محسوب على عنوان التوصيل المختار في <span className="font-bold" data-testid="checkout-governorate">{chosenGov?.nameAr}</span>
+                  {browsingGov && chosenGov && browsingGov.id !== chosenGov.id && <> (محافظة التصفح في أعلى الصفحة «{browsingGov.nameAr}» لا تؤثر على هذا الطلب)</>}.
+                </p>
                 <ul className="space-y-3">
                   {cart.groups.map((g) => (
                     <li key={g.sellerId} className="rounded-xl border border-line p-3">
                       <div className="flex flex-wrap justify-between gap-2 text-sm">
                         <span className="font-semibold">من {g.storeName}</span>
-                        <span>{g.shippingFee === null ? <span className="text-red-700">لا يشحن لهذه المحافظة</span> : g.shippingFee === 0 ? 'شحن مجاني' : formatEGP(g.shippingFee)}</span>
+                        <span>{g.shippingFee === null ? <span className="text-red-700">البائع لا يشحن إلى هذه المحافظة حالياً</span> : g.shippingFee === 0 ? 'شحن مجاني' : formatEGP(g.shippingFee)}</span>
                       </div>
                       {g.etaMinDays !== null && <p className="text-xs text-muted">التوصيل المتوقع خلال {g.etaMinDays + g.processingDays}–{(g.etaMaxDays ?? 0) + g.processingDays} أيام عمل بعد تأكيد الدفع</p>}
                       <div className="mt-2 flex gap-2 overflow-x-auto">
@@ -139,12 +147,20 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                   <h2 className="mb-3 font-bold">4. ملاحظات للبائع (اختياري)</h2>
                   <Textarea name="note" rows={2} maxLength={500} placeholder="مثال: الاتصال قبل التوصيل" />
                 </section>
-                <div className="lg:hidden">
-                  <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب · {formatEGP(cart.grandTotal)}</SubmitButton>
-                </div>
-                <div className="hidden lg:block">
-                  <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب والانتقال للدفع</SubmitButton>
-                </div>
+                {problems.length > 0 ? (
+                  <button type="button" disabled className="h-12 w-full rounded-xl bg-slate-300 text-sm font-semibold text-slate-600" data-testid="checkout-blocked">
+                    {noShipping ? 'لا يمكن إتمام الطلب: بائع لا يشحن إلى محافظة عنوان التوصيل' : 'لا يمكن إتمام الطلب قبل مراجعة المنتجات'}
+                  </button>
+                ) : (
+                  <>
+                  <div className="lg:hidden">
+                    <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب · {formatEGP(cart.grandTotal)}</SubmitButton>
+                  </div>
+                  <div className="hidden lg:block">
+                    <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب والانتقال للدفع</SubmitButton>
+                  </div>
+                  </>
+                )}
               </ActionForm>
             </>
           )}
@@ -154,7 +170,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
             <h2 className="font-bold">5. مراجعة الطلب</h2>
             <dl className="space-y-2">
               <div className="flex justify-between"><dt className="text-muted">المنتجات ({cart.itemCount})</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd>{chosen ? formatEGP(cart.shippingTotal) : '—'}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd data-testid="checkout-shipping-total">{!chosen ? '—' : cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'غير متاح'}</dd></div>
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي المطلوب</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. يتم تقسيم الطلب تلقائياً حسب كل بائع.</p>

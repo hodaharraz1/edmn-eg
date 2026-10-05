@@ -1,6 +1,6 @@
-import { Bell, ChevronDown, Heart, LayoutGrid, MapPin, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
+import { Bell, ChevronDown, Heart, LayoutGrid, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
 import Link from 'next/link';
-import { setGovernorateAction } from '@/app/_actions/shop';
+import { DeliveryLocationPicker } from '@/app/_components/delivery-location';
 import { t } from '@/lib/i18n';
 import { Logo } from '@/ui/logo';
 import { Drawer } from '@/ui/client';
@@ -22,19 +22,6 @@ export async function ShopHeader({ q }: { q?: string }) {
           }
         >
           <nav className="space-y-1 text-ink">
-            <form action={setGovernorateAction} className="mb-2 space-y-2 rounded-lg border border-line p-3" data-testid="mobile-governorate">
-              <label htmlFor="gov-select-mobile" className="flex items-center gap-1 text-xs font-semibold">
-                <MapPin className="size-4" aria-hidden /> التوصيل إلى: {gov?.nameAr}
-              </label>
-              <select id="gov-select-mobile" name="governorateId" defaultValue={gov?.id} className="h-10 w-full rounded-lg border border-line px-2 text-sm">
-                {govs.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.nameAr}
-                  </option>
-                ))}
-              </select>
-              <button className="h-10 w-full rounded-lg bg-brand-700 text-sm font-semibold text-white">تغيير محافظة التوصيل</button>
-            </form>
             <Link href="/protected-deal" className="flex items-center gap-2 rounded-lg bg-accent-50 p-3 font-semibold text-accent-700">
               <ShieldCheck className="size-5" /> {t('nav.protectedDeal')}
             </Link>
@@ -60,28 +47,13 @@ export async function ShopHeader({ q }: { q?: string }) {
         </Drawer>
         <Logo variant="header" priority />
 
-        <details className="group relative hidden shrink-0 lg:block">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1 text-xs hover:bg-page">
-            <MapPin className="size-4" aria-hidden />
-            <span className="leading-tight">
-              <span className="block text-[10px] text-muted">{t('deliverTo')}</span>
-              <span className="font-semibold">{gov?.nameAr}</span>
-            </span>
-          </summary>
-          <form action={setGovernorateAction} className="absolute top-12 start-0 z-50 w-64 space-y-2 rounded-xl bg-white p-3 text-ink shadow-[var(--shadow-pop)]">
-            <label htmlFor="gov-select" className="text-xs font-semibold">
-              اختر محافظة التوصيل
-            </label>
-            <select id="gov-select" name="governorateId" defaultValue={gov?.id} className="h-9 w-full rounded-lg border border-line px-2 text-sm">
-              {govs.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nameAr}
-                </option>
-              ))}
-            </select>
-            <button className="h-9 w-full rounded-lg bg-brand-700 text-sm font-semibold text-white">تطبيق</button>
-          </form>
-        </details>
+        {gov && (
+          <DeliveryLocationPicker
+            governorates={govs.map((g) => ({ id: g.id, nameAr: g.nameAr }))}
+            current={{ id: gov.id, nameAr: gov.nameAr }}
+            className="max-w-28 lg:max-w-36"
+          />
+        )}
 
         <form action="/search" role="search" className="order-last flex min-w-0 basis-full lg:order-none lg:basis-auto lg:flex-1">
           <label htmlFor="site-search" className="sr-only">
