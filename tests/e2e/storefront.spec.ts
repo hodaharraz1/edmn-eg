@@ -35,7 +35,7 @@ test.describe('storefront (Arabic RTL)', () => {
   test('used product shows its condition', async ({ page }) => {
     await page.goto('/search?condition=USED');
     await page.locator('a[href^="/product/"]').first().click();
-    await expect(page.getByText(/مستعمل/).first()).toBeVisible();
+    await expect(page.locator('#main').getByText(/مستعمل/).first()).toBeVisible();
   });
 });
 
