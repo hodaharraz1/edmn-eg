@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { after } from 'next/server';
 import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
@@ -31,6 +32,8 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Serverless hosts have no long-running worker: process due jobs shortly after page renders.
+  if (process.env.INLINE_WORKER === 'true') after(async () => (await import('@/server/jobs/tick')).maybeRunInlineTick());
   return (
     <html lang="ar" dir="rtl">
       <body className="min-h-dvh antialiased">

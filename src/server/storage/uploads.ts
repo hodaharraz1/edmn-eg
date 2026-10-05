@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { requireUser, type Actor } from '@/server/core/actor';
 import { sha256 } from '@/server/core/crypto';
+import { env } from '@/server/core/env';
 import { validation } from '@/server/core/errors';
 import { logger } from '@/server/core/logger';
 import type { DbOrTx } from '@/server/db/client';
@@ -64,7 +65,11 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
   if (input.originalName && !ALLOWED_EXT.test(input.originalName)) throw validation('امتداد الملف غير مسموح');
   if (kind === 'pdf' && IMAGE_ONLY.has(input.purpose)) throw validation('يجب رفع صورة (JPG / PNG / WEBP)');
 
-  const maxMb = kind === 'pdf' ? await getSetting('uploads.maxDocumentMb', tx) : await getSetting('uploads.maxImageMb', tx);
+  // The admin setting can only lower the deployment's hard cap (UPLOAD_MAX_*_MB), never raise it.
+  const maxMb =
+    kind === 'pdf'
+      ? Math.min(await getSetting('uploads.maxDocumentMb', tx), env().UPLOAD_MAX_DOCUMENT_MB)
+      : Math.min(await getSetting('uploads.maxImageMb', tx), env().UPLOAD_MAX_IMAGE_MB);
   if (input.data.length > maxMb * 1024 * 1024) throw validation(`حجم الملف يتجاوز الحد المسموح (${maxMb} ميجابايت)`);
 
   const visibility = PUBLIC_PURPOSES.has(input.purpose) ? 'PUBLIC' : 'PRIVATE';

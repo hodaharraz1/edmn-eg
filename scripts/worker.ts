@@ -1,32 +1,14 @@
 import './_env';
 import { logger } from '../src/server/core/logger';
 import { closeDb } from '../src/server/db/client';
-import { recoverStuckJobs, runOneJob, SCHEDULE } from '../src/server/jobs/worker';
+import { recoverStuckJobs } from '../src/server/jobs/worker';
+import { runTick } from '../src/server/jobs/tick';
 
 /**
  * Background worker: processes queued jobs and runs periodic maintenance.
  * Run one or more instances in production (systemd / container) — job claiming is concurrency-safe.
  */
 let stopping = false;
-const lastRun = new Map<string, number>();
-
-async function tick() {
-  for (const s of SCHEDULE) {
-    const last = lastRun.get(s.name) ?? 0;
-    if (Date.now() - last >= s.everyMs) {
-      lastRun.set(s.name, Date.now());
-      try {
-        const res = await s.run();
-        logger.debug('schedule.ran', { name: s.name, res: typeof res === 'object' ? res : { value: res } });
-      } catch (e) {
-        logger.error('schedule.failed', { name: s.name, error: (e as Error).message });
-      }
-    }
-  }
-  while (!stopping && (await runOneJob())) {
-    /* drain */
-  }
-}
 
 async function main() {
   const poll = Number(process.env.WORKER_POLL_MS ?? 5000);
@@ -34,7 +16,7 @@ async function main() {
   await recoverStuckJobs();
   const once = process.argv.includes('--once');
   do {
-    await tick();
+    await runTick({ isStopping: () => stopping });
     if (once) break;
     await new Promise((r) => setTimeout(r, poll));
   } while (!stopping);
