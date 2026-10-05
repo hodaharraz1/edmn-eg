@@ -15,7 +15,7 @@ const ar = {
   'nav.bestSellers': 'الأكثر مبيعاً',
   'nav.stores': 'المتاجر',
   'nav.protectedDeal': 'اضمن صفقة خارج السوق',
-  'nav.sell': 'بع على اضمن',
+  'nav.sell': 'بيع على اضمن',
   'nav.home': 'الرئيسية',
   'nav.edmn': 'اضمن',
   'nav.orders': 'طلباتي',

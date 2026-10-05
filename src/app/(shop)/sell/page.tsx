@@ -12,7 +12,7 @@ import { LinkButton } from '@/ui/button';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Radio } from '@/ui/form';
 
-export const metadata: Metadata = { title: 'بع على اضمن', description: 'افتح متجرك على اضمن ووصّل لعملاء في كل محافظات مصر.' };
+export const metadata: Metadata = { title: 'بيع على اضمن', description: 'افتح متجرك على اضمن ووصّل لعملاء في كل محافظات مصر.' };
 
 export default async function SellLanding() {
   const user = await currentUser();
@@ -28,7 +28,7 @@ export default async function SellLanding() {
     <div className="container-page space-y-10 py-8">
       <section className="grid items-center gap-8 rounded-3xl bg-brand-900 p-8 text-white sm:p-12 lg:grid-cols-2">
         <div className="space-y-4">
-          <h1 className="text-3xl font-bold leading-tight sm:text-4xl">بع منتجاتك الجديدة والمستعملة لعملاء في كل مصر</h1>
+          <h1 className="text-3xl font-bold leading-tight sm:text-4xl">بيع منتجاتك الجديدة والمستعملة لعملاء في كل مصر</h1>
           <p className="text-white/80">سجّل كفرد أو شركة، وبعد مراجعة بياناتك تقدر تضيف منتجاتك، تحدد مصاريف الشحن لكل محافظة، وتسحب أرباحك بعد تأكيد العميل الاستلام.</p>
           {seller ? (
             <LinkButton href="/seller" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">الذهاب لمركز البائع</LinkButton>

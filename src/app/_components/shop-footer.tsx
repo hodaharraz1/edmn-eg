@@ -32,7 +32,7 @@ export async function ShopFooter() {
         <div>
           <h2 className="mb-3 font-semibold text-white">البائعون</h2>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/sell" className="hover:text-white">بع على اضمن</Link></li>
+            <li><Link href="/sell" className="hover:text-white">بيع على اضمن</Link></li>
             <li><Link href="/seller" className="hover:text-white">مركز البائع</Link></li>
             <li><Link href="/legal/seller-agreement" className="hover:text-white">اتفاقية البائع</Link></li>
             <li><Link href="/legal/fees" className="hover:text-white">الرسوم والعمولات</Link></li>

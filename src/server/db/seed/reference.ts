@@ -15,6 +15,8 @@ import {
   roles,
 } from '@/server/db/schema';
 import { DEFAULT_ROLES } from '@/server/rbac/permissions';
+import { LEGAL_TEXTS, LEGAL_VERSION } from './legal-texts';
+import type { LegalCode } from '@/server/modules/cms/service';
 import { LEGAL_CODES } from '@/server/modules/cms/service';
 
 /**
@@ -113,13 +115,74 @@ export const CATEGORY_TREE: CatSeed[] = [
       { slug: 'skincare', ar: 'العناية بالبشرة', en: 'Skincare', bps: 1200 },
     ],
   },
-  { slug: 'baby', ar: 'مستلزمات الأطفال', en: 'Baby', icon: 'Baby', bps: 900 },
-  { slug: 'toys', ar: 'ألعاب', en: 'Toys', icon: 'ToyBrick', bps: 1300 },
-  { slug: 'sports', ar: 'رياضة ولياقة', en: 'Sports & Fitness', icon: 'Dumbbell' },
-  { slug: 'automotive', ar: 'السيارات', en: 'Automotive', icon: 'Car', bps: 1200 },
-  { slug: 'books', ar: 'كتب', en: 'Books', icon: 'BookOpen', bps: 700 },
-  { slug: 'pet-supplies', ar: 'مستلزمات الحيوانات الأليفة', en: 'Pet Supplies', icon: 'PawPrint', bps: 1400 },
-  { slug: 'health', ar: 'الصحة', en: 'Health', icon: 'HeartPulse', restricted: true },
+  {
+    slug: 'baby', ar: 'مستلزمات الأطفال', en: 'Baby', icon: 'Baby', bps: 900,
+    children: [
+      { slug: 'baby-feeding', ar: 'رضاعة وتغذية', en: 'Feeding', bps: 900 },
+      { slug: 'diapers', ar: 'حفاضات ومناديل', en: 'Diapers & Wipes', bps: 900 },
+      { slug: 'strollers-car-seats', ar: 'عربيات ومقاعد سيارة', en: 'Strollers & Car Seats', bps: 900 },
+      { slug: 'baby-bath-care', ar: 'استحمام وعناية', en: 'Bath & Care', bps: 900 },
+      { slug: 'baby-nursery', ar: 'سراير وغرف نوم الأطفال', en: 'Nursery', bps: 900 },
+    ],
+  },
+  {
+    slug: 'toys', ar: 'ألعاب', en: 'Toys', icon: 'ToyBrick', bps: 1300,
+    children: [
+      { slug: 'educational-toys', ar: 'ألعاب تعليمية', en: 'Educational Toys', bps: 1300 },
+      { slug: 'dolls', ar: 'عرايس ودمى', en: 'Dolls', bps: 1300 },
+      { slug: 'board-games-puzzles', ar: 'ألعاب جماعية وبازل', en: 'Board Games & Puzzles', bps: 1300 },
+      { slug: 'outdoor-toys', ar: 'ألعاب خارجية', en: 'Outdoor Play', bps: 1300 },
+      { slug: 'rc-toys', ar: 'ألعاب ريموت كنترول', en: 'Remote Control Toys', bps: 1300 },
+    ],
+  },
+  {
+    slug: 'sports', ar: 'رياضة ولياقة', en: 'Sports & Fitness', icon: 'Dumbbell',
+    children: [
+      { slug: 'fitness-equipment', ar: 'أجهزة وأدوات رياضية', en: 'Fitness Equipment' },
+      { slug: 'sportswear', ar: 'ملابس رياضية', en: 'Sportswear' },
+      { slug: 'cycling', ar: 'عجل وإكسسوارات', en: 'Cycling' },
+      { slug: 'team-sports', ar: 'كرة قدم ورياضات جماعية', en: 'Team Sports' },
+      { slug: 'camping', ar: 'رحلات وتخييم', en: 'Camping & Outdoors' },
+    ],
+  },
+  {
+    slug: 'automotive', ar: 'السيارات', en: 'Automotive', icon: 'Car', bps: 1200,
+    children: [
+      { slug: 'car-accessories', ar: 'إكسسوارات السيارات', en: 'Car Accessories', bps: 1200 },
+      { slug: 'car-electronics', ar: 'إلكترونيات السيارة', en: 'Car Electronics', bps: 1000 },
+      { slug: 'car-care', ar: 'العناية بالسيارة', en: 'Car Care', bps: 1200 },
+      { slug: 'tires-wheels', ar: 'إطارات وجنوط', en: 'Tires & Wheels', bps: 1000 },
+      { slug: 'motorcycles', ar: 'موتوسيكلات وإكسسواراتها', en: 'Motorcycles & Accessories', bps: 1200 },
+    ],
+  },
+  {
+    slug: 'books', ar: 'كتب', en: 'Books', icon: 'BookOpen', bps: 700,
+    children: [
+      { slug: 'arabic-books', ar: 'كتب عربية', en: 'Arabic Books', bps: 700 },
+      { slug: 'english-books', ar: 'كتب أجنبية', en: 'Foreign-language Books', bps: 700 },
+      { slug: 'kids-books', ar: 'كتب أطفال', en: 'Children’s Books', bps: 700 },
+      { slug: 'educational-books', ar: 'كتب دراسية ومراجع', en: 'Textbooks & Reference', bps: 700 },
+      { slug: 'stationery', ar: 'أدوات مكتبية', en: 'Stationery', bps: 1000 },
+    ],
+  },
+  {
+    slug: 'pet-supplies', ar: 'مستلزمات الحيوانات الأليفة', en: 'Pet Supplies', icon: 'PawPrint', bps: 1400,
+    children: [
+      { slug: 'pet-food', ar: 'أكل الحيوانات', en: 'Pet Food', bps: 1400 },
+      { slug: 'cat-supplies', ar: 'مستلزمات القطط', en: 'Cat Supplies', bps: 1400 },
+      { slug: 'dog-supplies', ar: 'مستلزمات الكلاب', en: 'Dog Supplies', bps: 1400 },
+      { slug: 'birds-fish', ar: 'طيور وأسماك زينة', en: 'Birds & Fish', bps: 1400 },
+    ],
+  },
+  {
+    // Restricted: listings here always get enhanced moderation. No medicines or supplements.
+    slug: 'health', ar: 'الصحة', en: 'Health', icon: 'HeartPulse', restricted: true,
+    children: [
+      { slug: 'medical-devices', ar: 'أجهزة قياس منزلية', en: 'Home Medical Devices', restricted: true },
+      { slug: 'first-aid', ar: 'إسعافات أولية', en: 'First Aid', restricted: true },
+      { slug: 'mobility-aids', ar: 'مستلزمات كبار السن والحركة', en: 'Mobility Aids', restricted: true },
+    ],
+  },
 ];
 
 interface AttrSeed {
@@ -286,9 +349,16 @@ export async function seedReference() {
   }
 
   // Legal documents — DRAFT placeholders only (never fabricated final legal text)
-  for (const [code, meta] of Object.entries(LEGAL_CODES)) {
-    const [exists] = await db.select({ id: legalDocuments.id }).from(legalDocuments).where(eq(legalDocuments.code, code));
-    if (!exists) await db.insert(legalDocuments).values({ code, version: '0.1-draft', title: meta.title, body: LEGAL_PLACEHOLDER(meta.title), status: 'DRAFT', isCurrent: true });
+  // Full drafts (0.2) replace the untouched 0.1 placeholder as a NEW version; admin-edited documents are left alone.
+  for (const [code, meta] of Object.entries(LEGAL_CODES) as [LegalCode, (typeof LEGAL_CODES)[LegalCode]][]) {
+    const rows = await db.select().from(legalDocuments).where(eq(legalDocuments.code, code));
+    if (rows.some((r) => r.version === LEGAL_VERSION)) continue;
+    const current = rows.find((r) => r.isCurrent);
+    if (current && !(current.version === '0.1-draft' && current.body === LEGAL_PLACEHOLDER(meta.title))) continue;
+    await db.transaction(async (tx) => {
+      if (current) await tx.update(legalDocuments).set({ isCurrent: false }).where(eq(legalDocuments.id, current.id));
+      await tx.insert(legalDocuments).values({ code, version: LEGAL_VERSION, title: meta.title, body: LEGAL_TEXTS[code], status: 'DRAFT', isCurrent: true });
+    });
   }
 
   // Homepage CMS defaults (editable from Admin → CMS)

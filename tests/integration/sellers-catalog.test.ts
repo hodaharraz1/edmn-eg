@@ -1,3 +1,4 @@
+import { LEGAL_VERSION } from '@/server/db/seed/legal-texts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { customerActor, sellerActor } from '@/server/auth/actors';
@@ -30,7 +31,7 @@ describe('seller onboarding & approval', () => {
     const sa = (await sellerActor(u.id))!;
     const [s] = await db.select().from(sellers).where(eq(sellers.id, sa.sellerId!));
     expect(s.status).toBe('PENDING_REVIEW');
-    expect(s.agreementVersion).toBe('0.1-draft');
+    expect(s.agreementVersion).toBe(LEGAL_VERSION);
     expect(s.nationalIdEnc).not.toContain('29001011234567');
     expect(s.nationalIdLast4).toBe('4567');
 
