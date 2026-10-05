@@ -312,19 +312,37 @@ export const sellerDetailsSchema = z.object({
 });
 
 /** The seller's offer: material terms the buyer reviews before agreeing (and before any payment). */
-export const sellerOfferSchema = z.object({
+export const sellerOfferSchema = z
+  .object({
+  /** Final unit price offered by the seller (defaults to the buyer's requested price). */
+  unitPrice: z.string().trim().optional().default(''),
   shippingFee: z.string().trim().optional().default('0'),
+  /** The seller — not the buyer — sets how and how fast the item is delivered. */
+  deliveryMethod: z.string().trim().min(3, 'اكتب طريقة الشحن / التسليم').max(300),
   processingDays: z.coerce.number().int().min(0).max(30),
+  deliveryMinDays: z.coerce.number().int().min(0, 'مدة التوصيل غير صحيحة').max(60),
+  deliveryMaxDays: z.coerce.number().int().min(0, 'مدة التوصيل غير صحيحة').max(90),
   defects: z.string().trim().max(2000).optional().default(''),
   accessories: z.string().trim().max(1000).optional().default(''),
   warranty: z.string().trim().max(500).optional().default(''),
-});
+  })
+  .refine((o) => o.deliveryMaxDays >= o.deliveryMinDays, { path: ['deliveryMaxDays'], message: 'أقصى مدة توصيل يجب ألا تقل عن أقل مدة' });
 
 export type Terms = {
   product: { title: string; description: string | null; condition: string | null; quantity: number; category: string | null };
   disclosure: { defects: string; accessories: string; warranty: string };
   price: { unitPrice: number; goodsTotal: number; shippingFee: number; totalAmount: number; feeBps: number; feeAmount: number; feePayer: string; buyerPays: number; sellerReceives: number };
-  delivery: { method: string | null; deadline: string | null; inspectionDays: number; processingDays: number };
+  /**
+   * Seller-controlled delivery terms. `deadline` / `buyerRequestedMethod` are the buyer's original
+   * (non-authoritative) expectations, kept for reference.
+   */
+  delivery: { method: string | null; processingDays: number; expectedMinDays?: number; expectedMaxDays?: number; inspectionDays: number; deadline: string | null; buyerRequestedMethod?: string | null };
+  /** The buyer's original request (price / delivery expectation) the offer answered. */
+  request?: { unitPrice: number | null; deliveryMethod: string | null; latestDate: string | null };
+  /** Added when both parties agree (immutable snapshot). */
+  parties?: { buyerId: string; buyerName: string; sellerUserId: string | null; sellerName: string | null; sellerVerifiedPhone: string | null };
+  deliveryInfo?: { originGovernorateId: number | null; destinationGovernorateId: number | null; buyerLocationRef: string | null; sellerLocationRef: string | null };
+  agreement?: { version: number; proposedBy: string; proposedAt: string; agreedAt: string; acceptedByUserId: string | null };
   returnPolicy: ReturnPolicySnapshot;
   mandatoryRightsNotice: string;
   customTerms: string | null;
@@ -340,14 +358,33 @@ async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerO
   }
   if (shipping < 0) throw validation('تكلفة الشحن غير صحيحة');
   if (deal.condition === 'USED' && !offer.defects) throw validation('للمنتج المستعمل: اكتب العيوب المعروفة (أو "لا يوجد")');
-  const goods = (deal.unitPrice ?? 0) * deal.quantity;
+  let unit = deal.unitPrice ?? 0;
+  if (offer.unitPrice) {
+    try {
+      unit = parseEgp(offer.unitPrice);
+    } catch {
+      throw validation('السعر غير صحيح');
+    }
+  }
+  if (unit <= 0) throw validation('السعر يجب أن يكون أكبر من صفر');
+  const goods = unit * deal.quantity;
+  if (goods > 50_000_000_00) throw validation('قيمة الصفقة تتجاوز الحد المسموح');
   const total = goods + shipping;
   const fee = applyBps(total, deal.feeBps);
   return {
     product: { title: deal.title, description: deal.description, condition: deal.condition, quantity: deal.quantity, category: deal.productCategory },
     disclosure: { defects: offer.defects, accessories: offer.accessories, warranty: offer.warranty },
-    price: { unitPrice: deal.unitPrice ?? 0, goodsTotal: goods, shippingFee: shipping, totalAmount: total, feeBps: deal.feeBps, feeAmount: fee, feePayer: deal.feePayer, buyerPays: deal.feePayer === 'BUYER' ? total + fee : total, sellerReceives: deal.feePayer === 'SELLER' ? total - fee : total },
-    delivery: { method: deal.deliveryMethod, deadline: deal.deliveryDeadline?.toISOString() ?? null, inspectionDays: deal.inspectionDays, processingDays: offer.processingDays },
+    price: { unitPrice: unit, goodsTotal: goods, shippingFee: shipping, totalAmount: total, feeBps: deal.feeBps, feeAmount: fee, feePayer: deal.feePayer, buyerPays: deal.feePayer === 'BUYER' ? total + fee : total, sellerReceives: deal.feePayer === 'SELLER' ? total - fee : total },
+    delivery: {
+      method: offer.deliveryMethod,
+      processingDays: offer.processingDays,
+      expectedMinDays: offer.deliveryMinDays,
+      expectedMaxDays: offer.deliveryMaxDays,
+      inspectionDays: deal.inspectionDays,
+      deadline: deal.deliveryDeadline?.toISOString() ?? null,
+      buyerRequestedMethod: deal.deliveryMethod,
+    },
+    request: { unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, latestDate: deal.deliveryDeadline?.toISOString() ?? null },
     returnPolicy: { ...policy, legalNoticeVersion: await currentLegalVersion(tx, 'RETURNS_POLICY') },
     mandatoryRightsNotice: await getSetting('returns.mandatoryRightsNotice', tx),
     customTerms: deal.customTerms,
@@ -417,13 +454,29 @@ export async function submitSellerOffer(
 /** Both parties agreed on `v`: freeze the snapshot (DB-immutable) and open the payment step. */
 async function finalizeTerms(tx: DbOrTx, actor: Actor, deal: Deal, v: typeof dealTermsVersions.$inferSelect) {
   const t = v.terms as unknown as Terms;
-  await tx.update(dealTermsVersions).set({ status: 'ACCEPTED', respondedAt: new Date() }).where(eq(dealTermsVersions.id, v.id));
+  const now = new Date();
+  const [buyer] = await tx.select({ fullName: users.fullName }).from(users).where(eq(users.id, deal.buyerId));
+  // The agreed snapshot also freezes who agreed, where it ships from/to (encrypted locations are
+  // referenced by fingerprint, never copied in clear) and when each side committed.
+  const snapshot: Terms = {
+    ...t,
+    parties: { buyerId: deal.buyerId, buyerName: buyer?.fullName ?? '', sellerUserId: deal.sellerUserId, sellerName: deal.sellerFullName, sellerVerifiedPhone: deal.sellerVerifiedPhone },
+    deliveryInfo: {
+      originGovernorateId: deal.originGovernorateId,
+      destinationGovernorateId: deal.destinationGovernorateId,
+      buyerLocationRef: deal.buyerLocationEnc ? sha256(deal.buyerLocationEnc) : null,
+      sellerLocationRef: deal.sellerLocationEnc ? sha256(deal.sellerLocationEnc) : null,
+    },
+    agreement: { version: v.version, proposedBy: v.proposedBy, proposedAt: v.createdAt.toISOString(), agreedAt: now.toISOString(), acceptedByUserId: actor.userId ?? null },
+  };
+  await tx.update(dealTermsVersions).set({ status: 'ACCEPTED', respondedAt: now }).where(eq(dealTermsVersions.id, v.id));
   await tx.update(dealInvitations).set({ status: 'ACCEPTED', respondedAt: new Date(), respondedBy: deal.sellerUserId }).where(and(eq(dealInvitations.dealId, deal.id), eq(dealInvitations.status, 'PENDING')));
   await moveDeal(tx, actor, deal, 'ACCEPTED', {
     acceptedAt: new Date(),
-    agreedTerms: v.terms,
+    agreedTerms: snapshot,
     agreedVersion: v.version,
-    agreedAt: new Date(),
+    agreedAt: now,
+    unitPrice: t.price.unitPrice,
     shippingFee: t.price.shippingFee,
     processingDays: t.delivery.processingDays,
     totalAmount: t.price.totalAmount,

@@ -363,7 +363,7 @@ export async function seedDemo() {
       details: { fullName: c3.fullName },
       location: { governorateId: 1, city: 'القاهرة — المعادي', street: 'شارع 9' },
       payout: { type: 'MOBILE_WALLET', holderName: c3.fullName, walletProvider: 'فودافون كاش', walletNumber: '01088888888' },
-      offer: { shippingFee: '80', processingDays: 1, defects: 'خدش خفيف أسفل الشاشة', accessories: 'الشاحن الأصلي', warranty: 'لا يوجد' },
+      offer: { shippingFee: '80', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1, defects: 'خدش خفيف أسفل الشاشة', accessories: 'الشاحن الأصلي', warranty: 'لا يوجد' },
       returnPolicy: { type: 'VOLUNTARY', windowDays: 3, conditions: ['ORIGINAL_CONDITION', 'ALL_ACCESSORIES'], shippingPayer: 'BY_REASON', notes: '' },
     },
     true,

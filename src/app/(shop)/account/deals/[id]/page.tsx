@@ -150,7 +150,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <Field label="البريد للتواصل (اختياري)" htmlFor="contactEmail"><Input id="contactEmail" name="contactEmail" type="email" dir="ltr" defaultValue={me.email ?? ''} /></Field>
             </div>
             <LocationPicker governorates={govs} title="عنوان استلام الشحنة منك" />
-            <OfferFields condition={deal.condition} />
+            <OfferFields condition={deal.condition} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} />
             <ReturnPolicyFields mandatoryNotice={mandatoryNotice} />
             <PayoutFields holder={me.fullName} />
             <Field label="رسالة للمشتري (اختياري)" htmlFor="message"><Textarea id="message" name="message" rows={2} maxLength={1000} /></Field>
@@ -231,7 +231,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
             <ActionForm action={sellerOfferAction} className="mt-3 space-y-3">
               <input type="hidden" name="dealId" value={deal.id} />
               <input type="hidden" name="first" value="0" />
-              <OfferFields condition={deal.condition} defaults={(lastSeller?.terms as Terms | undefined) ?? openTerms} />
+              <OfferFields condition={deal.condition} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} defaults={(lastSeller?.terms as Terms | undefined) ?? openTerms} />
               <ReturnPolicyFields defaults={openTerms.returnPolicy} mandatoryNotice={mandatoryNotice} />
               <Field label="رسالة للمشتري" htmlFor="counter-message"><Textarea id="counter-message" name="message" rows={2} maxLength={1000} /></Field>
               <Checkbox name="acceptTerms" required label="أؤكد صحة العرض وأوافق على شروط الصفقات المحمية" />
@@ -451,7 +451,10 @@ function TermsTable({ t }: { t: Terms }) {
       { label: 'تكلفة الشحن', value: t.price.shippingFee ? formatEGP(t.price.shippingFee) : 'مجاناً / مشمول' },
       { label: 'طريقة الشحن', value: t.delivery.method ?? '—' },
       { label: 'مدة التجهيز', value: `${t.delivery.processingDays} يوم` },
-      { label: 'موعد التسليم المتوقع', value: t.delivery.deadline ? `قبل ${formatDate(new Date(t.delivery.deadline))}` : '—' },
+      {
+        label: 'موعد التسليم المتوقع',
+        value: t.delivery.expectedMaxDays != null ? `خلال ${t.delivery.expectedMinDays}–${t.delivery.expectedMaxDays} يوم بعد التجهيز` : t.delivery.deadline ? `قبل ${formatDate(new Date(t.delivery.deadline))}` : '—',
+      },
       { label: 'حالة المنتج', value: <span>{t.product.condition === 'NEW' ? 'جديد' : 'مستعمل'}{t.disclosure.defects ? ` · العيوب: ${t.disclosure.defects}` : ''}{t.disclosure.accessories ? ` · الملحقات: ${t.disclosure.accessories}` : ''}{t.disclosure.warranty ? ` · الضمان: ${t.disclosure.warranty}` : ''}</span> },
       { label: 'سياسة الاسترجاع', value: <ReturnPolicyView policy={t.returnPolicy} mandatoryNotice={t.mandatoryRightsNotice} /> },
       { label: 'الشروط الخاصة', value: t.customTerms ?? 'لا يوجد' },
@@ -462,13 +465,23 @@ function TermsTable({ t }: { t: Terms }) {
   );
 }
 
-function OfferFields({ condition, defaults }: { condition: string | null; defaults?: Terms }) {
+function OfferFields({ condition, defaults, request }: { condition: string | null; defaults?: Terms; request: { unitPrice: number | null; deliveryMethod: string | null; deadline: Date | null } }) {
   return (
     <fieldset className="space-y-3 rounded-xl border border-line p-4">
       <legend className="px-1 text-sm font-bold">تفاصيل العرض</legend>
+      <p className="text-xs text-muted">
+        طلب المشتري: السعر {request.unitPrice != null ? formatEGP(request.unitPrice) : '—'} للوحدة · {request.deliveryMethod ?? '—'}
+        {request.deadline ? ` · يفضّل الاستلام قبل ${formatDate(request.deadline)}` : ''}. أنت من يحدد السعر النهائي وطريقة ومدة التوصيل.
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="السعر النهائي للوحدة (ج.م)" htmlFor="unitPrice" required><Input id="unitPrice" name="unitPrice" inputMode="decimal" dir="ltr" required defaultValue={toInputAmount(defaults?.price.unitPrice ?? request.unitPrice)} /></Field>
         <Field label="تكلفة الشحن (ج.م)" htmlFor="shippingFee" hint="0 لو الشحن مجاني أو تسليم يد بيد"><Input id="shippingFee" name="shippingFee" inputMode="decimal" dir="ltr" defaultValue={defaults ? toInputAmount(defaults.price.shippingFee) : '0'} /></Field>
+      </div>
+      <Field label="طريقة الشحن / التسليم" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" required minLength={3} defaultValue={defaults?.delivery.method ?? request.deliveryMethod ?? ''} placeholder="شحن عبر شركة… / تسليم يد بيد في…" /></Field>
+      <div className="grid grid-cols-3 gap-3">
         <Field label="مدة التجهيز (أيام)" htmlFor="processingDays" required><Input id="processingDays" name="processingDays" type="number" min={0} max={30} defaultValue={defaults?.delivery.processingDays ?? 1} required /></Field>
+        <Field label="التوصيل من (يوم)" htmlFor="deliveryMinDays" required><Input id="deliveryMinDays" name="deliveryMinDays" type="number" min={0} max={60} defaultValue={defaults?.delivery.expectedMinDays ?? 1} required /></Field>
+        <Field label="إلى (يوم)" htmlFor="deliveryMaxDays" required><Input id="deliveryMaxDays" name="deliveryMaxDays" type="number" min={0} max={90} defaultValue={defaults?.delivery.expectedMaxDays ?? 3} required /></Field>
       </div>
       <Field label={condition === 'USED' ? 'العيوب المعروفة (مطلوب للمستعمل)' : 'العيوب المعروفة'} htmlFor="defects" required={condition === 'USED'}><Textarea id="defects" name="defects" rows={2} defaultValue={defaults?.disclosure.defects ?? ''} required={condition === 'USED'} placeholder='اكتب "لا يوجد" لو مفيش' /></Field>
       <div className="grid gap-3 sm:grid-cols-2">

@@ -17,7 +17,7 @@ import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 import Link from 'next/link';
 
 export const metadata = { title: 'صفقة محمية جديدة' };
-const STEPS = ['المنتج', 'السعر', 'التسليم', 'شروط خاصة', 'عنوان الاستلام', 'مراجعة وإنشاء'];
+const STEPS = ['المنتج', 'السعر المطلوب', 'توقعات التسليم', 'شروط خاصة', 'عنوان الاستلام', 'مراجعة وإنشاء'];
 
 export default async function NewDealWizard(props: PageProps<'/account/deals/new'>) {
   const user = await requireUser('/account');
@@ -61,9 +61,10 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
           )}
           {step === 3 && (
             <>
-              <Field label="طريقة التسليم" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم يد بيد في…" required /></Field>
+              <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك فقط. البائع هو من يحدد طريقة ومدة التوصيل وتكلفة الشحن في عرضه، وأنت توافق عليها أو تطلب تعديل قبل أي دفع.</p>
+              <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم يد بيد في…" required /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="آخر موعد للتسليم" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
+                <Field label="أقصى موعد تفضّل الاستلام قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
                 <Field label="مدة الفحص بعد الاستلام (أيام)" htmlFor="inspectionDays"><Input id="inspectionDays" name="inspectionDays" type="number" min={1} max={14} defaultValue={deal?.inspectionDays ?? 2} /></Field>
               </div>
             </>
@@ -103,7 +104,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
                 { label: 'رسوم الخدمة', value: `${formatEGP(deal.feeAmount)} (يتحملها ${deal.feePayer === 'BUYER' ? 'المشتري' : 'البائع'})` },
                 { label: 'إجمالي ما ستدفعه', value: formatEGP(deal.buyerPays) },
                 { label: 'صافي ما يستلمه البائع', value: formatEGP(deal.sellerReceives) },
-                { label: 'التسليم', value: `${deal.deliveryMethod ?? '—'} · قبل ${formatDate(deal.deliveryDeadline)}` },
+                { label: 'توقعات التسليم (غير ملزمة)', value: `${deal.deliveryMethod ?? '—'} · يفضّل قبل ${formatDate(deal.deliveryDeadline)}` },
                 { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
                 { label: 'الشروط الخاصة', value: deal.customTerms ?? 'لا يوجد' },
               ]} />

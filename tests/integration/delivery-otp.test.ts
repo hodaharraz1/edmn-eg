@@ -59,7 +59,7 @@ async function activeDeal(opts: { seller?: Actor } = {}) {
   const { version } = await submitSellerOffer(
     seller,
     deal.id,
-    { details: { fullName: 'بائع التسليم' }, location: LOC, payout: { type: 'INSTAPAY', holderName: 'بائع التسليم', instapayAddress: 'otp@instapay' }, offer: { shippingFee: '0', processingDays: 1 }, returnPolicy: { type: 'NONE' } },
+    { details: { fullName: 'بائع التسليم' }, location: LOC, payout: { type: 'INSTAPAY', holderName: 'بائع التسليم', instapayAddress: 'otp@instapay' }, offer: { shippingFee: '0', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1 }, returnPolicy: { type: 'NONE' } },
     true,
   );
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');

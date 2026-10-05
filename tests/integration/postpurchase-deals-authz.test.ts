@@ -146,7 +146,7 @@ describe('external protected deals', () => {
         details: { fullName: 'بائع خارجي' },
         location: { governorateId: 2, city: 'الجيزة', street: 'شارع الهرم' },
         payout: { type: 'INSTAPAY', holderName: 'بائع خارجي', instapayAddress: 'ext@instapay' },
-        offer: { shippingFee: '0', processingDays: 1, defects: 'لا يوجد' },
+        offer: { shippingFee: '0', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1, defects: 'لا يوجد' },
         returnPolicy: { type: 'NONE' },
       },
       true,

@@ -24,6 +24,7 @@ import {
   startDealPayment,
   submitSellerOffer,
   termsHistory,
+  type Terms,
 } from '@/server/modules/deals/service';
 import { locationSchema, toStoredLocation } from '@/server/modules/locations';
 import { returnPolicySchema } from '@/domain/return-policy';
@@ -72,7 +73,7 @@ async function offer(seller: Actor, dealId: string, policy: unknown, first = tru
     dealId,
     {
       ...(first ? { details: { fullName: 'بائع خارجي حقيقي' }, location: SELLER_LOC, payout: PAYOUT } : {}),
-      offer: { shippingFee, processingDays: 2, defects: 'خدش بسيط في الظهر', accessories: 'شاحن', warranty: 'بدون' },
+      offer: { shippingFee, deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 2, defects: 'خدش بسيط في الظهر', accessories: 'شاحن', warranty: 'بدون' },
       returnPolicy: policy,
     },
     true,
@@ -241,6 +242,35 @@ describe('location privacy', () => {
 });
 
 describe('seller return policy & negotiation (protected deals)', () => {
+  it('the seller offer — not the buyer — sets the final price, delivery method and delivery window; the agreed snapshot freezes parties, delivery info and timestamps', async () => {
+    const { deal, buyer, seller, buyerUser } = await joinedDeal();
+    await expect(
+      submitSellerOffer(seller, deal.id, { details: { fullName: 'بائع خارجي' }, location: SELLER_LOC, payout: PAYOUT, offer: { shippingFee: '0', deliveryMethod: 'مندوب', processingDays: 1, deliveryMinDays: 5, deliveryMaxDays: 2, defects: 'لا يوجد' }, returnPolicy: { type: 'NONE' } }, true),
+    ).rejects.toThrow(/أقصى مدة توصيل/);
+    const { version } = await submitSellerOffer(
+      seller,
+      deal.id,
+      { details: { fullName: 'بائع خارجي' }, location: SELLER_LOC, payout: PAYOUT, offer: { unitPrice: '7600', shippingFee: '60', deliveryMethod: 'مندوب شركة بوسطة', processingDays: 2, deliveryMinDays: 1, deliveryMaxDays: 4, defects: 'لا يوجد' }, returnPolicy: { type: 'NONE' } },
+      true,
+    );
+    await respondToOffer(buyer, deal.id, version, 'ACCEPT');
+    const [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
+    const t = d.agreedTerms as unknown as Terms & Required<Pick<Terms, "parties" | "deliveryInfo" | "agreement" | "request">>;
+    expect(t.price.unitPrice).toBe(760000);
+    expect(t.price.shippingFee).toBe(6000);
+    expect(t.price.totalAmount).toBe(766000);
+    expect(d.totalAmount).toBe(766000);
+    expect(t.delivery).toMatchObject({ method: 'مندوب شركة بوسطة', processingDays: 2, expectedMinDays: 1, expectedMaxDays: 4, buyerRequestedMethod: 'شحن عبر شركة' });
+    expect(t.request).toMatchObject({ unitPrice: 800000, deliveryMethod: 'شحن عبر شركة' });
+    expect(t.parties).toMatchObject({ buyerId: buyerUser.id, buyerName: buyerUser.fullName, sellerUserId: seller.userId, sellerName: 'بائع خارجي' });
+    expect(t.deliveryInfo).toMatchObject({ originGovernorateId: 2, destinationGovernorateId: 1 });
+    expect(t.deliveryInfo.buyerLocationRef).toMatch(/^[0-9a-f]{64}$/);
+    expect(JSON.stringify(t)).not.toContain('شارع التحرير'); // addresses are referenced, never copied in clear
+    expect(t.agreement).toMatchObject({ version, proposedBy: 'SELLER', acceptedByUserId: buyerUser.id });
+    expect(new Date(t.agreement.agreedAt).getTime()).toBeGreaterThanOrEqual(new Date(t.agreement.proposedAt).getTime());
+    expect(t.product).toMatchObject({ quantity: 1, condition: 'USED' });
+  });
+
   it('schema: VOLUNTARY requires a window; NONE is normalised', () => {
     expect(returnPolicySchema.safeParse({ type: 'VOLUNTARY' }).success).toBe(false);
     expect(returnPolicySchema.safeParse({ type: 'VOLUNTARY', windowDays: 200 }).success).toBe(false);
@@ -252,7 +282,7 @@ describe('seller return policy & negotiation (protected deals)', () => {
   it('used product requires disclosed defects', async () => {
     const { deal, seller } = await joinedDeal({ condition: 'USED' });
     await expect(
-      submitSellerOffer(seller, deal.id, { details: { fullName: 'بائع خارجي' }, location: SELLER_LOC, payout: PAYOUT, offer: { shippingFee: '0', processingDays: 1 }, returnPolicy: { type: 'NONE' } }, true),
+      submitSellerOffer(seller, deal.id, { details: { fullName: 'بائع خارجي' }, location: SELLER_LOC, payout: PAYOUT, offer: { shippingFee: '0', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1 }, returnPolicy: { type: 'NONE' } }, true),
     ).rejects.toThrow(/العيوب/);
   });
 

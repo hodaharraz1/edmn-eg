@@ -144,7 +144,7 @@ export async function sellerOfferAction(_p: ActionState, fd: FormData): Promise<
       dealId,
       {
         ...(first ? { details: { fullName: str(fd, 'fullName'), contactEmail: str(fd, 'contactEmail') }, location: Object.fromEntries(Object.entries(values).filter(([k]) => k.startsWith('loc_')).map(([k, v]) => [k.slice(4), v])), payout: payoutFrom(fd) } : {}),
-        offer: { shippingFee: str(fd, 'shippingFee'), processingDays: str(fd, 'processingDays') as unknown as number, defects: str(fd, 'defects'), accessories: str(fd, 'accessories'), warranty: str(fd, 'warranty') },
+        offer: { unitPrice: str(fd, 'unitPrice'), shippingFee: str(fd, 'shippingFee'), deliveryMethod: str(fd, 'deliveryMethod'), processingDays: str(fd, 'processingDays') as unknown as number, deliveryMinDays: str(fd, 'deliveryMinDays') as unknown as number, deliveryMaxDays: str(fd, 'deliveryMaxDays') as unknown as number, defects: str(fd, 'defects'), accessories: str(fd, 'accessories'), warranty: str(fd, 'warranty') },
         returnPolicy: policyFrom(fd),
         message: str(fd, 'message'),
       },

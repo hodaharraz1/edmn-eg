@@ -46,17 +46,17 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
         <DefinitionList items={[
           { label: 'المنتج', value: `${s.title} × ${s.quantity}` },
           { label: 'الحالة', value: s.condition === 'NEW' ? 'جديد' : 'مستعمل' },
-          { label: 'السعر المطلوب', value: formatEGP(s.totalAmount) },
+          { label: 'السعر الذي طلبه المشتري', value: formatEGP(s.totalAmount) },
           { label: 'رسوم الخدمة', value: `${formatEGP(s.feeAmount)} (${s.feePayer === 'SELLER' ? 'تُخصم من مستحقك' : 'يتحملها المشتري'})` },
           { label: 'صافي ما ستستلمه (قبل الشحن)', value: formatEGP(s.sellerReceives) },
-          { label: 'طريقة التسليم المتوقعة', value: s.deliveryMethod ?? '—' },
-          { label: 'آخر موعد للتسليم', value: formatDate(s.deliveryDeadline) },
+          { label: 'طريقة التسليم المفضلة للمشتري', value: s.deliveryMethod ?? '—' },
+          { label: 'يفضّل المشتري الاستلام قبل', value: formatDate(s.deliveryDeadline) },
           { label: 'محافظة المشتري', value: s.destinationGovernorate ?? '—' },
           { label: 'مدة فحص المشتري', value: `${s.inspectionDays} يوم` },
           { label: 'شروط خاصة', value: s.customTerms ?? 'لا يوجد' },
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{s.description}</p>
-        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان الاستلام، وسيلة استلام المستحقات) وتحدد تكلفة الشحن وسياسة الاسترجاع، والمشتري هيراجع عرضك قبل أي دفع.</p>
+        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان الاستلام، وسيلة استلام المستحقات) وتحدد السعر النهائي وتكلفة وطريقة ومدة الشحن وسياسة الاسترجاع، والمشتري هيراجع عرضك قبل أي دفع.</p>
       </section>
 
       {inv.usable && !inv.isBuyer && !inv.boundToViewer && (
