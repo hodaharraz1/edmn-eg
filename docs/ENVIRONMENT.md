@@ -18,7 +18,8 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `SELLER_HOST` | `seller.edmneg.com` | with `ENFORCE_HOSTS` | Seller Center host name |
 | `ADMIN_HOST` | `admin.edmneg.com` | with `ENFORCE_HOSTS` | Admin host name |
 | `DATABASE_URL` | — | ✅ | PostgreSQL connection string |
-| `DATABASE_POOL_MAX` | `10` | | Pool size per process |
+| `DATABASE_URL_UNPOOLED` | — | | Direct (non-pooler) URL used for migrations/seeds by `scripts/vercel-build.sh` |
+| `DATABASE_POOL_MAX` | `10` | | Pool size per process (use 2–3 on serverless) |
 | `TEST_DATABASE_URL` | — | tests only | Database **wiped** by the Vitest suite |
 | `E2E_DATABASE_URL` | `…/edmn_e2e` | E2E only | Database **reset and re-seeded** by Playwright |
 | `SESSION_SECRET` | — | ✅ (≥ 32 chars, not the placeholder) | HMAC key for signed values |
@@ -28,8 +29,8 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `COOKIE_SECURE` | `false` | forced `true` in production | `Secure` flag on cookies |
 | `STORAGE_DRIVER` | `local` | | Storage backend: `local` (disk) or `database` (files in PostgreSQL, for hosts without persistent disk) |
 | `STORAGE_LOCAL_ROOT` | `./storage` | ✅ persistent volume | Root for `public/` and `private/` files |
-| `UPLOAD_MAX_IMAGE_MB` | `8` | | Hard cap for image uploads (runtime setting can be lower) |
-| `UPLOAD_MAX_DOCUMENT_MB` | `10` | | Hard cap for PDFs/documents |
+| `UPLOAD_MAX_IMAGE_MB` | `8` | | Hard cap for image uploads (the admin setting can only lower it; use 4 on Vercel) |
+| `UPLOAD_MAX_DOCUMENT_MB` | `10` | | Hard cap for PDFs/documents (use 4 on Vercel) |
 | `MAIL_DRIVER` | `log` | `smtp` | `log` stores/prints messages (dev); `smtp` sends via SMTP |
 | `MAIL_FROM` | `EDMN <no-reply@example.com>` | ✅ real sender | From header |
 | `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD` | — | with `smtp` | SMTP credentials (**external input**) |
@@ -38,6 +39,8 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `SMS_SENDER_ID` | `EDMN` | | Sender name |
 | `LOG_LEVEL` | `info` | | `debug`/`info`/`warn`/`error` |
 | `WORKER_POLL_MS` | `5000` | | Worker loop interval |
+| `INLINE_WORKER` | `false` | serverless only | `true` runs one throttled worker pass after page renders (hosts without a long-running worker) |
+| `CRON_SECRET` | — | serverless only | Bearer token for `/api/cron/tick`; the route returns 404 when unset |
 | `NEXT_PUBLIC_LOGO_URL` | empty | when the official logo exists | Official logo URL/path; empty shows the neutral placeholder |
 
 Staging-only variables (a public staging deployment must never reuse the repository's demo credentials):
