@@ -112,7 +112,7 @@ async function featuredSellers(b: Block) {
 function hero(b: Block) {
   const d = b.data as { heading: string; subheading?: string; ctaLabel?: string; ctaHref?: string; imageKey?: string };
   return (
-    <section key={b.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-brand-700 via-brand-800 to-brand-950 text-white">
+    <section key={b.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-brand-700 via-brand-800 to-brand-950 text-white md:bg-gradient-to-l">
       {d.imageKey && <img src={mediaUrl(d.imageKey)!} alt="" className="absolute inset-0 size-full object-cover opacity-30" />}
       <div className="relative grid gap-6 p-6 sm:p-10 md:grid-cols-[1.4fr_1fr] md:items-center">
         <div className="space-y-4">
@@ -129,10 +129,9 @@ function hero(b: Block) {
             </LinkButton>
           </div>
         </div>
-        {/* Brand visual: the official logo, unmodified. A soft circular light (not a box) behind it
-            keeps the dark-blue lettering legible on the navy hero. Decorative: the header logo is the accessible one. */}
-        <div className="relative flex items-center justify-center py-2 md:py-0" aria-hidden>
-          <div className="absolute aspect-square w-[clamp(190px,58vw,250px)] rounded-full bg-[radial-gradient(closest-side,rgb(255_255_255/0.92),rgb(255_255_255/0.55)_60%,transparent)] md:w-[clamp(250px,31vw,410px)]" />
+        {/* Brand visual: the official logo, unmodified, sitting directly on the hero background (decorative;
+            the header logo is the accessible one). */}
+        <div className="flex items-center justify-center pt-2 md:pt-0" aria-hidden>
           <img
             src={LOGO_SRC}
             width={LOGO_WIDTH}
@@ -140,7 +139,7 @@ function hero(b: Block) {
             alt=""
             decoding="async"
             draggable={false}
-            className="relative h-auto w-[clamp(140px,42vw,180px)] max-w-full select-none object-contain opacity-90 md:w-[clamp(190px,24vw,340px)]"
+            className="h-auto w-[clamp(120px,36vw,160px)] max-w-full select-none object-contain opacity-[0.92] md:w-[clamp(190px,21vw,300px)]"
           />
         </div>
       </div>
