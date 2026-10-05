@@ -1,12 +1,19 @@
 # Legal Wording Review — items requiring counsel approval
 
-Status: **PENDING COUNSEL REVIEW.** Nothing below is final legal text. This review does not assert
-that EDMN holds any escrow, payment, or financial-services license. Before launch, counsel must
-approve, rewrite, or remove each item.
+Status (2026-10-05): **APPROVED by the company owner. Version 1.0 is published.**
+
+- Operator stated in the documents: **شركة اضمن إي جي (EDMN EG)**, Alexandria.
+- Contact: **info@edmneg.com**.
+- The commercial registration number was not provided, so it is not stated anywhere.
+- The draft notices were removed from the public pages.
+- Later changes are published as new versions from **Admin → Legal Texts**. Every earlier version
+  and every user acceptance stays recorded.
+
+The table in §2 records how money-handling wording was reviewed and softened in this release.
 
 ## 1. Legal documents (CMS-managed)
 
-All 13 legal documents are **DRAFT placeholders** (version `0.1-draft`). They are managed in
+All 13 legal documents are published as full texts, **version 1.0 (APPROVED)**. They are managed in
 **Admin → System → Legal Texts**, are versioned, and record buyer and seller acceptances.
 
 | Code | Public URL |
@@ -25,7 +32,7 @@ All 13 legal documents are **DRAFT placeholders** (version `0.1-draft`). They ar
 | FEES_POLICY | `/legal/fees` |
 | DATA_DELETION | `/legal/data-deletion` |
 
-No final legal wording was written or invented.
+They replaced the earlier placeholders as a new version. The previous versions are kept.
 
 ## 2. Marketing / UI wording that describes money handling
 

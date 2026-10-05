@@ -1,23 +1,22 @@
 import type { LegalCode } from '@/server/modules/cms/service';
 
 /**
- * Full Arabic drafts of the marketplace legal documents (version 0.2-draft).
- * Written to match how the platform actually works. They stay in DRAFT status until EDMN's legal
- * counsel approves them from Admin → Legal Texts. Company registration data is left as bracketed
- * fields to be completed by the company — it is never invented.
+ * Arabic legal documents of the marketplace, version 1.0 — approved by the company owner
+ * (2026-10-05). Written to match how the platform actually works. Later changes are published as
+ * new versions from Admin → Legal Texts. The commercial registration number is not stated because
+ * it was not provided (never invented).
  *
  * Format: "## " = heading, "- " = bullet, other lines = paragraphs.
  */
-export const LEGAL_VERSION = '0.2-draft';
+export const LEGAL_VERSION = '1.0';
 
-const COMPANY = '[الاسم القانوني للشركة المشغلة لمنصة اضمن]';
-const CR = '[رقم السجل التجاري]';
-const ADDRESS = '[عنوان المقر الرئيسي — الإسكندرية]';
-const EMAIL = '[البريد الإلكتروني الرسمي للدعم]';
+const COMPANY = 'شركة اضمن إي جي (EDMN EG)';
+const ADDRESS = 'الإسكندرية، جمهورية مصر العربية';
+const EMAIL = 'info@edmneg.com';
 
 export const LEGAL_TEXTS: Record<LegalCode, string> = {
   TERMS_OF_USE: `## 1. التعريفات
-- «المنصة» أو «اضمن»: موقع وتطبيقات اضمن (EDMN) وكل الخدمات المقدمة من خلالها، والمشغلة بواسطة ${COMPANY}، سجل تجاري رقم ${CR}، ومقرها ${ADDRESS}.
+- «المنصة» أو «اضمن»: موقع وتطبيقات اضمن (EDMN) وكل الخدمات المقدمة من خلالها، والمشغلة بواسطة ${COMPANY}، ومقرها ${ADDRESS}.
 - «المستخدم»: كل شخص يزور المنصة أو ينشئ حساباً عليها.
 - «المشتري» أو «العميل»: المستخدم الذي يشتري منتجاً من السوق أو يبدأ صفقة محمية.
 - «البائع»: الفرد أو المنشأة التي تمت الموافقة على حسابها لعرض منتجات على المنصة.
@@ -71,7 +70,7 @@ export const LEGAL_TEXTS: Record<LegalCode, string> = {
 للاستفسارات والشكاوى: صفحة الدعم داخل حسابك أو ${EMAIL}.`,
 
   PRIVACY_POLICY: `## 1. من نحن
-تشغّل ${COMPANY} منصة اضمن، وهي المتحكم في بياناتك الشخصية وفق قانون حماية البيانات الشخصية رقم 151 لسنة 2020.
+تشغّل ${COMPANY}، ومقرها ${ADDRESS}، منصة اضمن، وهي المتحكم في بياناتك الشخصية وفق قانون حماية البيانات الشخصية رقم 151 لسنة 2020.
 
 ## 2. البيانات التي نجمعها
 - بيانات الحساب: الاسم، رقم الموبايل، البريد الإلكتروني، كلمة المرور (محفوظة بشكل مشفر غير قابل للاسترجاع).

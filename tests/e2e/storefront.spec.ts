@@ -25,9 +25,11 @@ test.describe('storefront (Arabic RTL)', () => {
     await expect(page.locator('a[href^="/product/"]').first()).toBeVisible();
   });
 
-  test('legal pages are clearly marked as drafts until approved', async ({ page }) => {
+  test('legal pages show the approved version with full text and no draft notice', async ({ page }) => {
     await page.goto('/legal/terms');
-    await expect(page.getByText(/مسودة|قيد المراجعة القانونية/).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /التعريفات/ })).toBeVisible();
+    await expect(page.getByText('info@edmneg.com').first()).toBeVisible();
+    await expect(page.getByText('نص غير نهائي')).toHaveCount(0);
   });
 
   test('used product shows its condition', async ({ page }) => {

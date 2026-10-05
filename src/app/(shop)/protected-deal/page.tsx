@@ -46,7 +46,6 @@ export default async function ProtectedDealLanding() {
         <div className="card p-5"><ShieldCheck className="mb-2 size-6 text-brand-600" /><p className="font-bold">نزاعات بقرار محايد</p><p className="text-sm text-muted">لو المنتج مختلف أو لم يصل، يراجع فريق اضمن الأدلة ويقرر.</p></div>
         <div className="card p-5"><Wallet className="mb-2 size-6 text-brand-600" /><p className="font-bold">رسوم واضحة</p><p className="text-sm text-muted">{fee ? `رسوم الخدمة الحالية ${bpsToPercentString(fee)}% من قيمة الصفقة.` : 'الرسوم الحالية تظهر لك قبل تأكيد الصفقة.'}</p></div>
       </section>
-      <p className="text-center text-xs text-muted">تنويه: تُستخدم عبارة «صفقة محمية» لوصف آلية حفظ المبلغ والتحقق داخل منصة اضمن، ويخضع النص القانوني النهائي لاعتماد المستشار القانوني للشركة.</p>
     </div>
   );
 }

@@ -226,7 +226,7 @@ The public E2E run covered:
 | SMTP provider | E-mail is not delivered |
 | Official company payment destinations | Admin enters them later without code changes |
 | Official logo file | The slot is ready (`NEXT_PUBLIC_LOGO_URL`) |
-| Counsel-approved legal texts | See `docs/LEGAL_WORDING_REVIEW.md` |
+| ~~Legal texts~~ | **Resolved**: all 13 documents published as v1.0, approved by the owner on 2026-10-05 |
 | Production domain / DNS decision | — |
 
 ## V. Production blockers

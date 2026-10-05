@@ -15,6 +15,8 @@ import {
   roles,
 } from '@/server/db/schema';
 import { DEFAULT_ROLES } from '@/server/rbac/permissions';
+import { audit } from '@/server/audit/audit';
+import { SYSTEM_ACTOR } from '@/server/core/actor';
 import { LEGAL_TEXTS, LEGAL_VERSION } from './legal-texts';
 import type { LegalCode } from '@/server/modules/cms/service';
 import { LEGAL_CODES } from '@/server/modules/cms/service';
@@ -254,14 +256,6 @@ export const POLICY_RULES: ['BLOCK_KEYWORD' | 'REVIEW_KEYWORD', string, string][
   ['REVIEW_KEYWORD', 'دواء', 'MEDICAL'],
 ];
 
-const LEGAL_PLACEHOLDER = (title: string) => `⚠️ مسودة غير معتمدة — هذا النص مؤقت لأغراض التطوير والعرض فقط، ولا يمثل الصيغة القانونية النهائية.
-يجب مراجعة واعتماد "${title}" من المستشار القانوني لشركة اضمن قبل الإطلاق.
-
-تُحدد هذه الوثيقة القواعد المنظمة لاستخدام منصة اضمن فيما يخص: ${title}.
-لا تنتقص أي سياسة من سياسات البائعين أو المنصة من الحقوق المقررة للمستهلك بموجب القوانين المصرية النافذة، بما فيها قانون حماية المستهلك.
-
-[يُستكمل النص النهائي بعد المراجعة القانونية]`;
-
 export async function seedReference() {
   // Governorates
   for (const [i, [code, ar, en]] of GOVERNORATES.entries()) {
@@ -349,22 +343,24 @@ export async function seedReference() {
   }
 
   // Legal documents — DRAFT placeholders only (never fabricated final legal text)
-  // Full drafts (0.2) replace the untouched 0.1 placeholder as a NEW version; admin-edited documents are left alone.
+  // Version 1.0 (approved by the company owner) replaces the untouched seeded drafts as a NEW version.
+  // Documents an admin has since published under another version are left alone.
   for (const [code, meta] of Object.entries(LEGAL_CODES) as [LegalCode, (typeof LEGAL_CODES)[LegalCode]][]) {
     const rows = await db.select().from(legalDocuments).where(eq(legalDocuments.code, code));
     if (rows.some((r) => r.version === LEGAL_VERSION)) continue;
     const current = rows.find((r) => r.isCurrent);
-    if (current && !(current.version === '0.1-draft' && current.body === LEGAL_PLACEHOLDER(meta.title))) continue;
+    if (current && !(current.status === 'DRAFT' && ['0.1-draft', '0.2-draft'].includes(current.version))) continue;
     await db.transaction(async (tx) => {
       if (current) await tx.update(legalDocuments).set({ isCurrent: false }).where(eq(legalDocuments.id, current.id));
-      await tx.insert(legalDocuments).values({ code, version: LEGAL_VERSION, title: meta.title, body: LEGAL_TEXTS[code], status: 'DRAFT', isCurrent: true });
+      await tx.insert(legalDocuments).values({ code, version: LEGAL_VERSION, title: meta.title, body: LEGAL_TEXTS[code], status: 'APPROVED', isCurrent: true, approvedAt: new Date() });
+      await audit(tx, SYSTEM_ACTOR, { action: 'legal.published', entityType: 'legal_document', entityId: `${code}@${LEGAL_VERSION}`, newValues: { status: 'APPROVED' }, reason: 'Approved by the company owner (instruction of 2026-10-05)' });
     });
   }
 
   // Homepage CMS defaults (editable from Admin → CMS)
   const [anyBlock] = await db.select({ id: cmsBlocks.id }).from(cmsBlocks).limit(1);
   if (!anyBlock) {
-    // Order follows the homepage hierarchy. Wording about payment protection is a DRAFT pending counsel review.
+    // Order follows the homepage hierarchy.
     const blocks: (typeof cmsBlocks.$inferInsert)[] = [
       { type: 'HERO', title: 'الرئيسية', sortOrder: 0, data: { heading: 'كل اللي محتاجه من بائعين موثّقين', subheading: 'منتجات جديدة ومستعملة من متاجر مصرية تمت مراجعتها. ادفع لاضمن، والبائع يستلم مستحقاته بعد ما تأكد استلام طلبك.', ctaLabel: 'تسوّق العروض', ctaHref: '/deals' } },
       { type: 'FEATURED_CATEGORIES', title: 'تسوّق حسب التصنيف', sortOrder: 1, data: { categorySlugs: ['mobile-phones', 'computers', 'tvs', 'large-appliances', 'small-appliances', 'men', 'women', 'shoes', 'home', 'beauty', 'toys', 'sports'] } },

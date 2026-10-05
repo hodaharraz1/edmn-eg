@@ -197,7 +197,6 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              {/* COUNSEL REVIEW: payment-protection wording is a draft and must be approved before launch. */}
               <p>تدفع لاضمن، ولا يصبح صافي مستحق البائع متاحاً للسحب إلا بعد تأكيدك استلام الطلب. لو حصلت مشكلة تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
             </div>
           </div>
@@ -257,7 +256,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         <section className="card space-y-3 p-5 text-sm">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Truck className="size-5 text-brand-600" /> الشحن والإرجاع</h2>
           <p>الشحن يتم بواسطة البائع مباشرة، ويمكنك متابعة رقم التتبع من صفحة الطلب.</p>
-          <p>حق الإرجاع القانوني: يمكن تقديم طلب إرجاع خلال {statutoryDays} يوم من الاستلام وفقاً للسياسة المعتمدة (النص النهائي يخضع للمراجعة القانونية).</p>
+          <p>حق الإرجاع القانوني: يمكن تقديم طلب إرجاع خلال {statutoryDays} يوم من الاستلام وفقاً لـ <Link href="/legal/returns" className="underline">سياسة الإرجاع والاسترداد</Link>.</p>
           {d.store.shippingPolicy && <p className="text-muted">{d.store.shippingPolicy}</p>}
           {d.store.returnConditions && <p className="text-muted">شروط البائع: {d.store.returnConditions}</p>}
         </section>

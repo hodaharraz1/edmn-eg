@@ -18,7 +18,7 @@ const HINTS: Partial<Record<SettingKey, string>> = {
   'sellers.businessRequiredDocuments': 'مصفوفة JSON',
   'deals.feeBps': 'نقاط أساس (100 = 1%)',
   'deals.feePayer': 'SELLER | BUYER',
-  'returns.statutoryWindowDays': 'يخضع للمراجعة القانونية',
+  'returns.statutoryWindowDays': 'حسب قانون حماية المستهلك 181/2018',
 };
 
 export default async function Settings() {

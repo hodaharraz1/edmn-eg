@@ -22,7 +22,7 @@ export default async function Legal(props: PageProps<'/admin/legal'>) {
   return (
     <div className="space-y-4">
       <PageHeader title="المستندات القانونية" description="إدارة إصدارات الشروط والسياسات. كل إصدار منشور يُحفظ ولا يُعدّل، وتُسجّل موافقات المستخدمين على الإصدار المحدد." />
-      <Alert tone="warning" title="تنبيه قانوني">النصوص المزروعة مسودات هيكلية فقط وليست نصوصاً قانونية معتمدة. لا تنشر أي نص قبل مراجعته واعتماده من محامٍ مختص بالقانون المصري، وفعّل خيار «معتمد من المستشار القانوني» فقط عند حدوث ذلك فعلاً.</Alert>
+      <Alert tone="info" title="إصدارات النصوص القانونية">الإصدار الحالي 1.0 معتمد من إدارة الشركة. أي تعديل يُنشر كإصدار جديد، ويُحفظ كل إصدار سابق، وتُسجَّل موافقات المستخدمين على الإصدار الذي وافقوا عليه.</Alert>
       <nav className="flex flex-wrap gap-2">{(Object.keys(LEGAL_CODES) as LegalCode[]).map((c) => <a key={c} href={`/admin/legal?code=${c}`} className={cn('rounded-full border px-3 py-1 text-sm', c === code ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-line')}>{LEGAL_CODES[c].title}</a>)}</nav>
       <section className="card p-4">
         <h2 className="mb-2 font-bold">الإصدارات — {LEGAL_CODES[code].title}</h2>
