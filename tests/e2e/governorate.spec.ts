@@ -137,8 +137,8 @@ test.describe('header delivery governorate', () => {
     });
   }
 
-  test('product page and cart use the selected governorate and the seller’s own rate for it', async ({ browser }) => {
-    const { ctx, page } = await freshGuest(browser, 1440);
+  for (const width of [1440, 390]) test(`product page and cart use the selected governorate and the seller’s own rate for it (${width}px)`, async ({ browser }) => {
+    const { ctx, page } = await freshGuest(browser, width);
     const prod = await pickProduct();
     await page.goto(`/product/${prod.slug}`);
     const main = page.locator('#main');
@@ -157,11 +157,11 @@ test.describe('header delivery governorate', () => {
   });
 });
 
-test.describe('signed-in customer: header context vs checkout address', () => {
-  test('header choice never rewrites addresses; checkout shipping comes from the chosen address and recalculates', async ({ browser }) => {
+test.describe.serial('signed-in customer: header context vs checkout address', () => {
+  for (const width of [1440, 390]) test(`header choice never rewrites addresses; checkout shipping comes from the chosen address and recalculates (${width}px)`, async ({ browser }) => {
     test.setTimeout(180_000);
     const prod = await pickProduct();
-    const ctx = await browser.newContext({ locale: 'ar-EG', viewport: { width: 1440, height: 900 } });
+    const ctx = await browser.newContext({ locale: 'ar-EG', viewport: { width, height: 900 } });
     const page = await ctx.newPage();
     await page.goto('/login');
     await page.locator('input[name=identifier]').fill(BUYER);
