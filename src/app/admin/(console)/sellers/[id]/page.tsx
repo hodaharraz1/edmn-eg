@@ -128,9 +128,8 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
             <p className="text-xs text-muted">{m.holderName} · {formatDate(m.createdAt, true)} · <StatusChip status={m.status} /></p>
             {m.status === 'PENDING_VERIFICATION' && s.status !== 'PENDING_REVIEW' && hasPermission(actor, 'sellers.payout.verify') && (
               <div className="mt-2 flex gap-2">
-                {['approve', 'reject'].map((d) => (
-                  <ActionForm key={d} action={verifyPayoutAction}><input type="hidden" name="payoutMethodId" value={m.id} /><input type="hidden" name="sellerId" value={s.id} /><input type="hidden" name="decision" value={d} /><SubmitButton size="sm" variant={d === 'approve' ? 'success' : 'outline'}>{d === 'approve' ? 'اعتماد' : 'رفض'}</SubmitButton></ActionForm>
-                ))}
+                <ActionForm action={verifyPayoutAction}><input type="hidden" name="payoutMethodId" value={m.id} /><input type="hidden" name="sellerId" value={s.id} /><input type="hidden" name="decision" value="approve" /><input type="hidden" name="back" value={`/admin/sellers/${s.id}`} /><SubmitButton size="sm" variant="success">اعتماد</SubmitButton></ActionForm>
+                <ActionForm action={verifyPayoutAction} className="flex gap-1"><input type="hidden" name="payoutMethodId" value={m.id} /><input type="hidden" name="sellerId" value={s.id} /><input type="hidden" name="decision" value="reject" /><input type="hidden" name="back" value={`/admin/sellers/${s.id}`} /><input name="reason" required minLength={3} placeholder="سبب الرفض" aria-label="سبب رفض وسيلة السحب" className="h-8 rounded border border-line px-2 text-xs" /><SubmitButton size="sm" variant="outline">رفض</SubmitButton></ActionForm>
               </div>
             )}
           </div>

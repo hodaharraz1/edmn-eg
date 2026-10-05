@@ -2,9 +2,6 @@ import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 import { requireUser } from '@/server/web/session';
-import { db } from '@/server/db/client';
-import { riskFlags } from '@/server/db/schema';
-import { and, eq } from 'drizzle-orm';
 import { PageHeader } from '@/ui/data';
 import { SellerStatusGate } from '@/app/_components/seller-gate';
 
@@ -17,7 +14,7 @@ export default async function HealthPage() {
   const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const d = await sellerDashboard(ctx.seller.id, rangeFromPreset('90d'));
-  const flags = await db.select().from(riskFlags).where(and(eq(riskFlags.entityType, 'seller'), eq(riskFlags.entityId, ctx.seller.id), eq(riskFlags.status, 'OPEN')));
+  // Risk flags are internal Operations notes and are never shown to the seller.
   const rows = [
     { label: 'نسبة الإلغاء من البائع', value: d.cancellationRate, ok: d.cancellationRate <= TARGETS.cancellation, target: `أقل من ${TARGETS.cancellation * 100}%`, fmt: (v: number) => `${(v * 100).toFixed(1)}%` },
     { label: 'نسبة المرتجعات', value: d.returnRate, ok: d.returnRate <= TARGETS.returns, target: `أقل من ${TARGETS.returns * 100}%`, fmt: (v: number) => `${(v * 100).toFixed(1)}%` },
@@ -40,12 +37,6 @@ export default async function HealthPage() {
           </div>
         ))}
       </div>
-      {flags.length > 0 && (
-        <section className="card p-5">
-          <h2 className="mb-2 font-bold">ملاحظات من فريق اضمن</h2>
-          <ul className="list-inside list-disc text-sm">{flags.map((f) => <li key={f.id}>{f.note ?? f.code}</li>)}</ul>
-        </section>
-      )}
     </div>
   );
 }

@@ -86,7 +86,7 @@ export async function dealDeliveredAction(_p: ActionState, fd: FormData): Promis
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await markDealDelivered(actor, str(fd, 'dealId'), str(fd, 'note'), await filesOf(fd, 'proof'));
-    return { message: 'تم تسجيل التسليم. بانتظار تأكيد المشتري.' };
+    return { message: 'تم تسجيل الشحن. عند التسليم اطلب رمز الاستلام من المشتري.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;

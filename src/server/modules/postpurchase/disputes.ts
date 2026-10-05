@@ -2,7 +2,8 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, disputeMachine, returnMachine, type DisputeDecision, type DisputeStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { hasPermission, requirePermission, requireUser, type Actor } from '@/server/core/actor';
+import { hasPermission, requirePermission, requireStepUp, requireUser, type Actor } from '@/server/core/actor';
+import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -174,6 +175,7 @@ export const decisionSchema = z.object({
  */
 export async function resolveDispute(actor: Actor, disputeId: string, input: z.input<typeof decisionSchema>) {
   requirePermission(actor, 'disputes.manage');
+  requireStepUp(actor); // the decision moves money (release / refund)
   const d = parse(decisionSchema, input);
   let amount: number | null = null;
   if (d.decision === 'PARTIAL_REFUND') {
@@ -187,6 +189,13 @@ export async function resolveDispute(actor: Actor, disputeId: string, input: z.i
     const [dispute] = await tx.select().from(disputes).where(eq(disputes.id, disputeId)).for('update');
     if (!dispute) throw notFound('النزاع');
     if (!OPEN.includes(dispute.status)) throw invalidState('تم حسم هذا النزاع بالفعل');
+    // Separation of duties: never decide a dispute you are a party to or whose store you belong to.
+    if (actor.userId && (actor.userId === dispute.claimantUserId || actor.userId === dispute.respondentUserId)) throw forbidden('لا يمكنك الحكم في نزاع أنت طرف فيه');
+    if (dispute.respondentSellerId) await assertNotSelfDealing(tx, actor, dispute.respondentSellerId);
+    if (dispute.dealId) {
+      const [dl] = await tx.select({ buyerId: externalDeals.buyerId, sellerUserId: externalDeals.sellerUserId }).from(externalDeals).where(eq(externalDeals.id, dispute.dealId));
+      if (dl && (dl.buyerId === actor.userId || dl.sellerUserId === actor.userId)) throw forbidden('لا يمكنك الحكم في نزاع أنت طرف فيه');
+    }
     await transition(tx, actor, disputeMachine, dispute.id, dispute.status, 'RESOLVED', d.note);
     await tx
       .update(disputes)

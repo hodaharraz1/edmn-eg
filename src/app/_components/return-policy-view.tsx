@@ -16,7 +16,10 @@ export function ReturnPolicyView({ policy, mandatoryNotice, compact }: { policy:
           {!compact && policy.shippingPayer && <p className="text-muted">{RETURN_SHIPPING_LABELS[policy.shippingPayer]}</p>}
         </>
       ) : (
-        <p className="font-semibold">{NO_VOLUNTARY_TEXT}</p>
+        <>
+          <p className="font-semibold">{NO_VOLUNTARY_TEXT}</p>
+          {!compact && <p className="text-xs text-muted">يظل من حقك الإبلاغ عن منتج معيب أو خاطئ أو تالف أو غير مطابق للوصف.</p>}
+        </>
       )}
       {!compact && policy.notes ? <p className="whitespace-pre-line text-muted">{policy.notes}</p> : null}
       {mandatoryNotice ? <p className="text-xs text-muted">{mandatoryNotice}</p> : null}

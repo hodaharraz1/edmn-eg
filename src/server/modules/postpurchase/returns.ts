@@ -117,6 +117,8 @@ async function lockForHandler(tx: DbOrTx, actor: Actor, returnId: string) {
   if (actor.type === 'SELLER') {
     if (actor.sellerId !== r.sellerId || !actor.sellerPermissions?.has('returns.manage')) throw forbidden();
   } else requirePermission(actor, 'returns.manage');
+  // An escalated return is decided only through its dispute (one decision, one refund).
+  if (r.status === 'DISPUTED') throw invalidState('هذا الإرجاع محال إلى نزاع؛ يتم القرار من صفحة النزاع');
   return r;
 }
 
@@ -197,7 +199,9 @@ export async function acceptReturnRefund(actor: Actor, returnId: string, input: 
 
 export async function acceptReturnRefundTx(tx: DbOrTx, actor: Actor, r: Return, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string }) {
   const { max, items } = await returnRefundCeiling(tx, r, !!input.includeShipping);
-  const amount = input.amount ?? Math.min(max, items + 0);
+  // Blank amount = the full ceiling (items, plus shipping when "include shipping" is ticked).
+  const amount = input.amount ?? max;
+  void items;
   if (!Number.isInteger(amount) || amount <= 0 || amount > max) throw validation(`مبلغ الاسترداد يجب أن يكون بين 0.01 و ${max / 100} ج.م`);
   await moveReturn(tx, actor, r, 'REFUND_PENDING', { refundAmount: amount, includeShipping: !!input.includeShipping, inspectionNote: input.note ?? r.inspectionNote }, input.note);
   const rItems = await tx.select().from(returnItems).where(eq(returnItems.returnId, r.id));

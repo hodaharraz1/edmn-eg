@@ -16,7 +16,9 @@ export const metadata = { title: 'دفتر القيود' };
 export default async function Ledger(props: PageProps<'/admin/ledger'>) {
   const { actor, allowed } = await adminWith('finance.view');
   if (!allowed) return <Forbidden />;
-  const tab = String((await props.searchParams).tab ?? 'overview');
+  const sp = await props.searchParams;
+  const sellerFilter = typeof sp.seller === 'string' && /^[0-9a-f-]{36}$/.test(sp.seller) ? sp.seller : null;
+  const tab = sellerFilter ? 'seller' : String(sp.tab ?? 'overview');
   const rec = await reconcile(db);
   const platform = await db.select().from(ledgerAccounts).where(isNull(ledgerAccounts.sellerId));
   return (
@@ -37,6 +39,7 @@ export default async function Ledger(props: PageProps<'/admin/ledger'>) {
         ]} />
       )}
       {tab === 'journal' && <Journal />}
+      {tab === 'seller' && sellerFilter && <SellerStatement sellerId={sellerFilter} />}
       {tab === 'adjustments' && <Adjustments canCreate={hasPermission(actor, 'ledger.adjust.create')} canApprove={hasPermission(actor, 'ledger.adjust.approve')} userId={actor.userId!} />}
     </div>
   );
@@ -95,5 +98,37 @@ async function Adjustments({ canCreate, canApprove, userId }: { canCreate: boole
         </ActionForm>
       )}
     </div>
+  );
+}
+
+/** Read-only statement of one seller's ledger accounts (linked from Seller 360). */
+async function SellerStatement({ sellerId }: { sellerId: string }) {
+  const accounts = await db.select().from(ledgerAccounts).where(eq(ledgerAccounts.sellerId, sellerId));
+  const ids = accounts.map((a) => a.id);
+  const lines = ids.length
+    ? await db
+        .select({ l: journalLines, e: journalEntries })
+        .from(journalLines)
+        .innerJoin(journalEntries, eq(journalEntries.id, journalLines.entryId))
+        .where(inArray(journalLines.accountId, ids))
+        .orderBy(desc(journalLines.createdAt))
+        .limit(200)
+    : [];
+  const [st] = await db.select({ name: stores.name }).from(stores).where(eq(stores.sellerId, sellerId));
+  return (
+    <section className="space-y-3" data-testid="seller-statement">
+      <h2 className="font-bold">كشف حساب البائع: {st?.name ?? sellerId}</h2>
+      <DataTable rows={accounts} rowKey={(a) => a.id} columns={[
+        { key: 'c', header: 'الحساب', cell: (a) => ACCOUNTS[a.code as AccountCode]?.name ?? a.code },
+        { key: 'b', header: 'الرصيد', cell: (a) => formatEGP(a.balance) },
+      ]} />
+      <DataTable rows={lines} rowKey={(r) => r.l.id} columns={[
+        { key: 'd', header: 'التاريخ', cell: (r) => formatDate(r.l.createdAt, true) },
+        { key: 'a', header: 'الحساب', cell: (r) => { const acc = accounts.find((x) => x.id === r.l.accountId); return acc ? (ACCOUNTS[acc.code as AccountCode]?.name ?? acc.code) : '—'; } },
+        { key: 'x', header: 'البيان', cell: (r) => r.e.description },
+        { key: 'dr', header: 'مدين', cell: (r) => (r.l.debit ? formatEGP(r.l.debit) : '') },
+        { key: 'cr', header: 'دائن', cell: (r) => (r.l.credit ? formatEGP(r.l.credit) : '') },
+      ]} />
+    </section>
   );
 }

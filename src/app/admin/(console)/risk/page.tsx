@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { sql } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
+import { riskFlagAction } from '@/app/_actions/admin';
+import { riskFlags } from '@/server/db/schema';
+import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { ShieldAlert } from 'lucide-react';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';
@@ -16,8 +19,11 @@ const SEV = { HIGH: { label: 'مرتفع', tone: 'danger' }, MEDIUM: { label: '�
  * Rule-based risk signals computed live from operational data (read-only).
  * They are prompts for human review — never automatic decisions.
  */
+const FLAG_LABEL: Record<string, string> = { DELIVERY_CONFLICT: 'تعارض في التسليم', DELIVERY_EXCEPTION: 'تعذر التحقق من التسليم', ADMIN_HOLD: 'إيقاف إداري', MANUAL: 'ملاحظة يدوية' };
+
 export default async function RiskFlags() {
   const { allowed } = await adminWith(['audit.view', 'finance.view']);
+  const openFlags = allowed ? await db.select().from(riskFlags).where(eq(riskFlags.status, 'OPEN')).orderBy(desc(riskFlags.createdAt)).limit(200) : [];
   if (!allowed) return <Forbidden />;
   const [payoutChange, lockouts, rejectedProofs, holds, disputes, unconfirmed] = await Promise.all([
     db.execute<{ id: string; store: string | null; amount: string; at: string; method_at: string }>(sql`
@@ -74,6 +80,31 @@ export default async function RiskFlags() {
           ))}
         </ul>
       )}
+      <section className="card space-y-3 p-5" data-testid="risk-flag-queue">
+        <h2 className="font-bold">مؤشرات مسجلة مفتوحة ({openFlags.length})</h2>
+        {openFlags.length === 0 ? (
+          <p className="text-sm text-muted">لا توجد مؤشرات مفتوحة.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {openFlags.map((f) => (
+              <li key={f.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
+                <Badge tone={f.severity === 'HIGH' ? 'danger' : 'warning'}>{FLAG_LABEL[f.code] ?? f.code}</Badge>
+                <span className="min-w-0 flex-1">{f.note} · {formatDate(f.createdAt, true)}</span>
+                <Link href={f.entityType === 'external_deal' ? `/admin/deals/${f.entityId}` : `/admin/sellers/${f.entityId}`} className="text-brand-700 hover:underline">فتح</Link>
+                <ActionForm action={riskFlagAction} className="flex items-center gap-1">
+                  <input type="hidden" name="op" value="resolve" />
+                  <input type="hidden" name="flagId" value={f.id} />
+                  <input type="hidden" name="entityType" value={f.entityType} />
+                  <input type="hidden" name="entityId" value={f.entityId} />
+                  <input type="hidden" name="back" value="/admin/risk" />
+                  <input name="reason" required minLength={3} placeholder="سبب الإغلاق" aria-label="سبب إغلاق المؤشر" className="h-8 rounded border border-line px-2 text-xs" />
+                  <SubmitButton size="sm" variant="outline">إغلاق</SubmitButton>
+                </ActionForm>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

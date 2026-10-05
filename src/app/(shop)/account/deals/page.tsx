@@ -26,7 +26,7 @@ export default async function DealsPage() {
                   <p className="font-semibold">{d.title}</p>
                   <p className="text-xs text-muted">صفقة #{d.number} · {formatDate(d.createdAt)} · <Badge tone={d.buyerId === user.id ? 'brand' : 'accent'}>{d.buyerId === user.id ? 'أنت المشتري' : 'أنت البائع'}</Badge></p>
                 </div>
-                <div className="flex items-center gap-3"><span className="font-semibold">{formatEGP(d.totalAmount)}</span><StatusChip status={d.status} /></div>
+                <div className="flex items-center gap-3"><span className="font-semibold">{formatEGP(d.totalAmount)}</span><StatusChip status={d.status === 'DELIVERED' ? 'DEAL_SHIPPED' : d.status} /></div>
               </Link>
             </li>
           ))}

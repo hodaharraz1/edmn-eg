@@ -215,7 +215,7 @@ describe('delivery OTP — isolation and visibility', () => {
   it('8 — another seller cannot use seller A’s code on deal A', async () => {
     const d = await shippedDeal();
     const sellerB = (await activeDeal()).seller;
-    await expect(verifyDeliveryOtp(sellerB, d.dealId, d.code)).rejects.toThrow(/لبائع الصفقة فقط/);
+    await expect(verifyDeliveryOtp(sellerB, d.dealId, d.code)).rejects.toThrow(/صلاحية|لبائع الصفقة فقط/);
     expect(await status(d.dealId)).toBe('DELIVERED');
   });
 

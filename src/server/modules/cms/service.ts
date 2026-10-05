@@ -142,7 +142,7 @@ export async function saveLegalDraft(actor: Actor, code: LegalCode, version: str
   if (body.trim().length < 20) throw validation('النص قصير جداً');
   await db.transaction(async (tx) => {
     const [existing] = await tx.select().from(legalDocuments).where(and(eq(legalDocuments.code, code), eq(legalDocuments.version, version)));
-    if (existing && existing.status !== 'DRAFT') throw invalidState('لا يمكن تعديل إصدار معتمد. أنشئ إصداراً جديداً');
+    if (existing && (existing.status !== 'DRAFT' || existing.isCurrent)) throw invalidState('لا يمكن تعديل إصدار منشور أو معتمد. أنشئ إصداراً جديداً');
     if (existing) await tx.update(legalDocuments).set({ title, body }).where(eq(legalDocuments.id, existing.id));
     else await tx.insert(legalDocuments).values({ code, version, title, body });
     await audit(tx, actor, { action: 'legal.draft_saved', entityType: 'legal_document', entityId: `${code}@${version}` });

@@ -294,6 +294,7 @@ export async function runScheduledSettlement(date = new Date()) {
 
 export async function createAdjustment(actor: Actor, input: { sellerId: string; amount: string; reasonCode: string; reason: string; sellerOrderId?: string | null }) {
   requirePermission(actor, 'ledger.adjust.create');
+  requireStepUp(actor);
   const why = requireReason(input.reason);
   let amount: number;
   try {
@@ -306,6 +307,7 @@ export async function createAdjustment(actor: Actor, input: { sellerId: string; 
   return db.transaction(async (tx) => {
     const [seller] = await tx.select({ id: sellers.id }).from(sellers).where(eq(sellers.id, input.sellerId));
     if (!seller) throw notFound('البائع');
+    await assertNotSelfDealing(tx, actor, input.sellerId);
     const [adj] = await tx
       .insert(ledgerAdjustments)
       .values({ sellerId: input.sellerId, sellerOrderId: input.sellerOrderId ?? null, amount, reasonCode: input.reasonCode, reason: why, createdBy: actor.userId! })
@@ -352,6 +354,7 @@ export async function decideAdjustment(actor: Actor, id: string, approve: boolea
     if (!adj) throw notFound('التسوية');
     if (adj.status !== 'PENDING_APPROVAL') throw invalidState('تم البت في هذه التسوية بالفعل');
     if (adj.createdBy === actor.userId) throw forbidden('لا يمكن لمنشئ التسوية اعتمادها (مبدأ الفصل بين المهام)');
+    await assertNotSelfDealing(tx, actor, adj.sellerId);
     if (approve) await postAdjustment(tx, actor, id, false);
     else {
       const why = requireReason(reason);

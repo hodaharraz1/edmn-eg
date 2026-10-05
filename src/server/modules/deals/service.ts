@@ -234,7 +234,7 @@ export async function invitationByToken(token: string, viewerUserId?: string | n
   if (!inv) return null;
   const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, inv.dealId));
   const now = new Date();
-  if (inv.status === 'PENDING' && inv.expiresAt < now) {
+  if (inv.status === 'PENDING' && !inv.boundUserId && inv.expiresAt < now) {
     await db.transaction(async (tx) => {
       const n = await tx.update(dealInvitations).set({ status: 'EXPIRED' }).where(and(eq(dealInvitations.id, inv.id), eq(dealInvitations.status, 'PENDING'))).returning({ id: dealInvitations.id });
       if (n.length) await audit(tx, SYSTEM_ACTOR, { action: 'deal.invitation_expired', entityType: 'external_deal', entityId: deal.id });
@@ -288,9 +288,11 @@ export async function invitationByToken(token: string, viewerUserId?: string | n
 export async function claimInvitation(actor: Actor, token: string) {
   const userId = requireUser(actor);
   return db.transaction(async (tx) => {
+    // Lock order deal → invitation (same as refresh/revoke) to avoid deadlocks.
+    const [found] = await tx.select({ dealId: dealInvitations.dealId }).from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(token)));
+    if (!found) throw invalidState('الدعوة غير صالحة');
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, found.dealId)).for('update');
     const [inv] = await tx.select().from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(token))).for('update');
-    if (!inv) throw invalidState('الدعوة غير صالحة');
-    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, inv.dealId)).for('update');
     if (inv.boundUserId) {
       if (inv.boundUserId !== userId) throw forbidden('هذه الدعوة مرتبطة بحساب آخر');
       return deal.id; // replay by the same seller: no-op
@@ -569,7 +571,8 @@ export async function rejectInvitation(actor: Actor, ref: { token?: string; deal
     const [inv] = ref.token
       ? await tx.select().from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(ref.token))).for('update')
       : await tx.select().from(dealInvitations).where(and(eq(dealInvitations.dealId, ref.dealId ?? ''), eq(dealInvitations.boundUserId, userId))).for('update');
-    if (!inv || inv.status !== 'PENDING' || inv.expiresAt < new Date()) throw invalidState('الدعوة غير صالحة أو منتهية الصلاحية');
+    // A link already bound to the seller no longer expires (the seller has joined); unbound links do.
+    if (!inv || inv.status !== 'PENDING' || (!inv.boundUserId && inv.expiresAt < new Date())) throw invalidState('الدعوة غير صالحة أو منتهية الصلاحية');
     if (inv.boundUserId && inv.boundUserId !== userId) throw forbidden('هذه الدعوة مرتبطة بحساب آخر');
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, inv.dealId)).for('update');
     if (deal.buyerId === userId) throw forbidden();
@@ -583,10 +586,10 @@ export async function rejectInvitation(actor: Actor, ref: { token?: string; deal
 
 /** Background: mark lapsed invitations EXPIRED (audited) so the lifecycle is explicit. */
 export async function expireDealInvitations(now = new Date()) {
-  const rows = await db.select().from(dealInvitations).where(and(eq(dealInvitations.status, 'PENDING'), lt(dealInvitations.expiresAt, now)));
+  const rows = await db.select().from(dealInvitations).where(and(eq(dealInvitations.status, 'PENDING'), isNull(dealInvitations.boundUserId), lt(dealInvitations.expiresAt, now)));
   for (const inv of rows) {
     await db.transaction(async (tx) => {
-      const n = await tx.update(dealInvitations).set({ status: 'EXPIRED' }).where(and(eq(dealInvitations.id, inv.id), eq(dealInvitations.status, 'PENDING'))).returning({ id: dealInvitations.id });
+      const n = await tx.update(dealInvitations).set({ status: 'EXPIRED' }).where(and(eq(dealInvitations.id, inv.id), eq(dealInvitations.status, 'PENDING'), isNull(dealInvitations.boundUserId))).returning({ id: dealInvitations.id });
       if (n.length) await audit(tx, SYSTEM_ACTOR, { action: 'deal.invitation_expired', entityType: 'external_deal', entityId: inv.dealId });
     });
   }
@@ -615,8 +618,19 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة ليست بانتظار الدفع');
-    const [existing] = await tx.select().from(payments).where(eq(payments.dealId, deal.id));
-    if (existing) return existing;
+    const [existing] = await tx.select().from(payments).where(eq(payments.dealId, deal.id)).for('update');
+    if (existing) {
+      // A deal has no stock to release: an elapsed payment window is simply reopened (audited) so the
+      // buyer is never stuck between "expired" and "cannot start a new payment".
+      if (existing.status === 'AWAITING_PAYMENT' && existing.dueAt < new Date()) {
+        const hours = await getSetting('payments.paymentWindowHours', tx);
+        const dueAt = new Date(Date.now() + hours * 3600_000);
+        await tx.update(payments).set({ dueAt }).where(eq(payments.id, existing.id));
+        await audit(tx, actor, { action: 'payment.window_reopened', entityType: 'payment', entityId: existing.id, newValues: { dueAt: dueAt.toISOString() } });
+        return { ...existing, dueAt };
+      }
+      return existing;
+    }
     const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
     if (!m?.isEnabled) throw validation('طريقة الدفع غير متاحة');
     const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
@@ -630,7 +644,7 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
         isTest: !(await realMoneyEnabled(tx)),
         method,
         destinationId: dests[0].id,
-        destinationSnapshot: dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr })),
+        destinationSnapshot: dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: deal.buyerPays!,
         dueAt: new Date(Date.now() + hours * 3600_000),
       })
@@ -654,7 +668,15 @@ export async function markDealDelivered(actor: Actor, dealId: string, note: stri
     }
     // "Delivered" here means shipped / out for handover. It moves NO money; the buyer's handover code
     // is issued now and must be verified at the physical handover.
-    await moveDeal(tx, actor, deal, 'DELIVERED', { deliveredAt: new Date(), deliveryNote: note?.trim() || null, deliveryAttempt: deal.deliveryAttempt + 1 });
+    await moveDeal(tx, actor, deal, 'DELIVERED', {
+      deliveredAt: new Date(),
+      deliveryNote: note?.trim() || null,
+      deliveryAttempt: deal.deliveryAttempt + 1,
+      // A (re)shipment starts a fresh handover; earlier handover evidence stays in the OTP history.
+      handoverVerifiedAt: null,
+      handoverOtpId: null,
+      deliveryConflictAt: null,
+    });
     await audit(tx, actor, { action: 'deal.shipped', entityType: 'external_deal', entityId: deal.id, newValues: { deliveryAttempt: deal.deliveryAttempt + 1, proofFiles: proof.length } });
     await notify(tx, { event: 'EXTERNAL_DEAL_DELIVERED', userIds: [deal.buyerId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
     await issueDeliveryOtpTx(tx, actor, { ...deal, deliveryAttempt: deal.deliveryAttempt + 1 }, 'deal.delivery_otp_issued');
@@ -662,6 +684,14 @@ export async function markDealDelivered(actor: Actor, dealId: string, note: stri
 }
 
 /* ───────── Delivery handover OTP ───────── */
+
+async function requireDealParty(dealId: string, userId: string): Promise<'BUYER' | 'SELLER'> {
+  const [d] = await db.select({ buyerId: externalDeals.buyerId, sellerUserId: externalDeals.sellerUserId }).from(externalDeals).where(eq(externalDeals.id, dealId));
+  if (!d) throw notFound('الصفقة');
+  if (d.buyerId === userId) return 'BUYER';
+  if (d.sellerUserId === userId) return 'SELLER';
+  throw forbidden();
+}
 
 const ACTIVE_OTP = (dealId: string) => and(eq(dealDeliveryOtps.dealId, dealId), isNull(dealDeliveryOtps.usedAt), isNull(dealDeliveryOtps.invalidatedAt));
 
@@ -701,6 +731,7 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
 /** Buyer (or the bound seller, on the buyer's behalf) asks for a new code; it is always sent to the BUYER. */
 export async function regenerateDeliveryOtp(actor: Actor, dealId: string) {
   const userId = requireUser(actor);
+  await requireDealParty(dealId, userId);
   if (!(await hit(`deal-otp-issue:${dealId}`, 5, 3600))) throw new DomainError('RATE_LIMITED', 'طلبت رموزًا كثيرة. حاول مرة أخرى بعد قليل');
   return db.transaction(async (tx) => {
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
@@ -721,6 +752,9 @@ type VerifyOutcome = { ok: true } | { ok: false; error: DomainError };
  */
 export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: string) {
   const userId = requireUser(actor);
+  // Authorize before counting, so strangers cannot exhaust a deal's verification quota.
+  const party = await requireDealParty(dealId, userId);
+  if (party !== 'SELLER') throw forbidden('إدخال رمز الاستلام متاح لبائع الصفقة فقط');
   await enforce(`deal-otp-verify:${dealId}`, 10, 900);
   await enforce(`deal-otp-verify-user:${userId}`, 20, 900);
   const candidate = String(code ?? '').trim();
@@ -860,7 +894,8 @@ export async function reportDeliveryException(actor: Actor, dealId: string, desc
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
     if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
-    if (deal.status !== 'DELIVERED') throw invalidState('طلب المراجعة متاح بعد الشحن وقبل التحقق من التسليم');
+    const legacyPending = deal.status === 'BUYER_CONFIRMATION_PENDING' && !deal.handoverVerifiedAt;
+    if (deal.status !== 'DELIVERED' && !legacyPending) throw invalidState('طلب المراجعة متاح بعد الشحن وقبل التحقق من التسليم');
     await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
     return openDeliveryReview(tx, actor, deal, 'DELIVERY_EXCEPTION', why);
   });
@@ -942,6 +977,11 @@ export async function confirmDealReceipt(actor: Actor, dealId: string) {
 export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string, decision: DisputeDecision, amount: number | null, disputeId: string, note: string) {
   const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
   if (deal.status !== 'DISPUTED') return;
+  // The dispute decision is the Operations review: it closes the delivery review flags it was opened for.
+  await tx
+    .update(riskFlags)
+    .set({ status: 'RESOLVED', resolvedBy: actor.userId ?? null, resolvedAt: new Date() })
+    .where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, ['DELIVERY_CONFLICT', 'DELIVERY_EXCEPTION'])));
   if (decision === 'FULL_REFUND') {
     await moveDeal(tx, actor, deal, 'REFUNDED', {}, note);
     await postEntry(tx, actor, {
@@ -967,8 +1007,9 @@ export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string
     await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date() }, note);
     await postDealCompletion(tx, actor, deal);
   } else {
-    // RETURN_REQUIRED / REPLACEMENT → the deal continues
-    await moveDeal(tx, actor, deal, 'ACTIVE', {}, note);
+    // RETURN_REQUIRED / REPLACEMENT → the deal continues with a fresh delivery (new handover code on re-ship).
+    await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
+    await moveDeal(tx, actor, deal, 'ACTIVE', { handoverVerifiedAt: null, handoverOtpId: null, deliveryConflictAt: null }, note);
   }
 }
 

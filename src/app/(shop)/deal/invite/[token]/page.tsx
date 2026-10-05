@@ -81,7 +81,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
             <div className="flex flex-col gap-2 sm:flex-row">
               <LinkButton href={`/register?next=${encodeURIComponent(here)}`} variant="success" size="lg">قبول ومتابعة (حساب جديد)</LinkButton>
               <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="outline" size="lg">لدي حساب — تسجيل الدخول</LinkButton>
-              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="ghost" size="lg">رفض</LinkButton>
+              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="ghost" size="lg">سجّل الدخول لرفض الصفقة</LinkButton>
             </div>
           </div>
         )

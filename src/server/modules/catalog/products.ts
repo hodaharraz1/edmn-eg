@@ -478,6 +478,7 @@ export async function moderateRevision(actor: Actor, revisionId: string, approve
     if (!rev) throw notFound('التعديل');
     if (rev.status !== 'SUBMITTED') throw invalidState('تمت مراجعة هذا التعديل بالفعل');
     const [p] = await tx.select().from(products).where(eq(products.id, rev.productId)).for('update');
+    await assertNotSelfDealing(tx, actor, p.sellerId);
     if (approve) {
       const data = rev.data as RevisionData;
       if (data.fields) await tx.update(products).set(data.fields as Partial<Product>).where(eq(products.id, p.id));

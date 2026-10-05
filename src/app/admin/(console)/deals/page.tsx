@@ -36,7 +36,7 @@ export default async function AdminDeals(props: PageProps<'/admin/deals'>) {
         { key: 'n', header: 'الرقم', cell: (r) => <Link className="font-semibold text-brand-700" href={`/admin/deals/${r.d.id}`}>#{r.d.number}</Link> },
         { key: 't', header: 'العنوان', cell: (r) => r.d.title },
         { key: 'b', header: 'المشتري', cell: (r) => r.buyer },
-        { key: 's', header: 'البائع', cell: (r) => r.d.sellerName ?? '—' },
+        { key: 's', header: 'البائع', cell: (r) => r.d.sellerFullName ?? (r.d.sellerName ? `${r.d.sellerName} (غير مؤكد)` : '—') },
         { key: 'a', header: 'يدفع المشتري', cell: (r) => (r.d.buyerPays != null ? formatEGP(r.d.buyerPays) : '—') },
         { key: 'u', header: 'آخر تحديث', cell: (r) => formatDate(r.d.updatedAt, true) },
         { key: 'st', header: 'الحالة', cell: (r) => <StatusChip status={r.d.status} /> },

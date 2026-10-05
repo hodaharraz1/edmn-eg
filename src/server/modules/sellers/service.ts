@@ -25,6 +25,7 @@ import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
+import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { SELLER_ROLE_PERMISSIONS, type SellerPermission } from '@/server/rbac/permissions';
 
 export type Seller = typeof sellers.$inferSelect;
@@ -290,11 +291,14 @@ export async function addPayoutMethod(actor: Actor, input: PayoutInput) {
 
 export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, approve: boolean, reason?: string) {
   requirePermission(actor, 'sellers.payout.verify');
+  requireStepUp(actor); // decides where seller money is sent
+  if (!approve) requireReason(reason);
   await db.transaction(async (tx) => {
     const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, payoutMethodId)).for('update');
     if (!pm) throw notFound('وسيلة السحب');
     const [owner] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, pm.sellerId));
     if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد وسيلة سحب خاصة بمتجرك');
+    await assertNotSelfDealing(tx, actor, pm.sellerId);
     if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة وسيلة السحب بالفعل');
     if (approve) {
       await tx.update(sellerPayoutMethods).set({ isDefault: false }).where(eq(sellerPayoutMethods.sellerId, pm.sellerId));

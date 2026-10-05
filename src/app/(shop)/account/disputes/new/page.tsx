@@ -12,6 +12,8 @@ const REASONS: [string, string][] = [
   ['NOT_RECEIVED', 'لم أستلم الطلب'],
   ['NOT_AS_DESCRIBED', 'المنتج غير مطابق للوصف'],
   ['DAMAGED', 'المنتج تالف'],
+  ['DEFECTIVE', 'المنتج معيب / لا يعمل'],
+  ['WRONG_ITEM', 'استلمت منتجًا مختلفًا'],
   ['COUNTERFEIT', 'أشك أن المنتج غير أصلي'],
   ['SELLER_UNRESPONSIVE', 'البائع لا يستجيب'],
   ['OTHER', 'سبب آخر'],

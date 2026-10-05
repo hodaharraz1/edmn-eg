@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { z } from 'zod';
 import { SELLER_ORDER_CANCELLABLE, sellerOrderMachine, shipmentMachine, type SellerOrderStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
@@ -169,6 +170,7 @@ export async function confirmReceipt(actor: Actor, soId: string, opts: { onBehal
     if (!so) throw notFound('الطلب');
     const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
     if (!onBehalf && order.customerId !== userId) throw forbidden();
+    if (onBehalf) await assertNotSelfDealing(tx, actor, so.sellerId);
     if (so.status === 'DELIVERED' || so.status === 'COMPLETED') return { alreadyConfirmed: true, released: !!so.fundsReleasedAt };
     if (so.status !== 'SHIPPED') throw invalidState('يمكن تأكيد الاستلام بعد شحن الطلب فقط');
 
@@ -212,11 +214,13 @@ export async function releaseIfEligible(tx: DbOrTx, actor: Actor, soId: string) 
 
 export async function setFinancialHold(actor: Actor, soId: string, hold: boolean, reason: string) {
   requirePermission(actor, 'orders.manage');
+  if (!hold) requireStepUp(actor); // releasing a hold can make seller funds available
   const why = requireReason(reason);
   await db.transaction(async (tx) => {
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, soId)).for('update');
     if (!so) throw notFound('الطلب');
     if (hold && so.fundsReleasedAt) throw invalidState('تمت إتاحة الأموال بالفعل. استخدم تسوية مالية بدلاً من ذلك');
+    await assertNotSelfDealing(tx, actor, so.sellerId);
     await tx.update(sellerOrders).set({ financialHold: hold, holdReason: hold ? why : null }).where(eq(sellerOrders.id, so.id));
     await audit(tx, actor, { action: hold ? 'seller_order.hold_placed' : 'seller_order.hold_released', entityType: 'seller_order', entityId: so.id, reason: why });
     if (!hold) await releaseIfEligible(tx, actor, so.id);

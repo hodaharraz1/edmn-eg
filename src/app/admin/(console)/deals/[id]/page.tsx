@@ -41,7 +41,10 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات', href: '/admin/deals' }, { label: `#${d.number}` }]} />} title={`صفقة #${d.number}: ${d.title}`} description={`المشتري: ${g.buyerName}`} actions={<StatusChip status={d.status === 'DELIVERED' ? 'DEAL_SHIPPED' : d.status} />} />
       <section className="card p-5">
         <DefinitionList items={[
-          { label: 'البائع', value: `${d.sellerName ?? '—'} · ${d.sellerPhone ?? ''} ${d.sellerEmail ?? ''}` },
+          { label: 'البائع (بيانات مؤكدة)', value: d.sellerFullName ? `${d.sellerFullName} · ${d.sellerVerifiedPhone ?? ''} ${d.sellerContactEmail ?? ''}` : 'لم ينضم بعد' },
+          { label: 'تلميحات المشتري عن البائع (غير مؤكدة)', value: d.sellerName || d.sellerPhone || d.sellerEmail ? `${d.sellerName ?? ''} ${d.sellerPhone ?? ''} ${d.sellerEmail ?? ''}` : '—' },
+          { label: 'عنوان المشتري', value: g.buyerLocation ? `${g.buyerLocation.city}، ${g.buyerLocation.street}${g.buyerLocation.building ? ` · عمارة ${g.buyerLocation.building}` : ''}${g.buyerLocation.landmark ? ` · ${g.buyerLocation.landmark}` : ''}${g.buyerLocation.gps ? ` · موقع: ${g.buyerLocation.gps.lat}, ${g.buyerLocation.gps.lng}` : ''}` : '—' },
+          { label: 'عنوان البائع', value: g.sellerLocation ? `${g.sellerLocation.city}، ${g.sellerLocation.street}${g.sellerLocation.building ? ` · عمارة ${g.sellerLocation.building}` : ''}${g.sellerLocation.gps ? ` · موقع: ${g.sellerLocation.gps.lat}, ${g.sellerLocation.gps.lng}` : ''}` : '—' },
           { label: 'الكمية / الحالة', value: `${d.quantity} · ${d.condition ?? '—'}` },
           { label: 'إجمالي السعر', value: d.totalAmount != null ? formatEGP(d.totalAmount) : '—' },
           { label: 'رسوم الحماية', value: `${formatEGP(d.feeAmount)} (${(d.feeBps / 100).toFixed(2)}%) يتحملها ${d.feePayer === 'BUYER' ? 'المشتري' : 'البائع'}` },
@@ -81,6 +84,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
         {otpAudit.length > 0 && <Timeline items={otpAudit.map((a) => ({ title: a.action, time: formatDate(a.createdAt, true), body: a.newValues ? JSON.stringify(a.newValues) : a.reason }))} />}
         <ActionForm action={dealHoldAction} className="space-y-2 border-t border-line pt-3">
           <input type="hidden" name="dealId" value={d.id} />
+          <input type="hidden" name="back" value={`/admin/deals/${d.id}`} />
           <input type="hidden" name="hold" value={d.financialHold ? '0' : '1'} />
           <Field label="سبب الإجراء (يتطلب تأكيد 2FA حديث)" htmlFor="hold-reason" required><Textarea id="hold-reason" name="reason" rows={2} required minLength={3} /></Field>
           <SubmitButton variant={d.financialHold ? 'outline' : 'danger'} size="sm">{d.financialHold ? 'رفع إيقاف الصرف' : 'إيقاف الصرف لحين المراجعة'}</SubmitButton>

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { Scale } from 'lucide-react';
 import {
   buyerOfferResponseAction,
@@ -63,7 +63,8 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
   const [subs, methods, [dispute], versions, govs, mandatoryNotice, [me]] = await Promise.all([
     payment ? submissionsFor(payment.id) : Promise.resolve([]),
     enabledPaymentMethods(),
-    db.select().from(disputes).where(eq(disputes.dealId, deal.id)),
+    // Only an OPEN dispute blocks the delivery actions; a resolved one (e.g. return/replace) must not.
+    db.select().from(disputes).where(and(eq(disputes.dealId, deal.id), inArray(disputes.status, ['OPEN', 'UNDER_REVIEW', 'AWAITING_INFORMATION']))),
     termsHistory(actor, deal.id),
     db.select({ id: governorates.id, nameAr: governorates.nameAr }).from(governorates).orderBy(asc(governorates.sortOrder)),
     getSetting('returns.mandatoryRightsNotice'),
@@ -72,7 +73,9 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
   // The buyer's handover code (staging test mode only shows the code itself). Never loaded for the seller.
   const otpView = role === 'BUYER' && deal.status === 'DELIVERED' ? await deliveryOtpForBuyer(actor, deal.id) : null;
   const otpEvents = deal.deliveryAttempt > 0 ? await deliveryOtpEvents(deal.id) : [];
-  const handoverOpen = deal.status === 'DELIVERY_HANDOVER_VERIFIED' || deal.status === 'BUYER_CONFIRMATION_PENDING';
+  const handoverOpen = (deal.status === 'DELIVERY_HANDOVER_VERIFIED' || deal.status === 'BUYER_CONFIRMATION_PENDING') && !!deal.handoverVerifiedAt;
+  // Deals that reached BUYER_CONFIRMATION_PENDING before the handover code existed: Operations review only.
+  const legacyNoHandover = deal.status === 'BUYER_CONFIRMATION_PENDING' && !deal.handoverVerifiedAt;
   const flash = role === 'BUYER' && deal.status === 'INVITED' ? (await cookies()).get(`edmn_inv_${deal.id}`)?.value : undefined;
   const inviteLink = flash && /^[A-Za-z0-9_-]{30,100}$/.test(flash) ? `${APP_URL}/deal/invite/${flash}` : null;
   const govName = (gid?: number | null) => govs.find((x) => x.id === gid)?.nameAr ?? '—';
@@ -334,6 +337,18 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <SubmitButton variant="outline" size="sm">فتح نزاع عدم الاستلام</SubmitButton>
             </ActionForm>
           </details>
+        </section>
+      )}
+
+      {legacyNoHandover && !dispute && (
+        <section className="card space-y-2 border-amber-200 bg-amber-50 p-5 text-sm" data-testid="legacy-handover">
+          <p className="font-semibold">لم يتم التحقق من التسليم برمز الاستلام لهذه الصفقة.</p>
+          <p>لن يُصرف أي مبلغ تلقائيًا. اطلب مراجعة فريق العمليات لتأكيد التسليم أو حل المشكلة.</p>
+          <ActionForm action={reportDeliveryExceptionAction} className="space-y-2">
+            <input type="hidden" name="dealId" value={deal.id} />
+            <Field label="اشرح الوضع" htmlFor="legacy-desc" required><Textarea id="legacy-desc" name="description" rows={2} required minLength={3} /></Field>
+            <SubmitButton variant="outline" size="sm">طلب مراجعة فريق العمليات</SubmitButton>
+          </ActionForm>
         </section>
       )}
 

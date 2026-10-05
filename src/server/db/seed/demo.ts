@@ -186,7 +186,27 @@ async function onboardSeller(
   return sa;
 }
 
+/**
+ * Demo accounts use public repository passwords, so they may only ever be written to a local database
+ * or to an explicitly-marked staging deployment — never anywhere else, whatever NODE_ENV says.
+ */
+export function assertDemoSeedAllowed(env: Record<string, string | undefined> = process.env) {
+  const kind = env.EDMN_ENVIRONMENT;
+  if (kind === 'production') throw new Error('Refusing to seed demo data: EDMN_ENVIRONMENT=production');
+  if (kind === 'staging' || kind === 'development') return;
+  let host = '';
+  try {
+    host = new URL(env.DATABASE_URL ?? '').hostname;
+  } catch {
+    /* invalid URL → refuse below */
+  }
+  if (!['localhost', '127.0.0.1', '::1', 'postgres', 'db'].includes(host)) {
+    throw new Error('Refusing to seed demo data into a non-local database without EDMN_ENVIRONMENT=staging|development');
+  }
+}
+
 export async function seedDemo() {
+  assertDemoSeedAllowed();
   const [already] = await db.select().from(users).where(eq(users.email, 'admin@edmn.local'));
   if (already) return { skipped: true };
 

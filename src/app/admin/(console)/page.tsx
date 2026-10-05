@@ -1,7 +1,9 @@
 import { AlertTriangle, BadgeCheck, CircleDollarSign, Clock, CreditCard, Gavel, LifeBuoy, PackageSearch, RotateCcw, ShieldCheck, ShoppingBag, Store, Truck, Users, Wallet } from 'lucide-react';
 import { RangeFilter } from '@/app/_components/range-filter';
 import { adminDashboard, rangeFromPreset } from '@/server/modules/reports/service';
-import { requireAdmin } from '@/server/web/session';
+import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { realMoneyEnabled } from '@/server/modules/settings';
+import { Alert } from '@/ui/feedback';
 import { formatEGP, formatNumber } from '@/lib/format';
 import { BarChart, DataTable, PageHeader, StatCard } from '@/ui/data';
 
@@ -9,12 +11,15 @@ export const metadata = { title: 'لوحة القيادة' };
 const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
 export default async function AdminDashboard(props: PageProps<'/admin'>) {
-  const actor = await requireAdmin();
+  const { actor, allowed } = await adminWith('dashboard.view');
+  if (!allowed) return <Forbidden />;
+  const live = await realMoneyEnabled();
   const preset = typeof (await props.searchParams).range === 'string' ? String((await props.searchParams).range) : '30d';
   const d = await adminDashboard(actor, rangeFromPreset(preset));
   return (
     <div className="space-y-6">
       <PageHeader title="لوحة القيادة التنفيذية" description="مؤشرات حقيقية من قاعدة البيانات" actions={<RangeFilter path="/admin" active={preset} />} />
+      {!live && <Alert tone="warning" title="وضع الأموال التجريبية">كل المبالغ في هذه اللوحة ناتجة عن مدفوعات تجريبية (Staging / تجربة) وليست إيرادات حقيقية. الطلبات الملغاة مستبعدة.</Alert>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="إجمالي قيمة البضائع (GMV)" value={formatEGP(d.gmv)} icon={<CircleDollarSign className="size-5" />} />
         <StatCard label="إيرادات اضمن (عمولات + رسوم)" value={formatEGP(d.revenue)} icon={<ShieldCheck className="size-5" />} tone="success" />

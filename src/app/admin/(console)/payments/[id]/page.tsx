@@ -55,14 +55,14 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
             {s.claimedAmount !== p.amountDue && <Alert tone="warning">المبلغ المعلن لا يطابق المبلغ المطلوب. تحقق من كشف الحساب قبل التأكيد.</Alert>}
             {can && s.id === open?.id && (
               <div className="space-y-3 border-t border-line pt-3">
-                {p.status === 'PAYMENT_SUBMITTED' && <ActionForm action={paymentDecisionAction}><input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="op" value="review" /><SubmitButton size="sm" variant="outline">بدء المراجعة</SubmitButton></ActionForm>}
+                {p.status === 'PAYMENT_SUBMITTED' && <ActionForm action={paymentDecisionAction}><input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="op" value="review" /><SubmitButton size="sm" variant="outline">بدء المراجعة</SubmitButton></ActionForm>}
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
-                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="submissionId" value={s.id} /><input type="hidden" name="op" value="confirm" />
+                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} /><input type="hidden" name="op" value="confirm" />
                   <Field label="ملاحظة داخلية (اختياري)" htmlFor="note"><Input id="note" name="note" /></Field>
                   <ConfirmSubmit confirm={`تأكيد استلام ${formatEGP(p.amountDue)} فعلياً في حساب اضمن؟ لا يمكن التراجع.`} variant="success">تأكيد الدفع (تم التحقق من الحساب)</ConfirmSubmit>
                 </ActionForm>
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
-                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="submissionId" value={s.id} />
+                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} />
                   <Field label="سبب الرفض (يظهر للعميل)" htmlFor="reason" required><Textarea id="reason" name="reason" rows={2} required /></Field>
                   <div className="flex gap-2">
                     <SubmitButton variant="outline" size="sm" name="op" value="newproof">طلب إثبات جديد</SubmitButton>

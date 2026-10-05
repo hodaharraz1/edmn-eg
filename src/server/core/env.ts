@@ -13,6 +13,8 @@ const bool = z
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /** Deployment kind. Required whenever NODE_ENV=production so staging/production behaviour is never implied by a missing variable. */
+  EDMN_ENVIRONMENT: z.enum(['development', 'staging', 'production']).optional(),
   APP_URL: z.string().url().default('http://localhost:3000'),
   SELLER_APP_URL: z.string().url().default('http://localhost:3000/seller'),
   ADMIN_APP_URL: z.string().url().default('http://localhost:3000/admin'),
@@ -63,6 +65,12 @@ export function env(): Env {
     if (!e.APP_URL.startsWith('https://')) problems.push('APP_URL must be https in production');
     if (e.MAIL_DRIVER === 'smtp' && !e.SMTP_HOST) problems.push('SMTP_HOST required for smtp mail driver');
     if (e.SMS_DRIVER === 'http' && !e.SMS_HTTP_URL) problems.push('SMS_HTTP_URL required for http sms driver');
+    if (!e.EDMN_ENVIRONMENT) problems.push('EDMN_ENVIRONMENT must be set to "staging" or "production" for a production build');
+    if (e.EDMN_ENVIRONMENT === 'production') {
+      // Real customers must receive verification codes and delivery OTPs.
+      if (e.SMS_DRIVER !== 'http') problems.push('SMS_DRIVER=http is required in production (delivery OTP and phone verification)');
+      if (e.MAIL_DRIVER !== 'smtp') problems.push('MAIL_DRIVER=smtp is required in production');
+    }
     if (problems.length) throw new Error(`Unsafe production configuration:\n${problems.join('\n')}`);
   }
   cached = e;

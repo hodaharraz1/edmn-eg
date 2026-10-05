@@ -58,10 +58,20 @@ export async function verifyPayoutAction(_p: ActionState, fd: FormData) {
 }
 export async function riskFlagAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
-    requirePermission(a, 'sellers.suspend');
     if (str(fd, 'op') === 'resolve') {
-      await db.update(riskFlags).set({ status: 'RESOLVED', resolvedBy: a.userId, resolvedAt: new Date() }).where(eq(riskFlags.id, str(fd, 'flagId')));
+      const [flag] = await db.select().from(riskFlags).where(eq(riskFlags.id, str(fd, 'flagId')));
+      if (!flag) throw validation('المؤشر غير موجود');
+      // Deal delivery-review flags hold money: resolving one needs deal authority + a fresh 2FA and a reason.
+      if (flag.entityType === 'external_deal') {
+        requirePermission(a, 'deals.manage');
+        requireStepUp(a);
+        if (str(fd, 'reason').length < 3) throw validation('اكتب سبب إغلاق المؤشر');
+      } else requirePermission(a, 'sellers.suspend');
+      await db.update(riskFlags).set({ status: 'RESOLVED', resolvedBy: a.userId, resolvedAt: new Date() }).where(and(eq(riskFlags.id, flag.id), eq(riskFlags.status, 'OPEN')));
+      await audit(db, a, { action: 'risk.flag_resolved', entityType: flag.entityType, entityId: flag.entityId, newValues: { flagId: flag.id, code: flag.code }, reason: str(fd, 'reason') || null });
+      return done('تم إغلاق المؤشر');
     } else {
+      requirePermission(a, 'sellers.suspend');
       const note = str(fd, 'note');
       if (note.length < 3) throw validation('اكتب الملاحظة');
       await db.insert(riskFlags).values({ entityType: str(fd, 'entityType'), entityId: str(fd, 'entityId'), code: str(fd, 'code') || 'MANUAL', severity: str(fd, 'severity') || 'MEDIUM', note, createdBy: a.userId });
@@ -314,6 +324,10 @@ export async function rolePermissionAction(_p: ActionState, fd: FormData) {
     const role = str(fd, 'role');
     if (role === 'SUPER_ADMIN') throw validation('لا يمكن تعديل صلاحيات المدير العام');
     const perms = fd.getAll('perm').map(String).filter((p): p is Permission => (ALL_PERMISSIONS as string[]).includes(p));
+    // No self-escalation: you cannot change a role you hold, and only a super admin can hand out role management.
+    const mine = await db.select({ code: userRoles.roleCode }).from(userRoles).where(eq(userRoles.userId, a.userId!));
+    if (mine.some((m) => m.code === role)) throw validation('لا يمكنك تعديل صلاحيات دور تحمله أنت');
+    if (perms.includes('roles.manage' as Permission) && !mine.some((m) => m.code === 'SUPER_ADMIN')) throw validation('منح صلاحية إدارة الأدوار متاح للمدير العام فقط');
     const old = await db.select().from(rolePermissions).where(eq(rolePermissions.roleCode, role));
     await db.transaction(async (tx) => {
       await tx.delete(rolePermissions).where(eq(rolePermissions.roleCode, role));
@@ -345,12 +359,19 @@ export async function staffUserAction(_p: ActionState, fd: FormData) {
       const uid = str(fd, 'userId');
       const role = str(fd, 'role');
       if (uid === a.userId) throw validation('لا يمكنك تعديل أدوارك بنفسك');
+      const [target] = await db.select({ isStaff: users.isStaff }).from(users).where(eq(users.id, uid));
+      if (!target?.isStaff) throw validation('الأدوار الإدارية لحسابات فريق العمل فقط');
+      const mine = await db.select({ code: userRoles.roleCode }).from(userRoles).where(eq(userRoles.userId, a.userId!));
+      const roleGrantsRbac = (await db.select().from(rolePermissions).where(and(eq(rolePermissions.roleCode, role), eq(rolePermissions.permission, 'roles.manage')))).length > 0;
+      if ((role === 'SUPER_ADMIN' || roleGrantsRbac) && !mine.some((m) => m.code === 'SUPER_ADMIN')) throw validation('منح أو سحب هذا الدور متاح للمدير العام فقط');
       if (op === 'grant') await db.insert(userRoles).values({ userId: uid, roleCode: role, grantedBy: a.userId }).onConflictDoNothing();
       else await db.delete(userRoles).where(and(eq(userRoles.userId, uid), eq(userRoles.roleCode, role)));
       await audit(db, a, { action: `rbac.role_${op}`, entityType: 'user', entityId: uid, newValues: { role } });
     } else if (op === 'disable') {
       const uid = str(fd, 'userId');
       if (uid === a.userId) throw validation('لا يمكنك تعطيل حسابك');
+      const [target] = await db.select({ isStaff: users.isStaff }).from(users).where(eq(users.id, uid));
+      if (!target?.isStaff) throw validation('تعطيل حسابات العملاء يتم من صفحة العملاء');
       await db.update(users).set({ status: str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED' }).where(eq(users.id, uid));
       await audit(db, a, { action: 'rbac.staff_status', entityType: 'user', entityId: uid, newValues: { status: str(fd, 'status') } });
     }

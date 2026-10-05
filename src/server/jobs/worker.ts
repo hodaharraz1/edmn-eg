@@ -34,7 +34,8 @@ export async function flushOutbound(limit = 50) {
       const p = await providerFor(m.channel);
       await p.send({ recipient: m.recipient, subject: m.subject, body: m.body, secret: SECRET_EVENTS.includes(m.event ?? '') });
       // Once a real provider has delivered it, a message carrying a code or secret link is redacted at rest.
-      const redact = !p.name.startsWith('log') && SECRET_EVENTS.includes(m.event ?? '');
+      // Delivery OTPs are never kept after hand-off to any driver (the buyer's staging display uses its own encrypted copy).
+      const redact = SECRET_EVENTS.includes(m.event ?? '') && (!p.name.startsWith('log') || m.event === 'DEAL_DELIVERY_OTP');
       await db
         .update(outboundMessages)
         .set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1, ...(redact ? { body: REDACTED_BODY } : {}) })

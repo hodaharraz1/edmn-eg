@@ -23,7 +23,7 @@ export function rangeFromPreset(preset: string | undefined): DateRange {
 export async function adminDashboard(actor: Actor, range: DateRange) {
   requirePermission(actor, 'dashboard.view');
   const r = await db.execute<Record<string, string>>(sql`
-    with paid as (select * from orders where paid_at between ${range.from} and ${range.to})
+    with paid as (select * from orders where paid_at between ${range.from} and ${range.to} and status <> 'CANCELLED')
     select
       (select coalesce(sum(grand_total),0) from paid) as gmv,
       (select count(*) from orders where placed_at between ${range.from} and ${range.to}) as orders_total,
@@ -34,7 +34,7 @@ export async function adminDashboard(actor: Actor, range: DateRange) {
       (select coalesce(sum(l.credit - l.debit),0) from journal_lines l join ledger_accounts a on a.id = l.account_id
          where a.code in ('COMMISSION_REVENUE','DEAL_FEE_REVENUE') and l.created_at between ${range.from} and ${range.to}) as revenue,
       (select count(distinct customer_id) from paid) as active_buyers,
-      (select count(distinct so.seller_id) from seller_orders so where so.paid_at between ${range.from} and ${range.to}) as active_sellers,
+      (select count(distinct so.seller_id) from seller_orders so where so.paid_at between ${range.from} and ${range.to} and so.status <> 'CANCELLED') as active_sellers,
       (select count(*) from sellers where status = 'PENDING_REVIEW') as pending_sellers,
       (select count(*) from products where status in ('SUBMITTED','UNDER_REVIEW')) +
         (select count(*) from product_revisions where status = 'SUBMITTED') as pending_products,
@@ -46,7 +46,7 @@ export async function adminDashboard(actor: Actor, range: DateRange) {
       (select count(*) from support_tickets where status not in ('RESOLVED','CLOSED')) as open_tickets,
       (select count(*) from seller_orders where status = 'SHIPPED' and delivery_follow_up_flagged_at is not null) as unconfirmed_deliveries,
       (select count(*) from returns where created_at between ${range.from} and ${range.to}) as returns_count,
-      (select count(*) from seller_orders where paid_at between ${range.from} and ${range.to}) as seller_orders_paid,
+      (select count(*) from seller_orders where paid_at between ${range.from} and ${range.to} and status <> 'CANCELLED') as seller_orders_paid,
       (select count(*) from disputes where created_at between ${range.from} and ${range.to}) as disputes_count
   `);
   const k = r.rows[0];
@@ -70,7 +70,7 @@ export async function adminDashboard(actor: Actor, range: DateRange) {
       group by oi.title_snapshot order by gmv desc limit 8`),
     db.execute<{ day: string; gmv: string; orders: string }>(sql`
       select to_char(date_trunc('day', paid_at at time zone 'Africa/Cairo'), 'YYYY-MM-DD') as day, sum(grand_total) as gmv, count(*) as orders
-      from orders where paid_at between ${range.from} and ${range.to} group by 1 order by 1`),
+      from orders where paid_at between ${range.from} and ${range.to} and status <> 'CANCELLED' group by 1 order by 1`),
   ]);
   return {
     gmv: n(k.gmv),

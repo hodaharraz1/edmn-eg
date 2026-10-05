@@ -28,7 +28,7 @@ export default async function Commissions() {
         { key: 'm', header: 'حد أدنى', cell: (x) => (x.r.minFee != null ? formatEGP(x.r.minFee) : '—') },
         { key: 'e', header: 'سارية من', cell: (x) => formatDate(x.r.effectiveFrom, true) },
         { key: 's', header: 'الحالة', cell: (x) => (
-          <ActionForm action={commissionRuleAction} className="flex items-center gap-1">
+          <ActionForm action={commissionRuleAction} className="flex items-center gap-1"><input type="hidden" name="back" value="/admin/commissions" />
             <input type="hidden" name="op" value="toggle" /><input type="hidden" name="ruleId" value={x.r.id} /><input type="hidden" name="isEnabled" value={x.r.isEnabled ? '' : 'on'} />
             <Badge tone={x.r.isEnabled ? 'success' : 'neutral'}>{x.r.isEnabled ? 'مفعّلة' : 'معطلة'}</Badge>
             <Input name="reason" required minLength={3} placeholder="السبب" className="h-8 w-28 text-xs" aria-label="السبب" />
@@ -36,7 +36,7 @@ export default async function Commissions() {
           </ActionForm>
         ) },
       ]} />
-      <ActionForm action={commissionRuleAction} className="card grid gap-3 p-5 md:grid-cols-2" resetOnSuccess>
+      <ActionForm action={commissionRuleAction} className="card grid gap-3 p-5 md:grid-cols-2" resetOnSuccess><input type="hidden" name="back" value="/admin/commissions" />
         <input type="hidden" name="op" value="create" />
         <h2 className="font-bold md:col-span-2">إضافة نسخة قاعدة جديدة</h2>
         <Field label="الاسم" required><Input name="label" required minLength={2} /></Field>

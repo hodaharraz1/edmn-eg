@@ -1,4 +1,8 @@
 import { desc } from 'drizzle-orm';
+import { SECRET_EVENTS } from '@/server/jobs/worker';
+
+/** Codes are masked everywhere except staging verification codes (no SMS provider there; fake accounts only). */
+const STAGING = process.env.EDMN_ENVIRONMENT === 'staging';
 import { templateAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';
@@ -55,7 +59,7 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
           { key: 'c', header: 'القناة', cell: (m) => m.channel },
           { key: 'r', header: 'المستلم', cell: (m) => <span className="ltr text-xs">{m.recipient.replace(/^(.{3}).*(.{3})$/, '$1•••$2')}</span> },
           { key: 'e', header: 'الحدث', cell: (m) => <span className="text-xs">{m.event}</span> },
-          { key: 's', header: 'الموضوع', cell: (m) => m.subject ?? m.body.slice(0, 50) },
+          { key: 's', header: 'الموضوع', cell: (m) => (SECRET_EVENTS.includes(m.event ?? '') && m.event !== 'ACCOUNT_SECURITY' ? <span className="text-muted">[محتوى أمني مخفي]</span> : m.event === 'ACCOUNT_SECURITY' ? (STAGING ? <span title="بيئة Staging فقط: لا يوجد مزود رسائل، فتُعرض رموز التحقق هنا لاختبار الحسابات الوهمية">{m.body.slice(0, 90)} <span className="text-[10px] text-amber-700">(Staging)</span></span> : <span className="text-muted">{m.body.replace(/\d{6}/g, '••••••').replace(/https?:\/\/\S+/g, '[رابط مخفي]').slice(0, 60)}</span>) : (m.subject ?? m.body.slice(0, 50))) },
           { key: 'a', header: 'محاولات', cell: (m) => `${m.attempts}${m.lastError ? ` · ${m.lastError.slice(0, 40)}` : ''}` },
           { key: 'd', header: 'التاريخ', cell: (m) => formatDate(m.sentAt ?? m.createdAt, true) },
           { key: 'st', header: 'الحالة', cell: (m) => <StatusChip status={m.status} /> },
