@@ -28,7 +28,7 @@ export default async function AddressesPage(props: PageProps<'/account/addresses
               <p className="text-xs text-muted ltr">{a.phone}</p>
               <div className="flex gap-3 pt-2">
                 <a href={`/account/addresses?edit=${a.id}`} className="text-xs text-brand-700 hover:underline">تعديل</a>
-                <form action={archiveAddressAction}><input type="hidden" name="id" value={a.id} /><ConfirmSubmit confirm="حذف العنوان؟" variant="ghost" size="sm" className="h-auto px-0 text-xs text-red-600">حذف</ConfirmSubmit></form>
+                <form action={archiveAddressAction}><input type="hidden" name="id" value={a.id} /><ConfirmSubmit confirm="حذف العنوان؟" variant="ghost" size="sm" className="h-auto px-0 text-xs text-red-700">حذف</ConfirmSubmit></form>
               </div>
             </div>
           ))}

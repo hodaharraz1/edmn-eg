@@ -50,7 +50,7 @@ export default async function AdminProductReview(props: PageProps<'/admin/produc
               {imgs.map(({ i, key }) => (
                 <a key={i.id} href={mediaUrl(key)!} target="_blank" className="relative overflow-hidden rounded-lg border border-line bg-white">
                   <img src={mediaUrl(key, 'thumb')!} alt="" className="aspect-square w-full object-contain" />
-                  {i.isActualItem && <span className="absolute top-1 start-1 rounded bg-amber-500 px-1 text-[10px] font-bold text-white">حقيقية</span>}
+                  {i.isActualItem && <span className="absolute top-1 start-1 rounded bg-amber-400 px-1 text-[10px] font-bold text-amber-950">حقيقية</span>}
                 </a>
               ))}
             </div>

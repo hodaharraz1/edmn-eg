@@ -6,6 +6,7 @@ import { startSellerAction } from '@/app/_actions/seller-onboarding';
 import { ActionForm, FieldError, SubmitButton } from '@/ui/action-form';
 import { Checkbox, Field, Input, Radio } from '@/ui/form';
 import { currentUser } from '@/server/web/session';
+import { marketHref } from '@/lib/market-url';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 
 export const metadata: Metadata = { title: 'التسجيل كبائع' };
@@ -63,7 +64,7 @@ export default async function SellerRegisterPage() {
             required
             label={
               <>
-                أوافق على <Link href="/legal/terms" className="text-brand-700 underline" target="_blank">شروط الاستخدام</Link> و<Link href="/legal/privacy" className="text-brand-700 underline" target="_blank">سياسة الخصوصية</Link>. اتفاقية البائع تُعرض للموافقة قبل إرسال الطلب.
+                أوافق على <Link href={marketHref('/legal/terms')} className="text-brand-700 underline" target="_blank">شروط الاستخدام</Link> و<Link href={marketHref('/legal/privacy')} className="text-brand-700 underline" target="_blank">سياسة الخصوصية</Link>. اتفاقية البائع تُعرض للموافقة قبل إرسال الطلب.
               </>
             }
           />

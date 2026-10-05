@@ -17,6 +17,7 @@ import { FileInput } from '@/ui/client';
 import { Stepper, mediaUrl } from '@/ui/commerce';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
+import { marketHref } from '@/lib/market-url';
 import { Checkbox, Field, Input, Radio, Select, Textarea } from '@/ui/form';
 
 export default async function ProductEditor(props: PageProps<'/seller/products/[id]'>) {
@@ -53,7 +54,7 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
         breadcrumbs={<Breadcrumbs items={[{ label: 'المنتجات', href: '/seller/products' }, { label: p.titleAr }]} />}
         title={p.titleAr}
         description={`${label('condition', p.condition)} · آخر تحديث ${formatDate(p.updatedAt, true)}`}
-        actions={<><StatusChip status={p.status} />{p.status === 'LIVE' && <Link href={`/product/${p.slug}`} target="_blank" className="text-sm text-brand-700 hover:underline">عرض في السوق</Link>}</>}
+        actions={<><StatusChip status={p.status} />{p.status === 'LIVE' && <Link href={marketHref(`/product/${p.slug}`)} target="_blank" className="text-sm text-brand-700 hover:underline">عرض في السوق</Link>}</>}
       />
       {p.status === 'REJECTED' && <Alert tone="danger" title="المنتج يحتاج تعديلات قبل النشر">{p.statusReason}</Alert>}
       {p.status === 'SUSPENDED' && <Alert tone="danger" title="المنتج موقوف من الإدارة">{p.statusReason}</Alert>}
@@ -140,12 +141,12 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
             {g.images.map(({ img, key }) => (
               <div key={img.id} className="relative overflow-hidden rounded-lg border border-line bg-white">
                 <img src={mediaUrl(key, 'thumb')!} alt="" className="aspect-square w-full object-contain" />
-                {img.isActualItem && <span className="absolute top-1 start-1 rounded bg-amber-500 px-1 text-[10px] font-bold text-white">حقيقية</span>}
+                {img.isActualItem && <span className="absolute top-1 start-1 rounded bg-amber-400 px-1 text-[10px] font-bold text-amber-950">حقيقية</span>}
                 {!locked && (
                   <form action={removeImageAction} className="absolute bottom-1 end-1">
                     <input type="hidden" name="productId" value={p.id} />
                     <input type="hidden" name="fileId" value={img.fileId} />
-                    <button className="grid size-7 place-items-center rounded-full bg-white shadow" aria-label="حذف الصورة"><Trash2 className="size-3.5 text-red-600" /></button>
+                    <button className="grid size-7 place-items-center rounded-full bg-white shadow" aria-label="حذف الصورة"><Trash2 className="size-3.5 text-red-700" /></button>
                   </form>
                 )}
               </div>

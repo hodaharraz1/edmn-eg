@@ -10,6 +10,7 @@ import { requireSellerActor, requireUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 import { db } from '@/server/db/client';
 import { stores } from '@/server/db/schema';
+import { marketHref } from '@/lib/market-url';
 import { eq } from 'drizzle-orm';
 
 export const metadata: Metadata = { title: { default: 'مركز البائع', template: '%s | مركز البائع — اضمن' }, robots: { index: false, follow: false } };
@@ -38,7 +39,7 @@ export default async function SellerLayout({ children }: { children: React.React
           <span className="font-bold lg:hidden">مركز البائع</span>
           <span className="flex-1" />
           {store && ctx.seller.status === 'APPROVED' && (
-            <Link href={`/store/${store.slug}`} target="_blank" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline"><ExternalLink className="size-4" /> عرض المتجر</Link>
+            <Link href={marketHref(`/store/${store.slug}`)} target="_blank" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline"><ExternalLink className="size-4" /> عرض المتجر</Link>
           )}
           <span className="hidden text-sm text-muted sm:inline">{user.fullName}</span>
         </header>

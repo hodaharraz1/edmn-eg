@@ -19,7 +19,7 @@ export function Gallery({ images, alt }: { images: { src: string; full: string; 
     <div className="space-y-3">
       <button type="button" onClick={() => setZoom(true)} className="card group relative block aspect-square w-full overflow-hidden bg-white" aria-label="تكبير الصورة">
         <img src={cur.src} alt={alt} className="size-full object-contain transition-transform duration-300 group-hover:scale-105" />
-        {cur.actual && <span className="absolute top-3 start-3 rounded-full bg-amber-500 px-2.5 py-1 text-xs font-bold text-white">صورة حقيقية للقطعة</span>}
+        {cur.actual && <span className="absolute top-3 start-3 rounded-full bg-amber-400 px-2.5 py-1 text-xs font-bold text-amber-950">صورة حقيقية للقطعة</span>}
         <span className="absolute bottom-3 end-3 grid size-9 place-items-center rounded-full bg-white/90 shadow">
           <ZoomIn className="size-4" />
         </span>
@@ -36,7 +36,7 @@ export function Gallery({ images, alt }: { images: { src: string; full: string; 
               className={cn('relative size-16 shrink-0 overflow-hidden rounded-lg border-2 bg-white', idx === i ? 'border-brand-600' : 'border-line')}
             >
               <img src={im.src} alt="" className="size-full object-cover" loading="lazy" />
-              {im.actual && <span className="absolute bottom-0 inset-x-0 bg-amber-500 text-[9px] font-bold text-white">حقيقية</span>}
+              {im.actual && <span className="absolute bottom-0 inset-x-0 bg-amber-400 text-[9px] font-bold text-amber-950">حقيقية</span>}
             </button>
           ))}
         </div>

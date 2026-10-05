@@ -60,7 +60,7 @@ export default async function CartPage() {
                       {l.condition === 'USED' && <p className="text-xs font-semibold text-amber-700">مستعمل</p>}
                       <p className="text-sm font-bold">{formatEGP(l.unitPrice)}{l.priceSeen !== undefined && l.priceSeen !== l.unitPrice && <span className="ms-2 text-xs font-normal text-muted line-through">{formatEGP(l.priceSeen)}</span>}</p>
                       {l.issues.map((i) => (
-                        <p key={i} className={`text-xs ${i === 'PRICE_CHANGED' ? 'text-amber-700' : 'text-red-600'}`}>{ISSUE_TEXT[i]}{i === 'INSUFFICIENT_STOCK' ? ` (المتاح ${l.available})` : ''}</p>
+                        <p key={i} className={`text-xs ${i === 'PRICE_CHANGED' ? 'text-amber-700' : 'text-red-700'}`}>{ISSUE_TEXT[i]}{i === 'INSUFFICIENT_STOCK' ? ` (المتاح ${l.available})` : ''}</p>
                       ))}
                       <div className="flex items-center gap-3 pt-1">
                         <form action={updateCartAction} className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export default async function CartPage() {
                         <form action={updateCartAction}>
                           <input type="hidden" name="variantId" value={l.variantId} />
                           <input type="hidden" name="quantity" value="0" />
-                          <button className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"><Trash2 className="size-3.5" /> حذف</button>
+                          <button className="inline-flex items-center gap-1 text-xs text-red-700 hover:underline"><Trash2 className="size-3.5" /> حذف</button>
                         </form>
                       </div>
                     </div>

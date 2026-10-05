@@ -60,7 +60,7 @@ export default async function AccountDashboard() {
         )}
       </section>
       <form action={logoutAction} className="lg:hidden">
-        <button className="flex items-center gap-2 text-sm text-red-600"><LogOut className="size-4" /> تسجيل الخروج</button>
+        <button className="flex items-center gap-2 text-sm text-red-700"><LogOut className="size-4" /> تسجيل الخروج</button>
       </form>
     </div>
   );

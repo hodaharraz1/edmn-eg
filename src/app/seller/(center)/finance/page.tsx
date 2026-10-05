@@ -45,7 +45,7 @@ export default async function SellerFinance() {
         { key: 'desc', header: 'البيان', cell: (r) => r.entry.description },
         { key: 'a', header: 'الحساب', cell: (r) => ACCOUNT_LABEL[r.code] ?? r.code },
         { key: 'in', header: 'دائن (+)', cell: (r) => (r.line.credit ? <span className="text-emerald-700">{formatEGP(r.line.credit)}</span> : '') },
-        { key: 'out', header: 'مدين (−)', cell: (r) => (r.line.debit ? <span className="text-red-600">{formatEGP(r.line.debit)}</span> : '') },
+        { key: 'out', header: 'مدين (−)', cell: (r) => (r.line.debit ? <span className="text-red-700">{formatEGP(r.line.debit)}</span> : '') },
       ]} />
     </div>
   );

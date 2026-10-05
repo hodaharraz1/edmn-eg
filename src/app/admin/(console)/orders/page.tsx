@@ -40,7 +40,7 @@ export default async function AdminOrders(props: PageProps<'/admin/orders'>) {
     <div>
       <PageHeader title="الطلبات" />
       <Tabs active={tab} tabs={[{ key: 'all', label: 'كل الطلبات', href: '/admin/orders' }, { key: 'followup', label: 'شحنات بلا تأكيد استلام', href: '/admin/orders?tab=followup' }]} />
-      <form className="mb-4 flex flex-wrap gap-2"><input name="q" defaultValue={q} placeholder="رقم الطلب أو اسم العميل" className="h-9 flex-1 rounded-lg border border-line bg-white px-3 text-sm" /><select name="status" defaultValue={typeof sp.status === 'string' ? sp.status : ''} className="h-9 rounded-lg border border-line bg-white px-2 text-sm"><option value="">كل الحالات</option>{ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}</select><button className="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white">بحث</button></form>
+      <form className="mb-4 flex flex-wrap gap-2"><input name="q" aria-label="بحث في الطلبات" defaultValue={q} placeholder="رقم الطلب أو اسم العميل" className="h-9 flex-1 rounded-lg border border-line bg-white px-3 text-sm" /><select name="status" aria-label="تصفية حسب الحالة" defaultValue={typeof sp.status === 'string' ? sp.status : ''} className="h-9 rounded-lg border border-line bg-white px-2 text-sm"><option value="">كل الحالات</option>{ORDER_STATUSES.map((s) => <option key={s}>{s}</option>)}</select><button className="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white">بحث</button></form>
       <DataTable rows={rows} rowKey={(r) => r.o.id} columns={[
         { key: 'n', header: 'الطلب', cell: (r) => <Link href={`/admin/orders/${r.o.id}`} className="font-semibold text-brand-700">#{r.o.number}</Link> },
         { key: 'c', header: 'العميل', cell: (r) => r.customer },

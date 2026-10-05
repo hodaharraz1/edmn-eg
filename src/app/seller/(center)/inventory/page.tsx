@@ -37,7 +37,7 @@ export default async function InventoryPage(props: PageProps<'/seller/inventory'
                     <td className="px-4 py-3 ltr text-xs">{v.sku}</td>
                     <td className="px-4 py-3">{formatEGP(v.price)}</td>
                     <td className="px-4 py-3">{v.reserved}</td>
-                    <td className="px-4 py-3"><span className={avail <= 0 ? 'font-bold text-red-600' : avail <= v.lowStockThreshold ? 'font-bold text-amber-600' : ''}>{avail}</span></td>
+                    <td className="px-4 py-3"><span className={avail <= 0 ? 'font-bold text-red-700' : avail <= v.lowStockThreshold ? 'font-bold text-amber-600' : ''}>{avail}</span></td>
                     <td className="px-4 py-3">
                       <ActionForm action={setStockAction} className="flex items-center gap-2">
                         <input type="hidden" name="variantId" value={v.id} />

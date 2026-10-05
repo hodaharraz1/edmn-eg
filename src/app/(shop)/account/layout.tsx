@@ -22,7 +22,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
             <Store className="size-4" /> {seller ? 'مركز البائع' : 'ابدأ البيع على اضمن'}
           </Link>
           <form action={logoutAction}>
-            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-white">
+            <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-white">
               <LogOut className="size-4" /> تسجيل الخروج
             </button>
           </form>

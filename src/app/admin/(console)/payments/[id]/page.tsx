@@ -45,7 +45,7 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
           <div className="space-y-3 text-sm">
             <p className="flex items-center gap-2 font-bold">محاولة {subs.length - i} <StatusChip status={s.status} /></p>
             <DefinitionList items={[
-              { label: 'المبلغ المعلن', value: <span className={s.claimedAmount !== p.amountDue ? 'font-bold text-red-600' : 'font-bold text-emerald-700'}>{formatEGP(s.claimedAmount, { fixed: true })}</span> },
+              { label: 'المبلغ المعلن', value: <span className={s.claimedAmount !== p.amountDue ? 'font-bold text-red-700' : 'font-bold text-emerald-700'}>{formatEGP(s.claimedAmount, { fixed: true })}</span> },
               { label: 'رقم العملية', value: <span className="ltr">{s.reference ?? '—'}</span> },
               { label: 'اسم المحوّل', value: s.payerName ?? '—' },
               { label: 'وقت الرفع', value: formatDate(s.createdAt, true) },

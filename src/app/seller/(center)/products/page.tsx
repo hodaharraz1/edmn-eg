@@ -29,10 +29,11 @@ export default async function SellerProducts(props: PageProps<'/seller/products'
   const tab = TABS.find((t) => t[0] === sp.tab) ?? TABS[0];
   const where = tab[2].length ? and(eq(products.sellerId, actor.sellerId!), inArray(products.status, tab[2] as never)) : and(eq(products.sellerId, actor.sellerId!), sql`${products.status} <> 'ARCHIVED'`);
   const rows = await db
+    // Fully-qualified: in a single-table select Drizzle renders columns unqualified, which is ambiguous inside the subqueries.
     .select({
       p: products,
-      imageKey: sql<string | null>`(select f.storage_key from product_images pi join files f on f.id = pi.file_id where pi.product_id = ${products.id} order by pi.sort_order limit 1)`,
-      pendingRevision: sql<boolean>`exists (select 1 from product_revisions r where r.product_id = ${products.id} and r.status = 'SUBMITTED')`,
+      imageKey: sql<string | null>`(select f.storage_key from product_images pi join files f on f.id = pi.file_id where pi.product_id = "products"."id" order by pi.sort_order limit 1)`,
+      pendingRevision: sql<boolean>`exists (select 1 from product_revisions r where r.product_id = "products"."id" and r.status = 'SUBMITTED')`,
     })
     .from(products)
     .where(where)
@@ -62,9 +63,9 @@ export default async function SellerProducts(props: PageProps<'/seller/products'
             ),
           },
           { key: 'price', header: 'السعر', cell: (r) => formatEGP(r.p.minPrice) },
-          { key: 'stock', header: 'المتاح', cell: (r) => <span className={r.p.totalAvailable <= 0 ? 'font-semibold text-red-600' : ''}>{r.p.totalAvailable}</span> },
+          { key: 'stock', header: 'المتاح', cell: (r) => <span className={r.p.totalAvailable <= 0 ? 'font-semibold text-red-700' : ''}>{r.p.totalAvailable}</span> },
           { key: 'sold', header: 'المبيعات', cell: (r) => r.p.salesCount },
-          { key: 'status', header: 'الحالة', cell: (r) => <div className="space-y-1"><StatusChip status={r.p.status} />{r.p.statusReason && ['REJECTED', 'SUSPENDED'].includes(r.p.status) && <p className="max-w-48 text-xs text-red-600">{r.p.statusReason}</p>}</div> },
+          { key: 'status', header: 'الحالة', cell: (r) => <div className="space-y-1"><StatusChip status={r.p.status} />{r.p.statusReason && ['REJECTED', 'SUSPENDED'].includes(r.p.status) && <p className="max-w-48 text-xs text-red-700">{r.p.statusReason}</p>}</div> },
           {
             key: 'actions',
             header: '',

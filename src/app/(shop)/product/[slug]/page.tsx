@@ -187,7 +187,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} />
             <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
             <p className="text-xs text-muted">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة)</p>
-            <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+            <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
               {available > 5 ? 'متوفر' : available > 0 ? `متبقي ${available} فقط` : 'نفدت الكمية'}
             </p>
             {d.visible && v && available > 0 && shipFee !== null ? (

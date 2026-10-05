@@ -16,6 +16,7 @@ import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 import { ContactVerification } from '@/app/_components/contact-verification';
+import { marketHref } from '@/lib/market-url';
 import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'طلب الانضمام كبائع' };
@@ -69,7 +70,7 @@ export default async function OnboardingPage(props: PageProps<'/seller/onboardin
                 <Select id="governorateId" name="governorateId" defaultValue={s.governorateId ?? ''} required><option value="" disabled>اختر</option>{govs.map((g) => <option key={g.id} value={g.id}>{g.nameAr}</option>)}</Select>
               </Field>
             </div>
-            {!s.mobileVerifiedAt && <Alert tone="warning">رقم الموبايل غير مؤكد. أكّده من <Link className="underline" href="/account/security">إعدادات الأمان</Link> قبل إرسال الطلب.</Alert>}
+            {!s.mobileVerifiedAt && <Alert tone="warning">رقم الموبايل غير مؤكد. أكّده من قسم «تأكيد بيانات التواصل» أعلى الصفحة قبل إرسال الطلب.</Alert>}
           </>
         )}
         {step === 2 && (
@@ -132,7 +133,7 @@ export default async function OnboardingPage(props: PageProps<'/seller/onboardin
                 <li key={c.key} className="flex items-center gap-2 text-sm">{c.ok ? <CheckCircle2 className="size-5 text-emerald-600" /> : <Circle className="size-5 text-slate-300" />} {c.label}</li>
               ))}
             </ul>
-            <Checkbox name="acceptAgreement" required label={<>قرأت وأوافق على <Link href="/legal/seller-agreement" target="_blank" className="text-brand-700 underline">اتفاقية البائع</Link> و<Link href="/legal/prohibited-products" target="_blank" className="text-brand-700 underline">سياسة المنتجات المحظورة</Link> و<Link href="/legal/fees" target="_blank" className="text-brand-700 underline">الرسوم والعمولات</Link></>} />
+            <Checkbox name="acceptAgreement" required label={<>قرأت وأوافق على <Link href={marketHref('/legal/seller-agreement')} target="_blank" className="text-brand-700 underline">اتفاقية البائع</Link> و<Link href={marketHref('/legal/prohibited-products')} target="_blank" className="text-brand-700 underline">سياسة المنتجات المحظورة</Link> و<Link href={marketHref('/legal/fees')} target="_blank" className="text-brand-700 underline">الرسوم والعمولات</Link></>} />
           </>
         )}
         <div className="flex gap-2">

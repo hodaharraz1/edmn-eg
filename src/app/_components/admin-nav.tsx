@@ -29,7 +29,7 @@ export function AdminNav({ groups }: { groups: NavGroup[] }) {
     <nav aria-label="قائمة الإدارة" className="space-y-4">
       {groups.map((g) => (
         <div key={g.title}>
-          <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-white/40">{g.title}</p>
+          <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wide text-white/65">{g.title}</p>
           <ul className="space-y-0.5">
             {g.items.map((it) => {
               const active = isActive(it.href);

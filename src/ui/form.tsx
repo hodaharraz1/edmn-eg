@@ -11,12 +11,12 @@ export function Field({ label, htmlFor, hint, error, required, children, classNa
       {label && (
         <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
           {label}
-          {required && <span className="text-red-600" aria-hidden> *</span>}
+          {required && <span className="text-red-700" aria-hidden> *</span>}
         </label>
       )}
       {children}
       {err ? (
-        <p className="text-xs text-red-600" role="alert" id={htmlFor ? `${htmlFor}-error` : undefined}>
+        <p className="text-xs text-red-700" role="alert" id={htmlFor ? `${htmlFor}-error` : undefined}>
           {err}
         </p>
       ) : hint ? (

@@ -64,7 +64,7 @@ export default async function WithdrawalsPage() {
         { key: 'src', header: 'النوع', cell: (r) => (r.source === 'SCHEDULED' ? 'تسوية دورية' : 'طلب يدوي') },
         { key: 'd', header: 'التاريخ', cell: (r) => formatDate(r.createdAt, true) },
         { key: 'sla', header: 'الموعد المستهدف', cell: (r) => (['PAID', 'REJECTED', 'CANCELLED'].includes(r.status) ? '—' : formatDate(r.slaDueAt, true)) },
-        { key: 's', header: 'الحالة', cell: (r) => <div><StatusChip status={r.status} />{r.rejectReason && <p className="text-xs text-red-600">{r.rejectReason}</p>}{r.paidReference && <p className="text-xs text-muted ltr">{r.paidReference}</p>}{r.isTest && <p className="mt-1 flex items-center gap-1 text-xs text-red-700"><TestBadge /> سحب تجريبي — لا تُحوَّل أموال فعلية</p>}</div> },
+        { key: 's', header: 'الحالة', cell: (r) => <div><StatusChip status={r.status} />{r.rejectReason && <p className="text-xs text-red-700">{r.rejectReason}</p>}{r.paidReference && <p className="text-xs text-muted ltr">{r.paidReference}</p>}{r.isTest && <p className="mt-1 flex items-center gap-1 text-xs text-red-700"><TestBadge /> سحب تجريبي — لا تُحوَّل أموال فعلية</p>}</div> },
         { key: 'x', header: '', cell: (r) => r.status === 'REQUESTED' && canWithdraw && <form action={cancelWithdrawalAction}><input type="hidden" name="id" value={r.id} /><ConfirmSubmit confirm="إلغاء طلب السحب؟" variant="outline" size="sm">إلغاء</ConfirmSubmit></form> },
       ]} />
     </div>

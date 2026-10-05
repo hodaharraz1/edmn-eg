@@ -16,11 +16,11 @@ export function Logo({ className, href = '/', size = 'md', label = 'اضمن –
         <img src={src} alt="EDMN اضمن" className={cn(box, 'object-contain')} />
       ) : (
         <span
-          className={cn(box, 'grid place-items-center rounded-md border border-dashed border-current/40 text-center leading-none opacity-90')}
+          className={cn(box, 'grid place-items-center rounded-md border border-dashed border-current/40 text-center leading-none')}
           title="مكان الشعار الرسمي — يُستبدل بالملف المعتمد"
         >
           <span className="text-base font-bold tracking-tight">
-            اضمن <span className="text-[10px] font-semibold opacity-70">EDMN</span>
+            اضمن <span className="text-[10px] font-semibold">EDMN</span>
           </span>
         </span>
       )}

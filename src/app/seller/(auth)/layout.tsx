@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BadgeCheck, ShieldCheck, Truck, Wallet } from 'lucide-react';
+import { marketHref } from '@/lib/market-url';
 import { Logo } from '@/ui/logo';
 
 export const metadata: Metadata = { title: { default: 'مركز بائعي اضمن', template: '%s | EDMN Seller Center' }, robots: { index: false, follow: false } };
@@ -36,7 +37,7 @@ export default function SellerAuthLayout({ children }: { children: React.ReactNo
           })}
         </ul>
         <p className="mt-auto hidden text-xs text-white/50 lg:block">
-          تتسوق؟ <Link href="/" className="underline hover:text-white">اذهب إلى سوق اضمن</Link>
+          تتسوق؟ <Link href={marketHref('/')} className="underline hover:text-white">اذهب إلى سوق اضمن</Link>
         </p>
       </aside>
       <main id="main" className="grid place-items-center px-4 py-8 sm:px-8">

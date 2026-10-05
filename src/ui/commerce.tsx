@@ -25,7 +25,7 @@ export function Stars({ value, count, size = 'sm', showValue = true }: { value: 
   const v = Number(value) || 0;
   const icon = size === 'sm' ? 'size-3.5' : 'size-5';
   return (
-    <span className="inline-flex items-center gap-1" aria-label={`التقييم ${v.toFixed(1)} من 5`}>
+    <span role="img" className="inline-flex items-center gap-1" aria-label={`التقييم ${v.toFixed(1)} من 5`}>
       <span className="flex" dir="ltr">
         {[1, 2, 3, 4, 5].map((i) => (
           <Star key={i} className={cn(icon, i <= Math.round(v) ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200')} aria-hidden />
@@ -79,7 +79,7 @@ export function ProductCard({ p, wishlistSlot, priority }: { p: CardProduct; wis
           <div className="grid size-full place-items-center text-xs text-muted">لا توجد صورة</div>
         )}
         <div className="absolute top-2 start-2 flex flex-col items-start gap-1">
-          {p.condition === 'USED' && <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[11px] font-bold text-white">مستعمل{p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}</span>}
+          {p.condition === 'USED' && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold text-amber-950">مستعمل{p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}</span>}
           {out && <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[11px] font-bold text-white">نفدت الكمية</span>}
         </div>
       </Link>
@@ -161,7 +161,7 @@ export function DeliveryLine({ fee, min, max }: { fee: number | null; min: numbe
 
 export function Stepper({ steps, current, hrefFor }: { steps: string[]; current: number; hrefFor?: (i: number) => string | null }) {
   return (
-    <ol className="scrollbar-none mb-6 flex gap-2 overflow-x-auto pb-1">
+    <ol tabIndex={0} aria-label="خطوات" className="scrollbar-none mb-6 flex gap-2 overflow-x-auto pb-1">
       {steps.map((s, idx) => {
         const n = idx + 1;
         const state = n < current ? 'done' : n === current ? 'current' : 'todo';

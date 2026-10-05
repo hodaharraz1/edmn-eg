@@ -79,7 +79,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                     <li key={g.sellerId} className="rounded-xl border border-line p-3">
                       <div className="flex flex-wrap justify-between gap-2 text-sm">
                         <span className="font-semibold">من {g.storeName}</span>
-                        <span>{g.shippingFee === null ? <span className="text-red-600">لا يشحن لهذه المحافظة</span> : g.shippingFee === 0 ? 'شحن مجاني' : formatEGP(g.shippingFee)}</span>
+                        <span>{g.shippingFee === null ? <span className="text-red-700">لا يشحن لهذه المحافظة</span> : g.shippingFee === 0 ? 'شحن مجاني' : formatEGP(g.shippingFee)}</span>
                       </div>
                       {g.etaMinDays !== null && <p className="text-xs text-muted">التوصيل المتوقع خلال {g.etaMinDays + g.processingDays}–{(g.etaMaxDays ?? 0) + g.processingDays} أيام عمل بعد تأكيد الدفع</p>}
                       <div className="mt-2 flex gap-2 overflow-x-auto">

@@ -32,7 +32,7 @@ export default async function AdminSellers(props: PageProps<'/admin/sellers'>) {
       <PageHeader title="البائعون" />
       <form className="mb-4 flex flex-wrap gap-2">
         <input name="q" defaultValue={q} placeholder="بحث بالاسم، المتجر، البريد، الهاتف" className="h-9 min-w-60 flex-1 rounded-lg border border-line bg-white px-3 text-sm" />
-        <select name="status" defaultValue={status} className="h-9 rounded-lg border border-line bg-white px-2 text-sm"><option value="">كل الحالات</option>{SELLER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+        <select name="status" aria-label="تصفية حسب الحالة" defaultValue={status} className="h-9 rounded-lg border border-line bg-white px-2 text-sm"><option value="">كل الحالات</option>{SELLER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         <button className="h-9 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white">بحث</button>
       </form>
       <DataTable rows={rows} rowKey={(r) => r.s.id} columns={[

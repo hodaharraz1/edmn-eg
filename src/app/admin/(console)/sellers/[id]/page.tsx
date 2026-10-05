@@ -16,6 +16,7 @@ import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Stars } from '@/ui/commerce';
 import { Breadcrumbs, DataTable, DefinitionList, PageHeader, StatCard, Tabs } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
+import { marketHref } from '@/lib/market-url';
 import { Field, Select, Textarea, Input } from '@/ui/form';
 
 export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>) {
@@ -36,7 +37,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
 
   return (
     <div className="space-y-5">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'البائعون', href: '/admin/sellers' }, { label: store?.name ?? s.legalName ?? '' }]} />} title={store?.name ?? s.legalName ?? 'بائع'} description={`${label('sellerType', s.type)} · انضم ${formatDate(s.createdAt)}`} actions={<><StatusChip status={s.status} />{store && s.status === 'APPROVED' && <Link href={`/store/${store.slug}`} target="_blank" className="text-sm text-brand-700 underline">المتجر العام</Link>}</>} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'البائعون', href: '/admin/sellers' }, { label: store?.name ?? s.legalName ?? '' }]} />} title={store?.name ?? s.legalName ?? 'بائع'} description={`${label('sellerType', s.type)} · انضم ${formatDate(s.createdAt)}`} actions={<><StatusChip status={s.status} />{store && s.status === 'APPROVED' && <Link href={marketHref(`/store/${store.slug}`)} target="_blank" className="text-sm text-brand-700 underline">المتجر العام</Link>}</>} />
       {s.statusReason && <Alert tone="info">آخر سبب مسجل: {s.statusReason}</Alert>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label="المبيعات (12 شهر)" value={formatEGP(metrics.gross)} />
@@ -98,7 +99,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
         <aside className="space-y-4">
           <section className="card p-5">
             <h2 className="mb-2 font-bold">اكتمال الطلب</h2>
-            <ul className="space-y-1 text-sm">{checklist.map((c) => <li key={c.key} className={c.ok ? 'text-emerald-700' : 'text-red-600'}>{c.ok ? '✓' : '✗'} {c.label}</li>)}</ul>
+            <ul className="space-y-1 text-sm">{checklist.map((c) => <li key={c.key} className={c.ok ? 'text-emerald-700' : 'text-red-700'}>{c.ok ? '✓' : '✗'} {c.label}</li>)}</ul>
           </section>
           {decisions.length > 0 && hasPermission(actor, 'sellers.review') && (
             <ActionForm action={sellerDecisionAction} className="card space-y-3 p-5">

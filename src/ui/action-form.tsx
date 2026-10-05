@@ -92,7 +92,7 @@ export function FieldError({ name }: { name: string }) {
   const e = s.fieldErrors?.[name]?.[0];
   if (!e) return null;
   return (
-    <p className="text-xs text-red-600" role="alert">
+    <p className="text-xs text-red-700" role="alert">
       {e}
     </p>
   );

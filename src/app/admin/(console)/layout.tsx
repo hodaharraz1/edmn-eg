@@ -131,7 +131,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
           <span className="hidden rounded bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-sky-300 sm:inline" dir="ltr">EDMN OPS</span>
           <span className="flex-1" />
           <span className="hidden text-sm text-muted sm:inline">{s.user.fullName}</span>
-          <form action={adminLogoutAction}><button className="flex items-center gap-1 text-sm text-red-600"><LogOut className="size-4" /> خروج</button></form>
+          <form action={adminLogoutAction}><button className="flex items-center gap-1 text-sm text-red-700"><LogOut className="size-4" /> خروج</button></form>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl p-4 sm:p-6">{children}</main>
       </div>

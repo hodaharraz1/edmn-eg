@@ -76,7 +76,7 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
         <section className="card space-y-2 p-5 text-sm">
           <h2 className="mb-1 font-bold">تنبيهات المخزون</h2>
           <p className="flex items-center gap-2"><Boxes className="size-4 text-amber-600" /> {d.lowStock} منتج بمخزون منخفض</p>
-          <p className="flex items-center gap-2"><Boxes className="size-4 text-red-600" /> {d.outOfStock} منتج نفدت كميته</p>
+          <p className="flex items-center gap-2"><Boxes className="size-4 text-red-700" /> {d.outOfStock} منتج نفدت كميته</p>
           <Link href="/seller/inventory" className="text-brand-700 hover:underline">إدارة المخزون</Link>
           <p className="pt-2 text-xs text-muted">طلبات سحب قيد التنفيذ: {d.withdrawalsOpen} · إجمالي ما تم صرفه: {formatEGP(d.paidOut)}</p>
         </section>
