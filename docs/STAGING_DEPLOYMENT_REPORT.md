@@ -11,54 +11,57 @@ present are proxy placeholders with no access, there is no Railway, Render or Fl
 opening a tunnel from this environment is not permitted. A real public HTTPS deployment
 therefore needs one authorization from the owner (see "What the owner must do").
 
-## 1. Hosting provider (selected)
+## 1. Hosting provider (selected) — 100% free, no payment card
 
-**Railway** (`railway.com`). Reasons:
+Owner requirement: **zero cost**. Selected:
 
-- It runs the full application as a long-lived container: Next.js server **and** background worker.
-- It provides managed PostgreSQL and a **persistent volume** for the existing local-disk file
-  storage, so no storage rewrite and no loss of uploads.
-- It gives a free `https://<name>.up.railway.app` domain with TLS.
-- Its API is reachable from this environment (verified), so I can provision everything once
-  authorized.
+| Part | Provider | Free tier |
+|---|---|---|
+| Web app + worker (Docker) | **Render** free web service | free; 512 MB RAM; sleeps after ~15 min idle (first request then takes ~1 min) |
+| PostgreSQL | **Neon** free | free, no expiry; 0.5 GB storage |
+| Uploaded files | **inside the Neon database** (`STORAGE_DRIVER=database`) | counts toward 0.5 GB (all demo data ≈ 1 MB) |
+| HTTPS domain | `https://<name>.onrender.com` | free, TLS included |
 
-Rejected:
+Both providers sign in with GitHub. No payment card is needed for their free plans as far as
+publicly documented. Free tiers can change; nothing in this setup upgrades automatically.
 
-- **Vercel**: no persistent disk, so uploads would break without a storage rewrite.
-- **Render**: works, but persistent disks need a paid plan plus a separate Postgres plan.
-- **Fly.io**: workable, but needs more manual setup on the owner's side.
+Rejected for cost:
+
+- **Railway**: paid after a one-time trial.
+- **Render Postgres free**: expires after 30 days.
+- **Render persistent disk**: paid.
+- **Fly.io**: requires a payment card.
+- **Vercel**: free, but its 4.5 MB request limit breaks uploads up to 8 MB, and it can't run the worker.
 
 ## 2. Application URL
 
-Not yet assigned. It will be `https://<service>.up.railway.app` after provisioning.
+Not yet assigned. It will be `https://<service>.onrender.com` after provisioning.
 
 ## 3. Deployment architecture (prepared)
 
 ```
-Railway project "edmn-staging"
- ├─ PostgreSQL 16 (managed, separate staging database — never the legacy DB)
- └─ service "web"  ← GitHub hodaharraz1/edmn-eg @ claude/great-tesla-nor0wt, built from Dockerfile
-      container: scripts/start.sh
-        1. npm run db:migrate          (idempotent)
-        2. npm run db:seed             (reference data, idempotent)
-        3. npm run db:seed:demo        (only if EDMN_ENVIRONMENT=staging and SEED_DEMO=true; idempotent)
-        4. background worker loop      (outbox, order expiry, follow-ups, settlements)
-        5. next start -H 0.0.0.0 -p $PORT
-      volume mounted at /data → STORAGE_LOCAL_ROOT=/data/storage (public/ + private/)
-      health check: /api/ready
+Neon project "edmn-staging"   → PostgreSQL (separate staging DB — never the legacy DB)
+Render free web service       ← GitHub hodaharraz1/edmn-eg @ claude/great-tesla-nor0wt, Dockerfile
+  scripts/start.sh: migrate → seed → staging demo seed (idempotent) → worker → next start
+  files: stored in Postgres table stored_objects (survive restarts/redeploys with the DB)
+  health check: /api/ready
 ```
 
 ## 4. Database provider
 
-Railway PostgreSQL 16, created fresh for staging. Migrations and seeding run automatically on
-every boot (idempotent). Constraints, indexes and foreign keys come from the committed migrations
-`0000`–`0002`.
+Neon PostgreSQL (free tier), created fresh for staging. Migrations `0000`–`0003` and seeds run
+automatically on boot (idempotent).
 
 ## 5. Storage architecture
 
-Unchanged application storage driver (local disk), placed on a **Railway persistent volume** at
-`/data/storage`. Private files are still served only through the authorized `/api/files/[id]`
-route. No mock and no feature removal.
+The free web service has an **ephemeral disk**, so files would be lost on restart. A minimal storage
+adaptation was added: `STORAGE_DRIVER=database` stores object bytes in a new additive table
+`stored_objects` (migration `0003`), keyed exactly like the disk driver.
+
+- Access control is unchanged: private files are still served only through `/api/files/[id]` with
+  the same per-purpose authorization.
+- The local-disk driver remains the default.
+- Covered by new integration tests.
 
 ## 6. Environment variables (names only)
 
@@ -67,11 +70,12 @@ route. No mock and no feature removal.
 | `NODE_ENV` | `production` (set in image) |
 | `EDMN_ENVIRONMENT` | `staging` |
 | `SEED_DEMO` | `true` |
-| `DATABASE_URL` | reference to the Railway Postgres variable |
-| `APP_URL`, `SELLER_APP_URL`, `ADMIN_APP_URL` | the Railway HTTPS domain |
-| `SESSION_SECRET`, `DATA_ENCRYPTION_KEY` | generated at provisioning, stored only in Railway |
-| `STAGING_DEMO_PASSWORD`, `STAGING_ADMIN_PASSWORD`, `STAGING_TOTP_SECRET` | generated at provisioning, stored only in Railway |
-| `STORAGE_LOCAL_ROOT` | `/data/storage` |
+| `DATABASE_URL` | Neon connection string (secret) |
+| `APP_URL`, `SELLER_APP_URL`, `ADMIN_APP_URL` | the Render HTTPS domain |
+| `SESSION_SECRET`, `DATA_ENCRYPTION_KEY` | generated at provisioning, stored only in Render |
+| `STAGING_DEMO_PASSWORD`, `STAGING_ADMIN_PASSWORD`, `STAGING_TOTP_SECRET` | generated at provisioning, stored only in Render |
+| `STORAGE_DRIVER` | `database` |
+| `NODE_OPTIONS` | `--max-old-space-size=320` (fit 512 MB) |
 | `MAIL_DRIVER`, `SMS_DRIVER` | `log` (no providers yet — simulated, recorded in Admin → الإشعارات outbox) |
 | `COOKIE_SECURE` | forced on by production mode |
 
@@ -93,7 +97,7 @@ No secret is committed to Git or written to docs.
 - `npm run build` **with no `.env` file and no database**: ✅ succeeds after the fix (it failed before).
 - Docker image: the Dockerfile could not be fully built inside this sandbox because the build
   container has no network route to the npm registry here. That is an environment limitation; the
-  host builds with normal network. It will be verified by the first Railway build.
+  host builds with normal network. It will be verified by the first Render build.
 
 ## 9. Test results (this task)
 
@@ -101,9 +105,9 @@ No secret is committed to Git or written to docs.
 |---|---|
 | `npm run lint` | ✅ |
 | `npm run typecheck` | ✅ |
-| `npm test` (unit + integration) | ✅ 79 / 79 |
+| `npm test` (unit + integration) | ✅ 81 / 81 (incl. database storage driver) |
 | **Staging simulation**: `scripts/start.sh` run exactly as the container runs it, with `NODE_ENV=production`, `EDMN_ENVIRONMENT=staging`, a fresh database, freshly generated secrets, and no `.env.local` | ✅ migrate, seed (credentials not printed), worker, web ready |
-| **Full E2E suite against that production-mode staging instance** (`E2E_BASE_URL`) | ✅ **26 / 26**. Covers both critical flows from seller registration to paid withdrawal, the external deal flow, security and authorization, and mobile layout. |
+| **Full E2E suite against that production-mode staging instance** (`E2E_BASE_URL`), with files stored in the database and memory capped as on the free tier | ✅ **26 / 26**; peak memory ≈ 445 MB of the 512 MB limit. Covers both critical flows from seller registration to paid withdrawal, the external deal flow, security and authorization, and mobile layout. |
 | Restart persistence | ✅ second boot skips the seed; uploaded media still served; private file still returns 404 to anonymous users |
 | Security probes on the production-mode instance | ✅ no source maps, `/.env` and `/.git/config` → 404, HSTS/CSP/X-Frame-Options present, staging banner shown, `robots.txt` blocks all, no secrets in client bundles |
 
@@ -123,10 +127,11 @@ URL:
 - Email and SMS are simulated (`log` drivers); messages appear in the Admin outbox, and nothing
   is delivered.
 - Payment destinations are the demo "NOT REAL" accounts; no money moves.
-- There is a single web instance with an in-container worker. That is fine for staging; for
-  production run the worker as a separate service.
-- Local-disk storage on a volume ties the app to one instance; production should use object
-  storage (S3 driver not yet implemented).
+- **Free tier sleeps after ~15 min idle.** The first visit then takes about a minute, and the
+  background worker only runs while the service is awake.
+- 512 MB RAM and the 0.5 GB database limit are enough for staging and testing only.
+- Files are stored in Postgres, which is fine for staging. Production should use object storage
+  (an S3 driver is not yet implemented) and a separate worker service.
 
 ## 16. External services still missing
 
@@ -135,16 +140,15 @@ production domain decision.
 
 ## 17. Redeployment
 
-Push to `claude/great-tesla-nor0wt`; Railway rebuilds and redeploys automatically. Migrations and
+Push to `claude/great-tesla-nor0wt`; Render rebuilds and redeploys automatically. Migrations and
 seeding run on boot and are idempotent.
 
 ## 18. Rollback
 
-In Railway → service → Deployments, choose the previous successful deployment → Redeploy.
+In Render → service → Events/Deploys, choose a previous deploy → Rollback.
 
 - The database is not rolled back automatically. Migrations are additive.
-- For data rollback, restore a Railway Postgres backup or snapshot.
-- The volume persists across deployments.
+- For data rollback, use Neon point-in-time restore (free tier keeps a short history window).
 
 ## 19. Recommendation for production
 
@@ -163,18 +167,19 @@ See `docs/DEPLOYMENT.md` and `docs/FINAL_IMPLEMENTATION_REPORT.md`.
 
 ## What the owner must do (the only blocker)
 
-1. Create or sign in to a Railway account at railway.com (sign in with GitHub). A trial or Hobby
-   plan is enough.
-2. Create an **account token**: Account Settings → Tokens → Create.
-3. Add that token to **this cloud environment's settings** as an environment variable named
-   `RAILWAY_API_TOKEN`: the environment menu in the session title bar → Edit → environment
-   variables. Do **not** paste it in chat.
-4. Start a new session (or tell me it's added) so the variable is loaded.
+1. Sign in to **render.com** with GitHub, then Account Settings → **API Keys** → create a key.
+2. Sign in to **neon.tech** with GitHub, then Account settings → **API keys** → create a key.
+3. In **this cloud environment's settings** (the environment menu in the session title bar →
+   Edit → environment variables), add `RENDER_API_KEY` and `NEON_API_KEY`. Do **not** paste them
+   in chat.
+4. Start a new session (or tell me they're added).
 
 Then I will:
 
-- create the project, PostgreSQL, volume and service;
-- generate and store the secrets in Railway;
+- create the Neon database and the Render service;
+- generate the secrets and store them in Render;
 - deploy;
-- run every public-URL test listed above;
+- run every public-URL test;
 - fill in sections 2 and 10–14 of this report.
+
+Nothing will be put on a paid plan.

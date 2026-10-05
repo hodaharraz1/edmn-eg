@@ -26,7 +26,7 @@ const schema = z.object({
   SESSION_TTL_HOURS: z.coerce.number().int().positive().default(720),
   ADMIN_SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12),
   COOKIE_SECURE: bool,
-  STORAGE_DRIVER: z.enum(['local']).default('local'),
+  STORAGE_DRIVER: z.enum(['local', 'database']).default('local'),
   STORAGE_LOCAL_ROOT: z.string().default('./storage'),
   UPLOAD_MAX_IMAGE_MB: z.coerce.number().positive().default(8),
   UPLOAD_MAX_DOCUMENT_MB: z.coerce.number().positive().default(10),

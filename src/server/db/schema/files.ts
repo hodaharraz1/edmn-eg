@@ -1,4 +1,4 @@
-import { bigint, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, customType, index, integer, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, enumCheck, ts } from './_helpers';
 import { users } from './identity';
 
@@ -52,4 +52,22 @@ export const files = pgTable(
     enumCheck('files_visibility_chk', t.visibility, FILE_VISIBILITIES),
     enumCheck('files_purpose_chk', t.purpose, FILE_PURPOSES),
   ],
+);
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
+
+/**
+ * Object bytes for STORAGE_DRIVER=database (hosts without a persistent disk, e.g. free staging).
+ * Same keys and visibility split as the disk driver; access control stays in the `files` rules.
+ */
+export const storedObjects = pgTable(
+  'stored_objects',
+  {
+    visibility: text({ enum: FILE_VISIBILITIES }).notNull(),
+    key: text().notNull(),
+    data: bytea().notNull(),
+    size: integer().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.visibility, t.key] })],
 );

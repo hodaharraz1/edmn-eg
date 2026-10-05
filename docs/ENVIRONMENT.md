@@ -26,7 +26,7 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `SESSION_TTL_HOURS` | `720` | | Customer/seller session lifetime |
 | `ADMIN_SESSION_TTL_HOURS` | `12` | | Admin session lifetime |
 | `COOKIE_SECURE` | `false` | forced `true` in production | `Secure` flag on cookies |
-| `STORAGE_DRIVER` | `local` | | Storage backend (`local` implemented) |
+| `STORAGE_DRIVER` | `local` | | Storage backend: `local` (disk) or `database` (files in PostgreSQL, for hosts without persistent disk) |
 | `STORAGE_LOCAL_ROOT` | `./storage` | ✅ persistent volume | Root for `public/` and `private/` files |
 | `UPLOAD_MAX_IMAGE_MB` | `8` | | Hard cap for image uploads (runtime setting can be lower) |
 | `UPLOAD_MAX_DOCUMENT_MB` | `10` | | Hard cap for PDFs/documents |
