@@ -20,7 +20,7 @@ export function proxy(req: NextRequest) {
   const sellerHost = (process.env.SELLER_HOST ?? 'seller.edmneg.com').toLowerCase();
   const adminHost = (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase();
   const { pathname } = req.nextUrl;
-  const shared = pathname.startsWith('/_next') || pathname.startsWith('/media/') || pathname.startsWith('/api/') || pathname.startsWith('/brand/') || pathname === '/favicon.ico';
+  const shared = pathname.startsWith('/_next') || pathname.startsWith('/media/') || pathname.startsWith('/api/') || pathname.startsWith('/brand/') || pathname === '/favicon.ico' || pathname === '/icon.png';
 
   let res: NextResponse;
   if (enforce && !shared && (host === sellerHost || host === adminHost)) {

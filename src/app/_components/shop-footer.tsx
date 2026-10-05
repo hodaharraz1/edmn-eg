@@ -9,9 +9,14 @@ export async function ShopFooter() {
   const legal = Object.values(LEGAL_CODES);
   return (
     <footer className="mt-16 bg-brand-950 pb-24 text-white/85 lg:pb-0">
+      {/* Light brand band so the transparent official logo keeps its contrast. */}
+      <div className="border-t border-line bg-white">
+        <div className="container-page flex items-center justify-center py-5 sm:justify-start">
+          <Logo variant="sidebar" />
+        </div>
+      </div>
       <div className="container-page grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
-          <Logo className="text-white" />
           <p className="text-sm leading-relaxed text-white/70">
             {data.about || 'اضمن سوق مصري متعدد البائعين للمنتجات الجديدة والمستعملة، مع دفع محمي حتى تأكيد الاستلام، وصفقات محمية لمشترياتك من خارج السوق.'}
           </p>

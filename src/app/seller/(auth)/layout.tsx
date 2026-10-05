@@ -11,8 +11,8 @@ export default function SellerAuthLayout({ children }: { children: React.ReactNo
   return (
     <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="flex flex-col gap-6 bg-brand-950 px-6 py-6 text-white sm:px-10 lg:min-h-dvh lg:py-12">
-        <div className="flex items-center justify-between gap-3">
-          <Logo href="/seller/login" className="text-white" label="مركز بائعي اضمن" />
+        <div className="-mx-6 -mt-6 flex items-center justify-between gap-3 bg-white px-6 py-4 sm:-mx-10 sm:px-10 lg:-mt-12">
+          <Logo href="/seller/login" variant="sidebar" label="مركز بائعي اضمن" />
           <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-brand-950">Seller Center</span>
         </div>
         <div className="space-y-2">

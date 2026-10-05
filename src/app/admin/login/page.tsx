@@ -10,7 +10,7 @@ export default function AdminLogin() {
   return (
     <main id="main" className="grid min-h-dvh place-items-center p-4">
       <div className="w-full max-w-sm space-y-4">
-        <div className="flex justify-center text-brand-900"><Logo href="/admin/login" /></div>
+        <div className="flex justify-center"><Logo href="/admin/login" variant="auth" label="اضمن – دخول فريق العمل" /></div>
         <ActionForm action={adminLoginAction} className="card space-y-4 p-6">
           <h1 className="flex items-center gap-2 text-lg font-bold"><ShieldCheck className="size-5 text-brand-700" /> دخول فريق اضمن</h1>
           <Field label="البريد الإلكتروني" htmlFor="email" required><Input id="email" name="email" type="email" autoComplete="username" dir="ltr" required /></Field>

@@ -24,7 +24,7 @@ export default async function SellerLayout({ children }: { children: React.React
   return (
     <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="hidden bg-brand-950 p-4 lg:flex lg:flex-col lg:gap-4">
-        <div className="space-y-1"><Logo href="/seller" className="text-white" label="مركز بائعي اضمن" /><p className="text-[11px] font-semibold tracking-wide text-amber-300" dir="ltr">EDMN Seller Center</p></div>
+        <div className="-mx-4 -mt-4 flex flex-col items-center gap-1 bg-white px-4 py-4"><Logo href="/seller" variant="sidebar" label="مركز بائعي اضمن" /><p className="text-[11px] font-bold tracking-wide text-brand-800" dir="ltr">EDMN Seller Center</p></div>
         <div className="rounded-lg bg-white/10 p-3 text-xs text-white">
           <p className="truncate font-semibold">{store?.name ?? 'متجري'}</p>
           <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : label('sellerRole', ctx.role)}</span></div>
@@ -37,6 +37,7 @@ export default async function SellerLayout({ children }: { children: React.React
           <Drawer title="مركز البائع" trigger={<button type="button" className="grid size-9 place-items-center rounded-lg hover:bg-page lg:hidden" aria-label="القائمة"><Menu className="size-5" /></button>}>
             <div className="rounded-xl bg-brand-950 p-2"><SellerNav /></div>
           </Drawer>
+          <Logo href="/seller" variant="mobile" label="مركز بائعي اضمن" className="lg:hidden" />
           <span className="font-bold lg:hidden">مركز البائع</span>
           <span className="flex-1" />
           {store && ctx.seller.status === 'APPROVED' && (

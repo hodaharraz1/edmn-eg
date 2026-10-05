@@ -2,28 +2,53 @@ import Link from 'next/link';
 import { cn } from '@/lib/cn';
 
 /**
- * EDMN logo slot.
- * The official, legally-registered logo must be used AS-IS (never redrawn/recoloured/cropped).
- * Set NEXT_PUBLIC_LOGO_URL to the official asset (e.g. /brand/edmn-logo.png). Until then a
- * neutral placeholder reserves the same area so the layout does not change when the asset arrives.
+ * The official, legally-registered EDMN logo — ONE canonical asset for the whole application.
+ *
+ * - Source: /public/brand/edmn-logo.png (the supplied master, 752×720 transparent PNG, used byte-for-byte).
+ * - Never redrawn, recoloured, cropped, stretched or filtered: only the display HEIGHT is set and the
+ *   width follows the intrinsic aspect ratio (object-contain), so the mark can never be distorted.
+ * - Transparent: it must sit on a light surface (the surrounding UI provides one — never a box
+ *   added behind the logo, never a colour change to the logo).
+ * - Served as-is (≈40 KB); the browser scales the high-resolution master to the display size.
  */
-export function Logo({ className, href = '/', size = 'md', label = 'اضمن – الصفحة الرئيسية' }: { className?: string; href?: string; size?: 'sm' | 'md' | 'lg'; label?: string }) {
-  const src = process.env.NEXT_PUBLIC_LOGO_URL;
-  const box = { sm: 'h-8 w-20', md: 'h-10 w-24', lg: 'h-14 w-32' }[size];
+export const LOGO_SRC = '/brand/edmn-logo.png';
+export const LOGO_WIDTH = 752;
+export const LOGO_HEIGHT = 720;
+
+const SIZES = {
+  /** Marketplace header (mobile → desktop) */
+  header: 'h-11 sm:h-12',
+  /** Compact bars (mobile admin / seller top bars) */
+  mobile: 'h-9',
+  /** Seller Center / Admin sidebars */
+  sidebar: 'h-16',
+  /** Authentication cards (customer, seller, admin, 2FA) */
+  auth: 'h-20 sm:h-24',
+  /** Large brand display (seller entry hero, footer, empty states) */
+  large: 'h-28 sm:h-32',
+} as const;
+export type LogoVariant = keyof typeof SIZES;
+
+export function LogoImage({ variant = 'header', className, priority }: { variant?: LogoVariant; className?: string; priority?: boolean }) {
+  return (
+    // Plain <img>: the official master is served unmodified (no re-encoding by an image optimizer).
+    <img
+      src={LOGO_SRC}
+      width={LOGO_WIDTH}
+      height={LOGO_HEIGHT}
+      alt="اضمن EDMN"
+      decoding="async"
+      fetchPriority={priority ? 'high' : 'auto'}
+      draggable={false}
+      className={cn(SIZES[variant], 'w-auto max-w-none select-none object-contain', className)}
+    />
+  );
+}
+
+export function Logo({ className, href = '/', variant = 'header', label = 'اضمن – الصفحة الرئيسية', priority }: { className?: string; href?: string; variant?: LogoVariant; label?: string; priority?: boolean }) {
   return (
     <Link href={href} aria-label={label} className={cn('inline-flex shrink-0 items-center', className)}>
-      {src ? (
-        <img src={src} alt="EDMN اضمن" className={cn(box, 'object-contain')} />
-      ) : (
-        <span
-          className={cn(box, 'grid place-items-center rounded-md border border-dashed border-current/40 text-center leading-none')}
-          title="مكان الشعار الرسمي — يُستبدل بالملف المعتمد"
-        >
-          <span className="text-base font-bold tracking-tight">
-            اضمن <span className="text-[10px] font-semibold">EDMN</span>
-          </span>
-        </span>
-      )}
+      <LogoImage variant={variant} priority={priority} />
     </Link>
   );
 }

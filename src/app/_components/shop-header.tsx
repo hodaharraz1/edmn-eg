@@ -9,12 +9,14 @@ import { allGovernorates, deliveryGovernorate, headerState, navCategories } from
 export async function ShopHeader({ q }: { q?: string }) {
   const [{ user, cartCount, unread }, cats, gov, govs] = await Promise.all([headerState(), navCategories(), deliveryGovernorate(), allGovernorates()]);
   return (
-    <header className="sticky top-0 z-40 bg-brand-900 text-white shadow-md">
+    <header className="sticky top-0 z-40 shadow-md">
+      {/* Light brand bar: the official logo is transparent and must sit on a light surface. */}
+      <div className="border-b border-line bg-white text-ink">
       <div className="container-page flex flex-wrap items-center gap-x-3 gap-y-2 py-2 lg:h-16 lg:flex-nowrap lg:py-0">
         <Drawer
           title="القائمة"
           trigger={
-            <button type="button" className="grid size-10 place-items-center rounded-lg hover:bg-white/10 lg:hidden" aria-label="القائمة">
+            <button type="button" className="grid size-10 place-items-center rounded-lg text-brand-900 hover:bg-page lg:hidden" aria-label="القائمة">
               <Menu className="size-6" />
             </button>
           }
@@ -56,13 +58,13 @@ export async function ShopHeader({ q }: { q?: string }) {
             ))}
           </nav>
         </Drawer>
-        <Logo className="text-white" />
+        <Logo variant="header" priority />
 
         <details className="group relative hidden shrink-0 lg:block">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1 text-xs hover:bg-white/10">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-2 py-1 text-xs hover:bg-page">
             <MapPin className="size-4" aria-hidden />
             <span className="leading-tight">
-              <span className="block text-[10px] opacity-75">{t('deliverTo')}</span>
+              <span className="block text-[10px] text-muted">{t('deliverTo')}</span>
               <span className="font-semibold">{gov?.nameAr}</span>
             </span>
           </summary>
@@ -90,7 +92,7 @@ export async function ShopHeader({ q }: { q?: string }) {
             name="q"
             defaultValue={q}
             placeholder={t('search.placeholder')}
-            className="h-11 min-w-0 flex-1 rounded-s-xl border-0 bg-white px-4 text-sm text-ink placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className="h-11 min-w-0 flex-1 rounded-s-xl border border-e-0 border-line bg-white px-4 text-sm text-ink placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-300"
             autoComplete="off"
             enterKeyHint="search"
           />
@@ -101,7 +103,7 @@ export async function ShopHeader({ q }: { q?: string }) {
 
         <nav className="ms-auto flex shrink-0 items-center gap-1 lg:ms-0" aria-label="الحساب">
           {user ? (
-            <Link href="/account" className="hidden items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-white/10 sm:flex">
+            <Link href="/account" className="hidden items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-page sm:flex">
               <User className="size-5" aria-hidden />
               <span className="text-xs leading-tight">
                 <span className="block opacity-75">أهلاً، {user.fullName.split(' ')[0]}</span>
@@ -109,28 +111,29 @@ export async function ShopHeader({ q }: { q?: string }) {
               </span>
             </Link>
           ) : (
-            <Link href="/login" className="hidden items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold hover:bg-white/10 sm:flex">
+            <Link href="/login" className="hidden items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold hover:bg-page sm:flex">
               <User className="size-5" aria-hidden /> {t('action.login')}
             </Link>
           )}
-          <Link href="/account/orders" className="hidden items-center gap-1.5 rounded-lg px-2 py-2 text-sm hover:bg-white/10 md:flex">
+          <Link href="/account/orders" className="hidden items-center gap-1.5 rounded-lg px-2 py-2 text-sm hover:bg-page md:flex">
             <Package className="size-5" aria-hidden /> {t('nav.orders')}
           </Link>
           {user && (
-            <Link href="/account/notifications" className="relative hidden rounded-lg p-2 hover:bg-white/10 sm:block" aria-label={`الإشعارات${unread ? ` (${unread} غير مقروءة)` : ''}`}>
+            <Link href="/account/notifications" className="relative hidden rounded-lg p-2 hover:bg-page sm:block" aria-label={`الإشعارات${unread ? ` (${unread} غير مقروءة)` : ''}`}>
               <Bell className="size-5" />
-              {unread > 0 && <span className="absolute top-1 end-1 grid min-w-4 place-items-center rounded-full bg-accent-600 px-1 text-[10px] font-bold">{unread}</span>}
+              {unread > 0 && <span className="absolute top-1 end-1 grid min-w-4 place-items-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white">{unread}</span>}
             </Link>
           )}
-          <Link href="/cart" className="relative flex items-center gap-1 rounded-lg p-2 hover:bg-white/10" aria-label={`السلة (${cartCount})`}>
+          <Link href="/cart" className="relative flex items-center gap-1 rounded-lg p-2 hover:bg-page" aria-label={`السلة (${cartCount})`}>
             <ShoppingCart className="size-6" />
             <span className="absolute -top-0.5 end-0 grid min-w-5 place-items-center rounded-full bg-amber-400 px-1 text-[11px] font-bold text-brand-950">{cartCount}</span>
             <span className="hidden text-sm font-semibold xl:inline">{t('nav.cart')}</span>
           </Link>
         </nav>
       </div>
+      </div>
 
-      <nav className="hidden border-t border-white/10 bg-brand-800 lg:block" aria-label="التنقل الرئيسي">
+      <nav className="hidden bg-brand-800 text-white lg:block" aria-label="التنقل الرئيسي">
         <div className="container-page flex h-11 items-center gap-1 text-sm">
           <details className="group relative">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold hover:bg-white/10">

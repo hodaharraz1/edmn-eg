@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { LogoImage } from '@/ui/logo';
 import { adminHasTotp, adminTotpVerifyAction } from '@/app/_actions/admin-auth';
 import { getAdminSession } from '@/server/web/session';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -15,6 +16,7 @@ export default async function Admin2fa() {
   return (
     <main id="main" className="grid min-h-dvh place-items-center p-4">
       <div className="card w-full max-w-sm space-y-4 p-6">
+        <div className="flex justify-center"><LogoImage variant="auth" /></div>
         <h1 className="text-lg font-bold">التحقق بخطوتين</h1>
         {!enrolled && <Enroll />}
         <ActionForm action={adminTotpVerifyAction} className="space-y-3">

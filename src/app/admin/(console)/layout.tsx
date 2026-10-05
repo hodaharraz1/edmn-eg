@@ -116,9 +116,9 @@ export default async function AdminConsoleLayout({ children }: { children: React
   return (
     <div className="lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden h-dvh overflow-y-auto bg-slate-900 p-4 lg:sticky lg:top-0 lg:block">
-        <div className="mb-5 space-y-1 text-white">
-          <Logo href="/admin" label="مركز عمليات اضمن" />
-          <p className="text-[11px] font-semibold uppercase leading-tight tracking-wide text-sky-300" dir="ltr">EDMN Operations &amp; Control Center</p>
+        <div className="-mx-4 -mt-4 mb-5 flex flex-col items-center gap-1 bg-white px-4 py-4">
+          <Logo href="/admin" variant="sidebar" label="مركز عمليات اضمن" />
+          <p className="text-center text-[11px] font-bold uppercase leading-tight tracking-wide text-brand-800" dir="ltr">EDMN Operations &amp; Control Center</p>
         </div>
         <AdminNav groups={groups} />
       </aside>
@@ -127,6 +127,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
           <Drawer title="القائمة" trigger={<button type="button" className="grid size-9 place-items-center rounded-lg hover:bg-page lg:hidden" aria-label="القائمة"><Menu className="size-5" /></button>}>
             <div className="rounded-xl bg-slate-900 p-2"><AdminNav groups={groups} /></div>
           </Drawer>
+          <Logo href="/admin" variant="mobile" label="مركز عمليات اضمن" className="lg:hidden" />
           <span className="font-bold">مركز العمليات والتحكم</span>
           <span className="hidden rounded bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-sky-300 sm:inline" dir="ltr">EDMN OPS</span>
           <span className="flex-1" />

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   title: { default: 'اضمن | EDMN — سوق موثوق للمنتجات الجديدة والمستعملة', template: '%s | اضمن EDMN' },
   description: 'تسوّق منتجات جديدة ومستعملة من بائعين موثّقين في مصر، مع دفع محمي حتى تأكيد الاستلام، وصفقات محمية لمشترياتك من خارج السوق.',
   applicationName: 'EDMN',
-  openGraph: { type: 'website', locale: 'ar_EG', siteName: 'اضمن EDMN' },
+  openGraph: { type: 'website', locale: 'ar_EG', siteName: 'اضمن EDMN', images: [{ url: '/brand/edmn-logo.png', width: 752, height: 720, alt: 'اضمن EDMN' }] },
   robots: IS_STAGING ? { index: false, follow: false } : { index: true, follow: true },
   formatDetection: { telephone: false },
 };
