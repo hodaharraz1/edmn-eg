@@ -1,4 +1,4 @@
-import { ArrowLeft, BadgeCheck, Camera, ShieldCheck, Sparkles, Truck, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Camera, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import Link from 'next/link';
 import { and, eq, inArray, sql } from 'drizzle-orm';
@@ -7,6 +7,7 @@ import { categories, files, products, sellers, stores } from '@/server/db/schema
 import { searchProducts, productsByIds, type Sort } from '@/server/modules/catalog/search';
 import { activeBlocks } from '@/server/modules/cms/service';
 import { LinkButton } from '@/ui/button';
+import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
 import { ProductCard, ProductRail, RailItem, SellerCard, mediaUrl } from '@/ui/commerce';
 import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
 import { RecentlyViewed } from './recently-viewed';
@@ -113,7 +114,7 @@ function hero(b: Block) {
   return (
     <section key={b.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-l from-brand-700 via-brand-800 to-brand-950 text-white">
       {d.imageKey && <img src={mediaUrl(d.imageKey)!} alt="" className="absolute inset-0 size-full object-cover opacity-30" />}
-      <div className="relative grid gap-6 p-6 sm:p-10 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+      <div className="relative grid gap-6 p-6 sm:p-10 md:grid-cols-[1.4fr_1fr] md:items-center">
         <div className="space-y-4">
           <h1 className="text-2xl font-bold leading-tight sm:text-4xl">{d.heading}</h1>
           {d.subheading && <p className="max-w-xl text-sm text-white/85 sm:text-base">{d.subheading}</p>}
@@ -128,21 +129,20 @@ function hero(b: Block) {
             </LinkButton>
           </div>
         </div>
-        <ul className="grid grid-cols-2 gap-3 text-sm">
-          {[
-            [BadgeCheck, 'بائعون موثّقون'],
-            [ShieldCheck, 'دفع محمي'],
-            [Truck, 'شحن لكل المحافظات'],
-            [Camera, 'صور حقيقية للمستعمل'],
-          ].map(([I, l]) => {
-            const Ic = I as LucideIcon;
-            return (
-              <li key={l as string} className="flex items-center gap-2 rounded-xl bg-white/10 p-3 backdrop-blur">
-                <Ic className="size-5 text-amber-300" aria-hidden /> {l as string}
-              </li>
-            );
-          })}
-        </ul>
+        {/* Brand visual: the official logo, unmodified. A soft circular light (not a box) behind it
+            keeps the dark-blue lettering legible on the navy hero. Decorative: the header logo is the accessible one. */}
+        <div className="relative flex items-center justify-center py-2 md:py-0" aria-hidden>
+          <div className="absolute aspect-square w-[clamp(190px,58vw,250px)] rounded-full bg-[radial-gradient(closest-side,rgb(255_255_255/0.92),rgb(255_255_255/0.55)_60%,transparent)] md:w-[clamp(250px,31vw,410px)]" />
+          <img
+            src={LOGO_SRC}
+            width={LOGO_WIDTH}
+            height={LOGO_HEIGHT}
+            alt=""
+            decoding="async"
+            draggable={false}
+            className="relative h-auto w-[clamp(140px,42vw,180px)] max-w-full select-none object-contain opacity-90 md:w-[clamp(190px,24vw,340px)]"
+          />
+        </div>
       </div>
     </section>
   );
