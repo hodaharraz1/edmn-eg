@@ -9,7 +9,22 @@ const DEMO_ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? 'Admin@Edmn#20
 
 export const DB_URL = process.env.E2E_DATABASE_URL ?? 'postgresql://edmn:edmn@localhost:5432/edmn_e2e';
 
+/**
+ * Read-only verification queries. E2E_DB_HTTP=neon uses Neon's HTTPS SQL endpoint (for runners that
+ * cannot open port 5432 to a hosted staging database).
+ */
 export async function q<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
+  if (process.env.E2E_DB_HTTP === 'neon') {
+    const host = new URL(DB_URL).host;
+    const res = await fetch(`https://${host}/sql`, {
+      method: 'POST',
+      headers: { 'Neon-Connection-String': DB_URL, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text, params }),
+    });
+    const body = (await res.json()) as { rows?: T[]; message?: string };
+    if (!res.ok || !body.rows) throw new Error(`neon sql failed: ${body.message ?? res.status}`);
+    return body.rows;
+  }
   const c = new Client({ connectionString: DB_URL });
   await c.connect();
   try {
