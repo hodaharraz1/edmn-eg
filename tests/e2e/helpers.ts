@@ -41,7 +41,22 @@ export async function png(): Promise<Buffer> {
 }
 export const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF', 'ascii');
 
+/**
+ * Sessions are reused per account within a run: the suite would otherwise exceed the production
+ * login rate limit (30 logins / 15 min per IP), which we deliberately do not relax for tests.
+ */
+const sessions = new Map<string, Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>>();
+
 export async function customerLogin(browser: Browser, email: string, password = DEMO_PASSWORD): Promise<Page> {
+  const saved = sessions.get(email);
+  if (saved) {
+    const ctx = await browser.newContext({ locale: 'ar-EG', storageState: saved });
+    const page = await ctx.newPage();
+    await page.goto('/account');
+    if (!new URL(page.url()).pathname.startsWith('/login')) return page;
+    await ctx.close();
+    sessions.delete(email);
+  }
   const ctx = await browser.newContext({ locale: 'ar-EG' });
   const page = await ctx.newPage();
   await page.goto('/login');
@@ -49,6 +64,7 @@ export async function customerLogin(browser: Browser, email: string, password = 
   await page.locator('input[name=password]').fill(password);
   await page.locator('form button[type=submit]').first().click();
   await page.waitForURL((u) => !u.pathname.startsWith('/login'));
+  sessions.set(email, await ctx.storageState());
   return page;
 }
 
