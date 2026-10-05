@@ -86,8 +86,14 @@ Guessing an id gives a uniform 404 (EDGE 18). Sensitive reads are audited.
 | Start payment | ✔ only after agreed terms (PAYMENT_PENDING) | ✖ | ✖ | ✖ | ✖ |
 | View the deal page | ✔ | ✖ | ✔ | ✖ (404) | `deals.view` |
 | See the counterparty's address / GPS | from ACTIVE (payment confirmed) | ✖ | from ACTIVE | ✖ | `deals.view` |
-| Declare delivery | ✖ | ✖ | ✔ ACTIVE | ✖ | — |
-| Confirm receipt / open dispute | ✔ | ✖ | dispute only | ✖ | `disputes.manage` |
+| Declare shipment (issues the buyer's handover code) | ✖ | ✖ | ✔ ACTIVE | ✖ | — |
+| Read the handover code | ✔ own deal only (staging test display; production: SMS) | ✖ | **✖ never** | ✖ | ✖ (only issuance/attempt metadata, never the code) |
+| Enter the handover code (verify) | ✖ | ✖ | ✔ DELIVERED; rate-limited; attempt-limited | ✖ | ✖ |
+| Request a new code (sent to the buyer) | ✔ | ✖ | ✔ | ✖ | — |
+| "Buyer received" without the buyer | — | — | **✖ no such action** | ✖ | dispute decision only |
+| Confirm "received & as described" (release) | ✔ only after verified handover; no hold/flag/dispute | ✖ | ✖ | ✖ | — |
+| Report problem / not received / exception | ✔ | ✖ | exception + dispute | ✖ | `disputes.manage` decides |
+| Operations hold on a deal | ✖ | ✖ | ✖ | ✖ | `deals.manage` + SU |
 | Mark deal payout paid | ✖ | ✖ | ✖ | ✖ | `deals.payout`, payout PENDING, payee ≠ actor |
 
 Tests: `tests/integration/deal-invitation-returns.test.ts` (binding, enumeration, expiry, revoke, stranger, location visibility, version immutability) and `tests/e2e/protected-deal.spec.ts`.

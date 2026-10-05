@@ -13,6 +13,7 @@ Every security control is backed by an automated test that runs in CI (`npm test
 | `tests/integration/auth.test.ts` | Integration | Login, lockout, sessions, TOTP, reset |
 | `tests/integration/fulfilment-finance.test.ts` | Integration | Release, refunds, withdrawals, ledger |
 | `tests/integration/postpurchase-deals-authz.test.ts` | Integration | Returns, disputes, deal end-to-end, authorization edges |
+| `tests/integration/delivery-otp.test.ts` | Integration (24) | Delivery OTP generation, expiry, single use, rate/attempt limits, regeneration, isolation, logs, money |
 | `tests/e2e/security.spec.ts` | E2E | Admin isolation, private files, cross-account orders, headers |
 | `tests/e2e/protected-deal.spec.ts` | E2E | Full invitation-first deal on a real browser (geolocation granted/denied) |
 
@@ -63,6 +64,12 @@ Every security control is backed by an automated test that runs in CI (`npm test
 | **Agreed terms / versions immutable (DB)** | "agreed terms and term versions are immutable…" |
 | **"No voluntary returns" never blocks disputes / protected returns** | "\"no voluntary returns\" never blocks a defect dispute…", "order items snapshot the policy…" |
 | **Return policy required at listing submission** | "a product cannot be submitted before its return policy is set" |
+| **Delivery OTP: wrong / expired / reused / regenerated / attempt limit / rate limit / concurrent** | delivery-otp tests 1–6, 12, 13 |
+| **Delivery OTP: seller / other seller / other customer / anonymous / other deal cannot read or use it** | delivery-otp tests 7–11, 15; e2e protected-deal (seller page never contains the code; anonymous redirected) |
+| **Delivery OTP never in logs** | delivery-otp test 14 |
+| **OTP / waybill / tracking / GPS alone release nothing** | delivery-otp tests 16–19; e2e "funds stay unavailable" |
+| **Buyer confirmation after OTP releases once; problem / conflict / exception / hold keep funds held** | delivery-otp tests 20–23 + extras; e2e both paths |
+| **Ledger balanced** | delivery-otp test 24; e2e ledger check |
 | **Order snapshot unaffected by later changes** | "order items snapshot the policy; later store changes do not alter history…" |
 
 ## Manual checks on staging (non-destructive)

@@ -34,6 +34,8 @@
 | Protected deal | Pay before both sides agree; seller changes terms after payment | Payment only from PAYMENT_PENDING (after agreed version); agreed terms are DB-immutable; versions append-only | deal-invitation-returns |
 | Protected deal | Buyer accepts a stale or replaced offer | ACCEPT must name the current PROPOSED version | deal-invitation-returns |
 | Protected deal | Payout before buyer confirmation / during a dispute | Completion only on buyer confirm, end of inspection, or dispute decision; payout PENDING → PAID by finance (payee ≠ actor) | E2E protected-deal |
+| Protected deal | Seller marks the buyer as having received / courier collects the money release with a code only | No seller "received" action. The handover OTP proves physical handover only. Release requires the buyer's explicit "received & as described" after a verified handover, confirmed payment, no dispute, no ops hold and no hold flag — exactly once | delivery-otp suite |
+| Protected deal | Buyer says "not received" after a verified OTP | DELIVERY_CONFLICT: dispute + HIGH risk flag; funds held; Operations decides | delivery-otp 22 |
 | Protected deal | Shipping fee manipulation | Seller's shipping fee is part of the versioned terms; total, fee and buyer-pays are recomputed on the server and frozen at agreement | deal-invitation-returns |
 
 ## 3. Return policy and money

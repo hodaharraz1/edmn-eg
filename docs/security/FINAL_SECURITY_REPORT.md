@@ -1,7 +1,7 @@
 # EDMN Marketplace — Final Security Report
 
 - **Date:** 2026-10-05
-- **Commit:** `f0a2936` on branch `claude/great-tesla-nor0wt`
+- **Commit:** see the latest commit on branch `claude/great-tesla-nor0wt` (Delivery OTP added after `f0a2936`)
 - **Staging:** https://edmn-staging.vercel.app (Vercel + Neon, `EDMN_ENVIRONMENT=staging`)
 
 ## 1. Executive Summary
@@ -172,7 +172,16 @@ The flow is now invitation-first.
 
 **Return policy:** the seller's policy (voluntary / none) is part of the agreed terms. "No voluntary returns" never blocks a dispute or a defect claim.
 
-Tests: 23 integration tests plus 7 E2E steps (local and staging).
+**Delivery OTP (physical handover):**
+- When the seller ships, a CSPRNG 6-digit code is issued to the **buyer**. Only an HMAC bound to the deal and the code id is stored.
+- The code expires after 72h, allows 5 attempts, is rate-limited per deal and per user, and is single use under a row lock.
+- Requesting a new code invalidates the previous one. A DB trigger prevents reactivating or deleting a code.
+- The code is never visible to the seller, admins, audit logs, in-app notifications or server logs. On staging only, the authenticated buyer sees it labelled «رمز تجريبي — بيئة Staging»; production keeps no recoverable copy.
+- Verifying the code only moves the deal to `DELIVERY_HANDOVER_VERIFIED`. Funds stay unavailable until the buyer explicitly chooses «استلمت والمنتج مطابق» (`BUYER_CONFIRMED_RECEIPT` → `COMPLETED`, exactly once). That also requires confirmed payment, no dispute, no Operations hold and no hold risk flag.
+- A reported problem opens a dispute. "Not received" after a verified code is a `DELIVERY_CONFLICT` (dispute plus a HIGH risk flag). A failed code exchange goes to Operations review.
+- The seller has no "buyer received" action.
+
+Tests: 23 + 24 integration tests; 11 E2E steps covering two deals (local and staging).
 
 ## 18. Database
 
@@ -262,11 +271,11 @@ All fixed findings are listed with evidence in `SECURITY_FINDINGS.md`:
 |---|---|
 | Lint (`eslint .`) | 0 problems |
 | Typecheck (`next typegen && tsc --noEmit`) | 0 errors |
-| Integration + unit (`vitest`, PostgreSQL) | **140 / 140 passed** (14 files); 26 security-gate + 23 deal/return-policy tests included |
-| E2E local (production build) | **30 / 30 passed** |
-| E2E on public staging URL | **30 / 30 passed** (11.1 min); includes the full invitation-first deal (GPS granted / denied), security, responsive 7 widths + axe |
+| Integration + unit (`vitest`, PostgreSQL) | **164 / 164 passed** (15 files); 26 security-gate + 23 deal/return-policy + 24 delivery-OTP tests included |
+| E2E local (production build) | **34 / 34 passed** |
+| E2E on public staging URL | **34 / 34 passed** (11.9 min). Includes the full invitation-first deal with Delivery OTP: buyer A and seller B in separate browser contexts, satisfactory path released once, and a problem-after-OTP path held. Also includes security, responsive at 7 widths and axe |
 | Build | Local `next build` OK; Vercel deployment `f0a2936` READY (migrations applied) |
-| Staging ledger reconciliation (read-only) | 23 accounts, **0 projection mismatches**, 33 entries / 87 lines, debits **231,549.00 EGP** = credits **231,549.00 EGP**, diff **0**, 0 unbalanced entries; real money **off** |
+| Staging ledger reconciliation (read-only, after the OTP runs) | 29 accounts, **0 projection mismatches**, 56 entries / 139 lines, debits **356,289.00 EGP** = credits **356,289.00 EGP**, diff **0**, 0 unbalanced entries; real money **off**; migration 0006 applied additively (existing deals preserved) |
 | Staging probes | Headers OK; invalid / traversal / XSS invite tokens → identical "invalid link" page; legacy `/deal-invite/*` redirects; anonymous deal page → login; no CORS |
 
 ## 28. Production Security Blockers (real money)

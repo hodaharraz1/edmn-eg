@@ -17,7 +17,14 @@ const NEW_SELLER = { name: 'كريم البائع الخارجي', email: `ext-s
 let dealId = '';
 let link = '';
 const status = async () => (await q<{ status: string }>(`select status from external_deals where id = $1`, [dealId]))[0]?.status;
-const next = (page: Page) => page.getByRole('button', { name: 'حفظ والتالي' }).click();
+/** Click "save & next" only once the current step has rendered and hydrated (soft navigation updates the URL first). */
+const STEP_FIELD: Record<string, string> = { '1': 'input[name=title]', '2': 'input[name=unitPrice]', '3': 'input[name=deliveryMethod]', '4': 'textarea[name=customTerms]', '5': 'input[name=loc_city]' };
+async function next(page: Page) {
+  const step = new URL(page.url()).searchParams.get('step') ?? '1';
+  await page.locator(STEP_FIELD[step] ?? 'form').first().waitFor();
+  await page.waitForLoadState('networkidle');
+  await page.getByRole('button', { name: 'حفظ والتالي' }).click();
+}
 
 test('buyer creates a request without seller details, shares a secure link (GPS granted)', async ({ browser }) => {
   const page = await customerLogin(browser, 'ahmed@demo.edmn.local');
@@ -189,6 +196,7 @@ test('buyer pays and admin verifies; addresses become visible to the parties', a
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect.poll(async () => (await q(`select id from payments where deal_id = $1`, [dealId])).length).toBe(1);
   await page.reload();
+  await page.waitForLoadState('networkidle');
   await page.locator('input[name=reference]').fill('VC-E2E-5555');
   await page.locator('input[name=proof]').setInputFiles({ name: 'vc.png', mimeType: 'image/png', buffer: await png() });
   await page.getByRole('button', { name: 'رفع إثبات الدفع' }).click();
@@ -318,6 +326,7 @@ test('second deal reaches ACTIVE with the existing seller account (login path)',
   await buyer.getByRole('button', { name: 'متابعة' }).click();
   await expect.poll(async () => (await q(`select id from payments where deal_id = $1`, [deal2])).length).toBe(1);
   await buyer.reload();
+  await buyer.waitForLoadState('networkidle');
   await buyer.locator('input[name=reference]').fill('VC-E2E-7777');
   await buyer.locator('input[name=proof]').setInputFiles({ name: 'vc.png', mimeType: 'image/png', buffer: await png() });
   await buyer.getByRole('button', { name: 'رفع إثبات الدفع' }).click();
