@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, check, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { DEAL_STATUSES, INVITATION_STATUSES, PAYOUT_TYPES } from '@/domain/machines';
 import { createdAt, enumCheck, money, ts, updatedAt } from './_helpers';
 import { files } from './files';
@@ -28,11 +28,30 @@ export const externalDeals = pgTable(
     condition: text(), // NEW | USED (free for external goods)
     sourceUrl: text(), // where the buyer found it (marketplace/social link) — display only
     quantity: integer().notNull().default(1),
-    // Step 2 — external seller (counterparty)
+    // Optional buyer-provided contact HINTS for the external seller — never treated as verified identity.
     sellerName: text(),
     sellerPhone: text(),
     sellerEmail: text(),
+    // The seller account bound to this deal through the invitation (set once, on claim).
     sellerUserId: uuid().references(() => users.id),
+    sellerJoinedAt: ts(),
+    // Authoritative seller details, entered by the SELLER (phone copied from their verified account).
+    sellerFullName: text(),
+    sellerVerifiedPhone: text(),
+    sellerContactEmail: text(),
+    // Delivery locations: structured address + optional GPS, encrypted (AES-256-GCM) — sensitive PII.
+    buyerLocationEnc: text(),
+    sellerLocationEnc: text(),
+    // Plain governorate ids for shipping calculation (origin = seller, destination = buyer).
+    originGovernorateId: integer(),
+    destinationGovernorateId: integer(),
+    // Seller offer fields (set from the agreed terms version).
+    shippingFee: money().notNull().default(0),
+    processingDays: integer(),
+    /** Immutable once set: the exact terms both parties accepted (DB trigger blocks any later change). */
+    agreedTerms: jsonb().$type<Record<string, unknown>>(),
+    agreedVersion: integer(),
+    agreedAt: ts(),
     // Step 3 — price & terms
     unitPrice: money(),
     totalAmount: money(),
@@ -86,6 +105,11 @@ export const dealInvitations = pgTable(
     tokenHash: text().notNull(),
     status: text({ enum: INVITATION_STATUSES }).notNull().default('PENDING'),
     expiresAt: ts().notNull(),
+    /** First time the link was opened (audit INVITATION_OPENED). */
+    openedAt: ts(),
+    /** The single account this invitation is bound to once a seller claims it. */
+    boundUserId: uuid().references(() => users.id),
+    boundAt: ts(),
     respondedAt: ts(),
     respondedBy: uuid().references(() => users.id),
     rejectReason: text(),
@@ -139,5 +163,35 @@ export const dealPayouts = pgTable(
     uniqueIndex('deal_payouts_deal_uq').on(t.dealId),
     enumCheck('deal_payouts_status_chk', t.status, DEAL_PAYOUT_STATUSES),
     check('deal_payouts_amount_chk', sql`${t.amount} > 0`),
+  ],
+);
+
+/**
+ * Deal terms versions: every seller offer, buyer change request and seller counter-offer is a NEW
+ * row (never overwritten). Statuses: PROPOSED → ACCEPTED | REJECTED | SUPERSEDED.
+ */
+export const DEAL_TERMS_STATUSES = ['PROPOSED', 'ACCEPTED', 'REJECTED', 'SUPERSEDED'] as const;
+export const dealTermsVersions = pgTable(
+  'deal_terms_versions',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    dealId: uuid()
+      .notNull()
+      .references(() => externalDeals.id),
+    version: integer().notNull(),
+    proposedBy: text().notNull(), // SELLER | BUYER
+    proposedByUserId: uuid()
+      .notNull()
+      .references(() => users.id),
+    terms: jsonb().$type<Record<string, unknown>>().notNull(),
+    message: text(),
+    status: text({ enum: DEAL_TERMS_STATUSES }).notNull().default('PROPOSED'),
+    respondedAt: ts(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('deal_terms_versions_uq').on(t.dealId, t.version),
+    enumCheck('deal_terms_versions_status_chk', t.status, DEAL_TERMS_STATUSES),
+    check('deal_terms_versions_by_chk', sql`${t.proposedBy} in ('SELLER','BUYER')`),
   ],
 );

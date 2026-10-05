@@ -158,6 +158,8 @@ export const addresses = pgTable(
     floor: text(),
     apartment: text(),
     landmark: text(),
+    /** Optional GPS pin {lat,lng,accuracy}, captured only after explicit browser permission; AES-GCM encrypted. */
+    locationEnc: text(),
     isDefault: boolean().notNull().default(false),
     archivedAt: ts(),
     createdAt: createdAt(),

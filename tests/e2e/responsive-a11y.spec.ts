@@ -30,6 +30,8 @@ test('customer, seller and admin surfaces: responsive at 7 widths + accessibilit
   const [prod] = await q<{ slug: string }>(`select slug from products where status = 'LIVE' order by created_at limit 1`);
   const [store] = await q<{ slug: string }>(`select st.slug from stores st join sellers s on s.id = st.seller_id where s.status = 'APPROVED' limit 1`);
   const [order] = await q<{ id: string }>(`select o.id from orders o join users u on u.id = o.customer_id where u.email = 'ahmed@demo.edmn.local' order by o.created_at limit 1`);
+  const [agreedDeal] = await q<{ id: string }>(`select d.id from external_deals d join users u on u.id = d.buyer_id where u.email = 'ahmed@demo.edmn.local' and d.agreed_terms is not null order by d.created_at limit 1`);
+  const [invitedDeal] = await q<{ id: string }>(`select d.id from external_deals d join users u on u.id = d.buyer_id where u.email = 'mona@demo.edmn.local' and d.status = 'INVITED' limit 1`);
   const pages: [string, string][] = [
     ['anon', '/'],
     ['anon', `/search?q=${encodeURIComponent('سامسونج')}`],
@@ -44,6 +46,10 @@ test('customer, seller and admin surfaces: responsive at 7 widths + accessibilit
     ['ahmed', '/checkout'],
     ['ahmed', '/account'],
     ['ahmed', `/account/orders/${order.id}`],
+    ['ahmed', '/account/deals/new'],
+    ['ahmed', `/account/deals/${agreedDeal.id}`],
+    ['mona', `/account/deals/${invitedDeal.id}`],
+    ['anon', `/deal/invite/${'x'.repeat(43)}`],
     ['techzone', '/seller'],
     ['techzone', '/seller/products'],
     ['techzone', '/seller/orders'],

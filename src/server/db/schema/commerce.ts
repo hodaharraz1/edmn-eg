@@ -225,6 +225,8 @@ export const orderItems = pgTable(
     commissionRuleId: uuid().references(() => commissionRules.id),
     commissionBps: integer().notNull(),
     commissionAmount: money().notNull(),
+    /** Seller's voluntary return policy as shown at purchase (later policy edits never change it). */
+    returnPolicySnapshot: jsonb().$type<import('@/domain/return-policy').ReturnPolicySnapshot>(),
     returnedQuantity: integer().notNull().default(0),
     createdAt: createdAt(),
   },

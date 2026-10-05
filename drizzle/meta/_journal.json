@@ -36,6 +36,13 @@
       "when": 1791195187229,
       "tag": "0004_pilot_test_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791202866089,
+      "tag": "0005_deals_terms_location_returns",
+      "breakpoints": true
     }
   ]
 }

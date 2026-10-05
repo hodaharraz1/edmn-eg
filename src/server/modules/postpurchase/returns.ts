@@ -11,6 +11,7 @@ import { createSellerOrderRefund } from '@/server/modules/finance/postings';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
+import { PROTECTED_REASONS, type ReturnPolicySnapshot } from '@/domain/return-policy';
 import { parse, requireReason, transition } from '../_shared';
 
 export type Return = typeof returns.$inferSelect;
@@ -33,10 +34,17 @@ export const returnRequestSchema = z.object({
 });
 
 /** Eligibility window: the longer of the (legally-reviewed, configurable) statutory window and the store's voluntary window. */
-export async function returnWindow(conn: DbOrTx, sellerId: string) {
+export async function returnWindow(conn: DbOrTx, sellerId: string, items?: { returnPolicySnapshot: ReturnPolicySnapshot | null }[]) {
   const statutory = await getSetting('returns.statutoryWindowDays', conn);
-  const [store] = await conn.select().from(stores).where(eq(stores.sellerId, sellerId));
-  const voluntary = store?.acceptsVoluntaryReturns ? (store.voluntaryReturnDays ?? 0) : 0;
+  // The voluntary window is the one agreed at purchase (order item snapshot); legacy items without a
+  // snapshot fall back to the store's current setting.
+  const snaps = (items ?? []).map((i) => i.returnPolicySnapshot).filter(Boolean) as ReturnPolicySnapshot[];
+  let voluntary: number;
+  if (snaps.length) voluntary = Math.min(...snaps.map((s) => (s.type === 'VOLUNTARY' ? (s.windowDays ?? 0) : 0)));
+  else {
+    const [store] = await conn.select().from(stores).where(eq(stores.sellerId, sellerId));
+    voluntary = store?.acceptsVoluntaryReturns ? (store.voluntaryReturnDays ?? 0) : 0;
+  }
   return { statutory, voluntary, effective: Math.max(statutory, voluntary) };
 }
 
@@ -62,10 +70,14 @@ export async function requestReturn(actor: Actor, input: z.input<typeof returnRe
     const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
     if (order.customerId !== userId) throw forbidden();
     if (so.status !== 'DELIVERED' && so.status !== 'COMPLETED') throw invalidState('يمكن طلب الإرجاع بعد تأكيد استلام الطلب فقط');
-    const win = await returnWindow(tx, so.sellerId);
-    const ageDays = (Date.now() - (so.deliveredAt ?? new Date()).getTime()) / 86400_000;
-    if (ageDays > win.effective) throw invalidState(`انتهت مدة الإرجاع (${win.effective} يوم من الاستلام). يمكنك فتح تذكرة دعم إذا كان المنتج معيباً`);
     const items = await tx.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+    const win = await returnWindow(tx, so.sellerId, items.filter((i) => d.items.some((r) => r.orderItemId === i.id)));
+    const ageDays = (Date.now() - (so.deliveredAt ?? new Date()).getTime()) / 86400_000;
+    // A seller's "no voluntary returns" only limits change-of-mind returns. Wrong / damaged /
+    // defective / not-as-described items stay claimable for the (longer) dispute window.
+    const isProtected = (PROTECTED_REASONS as readonly string[]).includes(d.reason);
+    const limit = isProtected ? Math.max(win.effective, await getSetting('disputes.windowDays', tx)) : win.effective;
+    if (ageDays > limit) throw invalidState(`انتهت مدة الإرجاع (${limit} يوم من الاستلام). يمكنك فتح نزاع أو تذكرة دعم إذا كان المنتج معيباً`);
     for (const ri of d.items) {
       const it = items.find((i) => i.id === ri.orderItemId);
       if (!it) throw forbidden();

@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
+import { RETURN_CONDITION_KEYS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
@@ -487,6 +488,8 @@ export const storeSettingsSchema = z.object({
   acceptsVoluntaryReturns: z.boolean(),
   voluntaryReturnDays: z.number().int().min(1).max(365).nullable(),
   returnConditions: z.string().trim().max(2000).optional().default(''),
+  returnConditionKeys: z.array(z.enum(RETURN_CONDITION_KEYS)).max(RETURN_CONDITION_KEYS.length).optional().default([]),
+  returnShippingPayer: z.enum(RETURN_SHIPPING_PAYERS).optional().default('BY_REASON'),
   shippingPolicy: z.string().trim().max(2000).optional().default(''),
   defaultProcessingDays: z.number().int().min(0).max(30),
   freeShippingThreshold: z.number().int().min(0).nullable(),
@@ -515,6 +518,8 @@ export async function updateStoreSettings(
         acceptsVoluntaryReturns: d.acceptsVoluntaryReturns,
         voluntaryReturnDays: d.acceptsVoluntaryReturns ? d.voluntaryReturnDays : null,
         returnConditions: d.returnConditions || null,
+        returnConditionKeys: d.acceptsVoluntaryReturns ? d.returnConditionKeys : [],
+        returnShippingPayer: d.returnShippingPayer,
         shippingPolicy: d.shippingPolicy || null,
         defaultProcessingDays: d.defaultProcessingDays,
         freeShippingThreshold: d.freeShippingThreshold,

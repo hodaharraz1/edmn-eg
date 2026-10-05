@@ -143,6 +143,9 @@ export async function productLogisticsAction(_p: ActionState, fd: FormData): Pro
       returnPolicyOverride: override,
       acceptsVoluntaryReturns: override ? str(fd, 'returnPolicy') === 'ACCEPT' : null,
       voluntaryReturnDays: override && str(fd, 'returnPolicy') === 'ACCEPT' ? (int(fd, 'voluntaryReturnDays') ?? null) : null,
+      returnConditionKeys: override && str(fd, 'returnPolicy') === 'ACCEPT' ? (fd.getAll('rp_conditions').map(String) as never) : [],
+      returnShippingPayer: override ? ((str(fd, 'rp_shippingPayer') || 'BY_REASON') as never) : null,
+      returnPolicyNotes: override ? str(fd, 'rp_notes') : '',
       seoTitle: str(fd, 'seoTitle'),
       seoDescription: str(fd, 'seoDescription'),
     });
@@ -307,6 +310,8 @@ export async function storeSettingsAction(_p: ActionState, fd: FormData): Promis
         acceptsVoluntaryReturns: bool(fd, 'acceptsVoluntaryReturns'),
         voluntaryReturnDays: int(fd, 'voluntaryReturnDays') ?? null,
         returnConditions: str(fd, 'returnConditions'),
+        returnConditionKeys: fd.getAll('rp_conditions').map(String) as never,
+        returnShippingPayer: (str(fd, 'rp_shippingPayer') || 'BY_REASON') as never,
         shippingPolicy: str(fd, 'shippingPolicy'),
         defaultProcessingDays: int(fd, 'defaultProcessingDays') ?? 2,
         freeShippingThreshold: str(fd, 'freeShippingThreshold') ? money(str(fd, 'freeShippingThreshold'), 'حد الشحن المجاني') : null,

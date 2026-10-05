@@ -41,6 +41,8 @@ export const SETTINGS_SCHEMA = {
   'products.minImages': z.number().int().min(1).max(10).default(1),
   'products.minActualImagesForUsed': z.number().int().min(1).max(10).default(2),
   /** Statutory return window shown to customers — SUBJECT TO LEGAL REVIEW, do not treat as legal advice. */
+  /** Neutral notice shown with every return policy (legal-counsel controlled wording). */
+  'returns.mandatoryRightsNotice': z.string().min(5).max(500).default('مع عدم الإخلال بأي حقوق إلزامية للمستهلك تنطبق وفق القانون.'),
   'returns.statutoryWindowDays': z.number().int().min(0).max(90).default(14),
   /** Days after shipment without buyer confirmation before the order is flagged for operations follow-up. */
   'orders.deliveryFollowUpDays': z.number().int().min(1).max(60).default(10),

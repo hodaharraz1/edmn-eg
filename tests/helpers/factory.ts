@@ -20,7 +20,7 @@ import {
   users,
 } from '@/server/db/schema';
 import { hashPassword } from '@/server/auth/password';
-import { addImages, createDraft, moderateProduct, saveVariants, submitForReview, updateDetails } from '@/server/modules/catalog/products';
+import { addImages, createDraft, moderateProduct, saveVariants, submitForReview, updateDetails, updateLogistics } from '@/server/modules/catalog/products';
 import { addToCart, cartLines } from '@/server/modules/commerce/cart';
 import { placeOrder } from '@/server/modules/commerce/orders';
 import { priceLines } from '@/server/modules/commerce/pricing';
@@ -116,7 +116,7 @@ export async function categoryId(slug: string) {
 export async function makeProduct(
   seller: Actor,
   admin: Actor,
-  opts: { price?: number; stock?: number; category?: string; condition?: 'NEW' | 'USED'; title?: string; approve?: boolean; attributes?: Record<string, string[]> } = {},
+  opts: { price?: number; stock?: number; category?: string; condition?: 'NEW' | 'USED'; title?: string; approve?: boolean; setReturnPolicy?: boolean; attributes?: Record<string, string[]> } = {},
 ) {
   const cat = await categoryId(opts.category ?? 'electronics-accessories');
   const title = opts.title ?? `منتج اختبار ${uniq()}`;
@@ -134,6 +134,8 @@ export async function makeProduct(
   });
   await addImages(seller, p.id, [{ data: await png('1'), name: '1.png' }, { data: await png('2'), name: '2.png' }], opts.condition === 'USED');
   await saveVariants(seller, p.id, [{ sku: `SKU-${uniq()}`, price: opts.price ?? 10000, stockOnHand: opts.stock ?? 10, options: {}, isActive: true, lowStockThreshold: 1 }]);
+  // Every listing needs an explicit return policy before submission (here: the store default).
+  if (opts.setReturnPolicy !== false) await updateLogistics(seller, p.id, { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, processingDays: null, returnPolicyOverride: false, acceptsVoluntaryReturns: null, voluntaryReturnDays: null });
   if (opts.approve === false) return { productId: p.id, variantId: await variantOf(p.id) };
   await submitForReview(seller, p.id);
   await moderateProduct(admin, p.id, 'APPROVE');

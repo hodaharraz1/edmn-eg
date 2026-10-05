@@ -161,6 +161,18 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     await approveWithdrawal(admin, w.withdrawal.id);
     await expect(markWithdrawalPaid(admin, w.withdrawal.id, 'TRX-DEBT')).rejects.toThrow(/مديونية/);
     await expect(requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() })).rejects.toThrow();
+    // Reverse the synthetic debt so the shared refunds-payable account is left as other suites expect.
+    await db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, {
+      entryType: 'REFUND_DECISION',
+      sourceType: 'test',
+      sourceId: randomUUID(),
+      idempotencyKey: `test-debt-reversal:${w.withdrawal.id}`,
+      description: 'test debt reversal',
+      lines: [
+        { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, debit: available + 10_000 },
+        { account: { code: 'SELLER_AVAILABLE', sellerId: s.actor.sellerId! }, credit: available + 10_000 },
+      ],
+    }));
   });
 
   it('SEC-WD-4: a withdrawal in transfer can only be rejected by a different, re-authenticated person', async () => {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { returnPolicySummary } from '@/domain/return-policy';
 import { notFound } from 'next/navigation';
 import { and, eq, inArray } from 'drizzle-orm';
 import { MapPin, PackageCheck, RotateCcw, Scale, Star, Truck } from 'lucide-react';
@@ -98,6 +99,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                     <div className="min-w-0 flex-1 text-sm">
                       <p className="font-medium">{it.titleSnapshot}</p>
                       <p className="text-xs text-muted">{it.variantLabel} · {label('condition', it.conditionSnapshot)} · الكمية {it.quantity}{it.returnedQuantity ? ` · تم إرجاع ${it.returnedQuantity}` : ''}</p>
+                      <p className="text-xs text-muted" data-testid="order-item-return-policy">سياسة الاسترجاع وقت الشراء: {it.returnPolicySnapshot ? returnPolicySummary(it.returnPolicySnapshot) : 'حسب سياسة المتجر'}</p>
                       {delivered && !reviewedItems.has(it.id) && (
                         <Link href={`/account/reviews?item=${it.id}`} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"><Star className="size-3.5" /> قيّم المنتج</Link>
                       )}

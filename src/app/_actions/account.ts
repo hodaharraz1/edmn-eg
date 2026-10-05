@@ -178,5 +178,6 @@ export async function confirmCodeAction(_p: ActionState, fd: FormData): Promise<
   });
   revalidatePath('/account/security');
   revalidatePath('/seller/onboarding');
+  revalidatePath('/account/deals/[id]', 'page');
   return res;
 }

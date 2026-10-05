@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation';
+import { returnPolicySummary } from '@/domain/return-policy';
+import { getSetting } from '@/server/modules/settings';
 import { eq } from 'drizzle-orm';
 import { requestReturnAction } from '@/app/_actions/account';
 import { db } from '@/server/db/client';
@@ -23,12 +25,14 @@ export default async function NewReturnPage(props: PageProps<'/account/returns/n
   const [row] = await db.select({ so: sellerOrders, order: orders, store: stores.name }).from(sellerOrders).innerJoin(orders, eq(orders.id, sellerOrders.orderId)).innerJoin(stores, eq(stores.sellerId, sellerOrders.sellerId)).where(eq(sellerOrders.id, soId));
   if (!row || row.order.customerId !== user.id) notFound();
   const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, soId));
-  const win = await returnWindow(db, row.so.sellerId);
+  const win = await returnWindow(db, row.so.sellerId, items);
+  const disputeDays = await getSetting('disputes.windowDays');
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلباتي', href: '/account/orders' }, { label: `#${row.order.number}-${row.so.suffix}`, href: `/account/orders/${row.order.id}` }, { label: 'طلب إرجاع' }]} />} title="طلب إرجاع" description={`من ${row.store}`} />
       <Alert tone="info">
-        يمكنك طلب الإرجاع خلال {win.effective} يوم من الاستلام. {win.voluntary ? `يقبل هذا البائع الإرجاع الاختياري خلال ${win.voluntary} يوم.` : 'البائع لا يقدم إرجاعاً اختيارياً، دون الإخلال بحقوقك المقررة قانوناً.'} للمنتجات التالفة أو المعيبة أرفق صوراً واضحة.
+        يمكنك طلب الإرجاع خلال {win.effective} يوم من الاستلام. {win.voluntary ? `يقبل هذا البائع الإرجاع الاختياري خلال ${win.voluntary} يوم.` : 'البائع لا يقدم إرجاعاً اختيارياً، دون الإخلال بحقوقك المقررة قانوناً.'} المنتج المعيب أو الخاطئ أو التالف أو غير المطابق للوصف يمكن الإبلاغ عنه خلال {Math.max(win.effective, disputeDays)} يوم بغض النظر عن سياسة البائع — أرفق صوراً واضحة.
+        <ul className="mt-2 list-inside list-disc text-xs" data-testid="return-policy-snapshot">{items.map((it) => <li key={it.id}>{it.titleSnapshot}: {it.returnPolicySnapshot ? returnPolicySummary(it.returnPolicySnapshot) : 'حسب سياسة المتجر'}</li>)}</ul>
       </Alert>
       <ActionForm action={requestReturnAction} className="card space-y-5 p-5" encType="multipart/form-data">
         <input type="hidden" name="sellerOrderId" value={soId} />

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { RETURN_CONDITION_KEYS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { productMachine, type ProductStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, type Actor } from '@/server/core/actor';
@@ -122,6 +123,9 @@ export const logisticsSchema = z.object({
   returnPolicyOverride: z.boolean(),
   acceptsVoluntaryReturns: z.boolean().nullable(),
   voluntaryReturnDays: z.number().int().min(1).max(365).nullable(),
+  returnConditionKeys: z.array(z.enum(RETURN_CONDITION_KEYS)).max(RETURN_CONDITION_KEYS.length).optional().default([]),
+  returnShippingPayer: z.enum(RETURN_SHIPPING_PAYERS).nullable().optional().default(null),
+  returnPolicyNotes: z.string().trim().max(1000).optional().default(''),
   seoTitle: z.string().trim().max(120).optional().default(''),
   seoDescription: z.string().trim().max(300).optional().default(''),
 });
@@ -234,9 +238,9 @@ export async function updateLogistics(actor: Actor, productId: string, input: z.
     // Logistics & return settings are operational (non-material) and apply immediately.
     await tx
       .update(products)
-      .set({ ...d, seoTitle: d.seoTitle || null, seoDescription: d.seoDescription || null })
+      .set({ ...d, returnPolicyNotes: d.returnPolicyNotes || null, returnPolicyConfirmed: true, seoTitle: d.seoTitle || null, seoDescription: d.seoDescription || null })
       .where(eq(products.id, p.id));
-    await audit(tx, actor, { action: 'product.logistics_updated', entityType: 'product', entityId: p.id });
+    await audit(tx, actor, { action: 'product.logistics_updated', entityType: 'product', entityId: p.id, newValues: { returnPolicyOverride: d.returnPolicyOverride, acceptsVoluntaryReturns: d.acceptsVoluntaryReturns, voluntaryReturnDays: d.voluntaryReturnDays } });
   });
 }
 
@@ -378,6 +382,7 @@ export async function submissionProblems(conn: DbOrTx, p: Product): Promise<stri
   }
   const variants = await conn.select().from(productVariants).where(and(eq(productVariants.productId, p.id), eq(productVariants.isActive, true)));
   if (!variants.length) problems.push('أضف السعر والكمية');
+  if (!p.returnPolicyConfirmed) problems.push('حدد سياسة الاسترجاع للمنتج (خطوة الشحن والإرجاع)');
   if (p.categoryId) {
     const schema = await effectiveAttributes(conn, p.categoryId);
     const values = await attributeMap(conn, p.id);

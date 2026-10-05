@@ -24,7 +24,7 @@ Guard legend:
 | `/api/admin/export` | GET | ADMIN(`reports.export`) | CSV exports. Returns 401 without an admin session |
 | `/api/cron/tick` | GET | `Authorization: Bearer CRON_SECRET` (constant-time) | Scheduled background work. Returns 404 otherwise |
 
-## 2. Server actions (105) by surface
+## 2. Server actions (109) by surface
 
 ### Authentication (PUBLIC, rate-limited)
 
@@ -47,7 +47,7 @@ Guard legend:
 - **Orders and payment:** `placeOrderAction` (server pricing; idempotent `checkoutKey`; `expectedTotal` used only as a guard), `submitProofAction` (payer only; client key), `cancelUnpaidOrderAction`, `confirmReceiptAction` (buyer only; exactly-once credit).
 - **Post-purchase:** `requestReturnAction`, `shipReturnAction`, `escalateReturnAction`, `openDisputeAction`, `disputeMessageAction`, `productReviewAction` / `sellerReviewAction` (verified purchase only), `reportReviewAction`.
 - **Account:** `openTicketAction`, `replyTicketAction`, `saveAddressAction`, `archiveAddressAction`, `updateProfileAction`, `changePasswordAction`, `sendCodeAction` / `confirmCodeAction`, `markNotificationsReadAction`.
-- **External deals:** `dealStepAction`, `inviteSellerAction`, `refreshInviteAction`, `startDealPaymentAction`, `dealProofAction`, `dealDeliveredAction`, `dealConfirmAction`, `cancelDealAction`, `acceptInviteAction` / `rejectInviteAction` (hashed, expiring invitation token).
+- **External deals (invitation-first):** `dealStepAction` (buyer draft only; step 5 = encrypted location + optional unverified seller hints), `inviteSellerAction` / `refreshInviteAction` (raw token handed to the share screen via a 15-minute httpOnly, path-scoped cookie — never in a URL), `revokeInviteAction`, `claimInviteAction` (binds the hashed, expiring token to ONE account; buyer refused; idempotent for the same account), `rejectInviteAction` (token or bound seller), `sellerOfferAction` (bound seller only; verified phone required; every offer = new immutable terms version), `buyerOfferResponseAction` (ACCEPT / REQUEST_CHANGE / REJECT on the exact PROPOSED version), `sellerChangeResponseAction`, `startDealPaymentAction` (only after agreed terms), `dealProofAction`, `dealDeliveredAction`, `dealConfirmAction`, `cancelDealAction`.
 - **Cart and other:** `updateCartAction` (guest cart cookie or user cart), `setGovernorateAction` (cookie only), `logoutAction`.
 
 ### Seller — `seller.ts`, `seller-onboarding.ts` (SELLER; seller-scoped with per-member seller permissions)
@@ -73,7 +73,7 @@ Guard legend:
 
 These pages scope queries to the actor or gate on a permission:
 
-- **Customer:** `/account/orders/[id]`, `/account/orders/[id]/pay`, `/account/returns/[id]`, `/account/disputes/[id]`, `/account/deals/[id]`, `/deal-invite/[token]`.
+- **Customer:** `/account/orders/[id]`, `/account/orders/[id]/pay`, `/account/returns/[id]`, `/account/disputes/[id]`, `/account/deals/[id]` (parties or `deals.view`; counterparty address only from ACTIVE), `/deal/invite/[token]` (safe summary: no buyer name/phone/address/coordinates; opening is read-only), `/deal-invite/[token]` (legacy → redirect).
 - **Seller:** `/seller/orders/[id]`, `/seller/products/[id]`, `/seller/returns/[id]`.
 - **Admin** (every page uses `adminWith(perm)` or `requireAdmin` + a service permission): `/admin/*/[id]`.
 

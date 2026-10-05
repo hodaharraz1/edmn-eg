@@ -152,6 +152,9 @@ export const stores = pgTable(
     acceptsVoluntaryReturns: boolean().notNull().default(false),
     voluntaryReturnDays: integer(),
     returnConditions: text(),
+    /** Structured voluntary-return conditions (keys of RETURN_CONDITION_KEYS) and who pays return shipping. */
+    returnConditionKeys: jsonb().$type<string[]>().notNull().default([]),
+    returnShippingPayer: text().notNull().default('BY_REASON'),
     shippingPolicy: text(),
     defaultProcessingDays: integer().notNull().default(2),
     freeShippingThreshold: money(),

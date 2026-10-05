@@ -21,7 +21,7 @@ import { requestReturn } from '@/server/modules/postpurchase/returns';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { openTicket } from '@/server/modules/support/service';
 import { addPayoutMethod, decideSeller, saveBusiness, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
-import { createDeal, inviteSeller, saveDealStep, acceptInvitation, startDealPayment } from '@/server/modules/deals/service';
+import { createDeal, inviteSeller, saveDealStep, claimInvitation, submitSellerOffer, respondToOffer, startDealPayment } from '@/server/modules/deals/service';
 import { orderItems, sellerOrders, payments, paymentSubmissions, productVariants } from '@/server/db/schema';
 import { demoDocument, demoImage } from './demo-images';
 
@@ -342,19 +342,33 @@ export async function seedDemo() {
   // ── External protected deals
   const buyer = customerActor(c2.id);
   const d1 = await createDeal(buyer, { title: 'موبايل سامسونج S23 مستعمل', description: 'لقيته على جروب فيسبوك، البائع في الإسكندرية، الجهاز بالعلبة.', condition: 'USED', quantity: 1, productCategory: 'موبايلات' });
-  await saveDealStep(buyer, d1.id, 2, { sellerName: 'محمد صلاح', sellerPhone: '01099999999', sellerEmail: '' });
-  await saveDealStep(buyer, d1.id, 3, { unitPrice: '21000' });
-  await saveDealStep(buyer, d1.id, 4, { deliveryMethod: 'تسليم يد بيد في سموحة', deliveryDeadline: new Date(Date.now() + 5 * 86400_000), inspectionDays: 2 });
-  await saveDealStep(buyer, d1.id, 5, { customTerms: 'الجهاز يكون بالعلبة والفاتورة، والبطارية فوق 85%.' });
+  await saveDealStep(buyer, d1.id, 2, { unitPrice: '21000' });
+  await saveDealStep(buyer, d1.id, 3, { deliveryMethod: 'تسليم يد بيد في سموحة', deliveryDeadline: new Date(Date.now() + 5 * 86400_000), inspectionDays: 2 });
+  await saveDealStep(buyer, d1.id, 4, { customTerms: 'الجهاز يكون بالعلبة والفاتورة، والبطارية فوق 85%.' });
+  await saveDealStep(buyer, d1.id, 5, { loc_governorateId: '2', loc_city: 'الإسكندرية — سموحة', loc_street: 'شارع فوزي معاذ', loc_building: '12' });
   await inviteSeller(buyer, d1.id, true);
-  // second deal accepted by an existing user (Omar acts as the external seller) and awaiting payment
-  const d2 = await createDeal(customerActor(c1.id), { title: 'لابتوب ماك بوك إير M1', description: 'ماك بوك إير M1 رامات 8 تخزين 256 بحالة ممتازة.', condition: 'USED', quantity: 1, productCategory: 'لابتوب' });
-  await saveDealStep(customerActor(c1.id), d2.id, 2, { sellerName: c3.fullName, sellerPhone: '01088888888', sellerEmail: '' });
-  await saveDealStep(customerActor(c1.id), d2.id, 3, { unitPrice: '32000' });
-  await saveDealStep(customerActor(c1.id), d2.id, 4, { deliveryMethod: 'شحن عبر بوسطة', deliveryDeadline: new Date(Date.now() + 7 * 86400_000), inspectionDays: 3 });
-  const inv = await inviteSeller(customerActor(c1.id), d2.id, true);
-  const token = inv.link.split('/').pop()!;
-  await acceptInvitation(customerActor(c3.id), token, { type: 'MOBILE_WALLET', holderName: c3.fullName, walletProvider: 'فودافون كاش', walletNumber: '01088888888' }, true);
+  // second deal: Omar (existing user) joins via the link, makes an offer, the buyer agrees → awaiting payment
+  const b2 = customerActor(c1.id);
+  const d2 = await createDeal(b2, { title: 'لابتوب ماك بوك إير M1', description: 'ماك بوك إير M1 رامات 8 تخزين 256 بحالة ممتازة.', condition: 'USED', quantity: 1, productCategory: 'لابتوب' });
+  await saveDealStep(b2, d2.id, 2, { unitPrice: '32000' });
+  await saveDealStep(b2, d2.id, 3, { deliveryMethod: 'شحن عبر بوسطة', deliveryDeadline: new Date(Date.now() + 7 * 86400_000), inspectionDays: 3 });
+  await saveDealStep(b2, d2.id, 5, { loc_governorateId: '1', loc_city: 'القاهرة — مدينة نصر', loc_street: 'شارع عباس العقاد' });
+  const inv = await inviteSeller(b2, d2.id, true);
+  const sellerOmar = customerActor(c3.id);
+  await claimInvitation(sellerOmar, inv.token);
+  const offer = await submitSellerOffer(
+    sellerOmar,
+    d2.id,
+    {
+      details: { fullName: c3.fullName },
+      location: { governorateId: 1, city: 'القاهرة — المعادي', street: 'شارع 9' },
+      payout: { type: 'MOBILE_WALLET', holderName: c3.fullName, walletProvider: 'فودافون كاش', walletNumber: '01088888888' },
+      offer: { shippingFee: '80', processingDays: 1, defects: 'خدش خفيف أسفل الشاشة', accessories: 'الشاحن الأصلي', warranty: 'لا يوجد' },
+      returnPolicy: { type: 'VOLUNTARY', windowDays: 3, conditions: ['ORIGINAL_CONDITION', 'ALL_ACCESSORIES'], shippingPayer: 'BY_REASON', notes: '' },
+    },
+    true,
+  );
+  await respondToOffer(b2, d2.id, offer.version, 'ACCEPT');
   await startDealPayment(customerActor(c1.id), d2.id, 'INSTAPAY');
 
   const brandCount = brandIds.size;

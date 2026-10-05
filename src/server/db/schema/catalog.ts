@@ -158,6 +158,11 @@ export const products = pgTable(
     returnPolicyOverride: boolean().notNull().default(false),
     acceptsVoluntaryReturns: boolean(),
     voluntaryReturnDays: integer(),
+    returnConditionKeys: jsonb().$type<string[]>(),
+    returnShippingPayer: text(),
+    returnPolicyNotes: text(),
+    /** The seller explicitly chose a return policy for this listing (store default or custom) — required before submission. */
+    returnPolicyConfirmed: boolean().notNull().default(false),
     // SEO
     seoTitle: text(),
     seoDescription: text(),

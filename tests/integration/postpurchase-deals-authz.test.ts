@@ -10,7 +10,7 @@ import { sellerBalances } from '@/server/modules/finance/ledger';
 import { acceptReturnRefund, approveReturn, customerShipsReturn, markReturnReceived, requestReturn, startInspection } from '@/server/modules/postpurchase/returns';
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
 import { createProductReview, moderateReview } from '@/server/modules/reviews/service';
-import { acceptInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, saveDealStep, startDealPayment } from '@/server/modules/deals/service';
+import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { canReadPrivateFile } from '@/server/storage/access';
 import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
@@ -131,15 +131,27 @@ describe('external protected deals', () => {
     const seller = customerActor(sellerUser.id);
     const deal = await createDeal(buyer, { title: 'لابتوب مستعمل من فيسبوك', description: 'لابتوب ديل مستعمل بحالة جيدة جداً', condition: 'USED', quantity: 1 });
     await expect(inviteSeller(buyer, deal.id, true)).rejects.toThrow(/أكمل/);
-    await saveDealStep(buyer, deal.id, 2, { sellerName: 'بائع خارجي', sellerPhone: '01155555555' });
-    await saveDealStep(buyer, deal.id, 3, { unitPrice: '15000' });
-    await saveDealStep(buyer, deal.id, 4, { deliveryMethod: 'تسليم يد بيد', deliveryDeadline: new Date(Date.now() + 3 * 86400_000), inspectionDays: 2 });
+    await saveDealStep(buyer, deal.id, 2, { unitPrice: '15000' });
+    await saveDealStep(buyer, deal.id, 3, { deliveryMethod: 'تسليم يد بيد', deliveryDeadline: new Date(Date.now() + 3 * 86400_000), inspectionDays: 2 });
+    await saveDealStep(buyer, deal.id, 5, { loc_governorateId: '1', loc_city: 'القاهرة', loc_street: 'شارع التحرير' });
     const { link } = await inviteSeller(buyer, deal.id, true);
     const token = link.split('/').pop()!;
     expect(await invitationByToken('wrong-token-wrong-token-wrong-token')).toBeNull();
-    await expect(acceptInvitation(buyer, token, { type: 'INSTAPAY', holderName: 'x x x', instapayAddress: 'b@instapay' }, true)).rejects.toThrow();
-    await acceptInvitation(seller, token, { type: 'INSTAPAY', holderName: 'بائع خارجي', instapayAddress: 'ext@instapay' }, true);
-    await expect(acceptInvitation(seller, token, { type: 'INSTAPAY', holderName: 'بائع خارجي', instapayAddress: 'ext@instapay' }, true)).rejects.toThrow(/غير صالحة/); // single-use
+    await expect(claimInvitation(buyer, token)).rejects.toThrow();
+    await claimInvitation(seller, token);
+    const { version } = await submitSellerOffer(
+      seller,
+      deal.id,
+      {
+        details: { fullName: 'بائع خارجي' },
+        location: { governorateId: 2, city: 'الجيزة', street: 'شارع الهرم' },
+        payout: { type: 'INSTAPAY', holderName: 'بائع خارجي', instapayAddress: 'ext@instapay' },
+        offer: { shippingFee: '0', processingDays: 1, defects: 'لا يوجد' },
+        returnPolicy: { type: 'NONE' },
+      },
+      true,
+    );
+    await respondToOffer(buyer, deal.id, version, 'ACCEPT');
     const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
     const { submission } = await submitProof(buyer, p.id, { claimedAmount: '15000', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await expect(markDealDelivered(seller, deal.id, 'تم')).rejects.toThrow(); // not active yet

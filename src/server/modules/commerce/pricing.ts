@@ -1,4 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
+import type { ReturnPolicy } from '@/domain/return-policy';
+import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
 import type { DbOrTx } from '@/server/db/client';
 import { sql } from 'drizzle-orm';
 import { productVariants, products, sellerShippingRates, sellers, stores } from '@/server/db/schema';
@@ -33,6 +35,8 @@ export interface PricedLine {
   available: number;
   priceSeen?: number;
   issues: LineIssue[];
+  /** Seller's voluntary return policy for this listing, shown before purchase (snapshotted on the order item). */
+  returnPolicy: ReturnPolicy;
 }
 
 export interface SellerGroup {
@@ -131,6 +135,7 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
       available: Math.max(0, available),
       priceSeen: input.priceSeen,
       issues,
+      returnPolicy: listingReturnPolicy(r.product, r.store),
     });
     g.merchandiseSubtotal += lineTotal;
     g.processingDays = Math.max(g.processingDays, r.product.processingDays ?? r.store.defaultProcessingDays);

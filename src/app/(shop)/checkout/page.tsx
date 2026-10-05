@@ -11,6 +11,7 @@ import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { allGovernorates } from '@/server/web/context';
 import { requireUser, requireCustomer } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
+import { returnPolicySummary } from '@/domain/return-policy';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { LinkButton } from '@/ui/button';
 import { mediaUrl } from '@/ui/commerce';
@@ -32,6 +33,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   const methods = await enabledPaymentMethods();
   const windowHours = await getSetting('payments.paymentWindowHours');
   const live = await realMoneyEnabled();
+  const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
 
   if (!cart.groups.length) {
     return (
@@ -90,9 +92,15 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                           </span>
                         ))}
                       </div>
+                      <div className="mt-2 space-y-1 border-t border-line pt-2 text-xs" data-testid="checkout-return-policy">
+                        {g.lines.map((l) => (
+                          <p key={l.variantId}><span className="font-semibold">سياسة الاسترجاع — {l.title}:</span> {returnPolicySummary(l.returnPolicy)}</p>
+                        ))}
+                      </div>
                     </li>
                   ))}
                 </ul>
+                <p className="mt-2 text-xs text-muted">{mandatoryNotice}</p>
               </section>
 
               {problems.length > 0 && (

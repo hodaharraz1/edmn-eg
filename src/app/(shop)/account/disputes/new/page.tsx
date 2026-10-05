@@ -21,6 +21,7 @@ export default async function NewDisputePage(props: PageProps<'/account/disputes
   const sp = await props.searchParams;
   const so = typeof sp.so === 'string' ? sp.so : '';
   const deal = typeof sp.deal === 'string' ? sp.deal : '';
+  const preset = typeof sp.reason === 'string' && REASONS.some(([v]) => v === sp.reason) ? sp.reason : '';
   if (!so && !deal) notFound();
   return (
     <div className="space-y-4">
@@ -30,7 +31,7 @@ export default async function NewDisputePage(props: PageProps<'/account/disputes
         {so && <input type="hidden" name="sellerOrderId" value={so} />}
         {deal && <input type="hidden" name="dealId" value={deal} />}
         <Field label="نوع المشكلة" htmlFor="reasonCode" required>
-          <Select id="reasonCode" name="reasonCode" required defaultValue="">
+          <Select id="reasonCode" name="reasonCode" required defaultValue={preset}>
             <option value="" disabled>اختر</option>
             {REASONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </Select>

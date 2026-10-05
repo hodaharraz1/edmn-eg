@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { RETURN_CONDITION_KEYS, RETURN_CONDITION_LABELS, RETURN_SHIPPING_LABELS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { storeSettingsAction } from '@/app/_actions/seller';
 import { db } from '@/server/db/client';
 import { files, stores } from '@/server/db/schema';
@@ -9,7 +10,7 @@ import { FileInput } from '@/ui/client';
 import { mediaUrl } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
 import { Alert } from '@/ui/feedback';
-import { Checkbox, Field, FormSection, Input, Textarea } from '@/ui/form';
+import { Checkbox, Field, FormSection, Input, Select, Textarea } from '@/ui/form';
 
 export const metadata = { title: 'إعدادات المتجر' };
 
@@ -43,7 +44,12 @@ export default async function StoreSettings() {
           <Field label="عنوان استلام المرتجعات" htmlFor="returnAddress" required><Input id="returnAddress" name="returnAddress" defaultValue={s.returnAddress ?? ''} required /></Field>
           <Checkbox name="acceptsVoluntaryReturns" defaultChecked={s.acceptsVoluntaryReturns} label="أقبل الإرجاع الاختياري" />
           <Field label="مدة الإرجاع الاختياري (أيام)" htmlFor="voluntaryReturnDays"><Input id="voluntaryReturnDays" name="voluntaryReturnDays" type="number" min={1} max={365} defaultValue={s.voluntaryReturnDays ?? ''} /></Field>
-          <Field label="شروط الإرجاع" htmlFor="returnConditions"><Textarea id="returnConditions" name="returnConditions" defaultValue={s.returnConditions ?? ''} rows={2} /></Field>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">شروط الاسترجاع الافتراضية</p>
+            {RETURN_CONDITION_KEYS.map((k) => <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" name="rp_conditions" value={k} defaultChecked={(s.returnConditionKeys ?? []).includes(k)} /> {RETURN_CONDITION_LABELS[k]}</label>)}
+          </div>
+          <Field label="مسؤولية شحن الإرجاع" htmlFor="rp_shippingPayer"><Select id="rp_shippingPayer" name="rp_shippingPayer" defaultValue={s.returnShippingPayer ?? 'BY_REASON'}>{RETURN_SHIPPING_PAYERS.map((x) => <option key={x} value={x}>{RETURN_SHIPPING_LABELS[x]}</option>)}</Select></Field>
+          <Field label="ملاحظات الإرجاع" htmlFor="returnConditions"><Textarea id="returnConditions" name="returnConditions" defaultValue={s.returnConditions ?? ''} rows={2} /></Field>
         </FormSection>
         <SubmitButton size="lg">حفظ الإعدادات</SubmitButton>
       </ActionForm>

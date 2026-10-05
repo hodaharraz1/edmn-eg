@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { customerActor, sellerActor } from '@/server/auth/actors';
 import { db } from '@/server/db/client';
 import { auditLogs, productRevisions, products, sellers, statusHistory } from '@/server/db/schema';
-import { addImages, createDraft, moderateProduct, moderateRevision, submitForReview, updateDetails, saveVariants } from '@/server/modules/catalog/products';
+import { addImages, createDraft, moderateProduct, moderateRevision, submitForReview, updateDetails, updateLogistics, saveVariants } from '@/server/modules/catalog/products';
 import { addPayoutMethod, decideSeller, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 import { searchProducts } from '@/server/modules/catalog/search';
 import { categoryId, makeAdmin, makeProduct, makeSeller, makeUser, png } from '../helpers/factory';
@@ -85,6 +85,7 @@ describe('product moderation', () => {
     await updateDetails(seller, d.id, { titleAr: 'موبايل مستعمل للاختبار', categoryId: cat, description: 'وصف تفصيلي للموبايل المستعمل', condition: 'USED', usedGrade: 'GOOD', conditionNotes: 'حالة جيدة', defects: 'خدش', attributes: { model: ['X1'], storage: ['128GB'] } });
     await addImages(seller, d.id, [{ data: await png('stock'), name: 's.png' }], false); // generic catalog image only
     await saveVariants(seller, d.id, [{ sku: 'USED-1', price: 100000, stockOnHand: 1, options: {}, isActive: true, lowStockThreshold: 0 }]);
+    await updateLogistics(seller, d.id, { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, processingDays: null, returnPolicyOverride: true, acceptsVoluntaryReturns: false, voluntaryReturnDays: null });
     await expect(submitForReview(seller, d.id)).rejects.toThrow(/صور فعلية/);
     await addImages(seller, d.id, [{ data: await png('real1'), name: 'r1.png' }, { data: await png('real2'), name: 'r2.png' }], true);
     await expect(submitForReview(seller, d.id)).resolves.toBe('SUBMITTED');

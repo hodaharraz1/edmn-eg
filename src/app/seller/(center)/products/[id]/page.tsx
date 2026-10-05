@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RETURN_CONDITION_KEYS, RETURN_CONDITION_LABELS, RETURN_SHIPPING_LABELS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { notFound } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';
 import { Trash2 } from 'lucide-react';
@@ -211,11 +212,18 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
           </div>
           <Field label="مدة التجهيز (أيام عمل)" htmlFor="processingDays" hint={`افتراضي المتجر: ${store?.defaultProcessingDays ?? 2}`}><Input id="processingDays" name="processingDays" type="number" min={0} max={30} defaultValue={p.processingDays ?? ''} /></Field>
           <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm font-semibold">سياسة الإرجاع الاختياري</legend>
+            <legend className="mb-1 text-sm font-semibold">سياسة الاسترجاع (مطلوبة — تظهر للمشتري قبل الشراء)</legend>
             <Radio name="returnPolicy" value="STORE" defaultChecked={!p.returnPolicyOverride} label="حسب سياسة المتجر" description={store?.acceptsVoluntaryReturns ? `المتجر يقبل الإرجاع خلال ${store.voluntaryReturnDays} يوم` : 'المتجر لا يقدم إرجاعاً اختيارياً'} />
             <Radio name="returnPolicy" value="ACCEPT" defaultChecked={p.returnPolicyOverride && !!p.acceptsVoluntaryReturns} label="أقبل الإرجاع الاختياري لهذا المنتج" />
             <Radio name="returnPolicy" value="NONE" defaultChecked={p.returnPolicyOverride && !p.acceptsVoluntaryReturns} label="لا أقدم إرجاعاً اختيارياً لهذا المنتج" description="دون الإخلال بحقوق المستهلك المقررة قانوناً" />
             <Field label="مدة الإرجاع الاختياري (أيام)" htmlFor="voluntaryReturnDays"><Input id="voluntaryReturnDays" name="voluntaryReturnDays" type="number" min={1} max={365} defaultValue={p.voluntaryReturnDays ?? ''} /></Field>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">شروط الاسترجاع (عند قبول الاسترجاع لهذا المنتج)</p>
+              {RETURN_CONDITION_KEYS.map((k) => <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" name="rp_conditions" value={k} defaultChecked={(p.returnConditionKeys ?? RETURN_CONDITION_KEYS).includes(k)} /> {RETURN_CONDITION_LABELS[k]}</label>)}
+            </div>
+            <Field label="مسؤولية شحن الإرجاع" htmlFor="rp_shippingPayer"><Select id="rp_shippingPayer" name="rp_shippingPayer" defaultValue={p.returnShippingPayer ?? 'BY_REASON'}>{RETURN_SHIPPING_PAYERS.map((x) => <option key={x} value={x}>{RETURN_SHIPPING_LABELS[x]}</option>)}</Select></Field>
+            <Field label="ملاحظات الاسترجاع (اختياري)" htmlFor="rp_notes"><Textarea id="rp_notes" name="rp_notes" rows={2} defaultValue={p.returnPolicyNotes ?? ''} maxLength={1000} /></Field>
+            <p className="text-xs text-muted">عدم تقديم استرجاع اختياري لا يلغي حق المشتري في الإبلاغ عن منتج معيب أو خاطئ أو تالف أو غير مطابق للوصف.</p>
           </fieldset>
           <details><summary className="cursor-pointer text-sm font-semibold">تحسين محركات البحث (اختياري)</summary>
             <div className="mt-3 grid gap-3"><Field label="عنوان الصفحة" htmlFor="seoTitle"><Input id="seoTitle" name="seoTitle" defaultValue={p.seoTitle ?? ''} /></Field><Field label="الوصف المختصر" htmlFor="seoDescription"><Textarea id="seoDescription" name="seoDescription" defaultValue={p.seoDescription ?? ''} rows={2} /></Field></div>

@@ -5,7 +5,7 @@ import { jobs, outboundMessages } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
 import { completeDeliveredOrders, flagUnconfirmedDeliveries } from '@/server/modules/commerce/fulfilment';
-import { flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
+import { expireDealInvitations, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { providerFor } from '@/server/modules/notifications/providers';
 
@@ -63,6 +63,7 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   { name: 'orders.flag_unconfirmed', everyMs: 60 * 60_000, run: () => flagUnconfirmedDeliveries() },
   { name: 'orders.complete_delivered', everyMs: 60 * 60_000, run: () => completeDeliveredOrders() },
   { name: 'deals.flag_unconfirmed', everyMs: 60 * 60_000, run: () => flagDealsAwaitingConfirmation() },
+  { name: 'deals.expire_invitations', everyMs: 60 * 60_000, run: () => expireDealInvitations() },
   { name: 'settlement.scheduled', everyMs: 60 * 60_000, run: () => runScheduledSettlement() },
   { name: 'outbound.flush', everyMs: 60_000, run: () => flushOutbound() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },

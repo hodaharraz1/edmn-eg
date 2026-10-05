@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
+import { ReturnPolicyView } from '@/app/_components/return-policy-view';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
@@ -53,8 +55,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
     getSetting('returns.statutoryWindowDays'),
     wishlistSet([p.id]),
   ]);
-  const accepts = p.returnPolicyOverride ? p.acceptsVoluntaryReturns : d.store.acceptsVoluntaryReturns;
-  const days = p.returnPolicyOverride ? p.voluntaryReturnDays : d.store.voluntaryReturnDays;
+  const policy = listingReturnPolicy(p, d.store);
+  const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
   const crumbs = [{ label: 'الرئيسية', href: '/' }, ...d.breadcrumbs.map((c) => ({ label: c.nameAr, href: `/category/${c.slug}` })), { label: p.titleAr }];
   const positive = d.seller.ratingCount ? Math.round((d.seller.positiveCount / d.seller.ratingCount) * 100) : null;
   const optionKeys = [...new Set(d.variants.flatMap((x) => Object.keys(x.options ?? {})))];
@@ -215,9 +217,10 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             </div>
             <p className="flex items-start gap-2 text-xs">
               <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
-              <span>
-                {accepts ? `يقبل البائع الإرجاع الاختياري خلال ${days} يوم من الاستلام.` : 'البائع لا يقدم إرجاعاً اختيارياً، دون الإخلال بحقوق المستهلك المقررة قانوناً.'}{' '}
-                <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع</Link>
+              <span className="space-y-1" data-testid="pdp-return-policy">
+                <span className="block font-semibold">سياسة الاسترجاع</span>
+                <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
+                <span className="block">يمكنك دائماً الإبلاغ عن منتج معيب أو خاطئ أو تالف أو غير مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
               </span>
             </p>
             <p className="flex items-start gap-2 text-xs">

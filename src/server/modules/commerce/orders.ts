@@ -16,6 +16,7 @@ import {
   sellerOrders,
   stores,
   users,
+  products,
 } from '@/server/db/schema';
 import { enqueueJob } from '@/server/jobs/queue';
 import { resolveRule, computeLineCommission } from '@/server/modules/finance/commissions';
@@ -26,6 +27,8 @@ import { transition, parse } from '../_shared';
 import { acknowledgePrices, cartLines, clearVariants } from './cart';
 import { priceLines } from './pricing';
 import { offeredDestinations } from '@/server/modules/payments/service';
+import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
+import { currentLegalVersion } from '@/server/modules/sellers/service';
 import { formatEGP } from '@/lib/format';
 
 export const checkoutSchema = z.object({
@@ -143,6 +146,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     for (const [i, g] of priced.groups.entries()) {
       let commissionTotal = 0;
       const itemRows: (typeof orderItems.$inferInsert)[] = [];
+      // Snapshot the seller's voluntary return policy as shown at purchase time (immune to later edits).
+      const [store] = await tx.select().from(stores).where(eq(stores.sellerId, g.sellerId));
+      const policyProducts = await tx.select().from(products).where(inArray(products.id, g.lines.map((l) => l.productId)));
+      const legalNoticeVersion = await currentLegalVersion(tx, 'RETURNS_POLICY');
       for (const l of g.lines) {
         const rule = await resolveRule(tx, l.categoryId, now);
         const c = computeLineCommission(rule, l.unitPrice, l.quantity);
@@ -163,6 +170,7 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           commissionRuleId: rule.id,
           commissionBps: c.bps,
           commissionAmount: c.amount,
+          returnPolicySnapshot: { ...listingReturnPolicy(policyProducts.find((x) => x.id === l.productId)!, store), legalNoticeVersion },
         });
       }
       const gross = g.merchandiseSubtotal + (g.shippingFee ?? 0);

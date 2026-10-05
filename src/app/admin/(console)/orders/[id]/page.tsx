@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { returnPolicySummary } from '@/domain/return-policy';
 import { notFound } from 'next/navigation';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { adminOrderAction } from '@/app/_actions/admin';
@@ -47,7 +48,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
               <h2 className="font-bold">{o.number}-{so.suffix} · <Link href={`/admin/sellers/${so.sellerId}`} className="text-brand-700">{storeName}</Link></h2>
               <span className="flex items-center gap-2"><StatusChip status={so.status} />{so.financialHold && <Badge tone="danger">تجميد</Badge>}{so.fundsReleasedAt && <Badge tone="success">أُتيحت الأموال</Badge>}</span>
             </div>
-            <ul className="text-sm">{items.map((it) => <li key={it.id}>{it.titleSnapshot} × {it.quantity} — {formatEGP(it.lineTotal)} · عمولة {(it.commissionBps / 100).toFixed(2)}% = {formatEGP(it.commissionAmount)}</li>)}</ul>
+            <ul className="text-sm">{items.map((it) => <li key={it.id}>{it.titleSnapshot} × {it.quantity} — {formatEGP(it.lineTotal)} · عمولة {(it.commissionBps / 100).toFixed(2)}% = {formatEGP(it.commissionAmount)}<span className="block text-xs text-muted">الاسترجاع (لقطة وقت الشراء): {it.returnPolicySnapshot ? `${returnPolicySummary(it.returnPolicySnapshot)}${it.returnPolicySnapshot.legalNoticeVersion ? ` · إشعار ${it.returnPolicySnapshot.legalNoticeVersion}` : ''}` : 'غير مسجلة (طلب قديم)'}</span></li>)}</ul>
             <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-6">
               {[['المنتجات', so.merchandiseSubtotal], ['الشحن', so.shippingFee], ['الإجمالي', so.grossTotal], ['العمولة', so.commissionTotal], ['صافي البائع', so.sellerNet], ['المسترد', so.refundedTotal]].map(([l, v]) => <div key={l as string} className="rounded bg-page p-2"><dt className="text-muted">{l}</dt><dd className="font-semibold">{formatEGP(v as number)}</dd></div>)}
             </dl>
