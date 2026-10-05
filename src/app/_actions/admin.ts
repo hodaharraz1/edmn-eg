@@ -130,7 +130,7 @@ export async function destinationAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const details: Record<string, string> = {};
     for (const k of ['bankName', 'accountName', 'accountNumber', 'iban', 'instapayAddress', 'walletNumber']) if (str(fd, k)) details[k] = str(fd, k);
-    await saveDestination(a, str(fd, 'id') || null, { methodCode: str(fd, 'methodCode') as 'INSTAPAY', label: str(fd, 'label'), details, instructionsAr: str(fd, 'instructionsAr'), isEnabled: bool(fd, 'isEnabled'), sortOrder: int(fd, 'sortOrder') ?? 0 }, str(fd, 'reason'));
+    await saveDestination(a, str(fd, 'id') || null, { methodCode: str(fd, 'methodCode') as 'INSTAPAY', label: str(fd, 'label'), details, instructionsAr: str(fd, 'instructionsAr'), isEnabled: bool(fd, 'isEnabled'), isTest: bool(fd, 'isTest'), sortOrder: int(fd, 'sortOrder') ?? 0 }, str(fd, 'reason'));
     return done('تم الحفظ');
   }, ['/admin/payment-settings']);
 }

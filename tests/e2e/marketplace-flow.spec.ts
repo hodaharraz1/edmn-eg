@@ -27,14 +27,18 @@ const soStatus = async () => (await q<{ status: string }>(`select status from se
 test('a new seller registers, verifies the mobile number and submits the application', async ({ browser }) => {
   const ctx = await browser.newContext({ locale: 'ar-EG' });
   const page = await ctx.newPage();
-  await page.goto('/register');
+  // Self-service sign-up through the dedicated Seller Center entry (no admin-created accounts).
+  await page.goto('/seller/register');
+  await expect(page.getByText('EDMN Seller Center').first()).toBeVisible();
+  await page.locator('input[name=type][value=INDIVIDUAL]').check();
   await page.locator('input[name=fullName]').fill(SELLER.name);
   await page.locator('input[name=email]').fill(SELLER.email);
   await page.locator('input[name=phone]').fill(SELLER.phone);
   await page.locator('input[name=password]').fill(SELLER.password);
   await page.locator('input[name=terms]').check();
-  await page.getByRole('button', { name: 'إنشاء حساب' }).click();
-  await page.waitForURL((u) => !u.pathname.startsWith('/register'));
+  await page.getByRole('button', { name: 'إنشاء حساب بائع' }).click();
+  await page.waitForURL(/\/seller\/onboarding/);
+  sellerId = (await q<{ id: string }>(`select s.id from sellers s join users u on u.id = s.owner_user_id where u.email = $1`, [SELLER.email]))[0].id;
 
   // Mobile verification (the development SMS driver records outbound messages).
   await page.goto('/account/security');
@@ -45,11 +49,7 @@ test('a new seller registers, verifies the mobile number and submits the applica
   await page.getByRole('button', { name: 'تأكيد' }).first().click();
   await expect.poll(async () => (await q<{ v: Date | null }>(`select phone_verified_at v from users where email = $1`, [SELLER.email]))[0].v).not.toBeNull();
 
-  // Start selling as an individual.
-  await page.goto('/sell');
-  await page.getByRole('button', { name: 'ابدأ التسجيل كبائع' }).click();
-  await page.waitForURL(/\/seller\/onboarding/);
-  sellerId = (await q<{ id: string }>(`select s.id from sellers s join users u on u.id = s.owner_user_id where u.email = $1`, [SELLER.email]))[0].id;
+  await page.goto('/seller/onboarding?step=1');
 
   // Step 1 — identity
   await page.locator('input[name=legalName]').fill('محمد أحمد البائع');

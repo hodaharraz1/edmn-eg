@@ -16,6 +16,7 @@ import { CopyButton, FileInput } from '@/ui/client';
 import { buttonClass, LinkButton } from '@/ui/button';
 import { Breadcrumbs, DefinitionList, PageHeader } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
+import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
 import { Field, Input, Radio, Textarea } from '@/ui/form';
 
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
@@ -37,7 +38,7 @@ export default async function DealDetail(props: PageProps<'/account/deals/[id]'>
   const [dispute] = await db.select().from(disputes).where(eq(disputes.dealId, deal.id));
   const inviteToken = typeof sp.invite === 'string' ? sp.invite : null;
   const inviteLink = inviteToken ? `${APP_URL}/deal-invite/${inviteToken}` : null;
-  const dests = (payment?.destinationSnapshot as { label: string; details: Record<string, string> }[] | null) ?? [];
+  const dests = (payment?.destinationSnapshot as { label: string; details: Record<string, string>; isTest?: boolean }[] | null) ?? [];
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات المحمية', href: '/account/deals' }, { label: `#${deal.number}` }]} />} title={deal.title} description={`صفقة محمية #${deal.number}`} actions={<><Badge tone={role === 'BUYER' ? 'brand' : 'accent'}>{role === 'BUYER' ? 'أنت المشتري' : 'أنت البائع'}</Badge><StatusChip status={deal.status} /></>} />
@@ -88,9 +89,10 @@ export default async function DealDetail(props: PageProps<'/account/deals/[id]'>
         <section className="card grid gap-5 p-5 lg:grid-cols-2">
           <div className="space-y-3">
             <h2 className="font-bold">حوّل {formatEGP(payment.amountDue, { fixed: true })} إلى:</h2>
+            {(payment.isTest || dests.some((d) => d.isTest !== false)) && <TestMoneyNotice />}
             {dests.map((d, i) => (
               <dl key={i} className="space-y-1 rounded-xl border border-line p-3 text-sm">
-                <dt className="font-semibold">{d.label}</dt>
+                <dt className="flex items-center gap-2 font-semibold">{d.label} {d.isTest !== false && <TestBadge />}</dt>
                 {Object.entries(d.details).map(([k, v]) => <dd key={k} className="flex justify-between gap-2"><span className="text-muted">{k}</span><span className="flex items-center gap-2 ltr">{v} <CopyButton value={v} /></span></dd>)}
               </dl>
             ))}
@@ -108,7 +110,7 @@ export default async function DealDetail(props: PageProps<'/account/deals/[id]'>
         </section>
       )}
       {deal.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info">إثبات الدفع قيد التحقق من فريق اضمن.</Alert>}
-      {deal.status === 'ACTIVE' && role === 'BUYER' && <Alert tone="success" title="الصفقة نشطة">تم تأكيد الدفع وحفظه لدى اضمن. سيقوم البائع بالتسليم حسب الاتفاق.</Alert>}
+      {deal.status === 'ACTIVE' && role === 'BUYER' && <Alert tone="success" title="الصفقة نشطة">تم تأكيد استلام اضمن للدفع. لن يُتاح مستحق البائع إلا بعد تأكيدك الاستلام أو انتهاء مدة الفحص المتفق عليها. سيقوم البائع بالتسليم حسب الاتفاق.</Alert>}
 
       {role === 'SELLER' && deal.status === 'ACTIVE' && (
         <ActionForm action={dealDeliveredAction} className="card space-y-3 p-5" encType="multipart/form-data">

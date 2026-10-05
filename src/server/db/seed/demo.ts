@@ -200,12 +200,14 @@ export async function seedDemo() {
   await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: demoCredentials().adminPassword });
   const A = await adminActor(admin.id, { stepUpAt: new Date() });
 
-  // ── Payment destinations: clearly-marked DEMO placeholders (replace from Admin → Payments before launch)
+  // ── Payment methods enabled; destinations are TEST placeholders
   await db.update(paymentMethods).set({ isEnabled: true });
+  // TEST destinations only: no account numbers are invented. Real ones are added by an authorized
+  // finance admin in Admin → payment settings (and only count once real money is explicitly enabled).
   await db.insert(paymentDestinations).values([
-    { methodCode: 'INSTAPAY', label: 'حساب إنستاباي تجريبي (DEMO)', details: { instapayAddress: 'edmn-demo@instapay', accountName: 'EDMN DEMO — NOT REAL' }, instructionsAr: 'بيانات تجريبية للتطوير فقط. لا تحوّل أي أموال حقيقية.', sortOrder: 1 },
-    { methodCode: 'VODAFONE_CASH', label: 'محفظة فودافون كاش تجريبية (DEMO)', details: { walletNumber: '010XXXXXXXX (DEMO)', accountName: 'EDMN DEMO — NOT REAL' }, instructionsAr: 'بيانات تجريبية للتطوير فقط.', sortOrder: 2 },
-    { methodCode: 'BANK_TRANSFER', label: 'حساب بنكي تجريبي (DEMO)', details: { bankName: 'DEMO BANK', accountName: 'EDMN DEMO — NOT REAL', accountNumber: '0000000000', iban: 'EG000000000000000000000000000' }, instructionsAr: 'بيانات تجريبية للتطوير فقط.', sortOrder: 3 },
+    { methodCode: 'INSTAPAY', label: 'إنستاباي — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 1 },
+    { methodCode: 'VODAFONE_CASH', label: 'فودافون كاش — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 2 },
+    { methodCode: 'BANK_TRANSFER', label: 'تحويل بنكي — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 3 },
   ]);
 
   // ── Brands

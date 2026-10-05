@@ -177,5 +177,6 @@ export async function confirmCodeAction(_p: ActionState, fd: FormData): Promise<
     return { message: 'تم التحقق بنجاح' };
   });
   revalidatePath('/account/security');
+  revalidatePath('/seller/onboarding');
   return res;
 }

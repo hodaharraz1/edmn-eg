@@ -124,3 +124,40 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Responsive data tables: below md each row becomes a labelled card (no horizontal scrolling). */
+@media (max-width: 767.98px) {
+  .rtable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .rtable tbody,
+  .rtable tr {
+    display: block;
+  }
+  .rtable tr {
+    padding: 0.75rem 1rem;
+  }
+  .rtable td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0 !important;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .rtable td:empty {
+    display: none;
+  }
+  .rtable td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted, #64748b);
+  }
+}

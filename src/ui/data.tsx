@@ -51,8 +51,8 @@ export interface Column<T> {
 export function DataTable<T>({ columns, rows, rowKey, empty, className }: { columns: Column<T>[]; rows: T[]; rowKey: (r: T) => string; empty?: ReactNode; className?: string }) {
   if (!rows.length) return <>{empty ?? <p className="p-6 text-center text-sm text-muted">لا توجد بيانات</p>}</>;
   return (
-    <div className={cn('card overflow-x-auto', className)}>
-      <table className="w-full min-w-[640px] text-sm">
+    <div className={cn('card rtable overflow-x-auto', className)}>
+      <table className="w-full text-sm md:min-w-[640px]">
         <thead className="border-b border-line bg-page/60 text-xs text-muted">
           <tr>
             {columns.map((c) => (
@@ -66,7 +66,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, className }: { colu
           {rows.map((r) => (
             <tr key={rowKey(r)} className="hover:bg-page/50">
               {columns.map((c) => (
-                <td key={c.key} className={cn('px-4 py-3 align-middle', c.className)}>
+                <td key={c.key} data-label={typeof c.header === 'string' && c.header ? c.header : undefined} className={cn('px-4 py-3 align-middle', c.className)}>
                   {c.cell(r)}
                 </td>
               ))}

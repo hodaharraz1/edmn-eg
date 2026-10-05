@@ -13,6 +13,8 @@ import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
 import { LinkButton } from '@/ui/button';
 import { DataTable, PageHeader } from '@/ui/data';
 import { Alert, EmptyState, StatusChip } from '@/ui/feedback';
+import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
+import { realMoneyEnabled } from '@/server/modules/settings';
 import { Field, Input } from '@/ui/form';
 
 export const metadata = { title: 'السحوبات' };
@@ -34,6 +36,7 @@ export default async function WithdrawalsPage() {
   const canWithdraw = actor.sellerPermissions?.has('finance.withdraw');
   return (
     <div className="space-y-5">
+      {!(await realMoneyEnabled()) && <TestMoneyNotice kind="payout" />}
       <PageHeader title="السحوبات" description={`الهدف تنفيذ طلبات السحب خلال ${sla} ساعة عمل. ${mode !== 'ON_REQUEST' ? `كما تتم تسوية دورية تلقائية يوم ${days.join(' و ')} من كل شهر.` : ''}`} />
       <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
         <div className="card space-y-3 p-5">
@@ -61,7 +64,7 @@ export default async function WithdrawalsPage() {
         { key: 'src', header: 'النوع', cell: (r) => (r.source === 'SCHEDULED' ? 'تسوية دورية' : 'طلب يدوي') },
         { key: 'd', header: 'التاريخ', cell: (r) => formatDate(r.createdAt, true) },
         { key: 'sla', header: 'الموعد المستهدف', cell: (r) => (['PAID', 'REJECTED', 'CANCELLED'].includes(r.status) ? '—' : formatDate(r.slaDueAt, true)) },
-        { key: 's', header: 'الحالة', cell: (r) => <div><StatusChip status={r.status} />{r.rejectReason && <p className="text-xs text-red-600">{r.rejectReason}</p>}{r.paidReference && <p className="text-xs text-muted ltr">{r.paidReference}</p>}</div> },
+        { key: 's', header: 'الحالة', cell: (r) => <div><StatusChip status={r.status} />{r.rejectReason && <p className="text-xs text-red-600">{r.rejectReason}</p>}{r.paidReference && <p className="text-xs text-muted ltr">{r.paidReference}</p>}{r.isTest && <p className="mt-1 flex items-center gap-1 text-xs text-red-700"><TestBadge /> سحب تجريبي — لا تُحوَّل أموال فعلية</p>}</div> },
         { key: 'x', header: '', cell: (r) => r.status === 'REQUESTED' && canWithdraw && <form action={cancelWithdrawalAction}><input type="hidden" name="id" value={r.id} /><ConfirmSubmit confirm="إلغاء طلب السحب؟" variant="outline" size="sm">إلغاء</ConfirmSubmit></form> },
       ]} />
     </div>

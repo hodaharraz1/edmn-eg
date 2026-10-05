@@ -25,6 +25,7 @@ import { postEntry } from '@/server/modules/finance/ledger';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
+import { realMoneyEnabled } from '@/server/modules/settings';
 import { formatEGP } from '@/lib/format';
 
 export type Payment = typeof payments.$inferSelect;
@@ -239,6 +240,8 @@ export const destinationSchema = z.object({
   details: z.record(z.string(), z.string().trim().max(200)),
   instructionsAr: z.string().trim().max(1000).optional().default(''),
   isEnabled: z.boolean(),
+  /** TEST destinations carry no real account data and are labelled "NOT FOR REAL MONEY" to buyers. */
+  isTest: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(1000).default(0),
 });
 
@@ -252,13 +255,13 @@ export async function saveDestination(actor: Actor, id: string | null, input: z.
     INSTAPAY: ['instapayAddress'],
     VODAFONE_CASH: ['walletNumber'],
   };
-  for (const k of required[d.methodCode]) if (!d.details[k]) throw validation(`الحقل ${k} مطلوب`);
+  if (!d.isTest) for (const k of required[d.methodCode]) if (!d.details[k]) throw validation(`الحقل ${k} مطلوب`);
   return db.transaction(async (tx) => {
     if (id) {
       const [old] = await tx.select().from(paymentDestinations).where(eq(paymentDestinations.id, id)).for('update');
       if (!old) throw notFound('حساب الاستلام');
       await tx.update(paymentDestinations).set({ ...d, instructionsAr: d.instructionsAr || null }).where(eq(paymentDestinations.id, id));
-      await audit(tx, actor, { action: 'payment.destination_updated', entityType: 'payment_destination', entityId: id, oldValues: { label: old.label, details: old.details, isEnabled: old.isEnabled }, newValues: d, reason: why });
+      await audit(tx, actor, { action: 'payment.destination_updated', entityType: 'payment_destination', entityId: id, oldValues: { label: old.label, details: old.details, isEnabled: old.isEnabled, isTest: old.isTest }, newValues: d, reason: why });
       return id;
     }
     const [row] = await tx.insert(paymentDestinations).values({ ...d, instructionsAr: d.instructionsAr || null, createdBy: actor.userId }).returning({ id: paymentDestinations.id });
@@ -284,7 +287,7 @@ export async function enabledPaymentMethods(conn: DbOrTx = db) {
     ? await conn
         .select()
         .from(paymentDestinations)
-        .where(and(inArray(paymentDestinations.methodCode, methods.map((m) => m.code)), eq(paymentDestinations.isEnabled, true)))
+        .where(and(inArray(paymentDestinations.methodCode, methods.map((m) => m.code)), offeredDestinations(await realMoneyEnabled(conn))))
         .orderBy(asc(paymentDestinations.sortOrder))
     : [];
   return methods.map((m) => ({ ...m, destinations: dests.filter((d) => d.methodCode === m.code) })).filter((m) => m.destinations.length);
@@ -305,4 +308,9 @@ export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW'
 
 export async function submissionsFor(paymentId: string) {
   return db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, paymentId)).orderBy(desc(paymentSubmissions.createdAt));
+}
+
+/** Destinations shown to buyers: with real money on, TEST destinations are never offered. */
+export function offeredDestinations(realMoney: boolean) {
+  return realMoney ? and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, false)) : eq(paymentDestinations.isEnabled, true);
 }

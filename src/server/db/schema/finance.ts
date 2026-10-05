@@ -130,6 +130,8 @@ export const withdrawalRequests = pgTable(
     paidReference: text(),
     proofFileId: uuid().references(() => files.id),
     rejectReason: text(),
+    /** Snapshot: requested while real money was disabled — closing it moves no money. */
+    isTest: boolean().notNull().default(true),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

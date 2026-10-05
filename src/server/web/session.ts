@@ -75,9 +75,9 @@ export async function requireCustomer(next = '/account'): Promise<Actor> {
 /** Seller Center access: signed in AND associated with a seller account (any status). */
 export async function requireSellerActor(next = '/seller'): Promise<Actor> {
   const s = await getWebSession();
-  if (!s) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!s) redirect(`/seller/login?next=${encodeURIComponent(next)}`);
   const a = await sellerActor(s.user.id, { ...(await requestMeta()), sessionId: s.session.id });
-  if (!a) redirect('/sell');
+  if (!a) redirect('/seller/register');
   return a;
 }
 

@@ -14,6 +14,7 @@ import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { FileInput } from '@/ui/client';
 import { Breadcrumbs, DefinitionList, PageHeader, Timeline } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
+import { TestMoneyNotice } from '@/app/_components/test-money';
 import { Field, Input, Textarea } from '@/ui/form';
 
 export default async function WithdrawalDetail(props: PageProps<'/admin/withdrawals/[id]'>) {
@@ -35,6 +36,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s.store} actions={<StatusChip status={w.status} />} />
+      {w.isTest && <TestMoneyNotice kind="payout" />}
       {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
       {s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {s.seller.status}</Alert>}
       <section className="card p-5">

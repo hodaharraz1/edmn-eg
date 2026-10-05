@@ -20,11 +20,12 @@ import {
 import { enqueueJob } from '@/server/jobs/queue';
 import { resolveRule, computeLineCommission } from '@/server/modules/finance/commissions';
 import { notify } from '@/server/modules/notifications/notify';
-import { getSetting } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { releaseReservation, reserve } from '@/server/modules/catalog/inventory';
 import { transition, parse } from '../_shared';
 import { acknowledgePrices, cartLines, clearVariants } from './cart';
 import { priceLines } from './pricing';
+import { offeredDestinations } from '@/server/modules/payments/service';
 import { formatEGP } from '@/lib/format';
 
 export const checkoutSchema = z.object({
@@ -77,7 +78,7 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     const destinations = await tx
       .select()
       .from(paymentDestinations)
-      .where(and(eq(paymentDestinations.methodCode, d.paymentMethod), eq(paymentDestinations.isEnabled, true)))
+      .where(and(eq(paymentDestinations.methodCode, d.paymentMethod), offeredDestinations(await realMoneyEnabled(tx))))
       .orderBy(asc(paymentDestinations.sortOrder));
     if (!destinations.length) throw validation('طريقة الدفع غير مهيأة حالياً. اختر طريقة أخرى');
 
@@ -189,9 +190,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       .values({
         orderId: order.id,
         payerUserId: customerId,
+        isTest: !(await realMoneyEnabled(tx)),
         method: d.paymentMethod,
         destinationId: destinations[0].id,
-        destinationSnapshot: destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr })),
+        destinationSnapshot: destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: order.grandTotal,
         dueAt,
       })

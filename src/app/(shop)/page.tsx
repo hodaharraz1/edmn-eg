@@ -14,7 +14,7 @@ import { RecentlyViewed } from './recently-viewed';
 type Block = Awaited<ReturnType<typeof activeBlocks>>[number];
 const TRUST_ICONS: LucideIcon[] = [BadgeCheck, ShieldCheck, Camera, Sparkles];
 
-async function rail(b: Block) {
+async function rail(b: Block, seen: Set<string>) {
   const d = b.data as { source: string; productSlugs?: string[]; categorySlug?: string; limit?: number };
   const limit = d.limit ?? 12;
   let items;
@@ -25,9 +25,12 @@ async function rail(b: Block) {
     const sort: Sort = d.source === 'BEST_SELLERS' ? 'best_selling' : d.source === 'NEW_ARRIVALS' ? 'newest' : d.source === 'TOP_RATED' ? 'top_rated' : 'recommended';
     let categoryId: string | undefined;
     if (d.categorySlug) categoryId = (await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, d.categorySlug)))[0]?.id;
-    items = (await searchProducts({ sort, pageSize: limit, dealsOnly: d.source === 'DEALS', condition: d.source === 'USED' ? 'USED' : undefined, categoryId, inStock: true })).items;
+    items = (await searchProducts({ sort, pageSize: limit + 12, dealsOnly: d.source === 'DEALS', condition: d.source === 'USED' ? 'USED' : d.source === 'RECOMMENDED' || d.source === 'BEST_SELLERS' ? 'NEW' : undefined, categoryId, inStock: true })).items;
   }
-  if (!items.length) return null;
+  // Each product appears once on the homepage: later rails skip products already shown above.
+  items = items.filter((p) => !seen.has(p.id)).slice(0, limit);
+  if (items.length < (d.source === 'USED' ? 1 : 3)) return null;
+  for (const p of items) seen.add(p.id);
   const href = d.source === 'DEALS' ? '/deals' : d.source === 'BEST_SELLERS' ? '/best-sellers' : d.source === 'USED' ? '/search?condition=USED' : d.source === 'NEW_ARRIVALS' ? '/search?sort=newest' : undefined;
   const wished = await wishlistSet(items.map((i) => i.id));
   return (
@@ -209,28 +212,18 @@ function trust(b: Block) {
 
 export default async function HomePage() {
   const blocks = await activeBlocks('HOME');
-  const rendered = await Promise.all(
-    blocks.map(async (b) => {
-      switch (b.type) {
-        case 'HERO':
-          return hero(b);
-        case 'BANNER':
-          return banner(b);
-        case 'FEATURED_CATEGORIES':
-          return featuredCategories(b);
-        case 'PRODUCT_RAIL':
-          return rail(b);
-        case 'FEATURED_SELLERS':
-          return featuredSellers(b);
-        case 'DEAL_CTA':
-          return dealCta(b);
-        case 'TRUST':
-          return trust(b);
-        default:
-          return null;
-      }
-    }),
-  );
+  const seen = new Set<string>();
+  const rendered: React.ReactNode[] = [];
+  // Sequential so product rails de-duplicate in page order.
+  for (const b of blocks) {
+    if (b.type === 'HERO') rendered.push(hero(b));
+    else if (b.type === 'BANNER') rendered.push(banner(b));
+    else if (b.type === 'FEATURED_CATEGORIES') rendered.push(await featuredCategories(b));
+    else if (b.type === 'PRODUCT_RAIL') rendered.push(await rail(b, seen));
+    else if (b.type === 'FEATURED_SELLERS') rendered.push(await featuredSellers(b));
+    else if (b.type === 'DEAL_CTA') rendered.push(dealCta(b));
+    else if (b.type === 'TRUST') rendered.push(trust(b));
+  }
   return (
     <div className="container-page space-y-8 py-4 sm:py-6">
       {rendered}

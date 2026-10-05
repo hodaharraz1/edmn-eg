@@ -7,7 +7,7 @@ import { AddressForm } from '@/app/_components/address-form';
 import { cartView } from '@/server/modules/commerce/cart';
 import { myAddresses } from '@/server/modules/customers/addresses';
 import { enabledPaymentMethods } from '@/server/modules/payments/service';
-import { getSetting } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { allGovernorates } from '@/server/web/context';
 import { requireUser, requireCustomer } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
@@ -16,6 +16,7 @@ import { LinkButton } from '@/ui/button';
 import { mediaUrl } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
 import { Alert, EmptyState } from '@/ui/feedback';
+import { TestMoneyNotice } from '@/app/_components/test-money';
 import { Radio, Textarea } from '@/ui/form';
 
 export const metadata: Metadata = { title: 'إتمام الشراء', robots: { index: false } };
@@ -30,6 +31,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   const cart = await cartView({ userId: user.id }, chosen?.governorateId ?? null);
   const methods = await enabledPaymentMethods();
   const windowHours = await getSetting('payments.paymentWindowHours');
+  const live = await realMoneyEnabled();
 
   if (!cart.groups.length) {
     return (
@@ -111,6 +113,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                 <input type="hidden" name="expectedTotal" value={cart.grandTotal} />
                 <section className="card p-5">
                   <h2 className="mb-3 flex items-center gap-2 font-bold"><Wallet className="size-5 text-brand-600" /> 3. طريقة الدفع</h2>
+                  {!live && <TestMoneyNotice className="mb-3" />}
                   {methods.length === 0 ? (
                     <Alert tone="warning">لا توجد طرق دفع مفعّلة حالياً. يرجى المحاولة لاحقاً.</Alert>
                   ) : (

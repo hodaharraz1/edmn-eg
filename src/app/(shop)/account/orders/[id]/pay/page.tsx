@@ -13,6 +13,7 @@ import { CopyButton, FileInput } from '@/ui/client';
 import { LinkButton } from '@/ui/button';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { Alert, StatusChip } from '@/ui/feedback';
+import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
 import { Field, Input, Textarea } from '@/ui/form';
 
 const FIELD_LABELS: Record<string, string> = { bankName: 'البنك', accountName: 'اسم الحساب', accountNumber: 'رقم الحساب', iban: 'IBAN', instapayAddress: 'عنوان إنستاباي', walletNumber: 'رقم المحفظة' };
@@ -30,7 +31,8 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
   const p = g.payment;
   if (!p) notFound();
   const subs = await submissionsFor(p.id);
-  const dests = (p.destinationSnapshot as { label: string; details: Record<string, string>; instructions: string | null }[]) ?? [];
+  const dests = (p.destinationSnapshot as { label: string; details: Record<string, string>; instructions: string | null; isTest?: boolean }[]) ?? [];
+  const isTest = p.isTest || dests.some((d) => d.isTest !== false);
   const canSubmit = p.status === 'AWAITING_PAYMENT' || p.status === 'REJECTED';
   const lastRejected = subs.find((s) => s.status === 'REJECTED' || s.status === 'NEW_PROOF_REQUESTED');
   return (
@@ -50,9 +52,10 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
           </div>
           {canSubmit && <p className="flex items-center gap-2 text-sm text-amber-800"><Clock className="size-4" /> آخر موعد للدفع: {formatDate(p.dueAt, true)}</p>}
           <h2 className="flex items-center gap-2 font-bold"><Landmark className="size-5 text-brand-600" /> بيانات التحويل</h2>
+          {isTest && <TestMoneyNotice />}
           {dests.map((d, i) => (
             <div key={i} className="space-y-2 rounded-xl border border-line p-4 text-sm">
-              <p className="font-semibold">{d.label}</p>
+              <p className="flex items-center gap-2 font-semibold">{d.label} {d.isTest !== false && <TestBadge />}</p>
               <dl className="space-y-1">
                 {Object.entries(d.details).map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between gap-2">

@@ -27,7 +27,7 @@ export function proxy(req: NextRequest) {
     const prefix = host === sellerHost ? '/seller' : '/admin';
     if (pathname.startsWith(prefix)) {
       res = NextResponse.next({ request: { headers } });
-    } else if (host === sellerHost && ['/login', '/register', '/forgot-password', '/reset-password', '/logout'].includes(pathname)) {
+    } else if (host === sellerHost && ['/forgot-password', '/reset-password', '/logout'].includes(pathname)) {
       res = NextResponse.next({ request: { headers } }); // shared auth pages
     } else {
       const url = req.nextUrl.clone();

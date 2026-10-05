@@ -4,6 +4,7 @@ import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';
 import { paymentDestinations, paymentMethods } from '@/server/db/schema';
 import { label } from '@/lib/i18n/labels';
+import { realMoneyEnabled } from '@/server/modules/settings';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
@@ -22,9 +23,21 @@ function DestinationForm({ d }: { d?: typeof paymentDestinations.$inferSelect })
       {FIELDS.map(([k, l]) => <Field key={k} label={l}><Input name={k} defaultValue={d?.details?.[k] ?? ''} className="ltr" /></Field>)}
       <Field label="تعليمات إضافية" className="md:col-span-3"><Textarea name="instructionsAr" rows={2} defaultValue={d?.instructionsAr ?? ''} /></Field>
       <Checkbox name="isEnabled" label="مفعّل ويظهر للعملاء" defaultChecked={d?.isEnabled ?? false} />
+      <Checkbox name="isTest" label="وجهة تجريبية — TEST (لا تستقبل أموالاً حقيقية). ألغِ التحديد فقط لحساب رسمي مملوك للشركة بعد التحقق منه." defaultChecked={d?.isTest ?? true} />
       <Input name="reason" required minLength={3} placeholder="سبب التعديل" aria-label="السبب" />
       <SubmitButton size="sm">حفظ</SubmitButton>
     </ActionForm>
+  );
+}
+
+async function RealMoneyStatus() {
+  const on = await realMoneyEnabled();
+  return on ? (
+    <Alert tone="danger" title="الأموال الحقيقية: مفعّلة">يظهر للعملاء فقط حسابات الاستلام الحقيقية المفعّلة. الحسابات التجريبية مخفية.</Alert>
+  ) : (
+    <Alert tone="warning" title="الأموال الحقيقية: معطّلة (وضع تجريبي)">
+      كل وجهات الدفع تظهر للعملاء بعلامة «TEST PAYMENT DESTINATION — NOT FOR REAL MONEY»، وكل السحوبات تُسجَّل كاختبار ولا تُحوَّل فيها أموال. التفعيل يتم من «إعدادات النظام» بصلاحية وتحقق 2FA، ويُمنع تماماً على بيئة Staging.
+    </Alert>
   );
 }
 
@@ -36,6 +49,7 @@ export default async function PaymentSettings() {
   return (
     <div className="space-y-4">
       <PageHeader title="إعدادات الدفع" description="طرق الدفع اليدوية وحسابات الاستلام الرسمية التي تظهر للعملاء عند الدفع." />
+      <RealMoneyStatus />
       <Alert tone="danger" title="هام">لا تُدخل إلا حسابات استلام رسمية مملوكة للشركة بعد التحقق منها. الحسابات المزروعة في بيئة التطوير وهمية (معطلة) ولا يجوز استخدامها. كل تعديل يتطلب تحققاً إضافياً (2FA) ويُسجّل.</Alert>
       <section className="space-y-3">
         <h2 className="font-bold">طرق الدفع</h2>
@@ -51,7 +65,7 @@ export default async function PaymentSettings() {
         <h2 className="font-bold">حسابات الاستلام</h2>
         {dests.map((d) => (
           <details key={d.id} className="card p-4">
-            <summary className="cursor-pointer"><b>{d.label}</b> · {label('paymentMethod', d.methodCode)} {d.isEnabled ? <Badge tone="success">مفعّل</Badge> : <Badge tone="neutral">معطل</Badge>}</summary>
+            <summary className="cursor-pointer"><b>{d.label}</b> · {label('paymentMethod', d.methodCode)} {d.isEnabled ? <Badge tone="success">مفعّل</Badge> : <Badge tone="neutral">معطل</Badge>} {d.isTest ? <Badge tone="warning">TEST — ليست للأموال الحقيقية</Badge> : <Badge tone="danger">حساب حقيقي</Badge>}</summary>
             <div className="mt-3"><DestinationForm d={d} /></div>
           </details>
         ))}

@@ -260,6 +260,8 @@ export const paymentDestinations = pgTable(
     details: jsonb().$type<Record<string, string>>().notNull(),
     instructionsAr: text(),
     isEnabled: boolean().notNull().default(true),
+    /** TEST destinations are shown as "TEST PAYMENT DESTINATION — NOT FOR REAL MONEY". Only an admin marks a real one. */
+    isTest: boolean().notNull().default(true),
     sortOrder: integer().notNull().default(0),
     createdBy: uuid().references(() => users.id),
     createdAt: createdAt(),
@@ -286,6 +288,8 @@ export const payments = pgTable(
     /** Provider abstraction: MANUAL today; a licensed PSP adapter later. */
     provider: text().notNull().default('MANUAL'),
     providerReference: text(),
+    /** Snapshot: created while real money was disabled (pilot/staging) — never a real receipt. */
+    isTest: boolean().notNull().default(true),
     dueAt: ts().notNull(),
     confirmedAt: ts(),
     confirmedBy: uuid().references(() => users.id),

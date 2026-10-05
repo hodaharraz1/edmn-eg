@@ -27,6 +27,7 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'المدفوعات', href: '/admin/payments' }, { label: row.orderNumber ? `طلب #${row.orderNumber}` : `صفقة #${row.deal?.number}` }]} />} title="مراجعة دفعة" actions={<StatusChip status={p.status} />} />
+      {p.isTest && <Alert tone="warning" title="دفعة تجريبية (TEST)">أُنشئت والأموال الحقيقية معطّلة، ووجهة الدفع تجريبية. تأكيدها يكمل مسار الاختبار فقط ولا يعني استلام أموال فعلية.</Alert>}
       <section className="card p-4"><DefinitionList items={[
         { label: 'المرجع', value: p.orderId ? <Link href={`/admin/orders/${p.orderId}`} className="text-brand-700">طلب #{row.orderNumber}</Link> : <Link href={`/admin/deals/${p.dealId}`} className="text-brand-700">صفقة #{row.deal?.number}</Link> },
         { label: 'العميل', value: <Link href={`/admin/customers/${row.payer.id}`} className="text-brand-700">{row.payer.fullName} · <span className="ltr">{row.payer.phone}</span></Link> },

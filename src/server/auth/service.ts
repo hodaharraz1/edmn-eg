@@ -8,7 +8,7 @@ import { env } from '@/server/core/env';
 import { DomainError, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db } from '@/server/db/client';
-import { authTokens, sessions, users } from '@/server/db/schema';
+import { authTokens, sellers, sessions, users } from '@/server/db/schema';
 import { sendDirect } from '@/server/modules/notifications/notify';
 import { CUSTOMER_POLICY, STAFF_POLICY, dummyVerify, hashPassword, passwordProblems, verifyPassword } from './password';
 import { enforce } from './rate-limit';
@@ -289,7 +289,12 @@ export async function confirmVerificationCode(userId: string, channel: 'EMAIL' |
   if (!row) return false;
   await db.transaction(async (tx) => {
     await tx.update(authTokens).set({ usedAt: new Date() }).where(eq(authTokens.id, row.id));
-    await tx.update(users).set(channel === 'EMAIL' ? { emailVerifiedAt: new Date() } : { phoneVerifiedAt: new Date() }).where(eq(users.id, userId));
+    const now = new Date();
+    const [u] = await tx.update(users).set(channel === 'EMAIL' ? { emailVerifiedAt: now } : { phoneVerifiedAt: now }).where(eq(users.id, userId)).returning({ phone: users.phone });
+    // A seller application opened before verification picks it up when its mobile is the verified number.
+    if (channel === 'PHONE' && u?.phone) {
+      await tx.update(sellers).set({ mobileVerifiedAt: now }).where(and(eq(sellers.ownerUserId, userId), eq(sellers.mobile, u.phone), isNull(sellers.mobileVerifiedAt)));
+    }
   });
   return true;
 }

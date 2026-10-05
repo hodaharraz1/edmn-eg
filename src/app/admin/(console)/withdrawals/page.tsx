@@ -8,6 +8,8 @@ import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { DataTable, PageHeader, Tabs } from '@/ui/data';
+import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
+import { realMoneyEnabled } from '@/server/modules/settings';
 import { Badge, EmptyState, StatusChip } from '@/ui/feedback';
 
 export const metadata = { title: 'طلبات السحب' };
@@ -19,8 +21,10 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
   const tab = String((await props.searchParams).tab ?? 'open');
   const rows = await withdrawalQueue(GROUPS[tab] ?? GROUPS.open, 200);
   const now = new Date();
+  const live = await realMoneyEnabled();
   return (
     <div className="space-y-3">
+      {!live && <TestMoneyNotice kind="payout" />}
       <PageHeader title="طلبات السحب" description="هدف الخدمة: الصرف خلال 48 ساعة عمل من الطلب (الأحد–الخميس). المراجِع يعتمد والمنفّذ يسجّل التحويل؛ المبالغ الكبيرة تتطلب شخصين مختلفين." actions={hasPermission(actor, 'settlements.manage') && (
         <ActionForm action={runSettlementAction}><input type="hidden" name="back" value="/admin/withdrawals" /><SubmitButton size="sm" variant="outline">تشغيل التسوية الدورية الآن</SubmitButton></ActionForm>
       )} />
@@ -33,7 +37,7 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
         { key: 'src', header: 'المصدر', cell: (r) => (r.w.source === 'SCHEDULED' ? <Badge tone="info">تسوية دورية</Badge> : 'طلب البائع') },
         { key: 'sla', header: 'موعد SLA', cell: (r) => <span className={['PAID', 'REJECTED', 'CANCELLED'].includes(r.w.status) ? '' : r.w.slaDueAt < now ? 'font-bold text-danger-700' : ''}>{formatDate(r.w.slaDueAt, true)}</span> },
         { key: 'f', header: '', cell: (r) => <span className="flex gap-1">{r.w.requiresDualControl && <Badge tone="warning">رقابة مزدوجة</Badge>}{r.seller.payoutHoldUntil && r.seller.payoutHoldUntil > now && <Badge tone="danger">تجميد</Badge>}</span> },
-        { key: 'st', header: 'الحالة', cell: (r) => <StatusChip status={r.w.status} /> },
+        { key: 'st', header: 'الحالة', cell: (r) => <span className="inline-flex items-center gap-1"><StatusChip status={r.w.status} />{r.w.isTest && <TestBadge />}</span> },
       ]} />
     </div>
   );

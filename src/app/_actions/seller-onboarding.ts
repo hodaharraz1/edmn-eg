@@ -8,7 +8,7 @@ import { bool, fileOf, int, runAction, str, type ActionState } from '@/server/we
 import { requireCustomer } from '@/server/web/session';
 
 export async function startSellerAction(_p: ActionState, fd: FormData): Promise<ActionState> {
-  const actor = await requireCustomer('/sell');
+  const actor = await requireCustomer('/seller/register');
   const res = await runAction(async () => {
     await startApplication(actor, str(fd, 'type') === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL');
   });

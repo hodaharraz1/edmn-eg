@@ -15,6 +15,7 @@ import { Stepper } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
+import { ContactVerification } from '@/app/_components/contact-verification';
 import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'طلب الانضمام كبائع' };
@@ -39,6 +40,14 @@ export default async function OnboardingPage(props: PageProps<'/seller/onboardin
     <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader title="طلب الانضمام كبائع" description={`نوع الحساب: ${label('sellerType', s.type)}`} />
       {s.status === 'MORE_INFO_REQUIRED' && <Alert tone="warning" title="مطلوب منك معلومات إضافية">{s.statusReason}</Alert>}
+      {(!user.phoneVerifiedAt || !user.emailVerifiedAt) && (
+        <section className="card space-y-3 p-4">
+          <h2 className="font-bold">تأكيد بيانات التواصل</h2>
+          <p className="text-sm text-muted">تأكيد رقم الموبايل مطلوب قبل إرسال الطلب. سيصلك رمز من 6 أرقام.</p>
+          {process.env.SMS_DRIVER !== 'http' && <Alert tone="info">بيئة تجريبية: لا يوجد مزوّد رسائل مفعّل بعد، لذلك لا تُرسل الرسائل فعلياً. يمكن لفريق اضمن قراءة الرمز من «الإشعارات» في لوحة الإدارة وإبلاغك به.</Alert>}
+          <ContactVerification user={user} />
+        </section>
+      )}
       <Stepper steps={STEPS} current={step} hrefFor={(n) => (n <= s.onboardingStep + 1 ? `/seller/onboarding?step=${n}` : null)} />
       <ActionForm action={onboardingStepAction} className="card space-y-4 p-5" encType="multipart/form-data">
         <input type="hidden" name="step" value={step} />

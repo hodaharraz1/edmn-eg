@@ -22,7 +22,7 @@ export default async function SellerLayout({ children }: { children: React.React
   return (
     <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="hidden bg-brand-950 p-4 lg:flex lg:flex-col lg:gap-4">
-        <Logo href="/seller" className="text-white" />
+        <div className="space-y-1"><Logo href="/seller" className="text-white" label="مركز بائعي اضمن" /><p className="text-[11px] font-semibold tracking-wide text-amber-300" dir="ltr">EDMN Seller Center</p></div>
         <div className="rounded-lg bg-white/10 p-3 text-xs text-white">
           <p className="truncate font-semibold">{store?.name ?? 'متجري'}</p>
           <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : ctx.role}</span></div>
@@ -40,7 +40,6 @@ export default async function SellerLayout({ children }: { children: React.React
           {store && ctx.seller.status === 'APPROVED' && (
             <Link href={`/store/${store.slug}`} target="_blank" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline"><ExternalLink className="size-4" /> عرض المتجر</Link>
           )}
-          <Link href="/" className="text-sm text-muted hover:text-ink">السوق</Link>
           <span className="hidden text-sm text-muted sm:inline">{user.fullName}</span>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl p-4 sm:p-6">{children}</main>

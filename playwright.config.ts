@@ -20,6 +20,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   globalSetup: './tests/e2e/global-setup.ts',
+  globalTeardown: './tests/e2e/global-teardown.ts',
   use: {
     baseURL: REMOTE ?? `http://localhost:${PORT}`,
     locale: 'ar-EG',

@@ -112,6 +112,12 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
               {p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}
             </Badge>
           </div>
+          {p.condition === 'USED' && (
+            <p className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
+              <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل <span className="font-semibold" dir="ltr">USED</span>
+              <span className="font-normal">— راجع إفصاح الحالة والعيوب قبل الشراء</span>
+            </p>
+          )}
           <h1 className="text-xl font-bold leading-snug sm:text-2xl">{p.titleAr}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             {p.ratingCount > 0 ? (
@@ -168,6 +174,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
                 <div><dt className="inline font-semibold">العيوب المعلنة: </dt><dd className="inline">{p.defects || 'لا يوجد'}</dd></div>
                 {p.includedAccessories && <div><dt className="inline font-semibold">المرفقات: </dt><dd className="inline">{p.includedAccessories}</dd></div>}
                 {p.usageInfo && <div><dt className="inline font-semibold">مدة الاستخدام: </dt><dd className="inline">{p.usageInfo}</dd></div>}
+                <div><dt className="inline font-semibold">الضمان: </dt><dd className="inline">{p.warrantyInfo || 'لا يوجد ضمان معلن من البائع'}</dd></div>
+                <div><dt className="inline font-semibold">صور القطعة الفعلية: </dt><dd className="inline">{d.images.filter((i) => i.isActualItem).length} صورة</dd></div>
               </dl>
               <p className="mt-2 text-xs text-amber-800">الصور المميزة بعلامة «صورة حقيقية» هي صور للقطعة نفسها المعروضة للبيع.</p>
             </div>
@@ -189,14 +197,18 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              <p>تدفع لاضمن، ولا يحصل البائع على أرباحه إلا بعد تأكيدك استلام الطلب. لو حصلت مشكلة يتدخل فريق اضمن.</p>
+              {/* COUNSEL REVIEW: payment-protection wording is a draft and must be approved before launch. */}
+              <p>تدفع لاضمن، ولا يصبح صافي مستحق البائع متاحاً للسحب إلا بعد تأكيدك استلام الطلب. لو حصلت مشكلة تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
             </div>
           </div>
           <div className="card space-y-3 p-4 text-sm">
             <p className="text-xs text-muted">يُباع ويُشحن بواسطة</p>
             <Link href={`/store/${d.store.slug}`} className="flex items-center gap-2 font-bold hover:text-brand-700">
-              <Store className="size-4" /> {d.store.name} {d.store.isVerified && <BadgeCheck className="size-4 text-brand-600" aria-label="متجر موثّق" />}
+              <Store className="size-4" /> {d.store.name}
             </Link>
+            {d.store.isVerified && (
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — تمت مراجعة هويته ومستنداته</p>
+            )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
               {d.seller.ratingCount > 0 ? <Stars value={d.seller.ratingAvg} count={d.seller.ratingCount} /> : <span>متجر جديد</span>}
               {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
@@ -254,6 +266,10 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       <section id="reviews" className="card grid gap-6 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-3">
           <h2 className="text-lg font-bold">تقييمات المنتج</h2>
+          {p.ratingCount === 0 ? (
+            <p className="text-sm text-muted">لم يُقيَّم هذا المنتج بعد.</p>
+          ) : (
+          <>
           <div className="flex items-center gap-2">
             <span className="text-4xl font-bold">{Number(p.ratingAvg).toFixed(1)}</span>
             <Stars value={p.ratingAvg} count={p.ratingCount} size="md" showValue={false} />
@@ -269,6 +285,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
               </li>
             ))}
           </ul>
+          </>
+          )}
           <p className="text-xs text-muted">التقييمات من مشترين مؤكدين فقط. تقييم المنتج منفصل عن تقييم البائع.</p>
         </div>
         <div className="space-y-4">

@@ -9,7 +9,7 @@ import { ledgerAdjustments, refunds, sellerPayoutMethods, sellers, settlements, 
 import { decryptJson } from '@/server/core/crypto';
 import { notify } from '@/server/modules/notifications/notify';
 import { activePayoutMethod } from '@/server/modules/sellers/service';
-import { getSetting } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { requireReason, transition } from '../_shared';
 import { accountBalance, postEntry } from './ledger';
@@ -67,6 +67,7 @@ export async function requestWithdrawal(
       .insert(withdrawalRequests)
       .values({
         sellerId,
+        isTest: !(await realMoneyEnabled(tx)),
         amount,
         source: opts.source ?? 'ON_DEMAND',
         settlementId: opts.settlementId ?? null,

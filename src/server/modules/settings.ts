@@ -1,10 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, type Actor, requireStepUp } from '@/server/core/actor';
 import { validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
-import { systemSettings } from '@/server/db/schema';
+import { paymentDestinations, systemSettings } from '@/server/db/schema';
 
 /**
  * Typed business configuration. Defaults below are DEVELOPMENT/BENCHMARK values and are editable
@@ -16,6 +16,11 @@ export const SETTINGS_SCHEMA = {
   'marketplace.supportPhone': z.string().default(''),
   'marketplace.maintenanceMode': z.boolean().default(false),
   /** Hours a customer has to pay (or submit proof) before an unpaid order expires and stock is released. */
+  /**
+   * REAL MONEY switch. Off by default: payment destinations and seller withdrawals are TEST only and
+   * clearly labelled as such. Can never be enabled on a staging deployment (EDMN_ENVIRONMENT=staging).
+   */
+  'payments.realMoneyEnabled': z.boolean().default(false),
   'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
   'withdrawals.minimumAmount': z.number().int().min(0).default(10000), // 100 EGP in piasters
   'withdrawals.slaBusinessHours': z.number().int().min(1).max(240).default(48),
@@ -52,6 +57,7 @@ export type SettingKey = keyof typeof SETTINGS_SCHEMA;
 export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA)[K]>;
 
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
+  'payments.realMoneyEnabled',
   'withdrawals.dualControlThreshold',
   'ledger.adjustmentDualControlThreshold',
   'withdrawals.minimumAmount',
@@ -95,6 +101,11 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw validation('قيمة غير صالحة لهذا الإعداد');
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر سبب التعديل');
+  if (key === 'payments.realMoneyEnabled' && parsed.data === true) {
+    if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');
+    const [real] = await db.select({ id: paymentDestinations.id }).from(paymentDestinations).where(and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, false))).limit(1);
+    if (!real) throw validation('أضف أولاً وجهة دفع حقيقية مفعّلة (غير تجريبية) من «طرق وحسابات الدفع».');
+  }
   await db.transaction(async (tx) => {
     const old = await getSetting(key, tx);
     await tx
@@ -110,4 +121,10 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
       reason,
     });
   });
+}
+
+/** True only when an authorized admin has explicitly enabled real money on a non-staging deployment. */
+export async function realMoneyEnabled(conn: DbOrTx = db): Promise<boolean> {
+  if (process.env.EDMN_ENVIRONMENT === 'staging') return false;
+  return getSetting('payments.realMoneyEnabled', conn);
 }

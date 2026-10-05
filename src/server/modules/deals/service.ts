@@ -13,10 +13,11 @@ import { dealEvidence, dealInvitations, dealPayouts, externalDeals, legalAccepta
 import { postEntry } from '@/server/modules/finance/ledger';
 import { notify, sendDirect } from '@/server/modules/notifications/notify';
 import { payoutMask, payoutSchema, currentLegalVersion, type PayoutInput } from '@/server/modules/sellers/service';
-import { getSetting } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
 import { formatEGP } from '@/lib/format';
+import { offeredDestinations } from '@/server/modules/payments/service';
 import { asc } from 'drizzle-orm';
 
 export type Deal = typeof externalDeals.$inferSelect;
@@ -263,7 +264,7 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
     if (existing) return existing;
     const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
     if (!m?.isEnabled) throw validation('طريقة الدفع غير متاحة');
-    const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), eq(paymentDestinations.isEnabled, true))).orderBy(asc(paymentDestinations.sortOrder));
+    const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
     if (!dests.length) throw validation('طريقة الدفع غير مهيأة');
     const hours = await getSetting('payments.paymentWindowHours', tx);
     const [p] = await tx
@@ -271,6 +272,7 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
       .values({
         dealId: deal.id,
         payerUserId: deal.buyerId,
+        isTest: !(await realMoneyEnabled(tx)),
         method,
         destinationId: dests[0].id,
         destinationSnapshot: dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr })),

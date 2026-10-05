@@ -43,8 +43,8 @@ export default async function SellLanding() {
             </ActionForm>
           ) : (
             <div className="flex gap-2">
-              <LinkButton href="/register?next=/sell" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">أنشئ حساباً وابدأ</LinkButton>
-              <LinkButton href="/login?next=/sell" size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">لدي حساب</LinkButton>
+              <LinkButton href="/seller/register" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">أنشئ حساباً وابدأ</LinkButton>
+              <LinkButton href="/seller/login" size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">لدي حساب</LinkButton>
             </div>
           )}
         </div>

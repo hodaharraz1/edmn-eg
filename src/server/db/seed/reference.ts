@@ -294,20 +294,27 @@ export async function seedReference() {
   // Homepage CMS defaults (editable from Admin → CMS)
   const [anyBlock] = await db.select({ id: cmsBlocks.id }).from(cmsBlocks).limit(1);
   if (!anyBlock) {
+    // Order follows the homepage hierarchy. Wording about payment protection is a DRAFT pending counsel review.
     const blocks: (typeof cmsBlocks.$inferInsert)[] = [
-      { type: 'HERO', title: 'الرئيسية', sortOrder: 0, data: { heading: 'كل اللي محتاجه من بائعين موثّقين', subheading: 'تسوّق منتجات جديدة ومستعملة من متاجر مصرية تمت مراجعتها، والدفع محمي حتى تؤكد الاستلام.', ctaLabel: 'تسوّق العروض', ctaHref: '/deals' } },
+      { type: 'HERO', title: 'الرئيسية', sortOrder: 0, data: { heading: 'كل اللي محتاجه من بائعين موثّقين', subheading: 'منتجات جديدة ومستعملة من متاجر مصرية تمت مراجعتها. ادفع لاضمن، والبائع يستلم مستحقاته بعد ما تأكد استلام طلبك.', ctaLabel: 'تسوّق العروض', ctaHref: '/deals' } },
       { type: 'FEATURED_CATEGORIES', title: 'تسوّق حسب التصنيف', sortOrder: 1, data: { categorySlugs: ['mobile-phones', 'computers', 'tvs', 'large-appliances', 'small-appliances', 'men', 'women', 'shoes', 'home', 'beauty', 'toys', 'sports'] } },
-      { type: 'PRODUCT_RAIL', title: 'عروض اليوم', sortOrder: 2, data: { source: 'DEALS', limit: 12 } },
-      { type: 'PRODUCT_RAIL', title: 'الأكثر مبيعاً', sortOrder: 3, data: { source: 'BEST_SELLERS', limit: 12 } },
-      { type: 'DEAL_CTA', title: 'صفقة خارج السوق', sortOrder: 4, data: { heading: 'لقيت حاجة برّه اضمن؟ اشتريها بأمان', body: 'لو اتفقت مع بائع على فيسبوك أو أي مكان، اعمل صفقة محمية: تدفع لاضمن، والبائع يستلم فلوسه بعد ما تأكد الاستلام.', ctaLabel: 'ابدأ صفقة محمية' } },
-      { type: 'PRODUCT_RAIL', title: 'وصل حديثاً', sortOrder: 5, data: { source: 'NEW_ARRIVALS', limit: 12 } },
+      { type: 'PRODUCT_RAIL', title: 'عروض اليوم', sortOrder: 2, data: { source: 'DEALS', limit: 8 } },
+      { type: 'PRODUCT_RAIL', title: 'مقترحات لك', sortOrder: 3, data: { source: 'RECOMMENDED', limit: 8 } },
+      { type: 'PRODUCT_RAIL', title: 'الأكثر مبيعاً', sortOrder: 4, data: { source: 'BEST_SELLERS', limit: 8 } },
+      { type: 'PRODUCT_RAIL', title: 'مستعمل بحالة ممتازة', sortOrder: 5, data: { source: 'USED', limit: 8 } },
       { type: 'FEATURED_SELLERS', title: 'متاجر موثّقة', sortOrder: 6, data: { storeSlugs: [] } },
-      { type: 'PRODUCT_RAIL', title: 'مستعمل بحالة ممتازة', sortOrder: 7, data: { source: 'USED', limit: 12 } },
+      { type: 'DEAL_CTA', title: 'صفقة خارج السوق', sortOrder: 7, data: { heading: 'لقيت حاجة برّه اضمن؟ اشتريها بأمان أكتر', body: 'لو اتفقت مع بائع على فيسبوك أو أي مكان، اعمل صفقة محمية: تدفع لاضمن، والبائع يستلم مستحقاته بعد ما تأكد الاستلام أو بعد انتهاء مدة الفحص المتفق عليها.', ctaLabel: 'ابدأ صفقة محمية' } },
       { type: 'TRUST', title: 'ليه تشتري من اضمن؟', sortOrder: 8, data: { items: [
-        { title: 'بائعون تمت مراجعتهم', body: 'كل بائع يمر بمراجعة هوية قبل البيع.' },
-        { title: 'دفع محمي', body: 'البائع لا يستلم أرباحه إلا بعد تأكيدك استلام الطلب.' },
-        { title: 'صور حقيقية للمستعمل', body: 'المنتجات المستعملة تُعرض بصور القطعة نفسها وعيوبها.' },
-        { title: 'دعم ونزاعات', body: 'فريق اضمن يتدخل لحل أي مشكلة بشكل عادل.' },
+        { title: 'بائعون تمت مراجعتهم', body: 'كل بائع يمر بمراجعة الهوية والمستندات قبل ما يبدأ البيع.' },
+        { title: 'صور حقيقية للمستعمل', body: 'المنتج المستعمل يُعرض بصور القطعة نفسها مع حالتها وعيوبها.' },
+        { title: 'شحن لكل المحافظات', body: 'كل بائع يحدد سعر ومدة الشحن لكل محافظة قبل الشراء.' },
+        { title: 'دعم ونزاعات', body: 'فريق اضمن يراجع الشكاوى والنزاعات وفق سياسة النزاعات المعلنة.' },
+      ] } },
+      { type: 'TRUST', title: 'إزاي بنحمي مشترياتك؟', sortOrder: 9, data: { items: [
+        { title: '١. تدفع لاضمن', body: 'التحويل يكون لحسابات اضمن المعلنة فقط، وفريقنا يتحقق من الدفع يدوياً.' },
+        { title: '٢. البائع يشحن', body: 'البائع يرفع بوليصة الشحن، ورفعها لا يعني تحويل أي مستحقات له.' },
+        { title: '٣. تستلم وتأكد', body: 'بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.' },
+        { title: '٤. مشكلة؟', body: 'تقدر تطلب إرجاع أو تفتح نزاع حسب السياسات قبل تأكيد الاستلام أو خلال المدة المحددة.' },
       ] } },
     ];
     await db.insert(cmsBlocks).values(blocks.map((b) => ({ ...b, placement: 'HOME' })));
