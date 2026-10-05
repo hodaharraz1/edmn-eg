@@ -11,6 +11,20 @@ import { providerFor } from '@/server/modules/notifications/providers';
 
 type Handler = (payload: Record<string, unknown>) => Promise<unknown>;
 
+/** Events whose message body carries a one-time code, reset link or invitation link. */
+export const SECRET_EVENTS = ['ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED'];
+export const REDACTED_BODY = '[تم حذف المحتوى الأمني (رمز/رابط) بعد الإرسال أو انتهاء الصلاحية]';
+
+/**
+ * Codes and links expire within 30 minutes (deal invitations are shared from the app itself), so
+ * any stored copy older than an hour is useless to the owner and only a risk: redact it.
+ */
+export async function redactExpiredSecrets() {
+  const r = await db.execute(sql`update outbound_messages set body = ${REDACTED_BODY}
+    where event in ('ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED') and body <> ${REDACTED_BODY} and created_at < now() - interval '1 hour'`);
+  return r.rowCount ?? 0;
+}
+
 /** Sends pending email/SMS through the configured adapters with retry bookkeeping. */
 export async function flushOutbound(limit = 50) {
   const pending = await db.select().from(outboundMessages).where(and(eq(outboundMessages.status, 'PENDING'), lte(outboundMessages.attempts, 4))).limit(limit);
@@ -19,7 +33,12 @@ export async function flushOutbound(limit = 50) {
     try {
       const p = await providerFor(m.channel);
       await p.send({ recipient: m.recipient, subject: m.subject, body: m.body });
-      await db.update(outboundMessages).set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1 }).where(eq(outboundMessages.id, m.id));
+      // Once a real provider has delivered it, a message carrying a code or secret link is redacted at rest.
+      const redact = !p.name.startsWith('log') && SECRET_EVENTS.includes(m.event ?? '');
+      await db
+        .update(outboundMessages)
+        .set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1, ...(redact ? { body: REDACTED_BODY } : {}) })
+        .where(eq(outboundMessages.id, m.id));
       sent++;
     } catch (e) {
       const attempts = m.attempts + 1;
@@ -47,6 +66,7 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   { name: 'settlement.scheduled', everyMs: 60 * 60_000, run: () => runScheduledSettlement() },
   { name: 'outbound.flush', everyMs: 60_000, run: () => flushOutbound() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },
+  { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },
 ];
 
 /** Claims one due job with FOR UPDATE SKIP LOCKED (safe with multiple workers). */

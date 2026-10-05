@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, isNull, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, type Actor } from '@/server/core/actor';
+import { requirePermission, type Actor, requireStepUp } from '@/server/core/actor';
 import { validation } from '@/server/core/errors';
 import { applyBps, assertMinor, type Minor } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -86,6 +86,7 @@ export const ruleInputSchema = z.object({
  */
 export async function createRule(actor: Actor, input: z.input<typeof ruleInputSchema>) {
   requirePermission(actor, 'commissions.manage');
+  requireStepUp(actor);
   const parsed = ruleInputSchema.safeParse(input);
   if (!parsed.success) throw validation('بيانات العمولة غير صحيحة');
   const r = parsed.data;
@@ -104,6 +105,7 @@ export async function createRule(actor: Actor, input: z.input<typeof ruleInputSc
 
 export async function setRuleEnabled(actor: Actor, ruleId: string, enabled: boolean, reason: string) {
   requirePermission(actor, 'commissions.manage');
+  requireStepUp(actor);
   if (!reason?.trim()) throw validation('يجب ذكر السبب');
   await db.transaction(async (tx) => {
     const [old] = await tx.select().from(commissionRules).where(eq(commissionRules.id, ruleId)).for('update');

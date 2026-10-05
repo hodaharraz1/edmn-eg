@@ -12,6 +12,7 @@ import { createSellerOrderRefund } from '@/server/modules/finance/postings';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
+import { getSetting } from '@/server/modules/settings';
 import { acceptReturnRefundTx } from './returns';
 
 export type Dispute = typeof disputes.$inferSelect;
@@ -62,6 +63,8 @@ export async function openDisputeTx(
     const isSellerSide = actor.type === 'SELLER' && actor.sellerId === so.sellerId;
     if (!isBuyer && !isSellerSide && !hasPermission(actor, 'disputes.manage') && !hasPermission(actor, 'returns.manage')) throw forbidden();
     if (['PENDING_PAYMENT', 'PAYMENT_UNDER_REVIEW', 'CANCELLED'].includes(so.status)) throw invalidState('لا يمكن فتح نزاع على هذا الطلب في حالته الحالية');
+    const windowDays = await getSetting('disputes.windowDays', tx);
+    if (so.deliveredAt && Date.now() - so.deliveredAt.getTime() > windowDays * 86_400_000) throw invalidState(`انتهت مدة فتح النزاع (${windowDays} يوماً من الاستلام)`);
     const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));
     respondentSellerId = so.sellerId;
     respondentUserId = s.ownerUserId;

@@ -25,7 +25,7 @@ export async function sellerLoginAction(_p: ActionState, fd: FormData): Promise<
     const { token, user } = await login(str(fd, 'identifier'), str(fd, 'password'), 'WEB', await requestMeta());
     await afterLogin(token, user.id);
   });
-  if (res.ok) redirect(next.startsWith('/seller') ? next : '/seller');
+  if (res.ok) redirect(next.startsWith('/seller/') || next === '/seller' ? next : '/seller');
   return res;
 }
 

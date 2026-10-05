@@ -364,7 +364,7 @@ export async function customerStatusAction(_p: ActionState, fd: FormData) {
     const status = str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED';
     const reason = str(fd, 'reason');
     if (reason.length < 3) throw validation('اذكر السبب');
-    await db.update(users).set({ status }).where(eq(users.id, uid));
+    await db.update(users).set({ status }).where(and(eq(users.id, uid), eq(users.isStaff, false)));
     await audit(db, a, { action: 'customer.status_changed', entityType: 'user', entityId: uid, newValues: { status }, reason });
     return done();
   }, [`/admin/customers/${str(fd, 'userId')}`]);

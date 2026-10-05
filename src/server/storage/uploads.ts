@@ -89,7 +89,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
     mime = 'application/pdf';
   } else {
     try {
-      const img = sharp(input.data, { failOn: 'error', limitInputPixels: 40_000_000 }).rotate();
+      const img = sharp(input.data, { failOn: 'error', limitInputPixels: 25_000_000 }).rotate();
       const meta = await img.metadata();
       if (!meta.width || !meta.height || meta.width < 50 || meta.height < 50) throw validation('أبعاد الصورة صغيرة جداً');
       const out = await img

@@ -1,9 +1,9 @@
 import { randomInt } from 'node:crypto';
-import { and, eq, gt, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
 import type { Actor } from '@/server/core/actor';
-import { decrypt, encrypt, randomToken, sha256 } from '@/server/core/crypto';
+import { decrypt, encrypt, hmac, randomToken, sha256 } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { DomainError, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
@@ -11,7 +11,7 @@ import { db } from '@/server/db/client';
 import { authTokens, sellers, sessions, users } from '@/server/db/schema';
 import { sendDirect } from '@/server/modules/notifications/notify';
 import { CUSTOMER_POLICY, STAFF_POLICY, dummyVerify, hashPassword, passwordProblems, verifyPassword } from './password';
-import { enforce } from './rate-limit';
+import { enforce, hit } from './rate-limit';
 import { generateTotpSecret, matchTotpStep } from './totp';
 
 const MAX_FAILED = 8;
@@ -79,10 +79,12 @@ export async function createSession(conn: Parameters<typeof audit>[0], userId: s
  * For ADMIN scope the session starts un-elevated (mfaVerifiedAt = null) until TOTP is verified.
  */
 export async function login(identifier: string, password: string, scope: Scope, meta: RequestMeta) {
-  const ident = identifier.trim().toLowerCase();
-  await enforce(`login-ip:${meta.ip ?? 'unknown'}`, 30, 900);
-  await enforce(`login-id:${ident}`, 10, 900);
+  const ident = identifier.trim().toLowerCase().slice(0, 254);
   const phone = normalizeEgyptMobile(ident);
+  await enforce(`login-ip:${meta.ip ?? 'unknown'}`, 30, 900);
+  // Key on the canonical identifier so "010-1234-5678", "+20 10…" and Arabic digits share one bucket.
+  await enforce(`login-id:${phone ?? ident}`, 10, 900);
+  if (password.length > 256) throw new DomainError('UNAUTHENTICATED', 'بيانات الدخول غير صحيحة');
   const [user] = await db
     .select()
     .from(users)
@@ -94,28 +96,27 @@ export async function login(identifier: string, password: string, scope: Scope, 
     throw generic;
   }
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new DomainError('RATE_LIMITED', 'تم إيقاف تسجيل الدخول مؤقتاً بسبب محاولات متكررة. حاول بعد قليل');
+    await dummyVerify(password);
+    throw generic; // same answer as a wrong password: a lock must not reveal that the account exists
   }
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
-    const failed = user.failedLoginCount + 1;
     await db.transaction(async (tx) => {
-      await tx
+      // Atomic increment: parallel failures cannot all write the same count and dodge the lock.
+      const [c] = await tx
         .update(users)
-        .set({
-          failedLoginCount: failed >= MAX_FAILED ? 0 : failed,
-          lockedUntil: failed >= MAX_FAILED ? new Date(Date.now() + LOCK_MINUTES * 60_000) : user.lockedUntil,
-        })
-        .where(eq(users.id, user.id));
+        .set({ failedLoginCount: sql`${users.failedLoginCount} + 1` })
+        .where(eq(users.id, user.id))
+        .returning({ n: users.failedLoginCount });
+      if (c && c.n >= MAX_FAILED) {
+        await tx.update(users).set({ failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) }).where(eq(users.id, user.id));
+      }
       await audit(tx, { ...anon(meta), userId: user.id }, { action: 'auth.login_failed', entityType: 'user', entityId: user.id, newValues: { scope } });
     });
     throw generic;
   }
   if (user.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'هذا الحساب غير مفعّل. تواصل مع الدعم');
-  if (scope === 'ADMIN' && !user.isStaff) {
-    await dummyVerify(password);
-    throw generic;
-  }
+  if (scope === 'ADMIN' && !user.isStaff) throw generic; // one hash already ran: equal timing
   return db.transaction(async (tx) => {
     await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
     const token = await createSession(tx, user.id, scope, meta);
@@ -213,8 +214,11 @@ export async function requestPasswordReset(identifier: string, meta: RequestMeta
     .where(phone ? or(eq(users.email, ident), eq(users.phone, phone)) : eq(users.email, ident));
   // Always behave identically whether or not the account exists (no enumeration).
   if (!user) return;
+  if (!(await hit(`pwreset-id:${user.id}`, 3, 3600))) return; // silently cap reset mails per account
   const token = randomToken(32);
   await db.transaction(async (tx) => {
+    // Only the newest link works: earlier unused reset tokens are retired.
+    await tx.update(authTokens).set({ usedAt: new Date() }).where(and(eq(authTokens.userId, user.id), eq(authTokens.purpose, 'PASSWORD_RESET'), isNull(authTokens.usedAt)));
     await tx.insert(authTokens).values({
       userId: user.id,
       purpose: 'PASSWORD_RESET',
@@ -250,6 +254,8 @@ export async function resetPassword(token: string, newPassword: string, meta: Re
 }
 
 export async function changePassword(userId: string, current: string, next: string, meta: RequestMeta & { sessionId?: string }) {
+  await enforce(`pwchange:${userId}`, 5, 900);
+  if (current.length > 256 || next.length > 256) throw validation('كلمة المرور طويلة جداً');
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   if (!user || !(await verifyPassword(current, user.passwordHash))) throw validation('كلمة المرور الحالية غير صحيحة');
   const problem = passwordProblems(next, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY);
@@ -272,7 +278,8 @@ export async function sendVerificationCode(userId: string, channel: 'EMAIL' | 'P
   const code = String(randomInt(100000, 1000000));
   const purpose = channel === 'EMAIL' ? 'EMAIL_VERIFY' : 'PHONE_VERIFY';
   await db.transaction(async (tx) => {
-    await tx.insert(authTokens).values({ userId, purpose, tokenHash: sha256(`${userId}:${purpose}:${code}`), expiresAt: new Date(Date.now() + 15 * 60_000) });
+    await tx.update(authTokens).set({ usedAt: new Date() }).where(and(eq(authTokens.userId, userId), eq(authTokens.purpose, purpose), isNull(authTokens.usedAt)));
+    await tx.insert(authTokens).values({ userId, purpose, tokenHash: codeHash(userId, purpose, code), expiresAt: new Date(Date.now() + 15 * 60_000) });
     await sendDirect(tx, 'ACCOUNT_SECURITY', channel === 'EMAIL' ? { email: user.email } : { phone: user.phone }, {
       message: `رمز التحقق الخاص بك في اضمن: ${code} (صالح لمدة 15 دقيقة)`,
     });
@@ -285,7 +292,7 @@ export async function confirmVerificationCode(userId: string, channel: 'EMAIL' |
   const [row] = await db
     .select()
     .from(authTokens)
-    .where(and(eq(authTokens.tokenHash, sha256(`${userId}:${purpose}:${code.trim()}`)), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())));
+    .where(and(eq(authTokens.tokenHash, codeHash(userId, purpose, code.trim())), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())));
   if (!row) return false;
   await db.transaction(async (tx) => {
     await tx.update(authTokens).set({ usedAt: new Date() }).where(eq(authTokens.id, row.id));
@@ -297,4 +304,9 @@ export async function confirmVerificationCode(userId: string, channel: 'EMAIL' |
     }
   });
   return true;
+}
+
+/** 6-digit codes have a tiny keyspace: hash them with a server secret so a DB read cannot reverse them. */
+function codeHash(userId: string, purpose: string, code: string) {
+  return hmac(`otp:${userId}:${purpose}:${code}`);
 }

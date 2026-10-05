@@ -95,6 +95,12 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       }
     }
     if (problems.length) throw new DomainError('INVALID_STATE', problems.join('، '));
+    // No self-purchase (wash sales / fake verified reviews), whatever path the cart was filled by.
+    for (const g of priced.groups) {
+      const own = await tx.execute(sql`select 1 from sellers s left join seller_members m on m.seller_id = s.id and m.user_id = ${customerId} and m.is_active
+        where s.id = ${g.sellerId} and (s.owner_user_id = ${customerId} or m.user_id is not null) limit 1`);
+      if (own.rows.length) throw new DomainError('INVALID_STATE', `لا يمكنك شراء منتجات من متجرك "${g.storeName}"`);
+    }
     if (priced.grandTotal !== d.expectedTotal || priced.groups.some((g) => g.lines.some((l) => l.issues.includes('PRICE_CHANGED')))) {
       throw new DomainError('CONFLICT', 'تغيّرت الأسعار أو تكلفة الشحن. يرجى مراجعة الإجمالي الجديد ثم التأكيد مرة أخرى');
     }

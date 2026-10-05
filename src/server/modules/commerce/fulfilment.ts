@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { SELLER_ORDER_CANCELLABLE, sellerOrderMachine, shipmentMachine, type SellerOrderStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { hasPermission, requirePermission, requireSeller, requireUser, SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
+import { hasPermission, requirePermission, requireSeller, requireUser, SYSTEM_ACTOR, type Actor, requireStepUp } from '@/server/core/actor';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { disputes, orderItems, orders, sellerOrders, sellers, shipmentDocuments, shipments, stores, trackingEvents } from '@/server/db/schema';
@@ -161,6 +161,7 @@ export async function confirmReceipt(actor: Actor, soId: string, opts: { onBehal
   const onBehalf = actor.type === 'ADMIN';
   if (onBehalf) {
     requirePermission(actor, 'orders.confirm_receipt_on_behalf');
+    requireStepUp(actor); // releases seller funds without the buyer
     requireReason(opts.onBehalfReason);
   }
   return db.transaction(async (tx) => {

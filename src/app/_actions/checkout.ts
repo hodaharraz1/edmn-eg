@@ -6,7 +6,7 @@ import { placeOrder } from '@/server/modules/commerce/orders';
 import { saveAddress } from '@/server/modules/customers/addresses';
 import { submitProof } from '@/server/modules/payments/service';
 import { cancelUnpaidOrder } from '@/server/modules/commerce/orders';
-import { bool, fileOf, int, runAction, str, type ActionState } from '@/server/web/action';
+import { bool, fileOf, int, runAction, str, type ActionState, safeNext } from '@/server/web/action';
 import { requireCustomer } from '@/server/web/session';
 
 function addressInput(fd: FormData) {
@@ -69,7 +69,7 @@ export async function submitProofAction(_p: ActionState, fd: FormData): Promise<
     );
     return { message: 'تم استلام إثبات الدفع. سيقوم فريق اضمن بالتحقق منه ونبلغك فور التأكيد.' };
   });
-  if (res.ok && back) redirect(back);
+  if (res.ok && back) redirect(safeNext(back, '/account/orders'));
   return res;
 }
 

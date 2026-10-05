@@ -292,6 +292,8 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
   await db.transaction(async (tx) => {
     const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, payoutMethodId)).for('update');
     if (!pm) throw notFound('وسيلة السحب');
+    const [owner] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, pm.sellerId));
+    if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد وسيلة سحب خاصة بمتجرك');
     if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة وسيلة السحب بالفعل');
     if (approve) {
       await tx.update(sellerPayoutMethods).set({ isDefault: false }).where(eq(sellerPayoutMethods.sellerId, pm.sellerId));
@@ -400,6 +402,7 @@ export async function decideSeller(actor: Actor, sellerId: string, decision: Sel
   return db.transaction(async (tx) => {
     const [s] = await tx.select().from(sellers).where(eq(sellers.id, sellerId)).for('update');
     if (!s) throw notFound('البائع');
+    if (s.ownerUserId === actor.userId) throw forbidden('لا يمكنك اتخاذ قرار على طلب بائع خاص بك');
     const to = DECISION_TARGET[decision];
     if (decision === 'APPROVE' && s.status !== 'PENDING_REVIEW') throw invalidState('يمكن الموافقة فقط على الطلبات قيد المراجعة');
     await transition(tx, actor, sellerMachine, s.id, s.status, to, why);

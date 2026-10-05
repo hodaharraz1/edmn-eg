@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, type Actor, requireStepUp } from '@/server/core/actor';
@@ -45,6 +45,8 @@ export const SETTINGS_SCHEMA = {
   /** Days after shipment without buyer confirmation before the order is flagged for operations follow-up. */
   'orders.deliveryFollowUpDays': z.number().int().min(1).max(60).default(10),
   /** Days after delivery confirmation before a seller order is marked COMPLETED. */
+  /** Days after delivery during which the buyer can still open a dispute on a marketplace order. */
+  'disputes.windowDays': z.number().int().min(1).max(180).default(30),
   'orders.completionDays': z.number().int().min(0).max(60).default(14),
   'deals.feeBps': z.number().int().min(0).max(5000).default(0),
   'deals.feePayer': z.enum(['SELLER', 'BUYER']).default('SELLER'),
@@ -105,6 +107,17 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
     if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');
     const [real] = await db.select({ id: paymentDestinations.id }).from(paymentDestinations).where(and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, false))).limit(1);
     if (!real) throw validation('أضف أولاً وجهة دفع حقيقية مفعّلة (غير تجريبية) من «طرق وحسابات الدفع».');
+    // Test money must never become real: go-live requires a clean financial state (no test payment,
+    // withdrawal, refund or deal still open, and no balance left in any seller or deal account).
+    const r = await db.execute<{ open_payments: string; open_withdrawals: string; open_refunds: string; open_deal_payouts: string; balances: string }>(sql`select
+      (select count(*) from payments where is_test and status in ('AWAITING_PAYMENT','PAYMENT_SUBMITTED','UNDER_REVIEW'))::text open_payments,
+      (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING'))::text open_withdrawals,
+      (select count(*) from refunds where status = 'PENDING')::text open_refunds,
+      (select count(*) from deal_payouts where status = 'PENDING')::text open_deal_payouts,
+      (select count(*) from ledger_accounts where balance <> 0 and (seller_id is not null or code = 'DEAL_FUNDS_HELD'))::text balances`);
+    const c = r.rows[0];
+    const blockers = Object.entries(c).filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}=${v}`);
+    if (blockers.length) throw validation(`لا يمكن التفعيل وما زالت توجد أموال/عمليات تجريبية مفتوحة (${blockers.join('، ')}). يجب إقفالها أولاً أو البدء بقاعدة بيانات إنتاج جديدة.`);
   }
   await db.transaction(async (tx) => {
     const old = await getSetting(key, tx);

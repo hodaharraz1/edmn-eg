@@ -4,6 +4,7 @@ import { journalEntries, journalLines, ledgerAccounts, ledgerAdjustments, seller
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { requireSellerActor } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
+import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { DataTable, PageHeader, StatCard } from '@/ui/data';
 
 export const metadata = { title: 'المالية' };
@@ -11,6 +12,7 @@ const ACCOUNT_LABEL: Record<string, string> = { SELLER_PENDING: 'معلق', SELL
 
 export default async function SellerFinance() {
   const actor = await requireSellerActor('/seller/finance');
+  if (!actor.sellerPermissions?.has('finance.view')) return <SellerForbidden />;
   const sellerId = actor.sellerId!;
   const [[t], [adj], balances, lines] = await Promise.all([
     db.select({ gross: sql<string>`coalesce(sum(gross_total) filter (where status <> 'CANCELLED' and paid_at is not null),0)`, fees: sql<string>`coalesce(sum(commission_total) filter (where status <> 'CANCELLED' and paid_at is not null),0)`, refunds: sql<string>`coalesce(sum(refunded_total),0)` }).from(sellerOrders).where(eq(sellerOrders.sellerId, sellerId)),

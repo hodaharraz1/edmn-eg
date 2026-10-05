@@ -13,6 +13,7 @@ import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { requireReason, transition } from '../_shared';
 import { accountBalance, postEntry } from './ledger';
+import { assertNotSelfDealing } from './self-dealing';
 import { formatEGP } from '@/lib/format';
 
 export type Withdrawal = typeof withdrawalRequests.$inferSelect;
@@ -63,6 +64,11 @@ export async function requestWithdrawal(
     if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة. أضف وسيلة سحب وانتظر اعتمادها');
     const slaHours = await getSetting('withdrawals.slaBusinessHours', tx);
     const threshold = await getSetting('withdrawals.dualControlThreshold', tx);
+    // Dual control applies to the seller's rolling 24-hour total, so splitting a payout into several
+    // requests just below the threshold does not avoid a second approver.
+    const recent = await tx.execute<{ total: string }>(sql`select coalesce(sum(amount), 0)::text total from withdrawal_requests
+      where seller_id = ${sellerId} and created_at > now() - interval '24 hours' and status not in ('REJECTED','CANCELLED')`);
+    const rolling = Number(recent.rows[0]?.total ?? 0) + amount;
     const [w] = await tx
       .insert(withdrawalRequests)
       .values({
@@ -77,7 +83,7 @@ export async function requestWithdrawal(
         clientKey: input.clientKey,
         requestedBy: actor.userId,
         slaDueAt: addBusinessHours(new Date(), slaHours),
-        requiresDualControl: amount >= threshold,
+        requiresDualControl: rolling >= threshold,
       })
       .returning();
     await postEntry(tx, actor, {
@@ -155,6 +161,7 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'APPROVED') return;
+    await assertNotSelfDealing(tx, actor, w.sellerId);
     const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId));
     if (seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن اعتماد السحب');
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'APPROVED', note);
@@ -191,6 +198,16 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     if (w.status === 'PAID') return;
     if (w.status !== 'APPROVED' && w.status !== 'PROCESSING') throw invalidState('يجب اعتماد طلب السحب قبل تسجيل الصرف');
     if (w.requiresDualControl && w.approvedBy === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن المعتمد');
+    await assertNotSelfDealing(tx, actor, w.sellerId);
+    if (w.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذا سحب تجريبي (TEST) ولا يمكن صرفه بعد تفعيل الأموال الحقيقية');
+    // Re-check the seller at payout time: a suspension, payout hold or outstanding debt (negative
+    // available balance after a post-release refund) blocks money leaving the platform.
+    const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
+    if (!seller || seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن صرف السحب');
+    if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب). لا يمكن الصرف الآن');
+    if ((await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
+      throw invalidState('على البائع مديونية (رصيد متاح سالب بعد استرداد). يجب تسويتها قبل صرف أي سحب');
+    }
     const file = proof ? await storeUpload(tx, actor, { purpose: 'WITHDRAWAL_PROOF', data: proof.data, originalName: proof.name }) : null;
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'PAID');
     await tx
@@ -219,6 +236,12 @@ export async function rejectWithdrawal(actor: Actor, id: string, reason: string)
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'REJECTED') return;
+    if (w.status === 'PROCESSING') {
+      // A transfer may already be on its way: only a different staff member, freshly re-authenticated,
+      // may state that it did not happen and return the money to the seller's available balance.
+      requireStepUp(actor);
+      if (w.processingBy === actor.userId) throw forbidden('رفض طلب جارٍ تحويله يجب أن يتم بواسطة شخص غير منفذ التحويل');
+    }
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'REJECTED', why);
     await tx.update(withdrawalRequests).set({ status: 'REJECTED', rejectReason: why }).where(eq(withdrawalRequests.id, w.id));
     await reverseReservation(tx, actor, w);
@@ -349,6 +372,11 @@ export async function markRefundPaid(actor: Actor, refundId: string, reference: 
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
     if (r.status === 'PAID') return;
+    // Maker/checker: whoever decided the refund cannot also record paying it, above the threshold.
+    if (r.createdBy === actor.userId && r.amount >= (await getSetting('withdrawals.dualControlThreshold', tx))) {
+      throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن متخذ قرار الاسترداد');
+    }
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك صرف استرداد لنفسك');
     await transition(tx, actor, refundMachine, r.id, r.status, 'PAID');
     const file = proof ? await storeUpload(tx, actor, { purpose: 'REFUND_PROOF', data: proof.data, originalName: proof.name }) : null;
     await tx.update(refunds).set({ status: 'PAID', paidReference: ref, paidProofFileId: file?.id ?? null, paidBy: actor.userId, paidAt: new Date() }).where(eq(refunds.id, r.id));
@@ -385,6 +413,8 @@ export async function markDealPayoutPaid(actor: Actor, payoutId: string, referen
     const [p] = await tx.select().from(dealPayouts).where(eq(dealPayouts.id, payoutId)).for('update');
     if (!p) throw notFound('المستحق');
     if (p.status === 'PAID') return;
+    if (p.status !== 'PENDING') throw invalidState('حالة المستحق لا تسمح بالصرف');
+    if (p.payeeUserId === actor.userId) throw forbidden('لا يمكنك صرف مستحق لنفسك');
     const file = proof ? await storeUpload(tx, actor, { purpose: 'WITHDRAWAL_PROOF', data: proof.data, originalName: proof.name }) : null;
     await tx.update(dealPayouts).set({ status: 'PAID', paidReference: ref, paidProofFileId: file?.id ?? null, paidBy: actor.userId, paidAt: new Date() }).where(eq(dealPayouts.id, p.id));
     const [deal] = await tx.select({ number: externalDeals.number }).from(externalDeals).where(eq(externalDeals.id, p.dealId));

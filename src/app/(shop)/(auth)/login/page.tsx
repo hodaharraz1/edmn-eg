@@ -5,14 +5,15 @@ import { loginAction } from '@/app/_actions/auth';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Field, Input } from '@/ui/form';
 import { Alert } from '@/ui/feedback';
+import { safeNext } from '@/server/web/action';
 import { currentUser } from '@/server/web/session';
 
 export const metadata: Metadata = { title: 'تسجيل الدخول', robots: { index: false } };
 
 export default async function LoginPage(props: PageProps<'/login'>) {
   const sp = await props.searchParams;
-  const next = typeof sp.next === 'string' ? sp.next : '/';
-  if (await currentUser()) redirect(next.startsWith('/') && !next.startsWith('//') ? next : '/');
+  const next = safeNext(typeof sp.next === 'string' ? sp.next : null, '/');
+  if (await currentUser()) redirect(next);
   return (
     <>
       <h1 className="mb-1 text-xl font-bold">تسجيل الدخول</h1>

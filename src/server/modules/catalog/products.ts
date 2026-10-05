@@ -25,6 +25,7 @@ import { requireActiveSeller } from '@/server/modules/sellers/service';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
 import { refreshProductReadModel } from './read-model';
+import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { effectiveAttributes, evaluateListingPolicy } from './taxonomy';
 
 export type Product = typeof products.$inferSelect;
@@ -434,6 +435,7 @@ export async function moderateProduct(actor: Actor, productId: string, decision:
   return db.transaction(async (tx) => {
     const [p] = await tx.select().from(products).where(eq(products.id, productId)).for('update');
     if (!p) throw notFound('المنتج');
+    await assertNotSelfDealing(tx, actor, p.sellerId);
     const to: ProductStatus =
       decision === 'START_REVIEW' ? 'UNDER_REVIEW' : decision === 'APPROVE' ? 'LIVE' : decision === 'SUSPEND' ? 'SUSPENDED' : decision === 'REINSTATE' ? 'APPROVED' : 'REJECTED';
     await transition(tx, actor, productMachine, p.id, p.status, to, why);
@@ -507,6 +509,9 @@ export async function setListingActive(actor: Actor, productId: string, active: 
     const p = await loadOwned(tx, actor, productId);
     const to: ProductStatus = active ? 'LIVE' : 'APPROVED';
     if (p.status === to) return;
+    // Sellers can only toggle an already-approved listing between live and paused. A SUSPENDED,
+    // REJECTED or not-yet-moderated listing can only be changed by staff moderation.
+    if (p.status !== 'APPROVED' && p.status !== 'LIVE') throw invalidState('لا يمكن تفعيل أو إيقاف هذا المنتج في حالته الحالية');
     if (active) await requireActiveSeller(tx, p.sellerId);
     await transition(tx, actor, productMachine, p.id, p.status, to);
     await tx.update(products).set({ status: to, ...(active && !p.publishedAt ? { publishedAt: new Date() } : {}) }).where(eq(products.id, p.id));

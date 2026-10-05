@@ -9,6 +9,9 @@ import { storage } from './storage';
  * Authorization for PRIVATE files. Knowing a file id is never enough: access is derived from the
  * business record the file is attached to (purpose-specific rules below). Denials are uniform 404s.
  */
+const DOC_STEP_UP_MS = 60 * 60_000;
+const SENSITIVE_PURPOSES = new Set(['SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE']);
+
 export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<boolean> {
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
   if (!f || f.deletedAt) return false;
@@ -19,7 +22,8 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
 
   switch (f.purpose) {
     case 'SELLER_DOCUMENT':
-      if (hasPermission(actor, 'sellers.documents.view')) return true;
+      // Identity scans show the full national ID: staff need the permission AND a 2FA re-check within the hour.
+      if (hasPermission(actor, 'sellers.documents.view')) return !!actor.stepUpAt && Date.now() - actor.stepUpAt.getTime() < DOC_STEP_UP_MS;
       return one(sql`select 1 from seller_documents d join sellers s on s.id = d.seller_id where d.file_id = ${f.id} and s.owner_user_id = ${uid}`);
     case 'PAYMENT_PROOF':
       if (hasPermission(actor, 'payments.view')) return true;
@@ -62,8 +66,8 @@ export async function readPrivateFile(actor: Actor, fileId: string) {
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
   const data = await storage().get(f.visibility, f.storageKey);
   if (!data) return null;
-  if (f.purpose === 'SELLER_DOCUMENT' && actor.type === 'ADMIN') {
-    // Access to identity documents is itself audited.
+  if (actor.type === 'ADMIN' && SENSITIVE_PURPOSES.has(f.purpose)) {
+    // Staff access to identity, payment and payout documents is itself audited.
     await audit(db, actor, { action: 'file.sensitive_viewed', entityType: 'file', entityId: f.id, newValues: { purpose: f.purpose } });
   }
   return { file: f, data };

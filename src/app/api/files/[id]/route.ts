@@ -13,7 +13,7 @@ export async function GET(req: Request, ctx: RouteContext<'/api/files/[id]'>) {
   const meta = await requestMeta();
   const candidates: Actor[] = [];
   const admin = await getAdminSession();
-  if (admin?.session.mfaVerifiedAt) candidates.push(await adminActor(admin.user.id, meta));
+  if (admin?.session.mfaVerifiedAt) candidates.push(await adminActor(admin.user.id, { ...meta, stepUpAt: admin.session.stepUpAt }));
   const web = await getWebSession();
   if (web) {
     const s = await sellerActor(web.user.id, meta);

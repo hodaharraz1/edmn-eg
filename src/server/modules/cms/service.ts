@@ -7,6 +7,14 @@ import { slugify } from '@/server/core/text';
 import { db } from '@/server/db/client';
 import { cmsBlocks, cmsPages, legalDocuments } from '@/server/db/schema';
 import { storeUpload } from '@/server/storage/uploads';
+
+/** CMS links: site-relative paths or https URLs only (no javascript:/data:/protocol-relative). */
+const safeHref = (max: number) =>
+  z
+    .string()
+    .max(max)
+    .default('')
+    .refine((v) => v === '' || (/^\/(?![\/\\])/.test(v) && !/[\u0000-\u001f\\]/.test(v)) || /^https:\/\/[^\s]+$/i.test(v), 'رابط غير مسموح — استخدم مساراً داخلياً يبدأ بـ / أو رابط https');
 import { parse, requireReason } from '../_shared';
 
 /**
@@ -15,14 +23,14 @@ import { parse, requireReason } from '../_shared';
  * not a general page builder.
  */
 export const blockDataSchemas = {
-  HERO: z.object({ heading: z.string().max(120), subheading: z.string().max(300).default(''), ctaLabel: z.string().max(40).default(''), ctaHref: z.string().max(300).default(''), imageKey: z.string().optional() }),
-  BANNER: z.object({ heading: z.string().max(120), body: z.string().max(300).default(''), href: z.string().max(300).default(''), tone: z.enum(['brand', 'accent', 'dark']).default('brand'), imageKey: z.string().optional() }),
+  HERO: z.object({ heading: z.string().max(120), subheading: z.string().max(300).default(''), ctaLabel: z.string().max(40).default(''), ctaHref: safeHref(300), imageKey: z.string().optional() }),
+  BANNER: z.object({ heading: z.string().max(120), body: z.string().max(300).default(''), href: safeHref(300), tone: z.enum(['brand', 'accent', 'dark']).default('brand'), imageKey: z.string().optional() }),
   FEATURED_CATEGORIES: z.object({ categorySlugs: z.array(z.string()).max(24).default([]) }),
   PRODUCT_RAIL: z.object({ source: z.enum(['DEALS', 'BEST_SELLERS', 'NEW_ARRIVALS', 'TOP_RATED', 'USED', 'MANUAL']), productSlugs: z.array(z.string()).max(24).default([]), categorySlug: z.string().default(''), limit: z.number().int().min(4).max(24).default(12) }),
   FEATURED_SELLERS: z.object({ storeSlugs: z.array(z.string()).max(12).default([]) }),
   DEAL_CTA: z.object({ heading: z.string().max(120), body: z.string().max(400).default(''), ctaLabel: z.string().max(40).default('ابدأ صفقة محمية') }),
   TRUST: z.object({ items: z.array(z.object({ title: z.string().max(60), body: z.string().max(200) })).max(6).default([]) }),
-  FOOTER: z.object({ about: z.string().max(400).default(''), links: z.array(z.object({ label: z.string().max(60), href: z.string().max(200) })).max(20).default([]) }),
+  FOOTER: z.object({ about: z.string().max(400).default(''), links: z.array(z.object({ label: z.string().max(60), href: safeHref(200) })).max(20).default([]) }),
 } as const;
 export type BlockType = keyof typeof blockDataSchemas;
 

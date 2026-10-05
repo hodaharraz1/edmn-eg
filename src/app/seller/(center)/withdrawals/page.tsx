@@ -15,12 +15,14 @@ import { DataTable, PageHeader } from '@/ui/data';
 import { Alert, EmptyState, StatusChip } from '@/ui/feedback';
 import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
 import { realMoneyEnabled } from '@/server/modules/settings';
+import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { Field, Input } from '@/ui/form';
 
 export const metadata = { title: 'السحوبات' };
 
 export default async function WithdrawalsPage() {
   const actor = await requireSellerActor('/seller/withdrawals');
+  if (!actor.sellerPermissions?.has('finance.view')) return <SellerForbidden />;
   const user = await requireUser('/seller');
   const ctx = (await sellerContextForUser(user.id))!;
   const [b, list, pm, min, mode, days, sla] = await Promise.all([

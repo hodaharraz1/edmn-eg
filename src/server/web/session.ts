@@ -7,6 +7,7 @@ import { adminActor, customerActor, sellerActor, type RequestContext } from '@/s
 import { resolveSession } from '@/server/auth/service';
 import type { Actor } from '@/server/core/actor';
 import { cookieSecure } from '@/server/core/env';
+import { clientIp } from './client-ip';
 import { sha256 } from '@/server/core/crypto';
 
 export const WEB_COOKIE = 'edmn_sid';
@@ -15,13 +16,15 @@ export const CART_COOKIE = 'edmn_cart';
 
 export async function requestMeta(): Promise<RequestContext> {
   const h = await headers();
-  const fwd = h.get('x-forwarded-for');
+  const rid = h.get('x-request-id');
   return {
-    ip: (fwd ? fwd.split(',')[0] : h.get('x-real-ip'))?.trim() || null,
-    userAgent: h.get('user-agent'),
-    requestId: h.get('x-request-id') ?? randomUUID(),
+    ip: clientIp(h),
+    userAgent: h.get('user-agent')?.slice(0, 300) ?? null,
+    requestId: rid && /^[\w-]{1,64}$/.test(rid) ? rid : randomUUID(),
   };
 }
+
+
 
 export async function setSessionCookie(name: string, token: string, maxAgeHours: number) {
   (await cookies()).set(name, token, {
@@ -82,6 +85,11 @@ export async function requireSellerActor(next = '/seller'): Promise<Actor> {
 }
 
 export const getAdminSession = cache(async () => {
+  // With host routing on, admin sessions are only honoured on the admin host — never on www./seller.
+  if (process.env.ENFORCE_HOSTS === 'true') {
+    const host = ((await headers()).get('host') ?? '').split(':')[0].toLowerCase();
+    if (host !== (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase()) return null;
+  }
   const token = (await cookies()).get(ADMIN_COOKIE)?.value;
   const row = await resolveSession(token, 'ADMIN');
   if (!row || !row.user.isStaff) return null;

@@ -19,8 +19,9 @@ export default async function SellerSettings() {
   const user = await requireUser('/seller');
   const isOwner = actor.sellerPermissions?.has('staff.manage');
   const [methods, members] = await Promise.all([
-    db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.sellerId, actor.sellerId!)).orderBy(desc(sellerPayoutMethods.createdAt)),
-    db.select({ m: sellerMembers, name: users.fullName, email: users.email }).from(sellerMembers).innerJoin(users, eq(users.id, sellerMembers.userId)).where(and(eq(sellerMembers.sellerId, actor.sellerId!), eq(sellerMembers.isActive, true))),
+    // Payout methods (masked) and the staff list are only for members allowed to manage them.
+    actor.sellerPermissions?.has('payout.manage') || actor.sellerPermissions?.has('finance.view') ? db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.sellerId, actor.sellerId!)).orderBy(desc(sellerPayoutMethods.createdAt)) : Promise.resolve([]),
+    isOwner ? db.select({ m: sellerMembers, name: users.fullName, email: users.email }).from(sellerMembers).innerJoin(users, eq(users.id, sellerMembers.userId)).where(and(eq(sellerMembers.sellerId, actor.sellerId!), eq(sellerMembers.isActive, true))) : Promise.resolve([]),
   ]);
   return (
     <div className="space-y-5">

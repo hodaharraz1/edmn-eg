@@ -8,7 +8,7 @@ import { logout } from '@/server/auth/service';
 import { db } from '@/server/db/client';
 import { wishlistItems } from '@/server/db/schema';
 import { addToCart, updateCartItem } from '@/server/modules/commerce/cart';
-import { runAction, int, str, type ActionState } from '@/server/web/action';
+import { runAction, int, str, type ActionState, safeNext } from '@/server/web/action';
 import { GOV_COOKIE } from '@/server/web/context';
 import { cartRef, clearCookie, getWebSession, WEB_COOKIE } from '@/server/web/session';
 import { cookieSecure } from '@/server/core/env';
@@ -51,7 +51,7 @@ export async function toggleWishlistAction(fd: FormData) {
   if (ex) await db.delete(wishlistItems).where(and(eq(wishlistItems.userId, s.user.id), eq(wishlistItems.productId, productId)));
   else await db.insert(wishlistItems).values({ userId: s.user.id, productId }).onConflictDoNothing();
   revalidatePath('/account/wishlist');
-  revalidatePath(str(fd, 'back') || '/');
+  revalidatePath(safeNext(str(fd, 'back'), '/'));
 }
 
 export async function logoutAction() {

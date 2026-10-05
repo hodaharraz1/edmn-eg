@@ -4,12 +4,14 @@ import { db } from '@/server/db/client';
 import { requireSellerActor } from '@/server/web/session';
 import { formatEGP } from '@/lib/format';
 import { LinkButton } from '@/ui/button';
+import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { PageHeader } from '@/ui/data';
 
 export const metadata = { title: 'الرصيد' };
 
 export default async function BalancePage() {
   const actor = await requireSellerActor('/seller/balance');
+  if (!actor.sellerPermissions?.has('finance.view')) return <SellerForbidden />;
   const b = await sellerBalances(db, actor.sellerId!);
   const cards = [
     { label: 'الرصيد المعلق', value: b.pending, tone: 'border-amber-300 bg-amber-50', def: 'صافي مبيعاتك (بعد العمولة) لطلبات تم دفعها ولم يؤكد العميل استلامها بعد، أو عليها نزاع/تجميد إداري.' },

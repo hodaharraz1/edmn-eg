@@ -2,7 +2,7 @@ import { and, desc, eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision } from '@/domain/machines';
 import { audit, recordTransition } from '@/server/audit/audit';
-import { requireUser, SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
+import { requireUser, SYSTEM_ACTOR, type Actor, hasPermission } from '@/server/core/actor';
 import { encryptJson, randomToken, sha256 } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
@@ -412,7 +412,7 @@ export async function dealGraph(actor: Actor, dealId: string) {
   const userId = requireUser(actor);
   const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, dealId));
   if (!deal) throw notFound('الصفقة');
-  const role = deal.buyerId === userId ? 'BUYER' : deal.sellerUserId === userId ? 'SELLER' : actor.type === 'ADMIN' ? 'ADMIN' : null;
+  const role = deal.buyerId === userId ? 'BUYER' : deal.sellerUserId === userId ? 'SELLER' : hasPermission(actor, 'deals.view') ? 'ADMIN' : null;
   if (!role) throw forbidden();
   const [payment] = await db.select().from(payments).where(eq(payments.dealId, deal.id));
   const evidence = await db.select().from(dealEvidence).where(eq(dealEvidence.dealId, deal.id));

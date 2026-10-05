@@ -175,7 +175,7 @@ export function toCsv(headers: string[], rows: (string | number | null | undefin
   const esc = (v: string | number | null | undefined) => {
     let s = v === null || v === undefined ? '' : String(v);
     if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return '﻿' + [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
 }

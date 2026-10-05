@@ -65,9 +65,4 @@ export async function filesOf(fd: FormData, key: string): Promise<{ data: Buffer
   return out;
 }
 
-/** Only allow same-site relative redirects (prevents open redirects via ?next=). */
-export function safeNext(next: string | null | undefined, fallback = '/'): string {
-  if (!next || typeof next !== 'string') return fallback;
-  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\') || next.includes('://')) return fallback;
-  return next;
-}
+export { safeNext } from './safe-next';

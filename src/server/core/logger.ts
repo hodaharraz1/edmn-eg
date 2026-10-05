@@ -4,7 +4,7 @@
  */
 type Level = 'debug' | 'info' | 'warn' | 'error';
 const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
-const SENSITIVE = /pass(word)?|secret|token|national_?id|iban|account_?number|wallet|totp|otp|cookie|authorization/i;
+const SENSITIVE = /pass(word)?|secret|token|national_?id|iban|account_?number|wallet|totp|otp|cookie|authorization|email|phone|mobile|address|legal_?name|lat(itude)?$|lng|lon(gitude)?$|coord/i;
 
 function redact(value: unknown, depth = 0): unknown {
   if (depth > 5 || value === null || typeof value !== 'object') return value;

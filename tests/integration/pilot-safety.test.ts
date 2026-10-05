@@ -51,7 +51,11 @@ describe('pilot safety — real money is off unless explicitly enabled', () => {
   it('with real money enabled only real destinations are offered and payments are not test', async () => {
     delete process.env.EDMN_ENVIRONMENT;
     await saveDestination(admin, null, { methodCode: 'INSTAPAY', label: 'حساب الشركة الرسمي', details: { instapayAddress: 'company@instapay' }, isEnabled: true, isTest: false }, 'حساب معتمد');
-    await updateSetting(admin, 'payments.realMoneyEnabled', true, 'go-live approved');
+    // P0 regression: go-live is refused while any test payment, withdrawal, refund, deal payout or
+    // seller/deal balance still exists — test money can never become real money.
+    await expect(updateSetting(admin, 'payments.realMoneyEnabled', true, 'go-live approved')).rejects.toThrow(/تجريبية مفتوحة/);
+    // Simulate a clean production database where an authorized admin enabled real money.
+    await db.insert(systemSettings).values({ key: 'payments.realMoneyEnabled', value: true }).onConflictDoUpdate({ target: systemSettings.key, set: { value: true } });
     expect(await realMoneyEnabled()).toBe(true);
     const s = await makeSeller(admin);
     const p = await makeProduct(s.actor, admin, { stock: 3 });
@@ -67,5 +71,11 @@ describe('pilot safety — real money is off unless explicitly enabled', () => {
     expect(await realMoneyEnabled()).toBe(false);
     process.env.EDMN_ENVIRONMENT = prevEnv;
     await updateSetting(admin, 'payments.realMoneyEnabled', false, 'back to pilot');
+    // In test mode only TEST destinations are offered (a "test" payment can never reach a real account).
+    const c2 = await makeCustomer();
+    const p2 = await makeProduct(s.actor, admin, { stock: 3 });
+    const o2 = await checkout(c2, [{ variantId: p2.variantId, qty: 1 }]);
+    const snap2 = (await paymentOf(o2.id)).destinationSnapshot as { isTest: boolean }[];
+    expect(snap2.every((d) => d.isTest === true)).toBe(true);
   });
 });

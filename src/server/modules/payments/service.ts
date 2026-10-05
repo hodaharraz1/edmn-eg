@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
@@ -49,6 +49,7 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
   let claimed: number;
   try {
     claimed = parseEgp(d.claimedAmount);
+    if (!(claimed > 0)) throw new Error('non-positive');
   } catch {
     throw validation('المبلغ غير صحيح', { claimedAmount: ['المبلغ غير صحيح'] });
   }
@@ -126,6 +127,7 @@ export async function startReview(actor: Actor, paymentId: string) {
  */
 export async function confirmPayment(actor: Actor, paymentId: string, submissionId: string, note?: string | null) {
   requirePermission(actor, 'payments.verify');
+  requireStepUp(actor); // confirming a payment creates seller liabilities in the ledger
   return db.transaction(async (tx) => {
     const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
     if (!p) throw notFound('عملية الدفع');
@@ -133,6 +135,13 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
     if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') throw invalidState('لا يوجد إثبات دفع قيد المراجعة لهذه العملية');
     const [sub] = await tx.select().from(paymentSubmissions).where(eq(paymentSubmissions.id, submissionId)).for('update');
     if (!sub || sub.paymentId !== p.id || sub.status !== 'SUBMITTED') throw invalidState('إثبات الدفع المحدد غير صالح للتأكيد');
+    // The amount the buyer declares must equal the amount due; a different transfer needs a new proof.
+    if (sub.claimedAmount !== p.amountDue) throw invalidState('المبلغ المحوَّل المعلن لا يطابق المبلغ المطلوب. اطلب إثباتاً جديداً بالمبلغ الصحيح');
+    // Separation of duties: staff can never confirm a payment they made or one that pays their own store.
+    if (p.payerUserId === actor.userId) throw forbidden('لا يمكنك تأكيد دفعة قمت بها بنفسك');
+    await assertNotSelfDealingOnPayment(tx, actor, p);
+    // Pilot safety: a payment made while real money was off can never be confirmed after go-live.
+    if (p.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذه دفعة تجريبية (TEST) ولا يمكن تأكيدها بعد تفعيل الأموال الحقيقية');
 
     await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', note);
     await tx.update(payments).set({ status: 'CONFIRMED', confirmedAt: new Date(), confirmedBy: actor.userId, confirmedAmount: p.amountDue }).where(eq(payments.id, p.id));
@@ -312,5 +321,18 @@ export async function submissionsFor(paymentId: string) {
 
 /** Destinations shown to buyers: with real money on, TEST destinations are never offered. */
 export function offeredDestinations(realMoney: boolean) {
-  return realMoney ? and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, false)) : eq(paymentDestinations.isEnabled, true);
+  // Real money on → only verified real destinations. Real money off → only TEST destinations, so a
+  // "test" payment can never land in a real company account.
+  return and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, !realMoney));
+}
+
+/** Reject confirmation by a staff member who owns or works for a store paid by this payment (or is the deal seller). */
+async function assertNotSelfDealingOnPayment(tx: DbOrTx, actor: Actor, p: Payment) {
+  if (!actor.userId) return;
+  const rows = p.orderId
+    ? await tx.execute(sql`select 1 from seller_orders so join sellers s on s.id = so.seller_id
+        left join seller_members m on m.seller_id = s.id and m.user_id = ${actor.userId} and m.is_active
+        where so.order_id = ${p.orderId} and (s.owner_user_id = ${actor.userId} or m.user_id is not null) limit 1`)
+    : await tx.execute(sql`select 1 from external_deals d where d.id = ${p.dealId} and d.seller_user_id = ${actor.userId} limit 1`);
+  if (rows.rows.length) throw forbidden('لا يمكنك تأكيد دفعة لصالح متجر أو صفقة أنت طرف فيها');
 }
