@@ -7,3 +7,4 @@ export * from './deals';
 export * from './postpurchase';
 export * from './finance';
 export * from './ops';
+export * from './messaging';

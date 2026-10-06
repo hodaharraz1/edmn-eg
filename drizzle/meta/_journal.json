@@ -50,6 +50,13 @@
       "when": 1791208376865,
       "tag": "0006_deal_delivery_otp",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791285842352,
+      "tag": "0007_buyer_seller_messaging",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ export const FILE_PURPOSES = [
   'WITHDRAWAL_PROOF',
   'REFUND_PROOF',
   'SUPPORT_ATTACHMENT',
+  'MESSAGE_ATTACHMENT',
 ] as const;
 export type FilePurpose = (typeof FILE_PURPOSES)[number];
 

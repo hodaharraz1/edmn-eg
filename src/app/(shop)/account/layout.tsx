@@ -4,11 +4,12 @@ import { logoutAction } from '@/app/_actions/shop';
 import { AccountNav } from '@/app/_components/account-nav';
 import { requireCustomer, requireUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
+import { unreadForUser } from '@/server/modules/messaging/service';
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   await requireCustomer('/account');
   const user = await requireUser('/account');
-  const seller = await sellerContextForUser(user.id);
+  const [seller, unread] = await Promise.all([sellerContextForUser(user.id), unreadForUser(user.id)]);
   return (
     <div className="container-page grid grid-cols-1 gap-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="min-w-0 space-y-3">
@@ -16,7 +17,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
           <p className="text-xs text-muted">أهلاً</p>
           <p className="font-bold">{user.fullName}</p>
         </div>
-        <AccountNav />
+        <AccountNav unreadMessages={unread} />
         <div className="hidden space-y-1 lg:block">
           <Link href={seller ? '/seller' : '/sell'} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-brand-700 hover:bg-white">
             <Store className="size-4" /> {seller ? 'مركز البائع' : 'ابدأ بيع على اضمن'}

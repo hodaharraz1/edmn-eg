@@ -8,6 +8,8 @@ import { sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
 import { disputeGraph } from '@/server/modules/postpurchase/disputes';
 import { isDomainError } from '@/server/core/errors';
 import { requireSellerActor } from '@/server/web/session';
+import { sellerOrderMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
+import { MessageCtaLink } from '@/app/_components/message-cta';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
@@ -34,9 +36,11 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
   const thread = dispute ? await disputeGraph(actor, dispute.id).catch(() => null) : null;
   const canShipEdit = ['SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED'].includes(so.status);
   const today = new Date().toISOString().slice(0, 10);
+  const canMessage = !!actor.sellerPermissions?.has('orders.communicate') && sellerOrderMessagingAvailable(so);
+  const unreadMsgs = canMessage ? await unreadForContext(actor, { sellerOrderId: so.id }) : 0;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الطلبات', href: '/seller/orders' }, { label: `#${order.number}-${so.suffix}` }]} />} title={`طلب #${order.number}-${so.suffix}`} description={`مدفوع في ${formatDate(so.paidAt, true)}`} actions={<StatusChip status={so.status} />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الطلبات', href: '/seller/orders' }, { label: `#${order.number}-${so.suffix}` }]} />} title={`طلب #${order.number}-${so.suffix}`} description={`مدفوع في ${formatDate(so.paidAt, true)}`} actions={<><StatusChip status={so.status} />{canMessage && <MessageCtaLink href={`/seller/messages/open?so=${so.id}`} label="تواصل مع المشتري" unread={unreadMsgs} />}</>} />
       {so.status === 'PAID' && <Alert tone="warning" title="طلب جديد بانتظار تأكيدك">أكّد الطلب ثم جهّزه للشحن خلال {so.processingDays ?? 2} يوم عمل.</Alert>}
       {so.financialHold && <Alert tone="danger">يوجد تجميد إداري على مستحقات هذا الطلب: {so.holdReason}</Alert>}
       {dispute && <Alert tone="danger" title={`نزاع مفتوح #${dispute.number}`}>{dispute.description}</Alert>}

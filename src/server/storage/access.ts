@@ -10,7 +10,7 @@ import { storage } from './storage';
  * business record the file is attached to (purpose-specific rules below). Denials are uniform 404s.
  */
 const DOC_STEP_UP_MS = 60 * 60_000;
-const SENSITIVE_PURPOSES = new Set(['SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE']);
+const SENSITIVE_PURPOSES = new Set(['SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE', 'MESSAGE_ATTACHMENT']);
 
 export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<boolean> {
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
@@ -58,6 +58,20 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
     case 'SUPPORT_ATTACHMENT':
       if (hasPermission(actor, 'support.manage')) return true;
       return one(sql`select 1 from support_messages m join support_tickets t on t.id = m.ticket_id where m.attachment_file_id = ${f.id} and t.requester_user_id = ${uid}`);
+    case 'MESSAGE_ATTACHMENT': {
+      // Staff with message access (each view audited below); otherwise only a participant of the very
+      // conversation the file was sent in, and never once staff have hidden that message.
+      if (hasPermission(actor, 'messages.view')) return true;
+      const storeSide =
+        actor.type === 'SELLER' && actor.sellerId && actor.sellerPermissions?.has('orders.communicate') ? sql`or c.seller_id = ${actor.sellerId}` : sql``;
+      return one(sql`
+        select 1 from conversation_message_attachments a join conversation_messages m on m.id = a.message_id
+        join conversations c on c.id = m.conversation_id
+        where a.file_id = ${f.id} and m.hidden_at is null
+          and ((c.context = 'SELLER_ORDER' and c.buyer_user_id = ${uid} and ${actor.type !== 'SELLER'})
+            or (c.context = 'DEAL' and (c.buyer_user_id = ${uid} or c.seller_user_id = ${uid}))
+            ${storeSide})`);
+    }
     default:
       return false;
   }

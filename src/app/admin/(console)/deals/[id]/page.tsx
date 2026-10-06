@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { canViewConversations, conversationIdFor } from '@/server/modules/messaging/service';
+
 import { isDomainError } from '@/server/core/errors';
 import { db } from '@/server/db/client';
 import { auditLogs, dealInvitations, disputes, riskFlags, statusHistory } from '@/server/db/schema';
@@ -25,6 +27,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
     throw e;
   }
   const d = g.deal;
+  const convId = canViewConversations(actor) ? await conversationIdFor({ dealId: d.id }) : null;
   const invites = await db.select().from(dealInvitations).where(eq(dealInvitations.dealId, d.id)).orderBy(asc(dealInvitations.createdAt));
   const disp = await db.select().from(disputes).where(eq(disputes.dealId, d.id));
   const history = await db.select().from(statusHistory).where(eq(statusHistory.entityId, d.id)).orderBy(asc(statusHistory.createdAt));
@@ -38,7 +41,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
   const flags = await db.select().from(riskFlags).where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, d.id)));
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات', href: '/admin/deals' }, { label: `#${d.number}` }]} />} title={`صفقة #${d.number}: ${d.title}`} description={`المشتري: ${g.buyerName}`} actions={<StatusChip status={d.status === 'DELIVERED' ? 'DEAL_SHIPPED' : d.status} />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات', href: '/admin/deals' }, { label: `#${d.number}` }]} />} title={`صفقة #${d.number}: ${d.title}`} description={`المشتري: ${g.buyerName}`} actions={<><StatusChip status={d.status === 'DELIVERED' ? 'DEAL_SHIPPED' : d.status} />{convId && <Link href={`/admin/messages/${convId}?via=deal`} className="text-sm font-semibold text-brand-700 underline" data-testid="admin-conversation-link">محادثة الطرفين</Link>}</>} />
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'البائع (بيانات مؤكدة)', value: d.sellerFullName ? `${d.sellerFullName} · ${d.sellerVerifiedPhone ?? ''} ${d.sellerContactEmail ?? ''}` : 'لم ينضم بعد' },

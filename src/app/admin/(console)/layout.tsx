@@ -60,6 +60,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/admin/approvals', label: 'مركز الموافقات', perm: 'dashboard.view', badgeKey: 'approvals' },
       { href: '/admin/notifications', label: 'الإشعارات', perm: 'notifications.manage' },
       { href: '/admin/support', label: 'الدعم الفني', perm: 'support.manage', badgeKey: 'tickets' },
+      { href: '/admin/messages', label: 'محادثات المشترين والبائعين', perm: 'messages.view' },
       { href: '/admin/reports', label: 'التقارير والتصدير', perm: 'reports.view' },
     ],
   },

@@ -56,6 +56,12 @@ export const SETTINGS_SCHEMA = {
   /** Delivery handover OTP lifetime and wrong-code limit (a new code can be requested afterwards). */
   'deals.deliveryOtpTtlHours': z.number().int().min(1).max(336).default(72),
   'deals.deliveryOtpMaxAttempts': z.number().int().min(3).max(10).default(5),
+  /**
+   * Buyer ↔ seller messaging stays writable this many days after the order/deal reaches a final state
+   * (completed / cancelled / refunded), then becomes read-only. A product default, NOT a legal retention
+   * period: conversations themselves are never deleted (evidence), whatever this value is.
+   */
+  'messaging.postCloseWriteDays': z.number().int().min(0).max(365).default(30),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;

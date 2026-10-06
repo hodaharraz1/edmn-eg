@@ -42,6 +42,8 @@ import { LocationPicker } from '@/app/_components/location-picker';
 import { ReturnPolicyFields } from '@/app/_components/return-policy-fields';
 import { ReturnPolicyView } from '@/app/_components/return-policy-view';
 import { ContactVerification } from '@/app/_components/contact-verification';
+import { MessageCtaLink } from '@/app/_components/message-cta';
+import { dealMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
 
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
 const NEGOTIATION = ['SELLER_JOINED', 'OFFER_PENDING_BUYER', 'CHANGE_REQUESTED'];
@@ -86,6 +88,9 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
   const dests = (payment?.destinationSnapshot as { label: string; details: Record<string, string>; isTest?: boolean }[] | null) ?? [];
   const isSeller = role === 'SELLER';
   const isBuyer = role === 'BUYER';
+  // Conversation opens once the seller has securely claimed the invitation (identity bound to the deal).
+  const canMessage = dealMessagingAvailable(deal);
+  const unreadMsgs = canMessage ? await unreadForContext(actor, { dealId: deal.id }) : 0;
 
   return (
     <div className="space-y-4">
@@ -93,7 +98,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات المحمية', href: '/account/deals' }, { label: g.ref }]} />}
         title={deal.title}
         description={`صفقة محمية · ${g.ref}`}
-        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} /></>}
+        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} />{canMessage && <MessageCtaLink href={`/account/messages/open?deal=${deal.id}`} label={isBuyer ? 'تواصل مع البائع' : 'تواصل مع المشتري'} unread={unreadMsgs} />}</>}
       />
 
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}

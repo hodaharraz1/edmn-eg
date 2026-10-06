@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, Boxes, CircleDollarSign, Gauge, HeartPulse, LayoutDashboard, LifeBuoy, Package, PackagePlus, RotateCcw, Settings, ShoppingBag, Star, Store, Truck, Wallet, Landmark } from 'lucide-react';
+import { BarChart3, Boxes, CircleDollarSign, Gauge, HeartPulse, LayoutDashboard, LifeBuoy, MessagesSquare, Package, PackagePlus, RotateCcw, Settings, ShoppingBag, Star, Store, Truck, Wallet, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -11,6 +11,7 @@ export const SELLER_NAV = [
   { href: '/seller/products/new', label: 'إضافة منتج', icon: PackagePlus },
   { href: '/seller/inventory', label: 'المخزون', icon: Boxes },
   { href: '/seller/orders', label: 'الطلبات', icon: ShoppingBag },
+  { href: '/seller/messages', label: 'الرسائل', icon: MessagesSquare },
   { href: '/seller/shipping', label: 'الشحن', icon: Truck },
   { href: '/seller/returns', label: 'المرتجعات', icon: RotateCcw },
   { href: '/seller/reviews', label: 'التقييمات', icon: Star },
@@ -24,17 +25,23 @@ export const SELLER_NAV = [
   { href: '/seller/settings', label: 'الإعدادات', icon: Settings },
 ] as const;
 
-export function SellerNav({ compact }: { compact?: boolean }) {
+export function SellerNav({ compact, unreadMessages = 0, canMessage = true }: { compact?: boolean; unreadMessages?: number; canMessage?: boolean }) {
   const path = usePathname();
   return (
     <nav aria-label="قائمة مركز البائع" className="space-y-0.5">
-      {SELLER_NAV.map((it) => {
+      {SELLER_NAV.filter((it) => canMessage || it.href !== '/seller/messages').map((it) => {
         const active = it.href === '/seller' ? path === '/seller' : it.href === '/seller/products' ? path.startsWith('/seller/products') && path !== '/seller/products/new' : path.startsWith(it.href);
         const Icon = it.icon;
         return (
           <Link key={it.href} href={it.href} aria-current={active ? 'page' : undefined} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm', active ? 'bg-white/15 font-semibold text-white' : 'text-white/75 hover:bg-white/10 hover:text-white', compact && 'text-ink/80 hover:text-ink')}>
             <Icon className="size-4 shrink-0" aria-hidden />
             {it.label}
+            {it.href === '/seller/messages' && unreadMessages > 0 && (
+              <span className="ms-auto inline-grid min-w-5 place-items-center rounded-full bg-accent-600 px-1.5 text-[11px] font-bold text-white" data-testid="unread-badge">
+                {unreadMessages > 99 ? '99+' : unreadMessages}
+                <span className="sr-only"> رسائل جديدة</span>
+              </span>
+            )}
           </Link>
         );
       })}

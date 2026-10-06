@@ -50,6 +50,9 @@ export const PERMISSIONS = {
   'settlements.manage': 'إدارة التسويات الدورية',
   // Ops
   'support.manage': 'إدارة الدعم الفني',
+  // Buyer ↔ seller conversations (private customer communication — every staff view is audited)
+  'messages.view': 'عرض محادثات المشترين والبائعين',
+  'messages.moderate': 'إدارة البلاغات وإخفاء الرسائل',
   'cms.manage': 'إدارة المحتوى',
   'legal.manage': 'إدارة النصوص القانونية',
   'notifications.manage': 'إدارة قوالب الإشعارات',
@@ -72,7 +75,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
       'sellers.suspend', 'products.view', 'products.moderate', 'orders.view', 'orders.manage', 'shipping.view',
       'orders.confirm_receipt_on_behalf', 'payments.view', 'returns.manage', 'disputes.manage', 'deals.view',
       'deals.manage', 'reviews.moderate', 'support.manage', 'cms.manage', 'audit.view', 'finance.view',
-      'withdrawals.view',
+      'withdrawals.view', 'messages.view', 'messages.moderate',
     ],
   },
   SELLER_REVIEWER: {
@@ -109,12 +112,12 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
   DISPUTE_OFFICER: {
     nameAr: 'مسؤول النزاعات',
     nameEn: 'Dispute officer',
-    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view'],
+    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view'],
   },
   CUSTOMER_SUPPORT: {
     nameAr: 'خدمة العملاء',
     nameEn: 'Customer support',
-    permissions: ['dashboard.view', 'support.manage', 'customers.view', 'orders.view', 'sellers.view', 'deals.view', 'reviews.moderate'],
+    permissions: ['dashboard.view', 'support.manage', 'customers.view', 'orders.view', 'sellers.view', 'deals.view', 'reviews.moderate', 'messages.view', 'messages.moderate'],
   },
 };
 
@@ -124,6 +127,8 @@ export const SELLER_PERMISSIONS = [
   'products.manage',
   'inventory.manage',
   'orders.manage',
+  /** Read and answer buyer conversations on the store's orders (not granted to finance/catalog staff). */
+  'orders.communicate',
   'returns.manage',
   'finance.view',
   'finance.withdraw',
@@ -136,9 +141,9 @@ export type SellerPermission = (typeof SELLER_PERMISSIONS)[number];
 
 export const SELLER_ROLE_PERMISSIONS: Record<string, readonly SellerPermission[]> = {
   STORE_OWNER: SELLER_PERMISSIONS,
-  STORE_MANAGER: ['store.manage', 'products.manage', 'inventory.manage', 'orders.manage', 'returns.manage', 'reviews.respond', 'support.use', 'finance.view'],
+  STORE_MANAGER: ['store.manage', 'products.manage', 'inventory.manage', 'orders.manage', 'orders.communicate', 'returns.manage', 'reviews.respond', 'support.use', 'finance.view'],
   CATALOG_MANAGER: ['products.manage', 'inventory.manage', 'support.use'],
-  ORDER_MANAGER: ['orders.manage', 'returns.manage', 'inventory.manage', 'support.use'],
+  ORDER_MANAGER: ['orders.manage', 'orders.communicate', 'returns.manage', 'inventory.manage', 'support.use'],
   FINANCE: ['finance.view', 'finance.withdraw', 'support.use'],
-  SUPPORT: ['support.use', 'reviews.respond', 'orders.manage'],
+  SUPPORT: ['support.use', 'reviews.respond', 'orders.manage', 'orders.communicate'],
 };

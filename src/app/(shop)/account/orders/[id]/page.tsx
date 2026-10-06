@@ -10,6 +10,8 @@ import { cancelUnpaidOrderAction } from '@/app/_actions/checkout';
 import { confirmReceiptAction } from '@/app/_actions/account';
 import { isDomainError } from '@/server/core/errors';
 import { requireCustomer } from '@/server/web/session';
+import { sellerOrderMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
+import { MessageCtaLink } from '@/app/_components/message-cta';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
@@ -32,6 +34,8 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
     throw e;
   }
   const soIds = g.sellerOrders.map((s) => s.so.id);
+  // One conversation per seller sub-order (never a shared multi-seller thread); opens once payment is confirmed.
+  const unreadBySo = new Map(await Promise.all(g.sellerOrders.map(async ({ so }) => [so.id, sellerOrderMessagingAvailable(so) ? await unreadForContext(actor, { sellerOrderId: so.id }) : 0] as const)));
   const [ships, rets, disp, pReviews, sReviews] = await Promise.all([
     soIds.length ? db.select().from(shipments).where(inArray(shipments.sellerOrderId, soIds)) : [],
     soIds.length ? db.select().from(returns).where(inArray(returns.sellerOrderId, soIds)) : [],
@@ -77,7 +81,14 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                 <p className="font-bold">شحنة {order.number}-{so.suffix}</p>
                 <p className="text-xs text-muted">من <Link href={`/store/${storeSlug}`} className="text-brand-700 hover:underline">{storeName}</Link></p>
               </div>
-              <StatusChip status={so.status} />
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusChip status={so.status} />
+                {sellerOrderMessagingAvailable(so) ? (
+                  <MessageCtaLink href={`/account/messages/open?so=${so.id}`} label="تواصل مع البائع" unread={unreadBySo.get(so.id) ?? 0} />
+                ) : (
+                  so.status !== 'CANCELLED' && <span className="text-xs text-muted" data-testid="message-cta-pending">التواصل مع البائع بيتفتح بعد تأكيد الدفع</span>
+                )}
+              </div>
             </header>
             <div className="space-y-5 p-5">
               {so.status !== 'CANCELLED' && stepIdx >= 0 && (

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { asc, eq, inArray } from 'drizzle-orm';
 import { adminOrderAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { canViewConversations, conversationIdFor } from '@/server/modules/messaging/service';
+
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { orders, shipmentDocuments, shipments, statusHistory, trackingEvents } from '@/server/db/schema';
@@ -24,6 +26,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
   if (!o) notFound();
   const g = await loadOrderGraph(o);
   const soIds = g.sellerOrders.map((s) => s.so.id);
+  const convBySo = canViewConversations(actor) ? new Map(await Promise.all(soIds.map(async (id) => [id, await conversationIdFor({ sellerOrderId: id })] as const))) : new Map<string, string | null>();
   const ships = soIds.length ? await db.select().from(shipments).where(inArray(shipments.sellerOrderId, soIds)) : [];
   const docs = ships.length ? await db.select().from(shipmentDocuments).where(inArray(shipmentDocuments.shipmentId, ships.map((s) => s.id))) : [];
   const events = ships.length ? await db.select().from(trackingEvents).where(inArray(trackingEvents.shipmentId, ships.map((s) => s.id))).orderBy(asc(trackingEvents.occurredAt)) : [];
@@ -46,7 +49,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
           <section key={so.id} className="card space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-bold">{o.number}-{so.suffix} · <Link href={`/admin/sellers/${so.sellerId}`} className="text-brand-700">{storeName}</Link></h2>
-              <span className="flex items-center gap-2"><StatusChip status={so.status} />{so.financialHold && <Badge tone="danger">تجميد</Badge>}{so.fundsReleasedAt && <Badge tone="success">أُتيحت الأموال</Badge>}</span>
+              <span className="flex items-center gap-2"><StatusChip status={so.status} />{so.financialHold && <Badge tone="danger">تجميد</Badge>}{so.fundsReleasedAt && <Badge tone="success">أُتيحت الأموال</Badge>}{convBySo.get(so.id) && <Link href={`/admin/messages/${convBySo.get(so.id)}?via=order`} className="text-xs font-semibold text-brand-700 underline" data-testid="admin-conversation-link">محادثة المشتري والبائع</Link>}</span>
             </div>
             <ul className="text-sm">{items.map((it) => <li key={it.id}>{it.titleSnapshot} × {it.quantity} — {formatEGP(it.lineTotal)} · عمولة {(it.commissionBps / 100).toFixed(2)}% = {formatEGP(it.commissionAmount)}<span className="block text-xs text-muted">الاسترجاع (لقطة وقت الشراء): {it.returnPolicySnapshot ? `${returnPolicySummary(it.returnPolicySnapshot)}${it.returnPolicySnapshot.legalNoticeVersion ? ` · إشعار ${it.returnPolicySnapshot.legalNoticeVersion}` : ''}` : 'غير مسجلة (طلب قديم)'}</span></li>)}</ul>
             <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-6">

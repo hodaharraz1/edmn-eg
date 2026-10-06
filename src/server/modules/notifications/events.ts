@@ -37,6 +37,9 @@ export const EVENT_TEMPLATES = {
   DEAL_DELIVERY_OTP: { title: 'رمز استلام الصفقة', body: 'رمز استلام صفقة اضمن #{{deal}}: {{code}} — لا تعطه لأحد إلا عند استلام المنتج فعليًا. صالح حتى {{expires}}.', sms: true },
   DEAL_HANDOVER_VERIFIED: { title: 'التسليم اتأكد', body: 'تسليم الصفقة #{{deal}} اتأكد. افحص المنتج وبعدها اختار: استلمته والمنتج مطابق، أو فيه مشكلة، أو ما استلمتوش.', sms: false },
   DEAL_DELIVERY_REVIEW: { title: 'الصفقة عند فريق العمليات', body: 'الصفقة #{{deal}} اتحوّلت لمراجعة فريق العمليات، والمبلغ محجوز لحد القرار.', sms: false },
+  /** Buyer ↔ seller messages: never include the message text (it may be private). */
+  MESSAGE_FROM_SELLER: { title: 'رسالة جديدة من البائع', body: 'عندك رسالة جديدة من {{party}} على {{ref}}. افتح اضمن عشان تشوفها.', sms: false },
+  MESSAGE_FROM_BUYER: { title: 'رسالة جديدة من المشتري', body: 'عندك رسالة جديدة من المشتري على {{ref}}. افتح اضمن عشان ترد.', sms: false },
   EXTERNAL_DEAL_COMPLETED: { title: 'الصفقة اكتملت', body: 'الصفقة #{{deal}} اكتملت. شكرًا إنك استخدمت اضمن.', sms: false },
   SUPPORT_REPLY: { title: 'رد جديد على تذكرة الدعم', body: 'فيه رد جديد على التذكرة #{{ticket}}.', sms: false },
   REVIEW_RECEIVED: { title: 'تقييم جديد', body: 'حصلت على تقييم جديد ({{rating}}/5).', sms: false },

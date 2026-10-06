@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { disputeAdminAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { canViewConversations, conversationIdFor } from '@/server/modules/messaging/service';
+
 import { isDomainError } from '@/server/core/errors';
 import { db } from '@/server/db/client';
 import { orders, sellerOrders, users } from '@/server/db/schema';
@@ -28,6 +30,7 @@ export default async function AdminDispute(props: PageProps<'/admin/disputes/[id
     throw e;
   }
   const d = g.dispute;
+  const convId = canViewConversations(actor) ? await conversationIdFor(d.sellerOrderId ? { sellerOrderId: d.sellerOrderId } : { dealId: d.dealId ?? undefined }) : null;
   let orderLink: { href: string; label: string } | null = null;
   if (d.sellerOrderId) {
     const [so] = await db.select({ orderId: sellerOrders.orderId, suffix: sellerOrders.suffix, number: orders.number }).from(sellerOrders).innerJoin(orders, eq(orders.id, sellerOrders.orderId)).where(eq(sellerOrders.id, d.sellerOrderId));
@@ -39,6 +42,12 @@ export default async function AdminDispute(props: PageProps<'/admin/disputes/[id
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'النزاعات', href: '/admin/disputes' }, { label: `#${d.number}` }]} />} title={`نزاع #${d.number}`} description={d.reasonCode} actions={<StatusChip status={d.status} />} />
+      {convId && (
+        <p className="text-sm" data-testid="dispute-conversation-evidence">
+          <Link href={`/admin/messages/${convId}?via=dispute`} className="font-semibold text-brand-700 underline">محادثة الطرفين (دليل مساعد)</Link>
+          <span className="text-muted"> — الرسائل لا تتجاوز السجلات الرسمية للدفع والشحن والشروط المتفق عليها ورمز الاستلام وتأكيد الاستلام.</span>
+        </p>
+      )}
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'المرجع', value: orderLink ? <Link className="text-brand-700" href={orderLink.href}>{orderLink.label}</Link> : '—' },
