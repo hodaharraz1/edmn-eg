@@ -225,3 +225,25 @@ export async function testApproval(entryTypes: string[], amount: number, approve
     values ('MANUAL_ADJUSTMENT', 'test', ${randomUUID()}, ${amount}, 'test', ${sql.raw(`array[${entryTypes.map((t) => `'${t.replace(/[^A-Z_]/g, '')}'`).join(',')}]`)}, 'test fixture', ${a.userId}, now(), ${randomUUID()}) returning id`);
   return r.rows[0].id;
 }
+
+/**
+ * Test-only clock simulation: shifts every delivery/response timestamp of a seller order back by
+ * `hours`, as if that much real time had passed. The deadline-immutability trigger is disabled only
+ * inside this one transaction (ALTER TABLE is transactional) and re-enabled before commit.
+ */
+export async function elapse(soId: string, hours: number) {
+  const { sql } = await import('drizzle-orm');
+  const iv = sql.raw(`interval '${Number(hours)} hours'`);
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`alter table seller_orders disable trigger seller_orders_deadline_guard`);
+    await tx.execute(sql`update seller_orders set
+      shipped_at = shipped_at - ${iv},
+      delivery_event_at = delivery_event_at - ${iv},
+      delivery_report_due_at = delivery_report_due_at - ${iv},
+      seller_delivery_confirmed_at = seller_delivery_confirmed_at - ${iv},
+      delivery_established_at = delivery_established_at - ${iv},
+      buyer_response_due_at = buyer_response_due_at - ${iv}
+      where id = ${soId}`);
+    await tx.execute(sql`alter table seller_orders enable trigger seller_orders_deadline_guard`);
+  });
+}
