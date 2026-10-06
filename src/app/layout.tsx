@@ -40,11 +40,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
           تخطَّ إلى المحتوى
         </a>
-        {IS_STAGING && (
-          <div role="note" className="bg-amber-400 px-4 py-1 text-center text-xs font-semibold text-black">
-            بيئة تجريبية (Staging) — كل البيانات والمدفوعات وهمية. لا تستخدم بيانات أو حسابات حقيقية.
-          </div>
-        )}
+        {/* Brand strip. The environment stays technically staging (noindex, test-money notices at
+            checkout/payment, real money blocked server-side); only this visible text changed. */}
+        <div role="note" data-environment={IS_STAGING ? 'staging' : 'production'} className="bg-amber-400 px-4 py-1 text-center text-xs font-semibold text-black">
+          مع اضمن.. اشتري وانت مطمّن
+        </div>
         {children}
       </body>
     </html>
