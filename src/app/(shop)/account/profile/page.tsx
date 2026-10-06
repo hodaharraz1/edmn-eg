@@ -12,13 +12,13 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-4">
       <PageHeader title="الملف الشخصي" />
-      <ActionForm action={updateProfileAction} className="card max-w-xl space-y-4 p-5" successMessage="تم الحفظ">
+      <ActionForm action={updateProfileAction} className="card max-w-xl space-y-4 p-5" successMessage="بياناتك اتحفظت">
         <Field label="الاسم بالكامل" htmlFor="fullName"><Input id="fullName" name="fullName" defaultValue={user.fullName} required /></Field>
-        <Field label="البريد الإلكتروني" htmlFor="email" hint="لتغيير البريد أو الموبايل تواصل مع الدعم"><Input id="email" value={user.email ?? ''} disabled dir="ltr" /></Field>
+        <Field label="البريد الإلكتروني" htmlFor="email" hint="عشان تغيّر البريد أو الموبايل، تواصل معانا"><Input id="email" value={user.email ?? ''} disabled dir="ltr" /></Field>
         <Field label="رقم الموبايل" htmlFor="phone"><Input id="phone" value={user.phone ?? ''} disabled dir="ltr" /></Field>
         <SubmitButton>حفظ</SubmitButton>
       </ActionForm>
-      <p className="text-xs text-muted">لطلب حذف الحساب والبيانات راجع <Link href="/legal/data-deletion" className="underline">سياسة حذف البيانات</Link> ثم افتح تذكرة دعم من نوع «الحساب».</p>
+      <p className="text-xs text-muted">عشان تطلب حذف حسابك وبياناتك، راجع <Link href="/legal/data-deletion" className="underline">سياسة حذف البيانات</Link> وبعدين افتح تذكرة دعم من نوع «الحساب».</p>
     </div>
   );
 }

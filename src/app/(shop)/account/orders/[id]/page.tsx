@@ -19,7 +19,7 @@ import { Breadcrumbs, PageHeader, Timeline } from '@/ui/data';
 import { Alert, StatusChip } from '@/ui/feedback';
 
 const STEPS = ['PAID', 'SELLER_CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'] as const;
-const STEP_LABEL: Record<string, string> = { PAID: 'تم الدفع', SELLER_CONFIRMED: 'أكده البائع', READY_TO_SHIP: 'جاهز للشحن', SHIPPED: 'تم الشحن', DELIVERED: 'تم الاستلام' };
+const STEP_LABEL: Record<string, string> = { PAID: 'اتدفع', SELLER_CONFIRMED: 'البائع أكّده', READY_TO_SHIP: 'جاهز للشحن', SHIPPED: 'اتشحن', DELIVERED: 'اتسلّم' };
 
 export default async function OrderDetail(props: PageProps<'/account/orders/[id]'>) {
   const actor = await requireCustomer('/account/orders');
@@ -51,16 +51,16 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
       <PageHeader
         breadcrumbs={<Breadcrumbs items={[{ label: 'طلباتي', href: '/account/orders' }, { label: `#${order.number}` }]} />}
         title={`طلب #${order.number}`}
-        description={`تم الطلب في ${formatDate(order.placedAt, true)}`}
+        description={`اتطلب في ${formatDate(order.placedAt, true)}`}
         actions={<StatusChip status={order.status} />}
       />
 
       {order.status === 'PENDING_PAYMENT' && payment && (
-        <Alert tone="warning" title={payment.status === 'REJECTED' ? 'لم يتم قبول إثبات الدفع' : 'الطلب بانتظار الدفع'} action={<LinkButton href={`/account/orders/${order.id}/pay`} size="sm">{payment.status === 'REJECTED' ? 'رفع إثبات جديد' : 'ادفع الآن'}</LinkButton>}>
-          المبلغ المطلوب {formatEGP(payment.amountDue)} — آخر موعد {formatDate(payment.dueAt, true)}. لن يتم تجهيز الطلب قبل تأكيد الدفع.
+        <Alert tone="warning" title={payment.status === 'REJECTED' ? 'إثبات الدفع اترفض' : 'الطلب مستني الدفع'} action={<LinkButton href={`/account/orders/${order.id}/pay`} size="sm">{payment.status === 'REJECTED' ? 'ارفع إثبات جديد' : 'ادفع دلوقتي'}</LinkButton>}>
+          المبلغ المطلوب {formatEGP(payment.amountDue)} — آخر موعد {formatDate(payment.dueAt, true)}. البائع مش هيجهّز الطلب غير بعد تأكيد الدفع.
         </Alert>
       )}
-      {order.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info" title="جارٍ التحقق من الدفع">استلمنا إثبات الدفع وسيتم التحقق منه في أقرب وقت. سنرسل لك إشعاراً فور التأكيد.</Alert>}
+      {order.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info" title="بنراجع الدفع">استلمنا إثبات الدفع وهنراجعه في أقرب وقت. هنبعتلك إشعار أول ما يتأكد.</Alert>}
 
       {g.sellerOrders.map(({ so, storeName, storeSlug, items }) => {
         const ship = ships.find((s) => s.sellerOrderId === so.id);
@@ -90,7 +90,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                   ))}
                 </ol>
               )}
-              {so.status === 'CANCELLED' && <Alert tone="danger" title="تم إلغاء هذه الشحنة">السبب: {so.cancelReason ?? '—'}. أي مبلغ مدفوع سيتم رده إليك.</Alert>}
+              {so.status === 'CANCELLED' && <Alert tone="danger" title="الشحنة دي اتلغت">السبب: {so.cancelReason ?? '—'}. أي مبلغ دفعته هيرجعلك.</Alert>}
               <ul className="divide-y divide-line">
                 {items.map((it) => (
                   <li key={it.id} className="flex gap-3 py-3">
@@ -99,8 +99,8 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                     </span>
                     <div className="min-w-0 flex-1 text-sm">
                       <p className="font-medium">{it.titleSnapshot}</p>
-                      <p className="text-xs text-muted">{it.variantLabel} · {label('condition', it.conditionSnapshot)} · الكمية {it.quantity}{it.returnedQuantity ? ` · تم إرجاع ${it.returnedQuantity}` : ''}</p>
-                      <p className="text-xs text-muted" data-testid="order-item-return-policy">سياسة الاسترجاع وقت الشراء: {it.returnPolicySnapshot ? returnPolicySummary(it.returnPolicySnapshot) : 'حسب سياسة المتجر'}</p>
+                      <p className="text-xs text-muted">{it.variantLabel} · {label('condition', it.conditionSnapshot)} · الكمية {it.quantity}{it.returnedQuantity ? ` · اترجع ${it.returnedQuantity}` : ''}</p>
+                      <p className="text-xs text-muted" data-testid="order-item-return-policy">سياسة الإرجاع وقت الشراء: {it.returnPolicySnapshot ? returnPolicySummary(it.returnPolicySnapshot) : 'حسب سياسة المتجر'}</p>
                       {delivered && !reviewedItems.has(it.id) && (
                         <Link href={`/account/reviews?item=${it.id}`} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"><Star className="size-3.5" /> قيّم المنتج</Link>
                       )}
@@ -112,9 +112,9 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               {ship && (
                 <div className="rounded-xl bg-page p-4 text-sm">
                   <p className="mb-2 flex items-center gap-2 font-semibold"><Truck className="size-4 text-brand-600" /> {ship.carrierName} {ship.trackingNumber && <span className="ltr text-xs text-muted">· {ship.trackingNumber}</span>}</p>
-                  {ship.expectedDeliveryAt && <p className="mb-3 text-xs text-muted">التسليم المتوقع: {formatDate(ship.expectedDeliveryAt)}</p>}
+                  {ship.expectedDeliveryAt && <p className="mb-3 text-xs text-muted">التوصيل المتوقع: {formatDate(ship.expectedDeliveryAt)}</p>}
                   <Timeline items={evs.map((e) => ({ title: e.description ?? e.status, time: formatDate(e.occurredAt, true) }))} />
-                  {docs.filter((d) => d.shipmentId === ship.id).length > 0 && <p className="mt-2 text-xs text-muted">تم رفع بوليصة الشحن بواسطة البائع.</p>}
+                  {docs.filter((d) => d.shipmentId === ship.id).length > 0 && <p className="mt-2 text-xs text-muted">البائع رفع بوليصة الشحن.</p>}
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
@@ -122,8 +122,8 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                   <ActionForm action={confirmReceiptAction} className="w-full space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                     <input type="hidden" name="sellerOrderId" value={so.id} />
                     <input type="hidden" name="orderId" value={order.id} />
-                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ بتأكيد الاستلام يتم تحويل المبلغ للبائع. لا تؤكد قبل استلام المنتج فعلياً.</p>
-                    <SubmitButton variant="success">تأكيد استلام الطلب</SubmitButton>
+                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ لما تأكّد الاستلام، المبلغ بيتحوّل للبائع. متأكّدش قبل ما المنتج يوصلك فعلاً.</p>
+                    <SubmitButton variant="success">أكّد الاستلام</SubmitButton>
                   </ActionForm>
                 )}
                 {delivered && (
@@ -133,11 +133,11 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                   </>
                 )}
                 {['PAID', 'SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(so.status) && !dsp && (
-                  <LinkButton href={`/account/disputes/new?so=${so.id}`} variant="ghost" size="sm"><Scale className="size-4" /> الإبلاغ عن مشكلة</LinkButton>
+                  <LinkButton href={`/account/disputes/new?so=${so.id}`} variant="ghost" size="sm"><Scale className="size-4" /> عندك مشكلة في الطلب؟</LinkButton>
                 )}
-                {dsp && <LinkButton href={`/account/disputes/${dsp.id}`} variant="secondary" size="sm">متابعة النزاع #{dsp.number}</LinkButton>}
+                {dsp && <LinkButton href={`/account/disputes/${dsp.id}`} variant="secondary" size="sm">تابع النزاع #{dsp.number}</LinkButton>}
                 {ret.map((r) => (
-                  <LinkButton key={r.id} href={`/account/returns/${r.id}`} variant="secondary" size="sm">مرتجع #{r.number} · <StatusChip status={r.status} /></LinkButton>
+                  <LinkButton key={r.id} href={`/account/returns/${r.id}`} variant="secondary" size="sm">طلب إرجاع #{r.number} · <StatusChip status={r.status} /></LinkButton>
                 ))}
               </div>
               <dl className="grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4">
@@ -168,7 +168,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
           {order.status === 'PENDING_PAYMENT' && (
             <form action={cancelUnpaidOrderAction} className="mt-3">
               <input type="hidden" name="orderId" value={order.id} />
-              <ConfirmSubmit confirm="هل تريد إلغاء هذا الطلب؟" variant="outline" size="sm">إلغاء الطلب</ConfirmSubmit>
+              <ConfirmSubmit confirm="عايز تلغي الطلب ده؟" variant="outline" size="sm">إلغاء الطلب</ConfirmSubmit>
             </form>
           )}
         </section>

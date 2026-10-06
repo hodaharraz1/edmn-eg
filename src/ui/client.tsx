@@ -13,7 +13,7 @@ export function Gallery({ images, alt }: { images: { src: string; full: string; 
     if (zoom) dialog.current?.showModal();
     else dialog.current?.close();
   }, [zoom]);
-  if (!images.length) return <div className="card grid aspect-square place-items-center text-muted">لا توجد صور</div>;
+  if (!images.length) return <div className="card grid aspect-square place-items-center text-muted">مفيش صور</div>;
   const cur = images[Math.min(i, images.length - 1)];
   return (
     <div className="space-y-3">
@@ -95,18 +95,18 @@ export function QuantityInput({ name = 'quantity', max = 99, defaultValue = 1 }:
   const [q, setQ] = useState(defaultValue);
   return (
     <div className="inline-flex h-10 items-center rounded-lg border border-line bg-white">
-      <button type="button" className="grid size-10 place-items-center disabled:opacity-40" onClick={() => setQ((v) => Math.max(1, v - 1))} disabled={q <= 1} aria-label="إنقاص">
+      <button type="button" className="grid size-10 place-items-center disabled:opacity-40" onClick={() => setQ((v) => Math.max(1, v - 1))} disabled={q <= 1} aria-label="قلّل">
         <Minus className="size-4" />
       </button>
       <input name={name} value={q} onChange={(e) => setQ(Math.min(max, Math.max(1, Number(e.target.value) || 1)))} inputMode="numeric" className="w-10 text-center text-sm font-semibold focus:outline-none" aria-label="الكمية" />
-      <button type="button" className="grid size-10 place-items-center disabled:opacity-40" onClick={() => setQ((v) => Math.min(max, v + 1))} disabled={q >= max} aria-label="زيادة">
+      <button type="button" className="grid size-10 place-items-center disabled:opacity-40" onClick={() => setQ((v) => Math.min(max, v + 1))} disabled={q >= max} aria-label="زوّد">
         <Plus className="size-4" />
       </button>
     </div>
   );
 }
 
-export function CopyButton({ value, label = 'نسخ' }: { value: string; label?: string }) {
+export function CopyButton({ value, label = 'انسخ' }: { value: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -123,7 +123,7 @@ export function CopyButton({ value, label = 'نسخ' }: { value: string; label?:
       className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs hover:bg-page"
     >
       {done ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-      {done ? 'تم النسخ' : label}
+      {done ? 'اتنسخ' : label}
     </button>
   );
 }

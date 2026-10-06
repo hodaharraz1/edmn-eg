@@ -30,18 +30,18 @@ export default async function AccountDashboard() {
       {awaitingPay.map(({ o, p }) => (
         <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
           <span className="flex items-center gap-2"><Clock className="size-4 text-amber-700" /> الطلب #{o.number} بانتظار الدفع ({formatEGP(o.grandTotal)}) — آخر موعد {formatDate(p.dueAt, true)}</span>
-          <LinkButton href={`/account/orders/${o.id}/pay`} size="sm">ادفع الآن</LinkButton>
+          <LinkButton href={`/account/orders/${o.id}/pay`} size="sm">ادفع دلوقتي</LinkButton>
         </div>
       ))}
       {toConfirm.map(({ so, number }) => (
         <div key={so.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm">
-          <span className="flex items-center gap-2"><Truck className="size-4 text-brand-700" /> الشحنة #{number}-{so.suffix} في الطريق إليك. أكّد الاستلام بعد فحص المنتج.</span>
-          <LinkButton href={`/account/orders/${so.orderId}`} size="sm" variant="secondary">عرض الطلب</LinkButton>
+          <span className="flex items-center gap-2"><Truck className="size-4 text-brand-700" /> الشحنة #{number}-{so.suffix} في الطريق ليك. أكّد الاستلام بعد ما تفحص المنتج.</span>
+          <LinkButton href={`/account/orders/${so.orderId}`} size="sm" variant="secondary">شوف الطلب</LinkButton>
         </div>
       ))}
       <section className="card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold">أحدث الطلبات</h2>
+          <h2 className="font-bold">آخر طلباتك</h2>
           <Link href="/account/orders" className="text-sm text-brand-700 hover:underline">كل الطلبات</Link>
         </div>
         {recent.length ? (
@@ -56,7 +56,7 @@ export default async function AccountDashboard() {
             ))}
           </ul>
         ) : (
-          <EmptyState icon={Package} title="لا توجد طلبات بعد" action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
+          <EmptyState icon={Package} title="لسه مفيش طلبات" action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
         )}
       </section>
       <form action={logoutAction} className="lg:hidden">

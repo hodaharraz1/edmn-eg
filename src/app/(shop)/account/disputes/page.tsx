@@ -15,9 +15,9 @@ export default async function DisputesPage() {
   const list = await db.select().from(disputes).where(or(eq(disputes.claimantUserId, user.id), eq(disputes.respondentUserId, user.id))).orderBy(desc(disputes.createdAt));
   return (
     <div>
-      <PageHeader title="النزاعات" description="فريق اضمن يراجع كل نزاع بناءً على الأدلة المقدمة من الطرفين." />
+      <PageHeader title="النزاعات" description="فريق اضمن بيراجع كل نزاع على حسب الأدلة اللي بيقدّمها الطرفين." />
       {list.length === 0 ? (
-        <EmptyState icon={Scale} title="لا توجد نزاعات" description="نتمنى أن تظل كذلك!" />
+        <EmptyState icon={Scale} title="مفيش نزاعات" description="ونتمنى تفضل كده!" />
       ) : (
         <ul className="card divide-y divide-line">
           {list.map((d) => (

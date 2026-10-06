@@ -20,10 +20,10 @@ export default async function NewTicket(props: PageProps<'/account/support/new'>
             {TICKET_TYPES.map((t) => <option key={t} value={t}>{label('ticketType', t)}</option>)}
           </Select>
         </Field>
-        <Field label="العنوان" htmlFor="subject" required><Input id="subject" name="subject" required minLength={5} /></Field>
-        <Field label="التفاصيل" htmlFor="body" required hint="اذكر رقم الطلب إن وجد"><Textarea id="body" name="body" required minLength={10} rows={5} /></Field>
+        <Field label="الموضوع" htmlFor="subject" required><Input id="subject" name="subject" required minLength={5} /></Field>
+        <Field label="التفاصيل" htmlFor="body" required hint="اكتب رقم الطلب لو موجود"><Textarea id="body" name="body" required minLength={10} rows={5} /></Field>
         <Field label="مرفق (اختياري)" htmlFor="attachment"><input id="attachment" type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-sm" /></Field>
-        <SubmitButton>إرسال</SubmitButton>
+        <SubmitButton>ابعت</SubmitButton>
       </ActionForm>
     </div>
   );

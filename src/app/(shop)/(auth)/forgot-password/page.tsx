@@ -10,14 +10,14 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <h1 className="mb-1 text-xl font-bold">نسيت كلمة المرور؟</h1>
-      <p className="mb-6 text-sm text-muted">أدخل بريدك أو رقم موبايلك وسنرسل لك رابطاً لإعادة التعيين.</p>
+      <p className="mb-6 text-sm text-muted">اكتب بريدك أو رقم موبايلك وهنبعتلك رابط تغيّر بيه كلمة المرور.</p>
       <ActionForm action={forgotPasswordAction} className="space-y-4" resetOnSuccess>
         <Field label="البريد الإلكتروني أو رقم الموبايل" htmlFor="identifier" required>
           <Input id="identifier" name="identifier" required dir="ltr" className="text-start" />
         </Field>
-        <SubmitButton className="w-full" size="lg">إرسال الرابط</SubmitButton>
+        <SubmitButton className="w-full" size="lg">ابعت الرابط</SubmitButton>
       </ActionForm>
-      <p className="mt-6 text-center text-sm"><Link href="/login" className="text-brand-700 hover:underline">العودة لتسجيل الدخول</Link></p>
+      <p className="mt-6 text-center text-sm"><Link href="/login" className="text-brand-700 hover:underline">ارجع لتسجيل الدخول</Link></p>
     </>
   );
 }

@@ -173,7 +173,7 @@ function dealCta(b: Block) {
           {d.body && <p className="max-w-2xl text-sm text-muted sm:text-base">{d.body}</p>}
           <ol className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs font-medium text-ink">
             <li>١. اكتب تفاصيل الصفقة</li>
-            <li>٢. ادعُ البائع</li>
+            <li>٢. ابعت دعوة للبائع</li>
             <li>٣. ادفع لاضمن</li>
             <li>٤. استلم وأكّد</li>
           </ol>

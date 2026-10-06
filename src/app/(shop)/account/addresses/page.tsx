@@ -19,7 +19,7 @@ export default async function AddressesPage(props: PageProps<'/account/addresses
   return (
     <div className="space-y-6">
       <PageHeader title="العناوين" />
-      {list.length === 0 ? <EmptyState icon={MapPin} title="لا توجد عناوين محفوظة" /> : (
+      {list.length === 0 ? <EmptyState icon={MapPin} title="مفيش عناوين محفوظة" /> : (
         <div className="grid gap-3 sm:grid-cols-2">
           {list.map((a) => (
             <div key={a.id} className="card space-y-1 p-4 text-sm">
@@ -28,14 +28,14 @@ export default async function AddressesPage(props: PageProps<'/account/addresses
               <p className="text-xs text-muted ltr">{a.phone}</p>
               <div className="flex gap-3 pt-2">
                 <a href={`/account/addresses?edit=${a.id}`} className="text-xs text-brand-700 hover:underline">تعديل</a>
-                <form action={archiveAddressAction}><input type="hidden" name="id" value={a.id} /><ConfirmSubmit confirm="حذف العنوان؟" variant="ghost" size="sm" className="h-auto px-0 text-xs text-red-700">حذف</ConfirmSubmit></form>
+                <form action={archiveAddressAction}><input type="hidden" name="id" value={a.id} /><ConfirmSubmit confirm="تحذف العنوان ده؟" variant="ghost" size="sm" className="h-auto px-0 text-xs text-red-700">حذف</ConfirmSubmit></form>
               </div>
             </div>
           ))}
         </div>
       )}
       <section className="card p-5">
-        <h2 className="mb-3 font-bold">{editing ? 'تعديل العنوان' : 'إضافة عنوان'}</h2>
+        <h2 className="mb-3 font-bold">{editing ? 'تعديل العنوان' : 'ضيف عنوان جديد'}</h2>
         <AddressForm address={editing} defaultName={user.fullName} defaultPhone={user.phone ?? ''} />
       </section>
     </div>

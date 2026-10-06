@@ -18,10 +18,10 @@ export async function ShopFooter() {
       <div className="container-page grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
           <p className="text-sm leading-relaxed text-white/70">
-            {data.about || 'اضمن سوق مصري متعدد البائعين للمنتجات الجديدة والمستعملة، مع دفع محمي حتى تأكيد الاستلام، وصفقات محمية لمشترياتك من خارج السوق.'}
+            {data.about || 'اضمن سوق مصري للمنتجات الجديدة والمستعملة من بائعين كتير. بتدفع لاضمن، والبائع بياخد فلوسه بعد ما تأكّد الاستلام. وتقدر كمان تعمل صفقة محمية لأي حاجة بتشتريها من برّه السوق.'}
           </p>
           <p className="flex items-center gap-2 text-xs text-emerald-300">
-            <ShieldCheck className="size-4" /> البائع لا يستلم أرباحه إلا بعد تأكيدك استلام الطلب
+            <ShieldCheck className="size-4" /> البائع ما بياخدش فلوسه غير بعد ما تأكّد إنك استلمت الطلب
           </p>
         </div>
         <div>
@@ -35,7 +35,7 @@ export async function ShopFooter() {
           </ul>
         </div>
         <div>
-          <h2 className="mb-3 font-semibold text-white">البائعون</h2>
+          <h2 className="mb-3 font-semibold text-white">للبائعين</h2>
           <ul className="space-y-2 text-sm">
             <li><Link href="/sell" className="hover:text-white">بيع على اضمن</Link></li>
             <li><Link href="/seller" className="hover:text-white">مركز البائع</Link></li>
@@ -49,7 +49,7 @@ export async function ShopFooter() {
         <div>
           <h2 className="mb-3 font-semibold text-white">السياسات والمساعدة</h2>
           <ul className="grid grid-cols-1 gap-2 text-sm">
-            <li><Link href="/account/support" className="hover:text-white">الدعم الفني</Link></li>
+            <li><Link href="/account/support" className="hover:text-white">تواصل معانا</Link></li>
             {legal.slice(0, 7).map((l) => (
               <li key={l.slug}><Link href={`/legal/${l.slug}`} className="hover:text-white">{l.title}</Link></li>
             ))}
@@ -57,7 +57,7 @@ export async function ShopFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">© {new Date().getFullYear()} EDMN — اضمن. جميع الحقوق محفوظة.</div>
+      <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">© {new Date().getFullYear()} اضمن. جميع الحقوق محفوظة.</div>
     </footer>
   );
 }

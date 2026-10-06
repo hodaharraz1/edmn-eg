@@ -12,7 +12,7 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
   return (
     <>
       <h1 className="mb-1 text-xl font-bold">إنشاء حساب جديد</h1>
-      <p className="mb-6 text-sm text-muted">حساب واحد للتسوق، الصفقات المحمية، والبيع على اضمن.</p>
+      <p className="mb-6 text-sm text-muted">حساب واحد تشتري بيه، وتعمل صفقات محمية، وتبيع على اضمن.</p>
       <ActionForm action={registerAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
         <Field label="الاسم بالكامل" htmlFor="fullName" required>
@@ -27,7 +27,7 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
           <Input id="phone" name="phone" type="tel" autoComplete="tel" required dir="ltr" className="text-start" inputMode="tel" />
           <FieldError name="phone" />
         </Field>
-        <Field label="كلمة المرور" htmlFor="password" required hint="8 أحرف على الأقل وتحتوي على حروف وأرقام">
+        <Field label="كلمة المرور" htmlFor="password" required hint="8 حروف على الأقل، فيها حروف وأرقام">
           <Input id="password" name="password" type="password" autoComplete="new-password" required minLength={8} />
           <FieldError name="password" />
         </Field>
@@ -40,11 +40,11 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
             </>
           }
         />
-        <SubmitButton className="w-full" size="lg" pendingText="جارٍ إنشاء الحساب…">إنشاء حساب</SubmitButton>
+        <SubmitButton className="w-full" size="lg" pendingText="بنعمل حسابك…">إنشاء حساب</SubmitButton>
       </ActionForm>
       <p className="mt-6 text-center text-sm">
-        لديك حساب بالفعل؟{' '}
-        <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-brand-700 hover:underline">سجّل الدخول</Link>
+        عندك حساب؟{' '}
+        <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-semibold text-brand-700 hover:underline">سجّل دخول</Link>
       </p>
     </>
   );

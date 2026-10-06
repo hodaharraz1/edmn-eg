@@ -25,7 +25,7 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'النزاعات', href: '/account/disputes' }, { label: `#${d.number}` }]} />} title={`نزاع #${d.number}`} actions={<StatusChip status={d.status} />} />
-      {d.status === 'AWAITING_INFORMATION' && <Alert tone="warning">فريق اضمن يطلب معلومات إضافية. يرجى الرد أدناه.</Alert>}
+      {d.status === 'AWAITING_INFORMATION' && <Alert tone="warning">فريق اضمن محتاج معلومات زيادة. رد عليهم تحت.</Alert>}
       {d.decision && (
         <Alert tone="success" title={`القرار: ${DECISION_LABELS[d.decision]}`}>
           {d.decisionNote} {d.decisionAmount ? `— المبلغ: ${formatEGP(d.decisionAmount)}` : ''}
@@ -44,7 +44,7 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
       </section>
       <section className="card space-y-3 p-5">
         <h2 className="font-bold">المحادثة</h2>
-        {g.messages.length === 0 && <p className="text-sm text-muted">لا توجد رسائل بعد.</p>}
+        {g.messages.length === 0 && <p className="text-sm text-muted">مفيش رسايل لسه.</p>}
         {g.messages.map(({ m, author }) => (
           <div key={m.id} className={`rounded-xl p-3 text-sm ${m.authorRole === 'ADMIN' ? 'bg-brand-50' : 'bg-page'}`}>
             <p className="mb-1 flex items-center gap-2 text-xs text-muted"><Badge tone={m.authorRole === 'ADMIN' ? 'brand' : 'neutral'}>{ROLE[m.authorRole]}</Badge> {author} · {formatDate(m.createdAt, true)}</p>
@@ -54,9 +54,9 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
         {open && (
           <ActionForm action={disputeMessageAction} className="space-y-2" resetOnSuccess encType="multipart/form-data">
             <input type="hidden" name="disputeId" value={d.id} />
-            <Textarea name="body" required rows={3} placeholder="اكتب ردك أو معلومات إضافية…" aria-label="الرسالة" />
+            <Textarea name="body" required rows={3} placeholder="اكتب ردك أو أي معلومات زيادة…" aria-label="الرسالة" />
             <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
-            <SubmitButton size="sm">إرسال</SubmitButton>
+            <SubmitButton size="sm">ابعت</SubmitButton>
           </ActionForm>
         )}
       </section>

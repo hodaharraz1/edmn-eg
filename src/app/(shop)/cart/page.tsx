@@ -12,13 +12,13 @@ import { DeliveryLine, mediaUrl } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
 import { Alert, EmptyState } from '@/ui/feedback';
 
-export const metadata: Metadata = { title: 'سلة التسوق', robots: { index: false } };
+export const metadata: Metadata = { title: 'السلة', robots: { index: false } };
 
 const ISSUE_TEXT: Record<string, string> = {
-  UNAVAILABLE: 'لم يعد هذا المنتج متاحاً — احذفه للمتابعة',
-  SELLER_UNAVAILABLE: 'المتجر غير متاح حالياً',
-  INSUFFICIENT_STOCK: 'الكمية المطلوبة أكبر من المتوفر',
-  PRICE_CHANGED: 'تغيّر السعر منذ أضفته للسلة',
+  UNAVAILABLE: 'المنتج ده مبقاش متاح — احذفه عشان تكمّل',
+  SELLER_UNAVAILABLE: 'المتجر مش متاح دلوقتي',
+  INSUFFICIENT_STOCK: 'الكمية المطلوبة أكبر من المتاح',
+  PRICE_CHANGED: 'السعر اتغيّر من وقت ما ضفته للسلة',
   NO_SHIPPING: 'البائع لا يشحن إلى هذه المحافظة حالياً',
 };
 
@@ -30,7 +30,7 @@ export default async function CartPage() {
   if (!cart || cart.groups.length === 0) {
     return (
       <div className="container-page py-10">
-        <EmptyState icon={ShoppingCart} title="سلة التسوق فارغة" description="تصفح آلاف المنتجات من بائعين موثّقين وأضف ما يعجبك." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
+        <EmptyState icon={ShoppingCart} title="السلة فاضية" description="شوف آلاف المنتجات من بائعين موثّقين وضيف اللي يعجبك." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
       </div>
     );
   }
@@ -40,14 +40,14 @@ export default async function CartPage() {
   const shippingWarning = cart.groups.some((g) => g.lines.some((l) => l.issues.includes('NO_SHIPPING')));
   return (
     <div className="container-page py-6">
-      <PageHeader title={`سلة التسوق (${cart.itemCount})`} description={`التوصيل إلى ${gov?.nameAr} · الطلبات من أكثر من متجر تُشحن بشكل منفصل من كل بائع.`} />
+      <PageHeader title={`السلة (${cart.itemCount})`} description={`التوصيل إلى ${gov?.nameAr} · لو طلبت من أكتر من متجر، كل بائع بيشحن منتجاته لوحده.`} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           {cart.groups.map((g) => (
             <section key={g.sellerId} className="card overflow-hidden">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-page/60 px-4 py-3">
                 <Link href={`/store/${g.storeSlug}`} className="flex items-center gap-1.5 font-semibold hover:text-brand-700">
-                  يُباع بواسطة {g.storeName} {g.storeVerified && <BadgeCheck className="size-4 text-brand-600" />}
+                  من متجر {g.storeName} {g.storeVerified && <BadgeCheck className="size-4 text-brand-600" />}
                 </Link>
                 <DeliveryLine fee={g.shippingFee} min={g.etaMinDays !== null ? g.etaMinDays + g.processingDays : null} max={g.etaMaxDays !== null ? g.etaMaxDays + g.processingDays : null} />
               </header>
@@ -83,7 +83,7 @@ export default async function CartPage() {
                 ))}
               </ul>
               <footer className="flex justify-between border-t border-line px-4 py-2 text-sm">
-                <span className="text-muted">إجمالي هذا المتجر</span>
+                <span className="text-muted">إجمالي المتجر ده</span>
                 <span className="font-semibold">{formatEGP(g.total)}</span>
               </footer>
             </section>
@@ -94,16 +94,16 @@ export default async function CartPage() {
             <h2 className="font-bold">ملخص الطلب</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-muted">المنتجات</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted">الشحن ({cart.groups.length} متجر)</dt><dd>{cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'يُحدد عند الدفع'}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted">الشحن ({cart.groups.length} متجر)</dt><dd>{cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'بيتحدد عند الدفع'}</dd></div>
               {cart.discountTotal > 0 && <div className="flex justify-between text-emerald-700"><dt>الخصم</dt><dd>-{formatEGP(cart.discountTotal)}</dd></div>}
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
-            {blocking && <Alert tone="warning">يرجى معالجة المنتجات غير المتاحة قبل إتمام الشراء.</Alert>}
-            {shippingWarning && !blocking && <Alert tone="info">بعض البائعين لا يشحنون إلى {gov?.nameAr}. سيتم التحقق من الشحن حسب عنوان التوصيل الذي تختاره عند إتمام الشراء.</Alert>}
+            {blocking && <Alert tone="warning">راجع المنتجات غير المتاحة الأول عشان تكمّل الشراء.</Alert>}
+            {shippingWarning && !blocking && <Alert tone="info">بعض البائعين مش بيشحنوا لـ{gov?.nameAr}. هنراجع الشحن على عنوان التوصيل اللي هتختاره وانت بتكمّل الشراء.</Alert>}
             <LinkButton href={user ? '/checkout' : '/login?next=/checkout'} size="lg" className={`w-full ${blocking ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={blocking}>
-              إتمام الشراء
+              كمّل الشراء
             </LinkButton>
-            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> مدفوعاتك محمية: البائع لا يحصل على أرباحه إلا بعد تأكيدك الاستلام.</p>
+            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> البائع ما بياخدش فلوسه غير بعد ما تأكّد إنك استلمت.</p>
           </div>
         </aside>
       </div>

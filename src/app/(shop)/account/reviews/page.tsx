@@ -17,7 +17,7 @@ function RatingSelect({ name, label, required }: { name: string; label: string; 
   return (
     <Field label={label} htmlFor={name} required={required}>
       <Select id={name} name={name} required={required} defaultValue={required ? '' : ''}>
-        <option value="">{required ? 'اختر' : '—'}</option>
+        <option value="">{required ? 'اختار' : '—'}</option>
         {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{'★'.repeat(n)} ({n})</option>)}
       </Select>
     </Field>
@@ -46,8 +46,8 @@ export default async function MyReviewsPage(props: PageProps<'/account/reviews'>
   const focusSo = typeof sp.so === 'string' ? sp.so : null;
   return (
     <div className="space-y-6">
-      <PageHeader title="تقييماتي" description="التقييم متاح فقط للمشتريات المؤكدة بعد الاستلام." />
-      {pendingItems.length === 0 && pendingSo.length === 0 && myP.length === 0 && <EmptyState icon={Star} title="لا توجد مشتريات بانتظار التقييم" />}
+      <PageHeader title="تقييماتي" description="تقدر تقيّم مشترياتك بس بعد ما تأكّد استلامها." />
+      {pendingItems.length === 0 && pendingSo.length === 0 && myP.length === 0 && <EmptyState icon={Star} title="مفيش مشتريات مستنية تقييمك" />}
       {pendingItems.map((it) => (
         <details key={it.id} open={focusItem === it.id} className="card p-4">
           <summary className="cursor-pointer font-semibold">قيّم المنتج: {it.titleSnapshot}</summary>
@@ -56,7 +56,7 @@ export default async function MyReviewsPage(props: PageProps<'/account/reviews'>
             <RatingSelect name="rating" label="تقييمك" required />
             <Field label="عنوان قصير" htmlFor={`t-${it.id}`}><Input id={`t-${it.id}`} name="title" /></Field>
             <Field label="رأيك في المنتج" htmlFor={`b-${it.id}`} className="sm:col-span-2"><Textarea id={`b-${it.id}`} name="body" rows={3} /></Field>
-            <div className="sm:col-span-2 space-y-2"><input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp" className="text-xs" aria-label="صور" /><SubmitButton size="sm">نشر التقييم</SubmitButton></div>
+            <div className="sm:col-span-2 space-y-2"><input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp" className="text-xs" aria-label="صور" /><SubmitButton size="sm">انشر التقييم</SubmitButton></div>
           </ActionForm>
         </details>
       ))}
@@ -70,7 +70,7 @@ export default async function MyReviewsPage(props: PageProps<'/account/reviews'>
             <RatingSelect name="packagingRating" label="التغليف" />
             <RatingSelect name="accuracyRating" label="مطابقة الوصف" />
             <Field label="تعليقك" htmlFor={`s-${so.id}`} className="sm:col-span-2"><Textarea id={`s-${so.id}`} name="body" rows={2} /></Field>
-            <div className="sm:col-span-2"><SubmitButton size="sm">نشر التقييم</SubmitButton></div>
+            <div className="sm:col-span-2"><SubmitButton size="sm">انشر التقييم</SubmitButton></div>
           </ActionForm>
         </details>
       ))}

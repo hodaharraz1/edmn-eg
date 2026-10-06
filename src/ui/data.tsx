@@ -49,7 +49,7 @@ export interface Column<T> {
 }
 
 export function DataTable<T>({ columns, rows, rowKey, empty, className }: { columns: Column<T>[]; rows: T[]; rowKey: (r: T) => string; empty?: ReactNode; className?: string }) {
-  if (!rows.length) return <>{empty ?? <p className="p-6 text-center text-sm text-muted">لا توجد بيانات</p>}</>;
+  if (!rows.length) return <>{empty ?? <p className="p-6 text-center text-sm text-muted">مفيش بيانات</p>}</>;
   return (
     <div className={cn('card rtable overflow-x-auto', className)}>
       <table className="w-full text-sm md:min-w-[640px]">
@@ -170,7 +170,7 @@ export function DefinitionList({ items, className }: { items: { label: ReactNode
 
 /** Lightweight bar chart rendered as accessible SVG-free HTML (no chart library). */
 export function BarChart({ data, format, height = 160 }: { data: { label: string; value: number }[]; format: (v: number) => string; height?: number }) {
-  if (!data.length) return <p className="py-10 text-center text-sm text-muted">لا توجد بيانات للفترة المحددة</p>;
+  if (!data.length) return <p className="py-10 text-center text-sm text-muted">مفيش بيانات للفترة دي</p>;
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
     <div>

@@ -24,13 +24,13 @@ export const RETURN_SHIPPING_LABELS: Record<(typeof RETURN_SHIPPING_PAYERS)[numb
 export const returnPolicySchema = z
   .object({
     type: z.enum(['VOLUNTARY', 'NONE']),
-    windowDays: z.coerce.number().int().min(1, 'حدد مدة الاسترجاع بالأيام').max(90).nullable().optional(),
+    windowDays: z.coerce.number().int().min(1, 'حدد مدة الإرجاع بالأيام').max(90).nullable().optional(),
     conditions: z.array(z.enum(RETURN_CONDITION_KEYS)).max(RETURN_CONDITION_KEYS.length).default([]),
     shippingPayer: z.enum(RETURN_SHIPPING_PAYERS).default('BY_REASON'),
     notes: z.string().trim().max(1000).default(''),
   })
   .superRefine((v, ctx) => {
-    if (v.type === 'VOLUNTARY' && !v.windowDays) ctx.addIssue({ code: 'custom', path: ['windowDays'], message: 'حدد مدة الاسترجاع بالأيام' });
+    if (v.type === 'VOLUNTARY' && !v.windowDays) ctx.addIssue({ code: 'custom', path: ['windowDays'], message: 'حدد مدة الإرجاع بالأيام' });
   })
   .transform((v) => (v.type === 'NONE' ? { type: 'NONE' as const, windowDays: null, conditions: [], shippingPayer: v.shippingPayer, notes: v.notes } : { ...v, windowDays: v.windowDays ?? null }));
 export type ReturnPolicy = z.output<typeof returnPolicySchema>;
@@ -38,14 +38,14 @@ export type ReturnPolicy = z.output<typeof returnPolicySchema>;
 /** What is stored on order items / agreed deal terms: the policy plus the legal notice version shown. */
 export type ReturnPolicySnapshot = ReturnPolicy & { legalNoticeVersion: string | null };
 
-export const NO_VOLUNTARY_TEXT = 'البائع لا يقدم استرجاعًا اختياريًا لهذا المنتج.';
+export const NO_VOLUNTARY_TEXT = 'البائع مش بيقدّم إرجاع اختياري للمنتج ده.';
 export const DEFAULT_MANDATORY_NOTICE = 'مع عدم الإخلال بأي حقوق إلزامية للمستهلك تنطبق وفق القانون.';
 /** Reasons that are never blocked by a seller's voluntary policy (handled by return/dispute rules). */
 export const PROTECTED_REASONS = ['WRONG_ITEM', 'DAMAGED', 'DEFECTIVE', 'MISSING_PARTS', 'NOT_AS_DESCRIBED', 'COUNTERFEIT_SUSPECTED'] as const;
 
 export function returnPolicySummary(p: Pick<ReturnPolicy, 'type' | 'windowDays'> | null | undefined): string {
   if (!p) return 'غير محددة';
-  return p.type === 'VOLUNTARY' ? `يسمح بالاسترجاع الاختياري خلال ${p.windowDays} يوم من الاستلام` : NO_VOLUNTARY_TEXT;
+  return p.type === 'VOLUNTARY' ? `بيقبل الإرجاع الاختياري خلال ${p.windowDays} يوم من الاستلام` : NO_VOLUNTARY_TEXT;
 }
 
 /** Read a policy from FormData-like values (fields prefixed "rp_"). */

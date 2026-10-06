@@ -19,7 +19,7 @@ export function ContactVerification({ user, only }: { user: U; only?: ('PHONE' |
             </span>
             {!verified && (
               <div className="flex flex-wrap gap-2">
-                <ActionForm action={sendCodeAction}><input type="hidden" name="channel" value={ch} /><SubmitButton size="sm" variant="outline">إرسال رمز</SubmitButton></ActionForm>
+                <ActionForm action={sendCodeAction}><input type="hidden" name="channel" value={ch} /><SubmitButton size="sm" variant="outline">ابعت الرمز</SubmitButton></ActionForm>
                 <ActionForm action={confirmCodeAction} className="flex gap-2"><input type="hidden" name="channel" value={ch} /><Input name="code" placeholder="الرمز" className="h-8 w-28" inputMode="numeric" aria-label="رمز التحقق" /><SubmitButton size="sm">تأكيد</SubmitButton></ActionForm>
               </div>
             )}

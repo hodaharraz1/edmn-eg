@@ -19,8 +19,8 @@ export const SORT_LABELS: Record<Sort, string> = {
   best_selling: 'الأكثر مبيعاً',
   top_rated: 'الأعلى تقييماً',
   newest: 'الأحدث',
-  price_asc: 'السعر: من الأقل',
-  price_desc: 'السعر: من الأعلى',
+  price_asc: 'السعر: الأقل أولاً',
+  price_desc: 'السعر: الأعلى أولاً',
 };
 
 /** Translate URL search params into a typed search query (all inputs validated). */
@@ -96,7 +96,7 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
         <legend className="mb-1 font-semibold">التقييم</legend>
         {[4, 3].map((r) => (
           <label key={r} className="flex items-center gap-2">
-            <input type="radio" name="rating" value={r} defaultChecked={one(sp.rating) === String(r)} className="accent-brand-700" /> {r} نجوم فأكثر
+            <input type="radio" name="rating" value={r} defaultChecked={one(sp.rating) === String(r)} className="accent-brand-700" /> {r} نجوم وأكتر
           </label>
         ))}
       </fieldset>
@@ -133,9 +133,9 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
         </fieldset>
       ))}
       <div className="flex gap-2">
-        <button className={buttonClass('primary', 'sm', 'flex-1')}>تطبيق</button>
+        <button className={buttonClass('primary', 'sm', 'flex-1')}>طبّق</button>
         <Link href={one(sp.q) ? `${path}?q=${encodeURIComponent(one(sp.q))}` : path} className={buttonClass('outline', 'sm')}>
-          مسح
+          امسح
         </Link>
       </div>
     </form>
@@ -189,7 +189,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
             <Pagination page={result.page} pages={result.pages} hrefFor={(p) => hrefWith(path, sp, { page: String(p) })} />
           </>
         ) : (
-          <EmptyState icon={SearchX} title="لا توجد نتائج مطابقة" description={emptyHint ?? 'جرّب كلمات بحث مختلفة أو قلّل عوامل التصفية.'} action={<Link href={path} className={buttonClass('outline')}>مسح التصفية</Link>} />
+          <EmptyState icon={SearchX} title="ملقيناش نتائج مطابقة" description={emptyHint ?? 'جرّب كلمات بحث تانية أو قلّل اختيارات التصفية.'} action={<Link href={path} className={buttonClass('outline')}>امسح التصفية</Link>} />
         )}
       </div>
     </div>

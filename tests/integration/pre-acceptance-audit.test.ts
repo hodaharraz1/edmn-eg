@@ -249,6 +249,6 @@ describe('pre-acceptance audit — marketplace & seller center fixes', () => {
     const c = await makeCustomer();
     const t = await openTicket(c.actor, { type: 'ACCOUNT', subject: 'مشكلة في الحساب', body: 'لا أستطيع تعديل بيانات الحساب الخاصة بي' });
     await updateTicket(admin, t.id, { status: 'CLOSED' });
-    await expect(replyToTicket(c.actor, t.id, 'رد بعد الإغلاق')).rejects.toThrow(/مغلقة/);
+    await expect(replyToTicket(c.actor, t.id, 'رد بعد الإغلاق')).rejects.toThrow(/التذكرة دي اتقفلت/);
   });
 });

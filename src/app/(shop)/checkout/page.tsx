@@ -41,7 +41,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   if (!cart.groups.length) {
     return (
       <div className="container-page py-10">
-        <EmptyState title="سلة التسوق فارغة" action={<LinkButton href="/">العودة للتسوق</LinkButton>} />
+        <EmptyState title="السلة فاضية" action={<LinkButton href="/">ارجع للتسوق</LinkButton>} />
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               </div>
             )}
             <details className="mt-3" open={addrs.length === 0}>
-              <summary className="cursor-pointer text-sm font-semibold text-brand-700">+ إضافة عنوان جديد</summary>
+              <summary className="cursor-pointer text-sm font-semibold text-brand-700">+ ضيف عنوان جديد</summary>
               <div className="mt-3">
                 <AddressForm back="checkout" defaultName={user.fullName} defaultPhone={user.phone ?? ''} />
               </div>
@@ -81,8 +81,8 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               <section className="card p-5">
                 <h2 className="mb-3 flex items-center gap-2 font-bold"><Truck className="size-5 text-brand-600" /> 2. التوصيل ({cart.groups.length} شحنة)</h2>
                 <p className="mb-3 rounded-lg bg-brand-50 p-2 text-xs text-brand-900" data-testid="checkout-shipping-basis">
-                  الشحن محسوب على عنوان التوصيل المختار في <span className="font-bold" data-testid="checkout-governorate">{chosenGov?.nameAr}</span>
-                  {browsingGov && chosenGov && browsingGov.id !== chosenGov.id && <> (محافظة التصفح في أعلى الصفحة «{browsingGov.nameAr}» لا تؤثر على هذا الطلب)</>}.
+                  مصاريف الشحن محسوبة على عنوان التوصيل اللي اخترته في <span className="font-bold" data-testid="checkout-governorate">{chosenGov?.nameAr}</span>
+                  {browsingGov && chosenGov && browsingGov.id !== chosenGov.id && <> (المحافظة اللي في أعلى الصفحة «{browsingGov.nameAr}» مش بتأثر على الطلب ده)</>}.
                 </p>
                 <ul className="space-y-3">
                   {cart.groups.map((g) => (
@@ -102,7 +102,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                       </div>
                       <div className="mt-2 space-y-1 border-t border-line pt-2 text-xs" data-testid="checkout-return-policy">
                         {g.lines.map((l) => (
-                          <p key={l.variantId}><span className="font-semibold">سياسة الاسترجاع — {l.title}:</span> {returnPolicySummary(l.returnPolicy)}</p>
+                          <p key={l.variantId}><span className="font-semibold">سياسة الإرجاع — {l.title}:</span> {returnPolicySummary(l.returnPolicy)}</p>
                         ))}
                       </div>
                     </li>
@@ -112,16 +112,16 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               </section>
 
               {problems.length > 0 && (
-                <Alert tone="danger" title="بعض المنتجات تحتاج مراجعة">
+                <Alert tone="danger" title="فيه منتجات محتاجة مراجعة">
                   <ul className="list-inside list-disc">
                     {problems.map(({ l }) => (
                       <li key={l.variantId}>{l.title}</li>
                     ))}
                   </ul>
-                  <Link href="/cart" className="font-semibold underline">العودة للسلة</Link>
+                  <Link href="/cart" className="font-semibold underline">ارجع للسلة</Link>
                 </Alert>
               )}
-              {priceChanged && <Alert tone="warning">تغيّرت أسعار بعض المنتجات منذ إضافتها. الأسعار المعروضة هنا هي الأسعار الحالية التي ستدفعها.</Alert>}
+              {priceChanged && <Alert tone="warning">أسعار بعض المنتجات اتغيّرت من وقت ما ضفتها. الأسعار اللي قدامك هنا هي اللي هتدفعها.</Alert>}
 
               <ActionForm action={placeOrderAction} className="space-y-4">
                 <input type="hidden" name="addressId" value={chosen!.id} />
@@ -131,7 +131,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                   <h2 className="mb-3 flex items-center gap-2 font-bold"><Wallet className="size-5 text-brand-600" /> 3. طريقة الدفع</h2>
                   {!live && <TestMoneyNotice className="mb-3" />}
                   {methods.length === 0 ? (
-                    <Alert tone="warning">لا توجد طرق دفع مفعّلة حالياً. يرجى المحاولة لاحقاً.</Alert>
+                    <Alert tone="warning">مفيش طرق دفع متاحة دلوقتي. جرّب تاني بعد شوية.</Alert>
                   ) : (
                     <div className="grid gap-2">
                       {methods.map((m, i) => (
@@ -140,24 +140,24 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                     </div>
                   )}
                   <p className="mt-3 text-xs text-muted">
-                    الدفع حالياً بالتحويل اليدوي: بعد تأكيد الطلب ستظهر لك بيانات التحويل، ثم ترفع إثبات الدفع خلال {windowHours} ساعة ليتحقق منه فريق اضمن. الكميات محجوزة لك خلال هذه المدة.
+                    الدفع دلوقتي بالتحويل اليدوي: بعد ما تأكّد الطلب هتظهرلك بيانات التحويل، وبعدها ترفع إثبات الدفع خلال {windowHours} ساعة عشان فريق اضمن يراجعه. الكميات محجوزة لك طول المدة دي.
                   </p>
                 </section>
                 <section className="card p-5">
                   <h2 className="mb-3 font-bold">4. ملاحظات للبائع (اختياري)</h2>
-                  <Textarea name="note" rows={2} maxLength={500} placeholder="مثال: الاتصال قبل التوصيل" />
+                  <Textarea name="note" rows={2} maxLength={500} placeholder="مثال: كلّمني قبل التوصيل" />
                 </section>
                 {problems.length > 0 ? (
                   <button type="button" disabled className="h-12 w-full rounded-xl bg-slate-300 text-sm font-semibold text-slate-600" data-testid="checkout-blocked">
-                    {noShipping ? 'لا يمكن إتمام الطلب: بائع لا يشحن إلى محافظة عنوان التوصيل' : 'لا يمكن إتمام الطلب قبل مراجعة المنتجات'}
+                    {noShipping ? 'مينفعش تكمّل: فيه بائع مش بيشحن لمحافظة عنوان التوصيل' : 'مينفعش تكمّل قبل ما تراجع المنتجات'}
                   </button>
                 ) : (
                   <>
                   <div className="lg:hidden">
-                    <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب · {formatEGP(cart.grandTotal)}</SubmitButton>
+                    <SubmitButton size="lg" className="w-full" pendingText="بنأكّد طلبك…">أكّد الطلب · {formatEGP(cart.grandTotal)}</SubmitButton>
                   </div>
                   <div className="hidden lg:block">
-                    <SubmitButton size="lg" className="w-full" pendingText="جارٍ تأكيد الطلب…">تأكيد الطلب والانتقال للدفع</SubmitButton>
+                    <SubmitButton size="lg" className="w-full" pendingText="بنأكّد طلبك…">أكّد الطلب وكمّل للدفع</SubmitButton>
                   </div>
                   </>
                 )}
@@ -173,7 +173,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd data-testid="checkout-shipping-total">{!chosen ? '—' : cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'غير متاح'}</dd></div>
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي المطلوب</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
-            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. يتم تقسيم الطلب تلقائياً حسب كل بائع.</p>
+            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. الطلب بيتقسم تلقائياً على حسب كل بائع.</p>
           </div>
         </aside>
       </div>

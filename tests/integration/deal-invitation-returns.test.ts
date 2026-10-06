@@ -128,7 +128,7 @@ describe('external deal invitation', () => {
     const s2 = customerActor((await makeUser()).id);
     expect(await claimInvitation(s1, token)).toBe(deal.id);
     expect(await claimInvitation(s1, token)).toBe(deal.id);
-    await expect(claimInvitation(s2, token)).rejects.toThrow(/حساب آخر/);
+    await expect(claimInvitation(s2, token)).rejects.toThrow(/حساب تاني/);
     const [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('SELLER_JOINED');
     expect(d.sellerUserId).toBe(s1.userId);

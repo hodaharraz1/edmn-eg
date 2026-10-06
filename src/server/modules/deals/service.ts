@@ -46,7 +46,7 @@ async function moveDeal(tx: DbOrTx, actor: Actor, deal: Deal, to: DealStatus, ex
 
 export const step1Schema = z.object({
   title: z.string().trim().min(3, 'اكتب اسم المنتج').max(200),
-  description: z.string().trim().min(10, 'اكتب وصفاً للمنتج (10 أحرف على الأقل)').max(4000),
+  description: z.string().trim().min(10, 'اكتب وصف للمنتج (10 حروف على الأقل)').max(4000),
   productCategory: z.string().trim().max(100).optional().default(''),
   condition: z.enum(['NEW', 'USED']),
   sourceUrl: z.string().trim().max(500).optional().default(''),
@@ -55,7 +55,7 @@ export const step1Schema = z.object({
 /** Wizard order: 1 product → 2 price → 3 delivery expectations → 4 terms → 5 buyer location (+ optional seller hints). */
 export const step2Schema = z.object({ unitPrice: z.string().trim().min(1, 'اكتب السعر') });
 export const step3Schema = z.object({
-  deliveryMethod: z.string().trim().min(3, 'وضح طريقة التسليم').max(300),
+  deliveryMethod: z.string().trim().min(3, 'وضّح طريقة التسليم').max(300),
   deliveryDeadline: z.coerce.date({ message: 'حدد موعد التسليم' }),
   inspectionDays: z.coerce.number().int().min(1).max(14),
 });
@@ -64,7 +64,7 @@ export const step4Schema = z.object({ customTerms: z.string().trim().max(4000).o
 export const sellerHintsSchema = z.object({
   sellerName: z.string().trim().max(120).optional().default(''),
   sellerPhone: z.string().trim().max(30).optional().default(''),
-  sellerEmail: z.string().trim().toLowerCase().email('البريد غير صحيح').or(z.literal('')).optional().default(''),
+  sellerEmail: z.string().trim().toLowerCase().email('الإيميل مش صحيح').or(z.literal('')).optional().default(''),
 });
 
 /** Public, human-friendly deal reference (never used as a secret). */
@@ -86,7 +86,7 @@ export async function createDeal(actor: Actor, input: z.input<typeof step1Schema
 
 async function requireDraft(tx: DbOrTx, actor: Actor, dealId: string) {
   const deal = await lockBuyerDeal(tx, actor, dealId);
-  if (deal.status !== 'DRAFT') throw invalidState('لا يمكن تعديل الصفقة بعد إرسال الدعوة');
+  if (deal.status !== 'DRAFT') throw invalidState('مينفعش تعدّل الصفقة بعد ما الدعوة اتبعتت');
   return deal;
 }
 
@@ -103,11 +103,11 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
       try {
         unit = parseEgp(d.unitPrice);
       } catch {
-        throw validation('السعر غير صحيح');
+        throw validation('السعر مش صحيح');
       }
-      if (unit <= 0) throw validation('السعر يجب أن يكون أكبر من صفر');
+      if (unit <= 0) throw validation('السعر لازم يكون أكبر من صفر');
       const total = unit * deal.quantity;
-      if (total > 50_000_000_00) throw validation('قيمة الصفقة تتجاوز الحد المسموح');
+      if (total > 50_000_000_00) throw validation('قيمة الصفقة أكبر من الحد المسموح');
       const feeBps = await getSetting('deals.feeBps', tx);
       const feePayer = await getSetting('deals.feePayer', tx);
       const fee = applyBps(total, feeBps);
@@ -122,7 +122,7 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
       };
     } else if (step === 3) {
       const d = parse(step3Schema, input);
-      if (d.deliveryDeadline.getTime() < Date.now() + 3600_000) throw validation('موعد التسليم يجب أن يكون في المستقبل');
+      if (d.deliveryDeadline.getTime() < Date.now() + 3600_000) throw validation('موعد التسليم لازم يكون في المستقبل');
       sets = { deliveryMethod: d.deliveryMethod, deliveryDeadline: d.deliveryDeadline, inspectionDays: d.inspectionDays };
     } else if (step === 4) {
       const d = parse(step4Schema, input);
@@ -133,10 +133,10 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
       let hintPhone: string | null = null;
       if (h.sellerPhone) {
         hintPhone = normalizeEgyptMobile(h.sellerPhone);
-        if (!hintPhone) throw validation('رقم موبايل البائع غير صحيح (أو اتركه فارغاً)');
+        if (!hintPhone) throw validation('رقم موبايل البائع مش صحيح (أو سيبه فاضي)');
       }
       const [me] = await tx.select({ phone: users.phone, email: users.email }).from(users).where(eq(users.id, deal.buyerId));
-      if ((hintPhone && me.phone === hintPhone) || (h.sellerEmail && me.email === h.sellerEmail)) throw validation('لا يمكنك إنشاء صفقة مع نفسك');
+      if ((hintPhone && me.phone === hintPhone) || (h.sellerEmail && me.email === h.sellerEmail)) throw validation('مينفعش تعمل صفقة مع نفسك');
       sets = {
         buyerLocationEnc: encryptLocation(loc),
         destinationGovernorateId: loc.governorateId,
@@ -152,7 +152,7 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
 export async function addDealPhotos(actor: Actor, dealId: string, photos: { data: Buffer; name: string }[]) {
   await db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (!['DRAFT', 'INVITED'].includes(deal.status)) throw invalidState('لا يمكن إضافة صور الآن');
+    if (!['DRAFT', 'INVITED'].includes(deal.status)) throw invalidState('مينفعش تضيف صور دلوقتي');
     for (const p of photos.slice(0, 6)) {
       const f = await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data: p.data, originalName: p.name });
       await tx.insert(dealEvidence).values({ dealId: deal.id, fileId: f.id, kind: 'PRODUCT_PHOTO', uploadedBy: actor.userId! });
@@ -186,7 +186,7 @@ async function issueInvitation(tx: DbOrTx, dealId: string) {
  * never be relayed as a branded SMS. Returns the raw link once; only its hash is stored.
  */
 export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: boolean) {
-  if (!acceptTerms) throw validation('يجب الموافقة على شروط الصفقات المحمية');
+  if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
   return db.transaction(async (tx) => {
     const deal = await requireDraft(tx, actor, dealId);
     const missing = dealProblems(deal);
@@ -204,7 +204,7 @@ export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: bo
 export async function refreshInvitation(actor: Actor, dealId: string) {
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (deal.status !== 'INVITED') throw invalidState('لا يمكن إنشاء رابط دعوة جديد في الحالة الحالية');
+    if (deal.status !== 'INVITED') throw invalidState('مينفعش تعمل رابط دعوة جديد في حالة الصفقة دي');
     const token = await issueInvitation(tx, deal.id);
     await audit(tx, actor, { action: 'deal.invitation_revoked', entityType: 'external_deal', entityId: deal.id, newValues: { reason: 'replaced' } });
     await audit(tx, actor, { action: 'deal.invitation_created', entityType: 'external_deal', entityId: deal.id });
@@ -216,7 +216,7 @@ export async function refreshInvitation(actor: Actor, dealId: string) {
 export async function revokeInvitation(actor: Actor, dealId: string) {
   await db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (deal.status !== 'INVITED') throw invalidState('لا يمكن إلغاء الرابط بعد انضمام البائع');
+    if (deal.status !== 'INVITED') throw invalidState('مينفعش تلغي الرابط بعد ما البائع دخل الصفقة');
     await tx.update(dealInvitations).set({ status: 'REVOKED' }).where(and(eq(dealInvitations.dealId, deal.id), eq(dealInvitations.status, 'PENDING')));
     await moveDeal(tx, actor, deal, 'DRAFT');
     await audit(tx, actor, { action: 'deal.invitation_revoked', entityType: 'external_deal', entityId: deal.id });
@@ -290,15 +290,15 @@ export async function claimInvitation(actor: Actor, token: string) {
   return db.transaction(async (tx) => {
     // Lock order deal → invitation (same as refresh/revoke) to avoid deadlocks.
     const [found] = await tx.select({ dealId: dealInvitations.dealId }).from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(token)));
-    if (!found) throw invalidState('الدعوة غير صالحة');
+    if (!found) throw invalidState('الدعوة مش صالحة');
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, found.dealId)).for('update');
     const [inv] = await tx.select().from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(token))).for('update');
     if (inv.boundUserId) {
-      if (inv.boundUserId !== userId) throw forbidden('هذه الدعوة مرتبطة بحساب آخر');
+      if (inv.boundUserId !== userId) throw forbidden('الدعوة دي مرتبطة بحساب تاني');
       return deal.id; // replay by the same seller: no-op
     }
-    if (inv.status !== 'PENDING' || inv.expiresAt < new Date() || deal.status !== 'INVITED') throw invalidState('الدعوة غير صالحة أو منتهية الصلاحية');
-    if (deal.buyerId === userId) throw forbidden('لا يمكن للمشتري قبول دعوته بنفسه');
+    if (inv.status !== 'PENDING' || inv.expiresAt < new Date() || deal.status !== 'INVITED') throw invalidState('الدعوة مش صالحة أو منتهية الصلاحية');
+    if (deal.buyerId === userId) throw forbidden('مينفعش المشتري يقبل الدعوة بتاعته');
     const now = new Date();
     await tx.update(dealInvitations).set({ boundUserId: userId, boundAt: now }).where(eq(dealInvitations.id, inv.id));
     await moveDeal(tx, actor, deal, 'SELLER_JOINED', { sellerUserId: userId, sellerJoinedAt: now });
@@ -310,7 +310,7 @@ export async function claimInvitation(actor: Actor, token: string) {
 
 export const sellerDetailsSchema = z.object({
   fullName: z.string().trim().min(3, 'اكتب اسمك بالكامل').max(120),
-  contactEmail: z.string().trim().toLowerCase().email('البريد غير صحيح').or(z.literal('')).optional().default(''),
+  contactEmail: z.string().trim().toLowerCase().email('الإيميل مش صحيح').or(z.literal('')).optional().default(''),
 });
 
 /** The seller's offer: material terms the buyer reviews before agreeing (and before any payment). */
@@ -322,13 +322,13 @@ export const sellerOfferSchema = z
   /** The seller — not the buyer — sets how and how fast the item is delivered. */
   deliveryMethod: z.string().trim().min(3, 'اكتب طريقة الشحن / التسليم').max(300),
   processingDays: z.coerce.number().int().min(0).max(30),
-  deliveryMinDays: z.coerce.number().int().min(0, 'مدة التوصيل غير صحيحة').max(60),
-  deliveryMaxDays: z.coerce.number().int().min(0, 'مدة التوصيل غير صحيحة').max(90),
+  deliveryMinDays: z.coerce.number().int().min(0, 'مدة التوصيل مش صحيحة').max(60),
+  deliveryMaxDays: z.coerce.number().int().min(0, 'مدة التوصيل مش صحيحة').max(90),
   defects: z.string().trim().max(2000).optional().default(''),
   accessories: z.string().trim().max(1000).optional().default(''),
   warranty: z.string().trim().max(500).optional().default(''),
   })
-  .refine((o) => o.deliveryMaxDays >= o.deliveryMinDays, { path: ['deliveryMaxDays'], message: 'أقصى مدة توصيل يجب ألا تقل عن أقل مدة' });
+  .refine((o) => o.deliveryMaxDays >= o.deliveryMinDays, { path: ['deliveryMaxDays'], message: 'أقصى مدة توصيل لازم متقلش عن أقل مدة' });
 
 export type Terms = {
   product: { title: string; description: string | null; condition: string | null; quantity: number; category: string | null };
@@ -356,21 +356,21 @@ async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerO
   try {
     shipping = offer.shippingFee ? parseEgp(offer.shippingFee) : 0;
   } catch {
-    throw validation('تكلفة الشحن غير صحيحة');
+    throw validation('مصاريف الشحن مش صحيحة');
   }
-  if (shipping < 0) throw validation('تكلفة الشحن غير صحيحة');
+  if (shipping < 0) throw validation('مصاريف الشحن مش صحيحة');
   if (deal.condition === 'USED' && !offer.defects) throw validation('للمنتج المستعمل: اكتب العيوب المعروفة (أو "لا يوجد")');
   let unit = deal.unitPrice ?? 0;
   if (offer.unitPrice) {
     try {
       unit = parseEgp(offer.unitPrice);
     } catch {
-      throw validation('السعر غير صحيح');
+      throw validation('السعر مش صحيح');
     }
   }
-  if (unit <= 0) throw validation('السعر يجب أن يكون أكبر من صفر');
+  if (unit <= 0) throw validation('السعر لازم يكون أكبر من صفر');
   const goods = unit * deal.quantity;
-  if (goods > 50_000_000_00) throw validation('قيمة الصفقة تتجاوز الحد المسموح');
+  if (goods > 50_000_000_00) throw validation('قيمة الصفقة أكبر من الحد المسموح');
   const total = goods + shipping;
   const fee = applyBps(total, deal.feeBps);
   return {
@@ -415,18 +415,18 @@ export async function submitSellerOffer(
   acceptTerms: boolean,
 ) {
   const userId = requireUser(actor);
-  if (!acceptTerms) throw validation('يجب الموافقة على شروط الصفقات المحمية');
+  if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
   const offer = parse(sellerOfferSchema, input.offer);
   const policy = parse(returnPolicySchema, input.returnPolicy);
   return db.transaction(async (tx) => {
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
     if (deal.sellerUserId !== userId) throw forbidden();
-    if (deal.status !== 'SELLER_JOINED' && deal.status !== 'CHANGE_REQUESTED') throw invalidState('لا يمكن تقديم عرض في حالة الصفقة الحالية');
+    if (deal.status !== 'SELLER_JOINED' && deal.status !== 'CHANGE_REQUESTED') throw invalidState('مينفعش تقدّم عرض في حالة الصفقة دي');
     let sellerSets: Partial<Deal> = {};
     if (deal.status === 'SELLER_JOINED') {
       const [me] = await tx.select({ phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId));
-      if (!me?.phoneVerifiedAt) throw validation('أكّد رقم موبايلك أولاً قبل تقديم العرض');
+      if (!me?.phoneVerifiedAt) throw validation('أكّد رقم موبايلك الأول قبل ما تقدّم العرض');
       const details = parse(sellerDetailsSchema, input.details ?? {});
       const loc = toStoredLocation(parse(locationSchema, input.location ?? {}));
       const p = parse(payoutSchema, input.payout);
@@ -502,9 +502,9 @@ export async function respondToOffer(actor: Actor, dealId: string, version: numb
     if (!deal) throw notFound('الصفقة');
     if (deal.buyerId !== userId) throw forbidden();
     if (decision === 'ACCEPT' && deal.agreedVersion === version && (deal.status === 'ACCEPTED' || deal.status === 'PAYMENT_PENDING')) return { status: deal.status }; // idempotent
-    if (deal.status !== 'OFFER_PENDING_BUYER') throw invalidState('لا يوجد عرض بانتظار ردك');
+    if (deal.status !== 'OFFER_PENDING_BUYER') throw invalidState('مفيش عرض مستني ردك');
     const [v] = await tx.select().from(dealTermsVersions).where(and(eq(dealTermsVersions.dealId, deal.id), eq(dealTermsVersions.version, version))).for('update');
-    if (!v || v.status !== 'PROPOSED' || v.proposedBy !== 'SELLER') throw invalidState('هذا العرض لم يعد قائماً، راجع آخر نسخة');
+    if (!v || v.status !== 'PROPOSED' || v.proposedBy !== 'SELLER') throw invalidState('العرض ده مبقاش قائم، راجع آخر نسخة');
     if (decision === 'ACCEPT') {
       await finalizeTerms(tx, actor, deal, v);
       return { status: 'PAYMENT_PENDING' };
@@ -539,9 +539,9 @@ export async function respondToChangeRequest(actor: Actor, dealId: string, versi
     if (!deal) throw notFound('الصفقة');
     if (deal.sellerUserId !== userId) throw forbidden();
     if (decision === 'ACCEPT' && deal.agreedVersion === version && (deal.status === 'ACCEPTED' || deal.status === 'PAYMENT_PENDING')) return { status: deal.status };
-    if (deal.status !== 'CHANGE_REQUESTED') throw invalidState('لا يوجد طلب تعديل بانتظار ردك');
+    if (deal.status !== 'CHANGE_REQUESTED') throw invalidState('مفيش طلب تعديل مستني ردك');
     const [v] = await tx.select().from(dealTermsVersions).where(and(eq(dealTermsVersions.dealId, deal.id), eq(dealTermsVersions.version, version))).for('update');
-    if (!v || v.status !== 'PROPOSED' || v.proposedBy !== 'BUYER') throw invalidState('طلب التعديل لم يعد قائماً');
+    if (!v || v.status !== 'PROPOSED' || v.proposedBy !== 'BUYER') throw invalidState('طلب التعديل مبقاش قائم');
     if (decision === 'ACCEPT') {
       await finalizeTerms(tx, actor, deal, v);
       return { status: 'PAYMENT_PENDING' };
@@ -550,7 +550,7 @@ export async function respondToChangeRequest(actor: Actor, dealId: string, versi
     const [lastSeller] = await tx.select().from(dealTermsVersions).where(and(eq(dealTermsVersions.dealId, deal.id), eq(dealTermsVersions.proposedBy, 'SELLER'))).orderBy(desc(dealTermsVersions.version)).limit(1);
     await tx.update(dealTermsVersions).set({ status: 'REJECTED', respondedAt: new Date() }).where(eq(dealTermsVersions.id, v.id));
     const nv = await nextVersion(tx, deal.id);
-    await tx.insert(dealTermsVersions).values({ dealId: deal.id, version: nv, proposedBy: 'SELLER', proposedByUserId: userId, terms: lastSeller.terms, message: 'رفض البائع التعديل المطلوب — العرض السابق قائم' });
+    await tx.insert(dealTermsVersions).values({ dealId: deal.id, version: nv, proposedBy: 'SELLER', proposedByUserId: userId, terms: lastSeller.terms, message: 'البائع رفض التعديل المطلوب — العرض السابق لسه قائم' });
     await moveDeal(tx, actor, deal, 'OFFER_PENDING_BUYER');
     await audit(tx, actor, { action: 'deal.change_rejected', entityType: 'external_deal', entityId: deal.id, newValues: { rejectedVersion: version, reproposedVersion: nv } });
     await notify(tx, { event: 'EXTERNAL_DEAL_ACCEPTED', userIds: [deal.buyerId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
@@ -572,11 +572,11 @@ export async function rejectInvitation(actor: Actor, ref: { token?: string; deal
       ? await tx.select().from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(ref.token))).for('update')
       : await tx.select().from(dealInvitations).where(and(eq(dealInvitations.dealId, ref.dealId ?? ''), eq(dealInvitations.boundUserId, userId))).for('update');
     // A link already bound to the seller no longer expires (the seller has joined); unbound links do.
-    if (!inv || inv.status !== 'PENDING' || (!inv.boundUserId && inv.expiresAt < new Date())) throw invalidState('الدعوة غير صالحة أو منتهية الصلاحية');
-    if (inv.boundUserId && inv.boundUserId !== userId) throw forbidden('هذه الدعوة مرتبطة بحساب آخر');
+    if (!inv || inv.status !== 'PENDING' || (!inv.boundUserId && inv.expiresAt < new Date())) throw invalidState('الدعوة مش صالحة أو منتهية الصلاحية');
+    if (inv.boundUserId && inv.boundUserId !== userId) throw forbidden('الدعوة دي مرتبطة بحساب تاني');
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, inv.dealId)).for('update');
     if (deal.buyerId === userId) throw forbidden();
-    if (deal.status !== 'INVITED' && deal.status !== 'SELLER_JOINED') throw invalidState('لا يمكن رفض الصفقة في حالتها الحالية');
+    if (deal.status !== 'INVITED' && deal.status !== 'SELLER_JOINED') throw invalidState('مينفعش ترفض الصفقة في حالتها دي');
     await tx.update(dealInvitations).set({ status: 'REJECTED', respondedAt: new Date(), respondedBy: userId, rejectReason: why }).where(eq(dealInvitations.id, inv.id));
     await moveDeal(tx, actor, deal, 'CANCELLED', { cancelledAt: new Date(), cancelReason: `رفض البائع: ${why}` }, why);
     await audit(tx, actor, { action: 'deal.rejected_by_seller', entityType: 'external_deal', entityId: deal.id, reason: why });
@@ -600,9 +600,9 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
   const why = requireReason(reason);
   await db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (!['DRAFT', 'INVITED', 'SELLER_JOINED', 'OFFER_PENDING_BUYER', 'CHANGE_REQUESTED', 'ACCEPTED', 'PAYMENT_PENDING'].includes(deal.status)) throw invalidState('لا يمكن إلغاء الصفقة بعد إرسال الدفع. افتح نزاعاً إذا كانت هناك مشكلة');
+    if (!['DRAFT', 'INVITED', 'SELLER_JOINED', 'OFFER_PENDING_BUYER', 'CHANGE_REQUESTED', 'ACCEPTED', 'PAYMENT_PENDING'].includes(deal.status)) throw invalidState('مينفعش تلغي الصفقة بعد ما الدفع اتبعت. لو فيه مشكلة افتح نزاع');
     const [p] = await tx.select().from(payments).where(eq(payments.dealId, deal.id)).for('update');
-    if (p && p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('يوجد إثبات دفع قيد المراجعة');
+    if (p && p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('فيه إثبات دفع لسه بيتراجع');
     if (p) {
       await transition(tx, actor, paymentMachine, p.id, p.status, 'CANCELLED', why);
       await tx.update(payments).set({ status: 'CANCELLED' }).where(eq(payments.id, p.id));
@@ -617,7 +617,7 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
 export async function startDealPayment(actor: Actor, dealId: string, method: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH') {
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة ليست بانتظار الدفع');
+    if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة مش مستنية دفع');
     const [existing] = await tx.select().from(payments).where(eq(payments.dealId, deal.id)).for('update');
     if (existing) {
       // A deal has no stock to release: an elapsed payment window is simply reopened (audited) so the
@@ -632,9 +632,9 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
       return existing;
     }
     const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
-    if (!m?.isEnabled) throw validation('طريقة الدفع غير متاحة');
+    if (!m?.isEnabled) throw validation('طريقة الدفع دي مش متاحة');
     const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
-    if (!dests.length) throw validation('طريقة الدفع غير مهيأة');
+    if (!dests.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي');
     const hours = await getSetting('payments.paymentWindowHours', tx);
     const [p] = await tx
       .insert(payments)
@@ -661,7 +661,7 @@ export async function markDealDelivered(actor: Actor, dealId: string, note: stri
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
     if (deal.sellerUserId !== userId) throw forbidden();
-    if (deal.status !== 'ACTIVE') throw invalidState('يمكن تسجيل التسليم بعد تأكيد الدفع فقط');
+    if (deal.status !== 'ACTIVE') throw invalidState('تقدر تسجّل الشحن بس بعد تأكيد الدفع');
     for (const f of proof.slice(0, 6)) {
       const s = await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data: f.data, originalName: f.name });
       await tx.insert(dealEvidence).values({ dealId: deal.id, fileId: s.id, kind: 'DELIVERY_PROOF', uploadedBy: userId, note: note.slice(0, 300) });
@@ -720,7 +720,7 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
   });
   const [buyer] = await tx.select({ phone: users.phone }).from(users).where(eq(users.id, deal.buyerId));
   if (buyer?.phone) {
-    const body = `رمز استلام صفقة اضمن #${dealRef(deal.number)}: ${code} — لا تعطه لأحد إلا عند استلام المنتج فعليًا. صالح حتى ${formatDate(expiresAt, true)}.`;
+    const body = `رمز استلام صفقة اضمن #${dealRef(deal.number)}: ${code} — متدّيهوش لحد غير لما تستلم المنتج فعلًا. صالح لحد ${formatDate(expiresAt, true)}.`;
     await tx.insert(outboundMessages).values({ channel: 'SMS', recipient: buyer.phone, body, event: 'DEAL_DELIVERY_OTP' });
     await enqueueJob(tx, 'outbound.flush', {}, { dedupeKey: 'outbound.flush' });
   }
@@ -732,12 +732,12 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
 export async function regenerateDeliveryOtp(actor: Actor, dealId: string) {
   const userId = requireUser(actor);
   await requireDealParty(dealId, userId);
-  if (!(await hit(`deal-otp-issue:${dealId}`, 5, 3600))) throw new DomainError('RATE_LIMITED', 'طلبت رموزًا كثيرة. حاول مرة أخرى بعد قليل');
+  if (!(await hit(`deal-otp-issue:${dealId}`, 5, 3600))) throw new DomainError('RATE_LIMITED', 'طلبت رموز كتير. جرّب تاني بعد شوية');
   return db.transaction(async (tx) => {
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
     if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
-    if (deal.status !== 'DELIVERED') throw invalidState('رمز الاستلام متاح فقط بعد الشحن وقبل التحقق من التسليم');
+    if (deal.status !== 'DELIVERED') throw invalidState('رمز الاستلام بيبقى متاح بس بعد الشحن وقبل التحقق من التسليم');
     const r = await issueDeliveryOtpTx(tx, actor, deal, 'deal.delivery_otp_regenerated');
     return { expiresAt: r.expiresAt };
   });
@@ -762,14 +762,14 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) return { ok: false, error: notFound('الصفقة') };
     if (deal.sellerUserId !== userId) return { ok: false, error: forbidden('إدخال رمز الاستلام متاح لبائع الصفقة فقط') };
-    if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'تم التحقق من التسليم مسبقًا' : 'لا يمكن التحقق من التسليم في حالة الصفقة الحالية') };
+    if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'التسليم اتأكد مسبقًا' : 'مينفعش تتحقق من التسليم في حالة الصفقة دي') };
     const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id)).for('update');
     if (!otp || otp.buyerId !== deal.buyerId) return { ok: false, error: invalidState('لا يوجد رمز صالح. اطلب من المشتري رمزًا جديدًا') };
     const now = new Date();
     if (otp.expiresAt <= now) {
       await tx.update(dealDeliveryOtps).set({ invalidatedAt: now, invalidReason: 'EXPIRED' }).where(eq(dealDeliveryOtps.id, otp.id));
       await audit(tx, actor, { action: 'deal.delivery_otp_expired', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id } });
-      return { ok: false, error: invalidState('انتهت صلاحية رمز الاستلام. اطلب رمزًا جديدًا') };
+      return { ok: false, error: invalidState('انتهت صلاحية رمز الاستلام. اطلب رمز جديد') };
     }
     const attempts = otp.attempts + 1;
     if (!deliveryCodeMatches(otp.codeHash, deal.id, otp.id, candidate)) {
@@ -781,7 +781,7 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
       await audit(tx, actor, { action: 'deal.delivery_otp_failed', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, maxAttempts: otp.maxAttempts, locked } });
       return {
         ok: false,
-        error: validation(locked ? 'تم تجاوز عدد المحاولات. اطلب من المشتري رمزًا جديدًا' : `رمز الاستلام غير صحيح (متبقٍ ${otp.maxAttempts - attempts} محاولة)`),
+        error: validation(locked ? 'تم تجاوز عدد المحاولات. اطلب من المشتري رمزًا جديدًا' : `رمز الاستلام غير صحيح (فاضل ${otp.maxAttempts - attempts} محاولة)`),
       };
     }
     await tx.update(dealDeliveryOtps).set({ attempts, lastAttemptAt: now, usedAt: now, usedBy: userId }).where(eq(dealDeliveryOtps.id, otp.id));
@@ -875,7 +875,7 @@ export async function reportNotReceived(actor: Actor, dealId: string, descriptio
   const why = requireReason(description);
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (!['DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('لا يمكن الإبلاغ عن عدم الاستلام في حالة الصفقة الحالية');
+    if (!['DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('مينفعش تبلّغ عن عدم الاستلام في حالة الصفقة دي');
     await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
     if (deal.handoverVerifiedAt) {
       await tx.update(externalDeals).set({ deliveryConflictAt: new Date() }).where(eq(externalDeals.id, deal.id));
@@ -895,7 +895,7 @@ export async function reportDeliveryException(actor: Actor, dealId: string, desc
     if (!deal) throw notFound('الصفقة');
     if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
     const legacyPending = deal.status === 'BUYER_CONFIRMATION_PENDING' && !deal.handoverVerifiedAt;
-    if (deal.status !== 'DELIVERED' && !legacyPending) throw invalidState('طلب المراجعة متاح بعد الشحن وقبل التحقق من التسليم');
+    if (deal.status !== 'DELIVERED' && !legacyPending) throw invalidState('طلب المراجعة بيبقى متاح بعد الشحن وقبل التحقق من التسليم');
     await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
     return openDeliveryReview(tx, actor, deal, 'DELIVERY_EXCEPTION', why);
   });
@@ -955,14 +955,14 @@ export async function confirmDealReceipt(actor: Actor, dealId: string) {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status === 'COMPLETED') return { alreadyCompleted: true };
     if (deal.status !== 'DELIVERY_HANDOVER_VERIFIED' && deal.status !== 'BUYER_CONFIRMATION_PENDING') {
-      throw invalidState(deal.status === 'DELIVERED' ? 'يجب التحقق من التسليم برمز الاستلام أولًا' : 'لا يمكن تأكيد الاستلام في حالة الصفقة الحالية');
+      throw invalidState(deal.status === 'DELIVERED' ? 'لازم التسليم يتأكد برمز الاستلام الأول' : 'مينفعش تأكد الاستلام في حالة الصفقة دي');
     }
-    if (!deal.handoverVerifiedAt || !deal.handoverOtpId) throw invalidState('يجب التحقق من التسليم برمز الاستلام أولًا');
+    if (!deal.handoverVerifiedAt || !deal.handoverOtpId) throw invalidState('لازم التسليم يتأكد برمز الاستلام الأول');
     const [pay] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.dealId, deal.id));
-    if (pay?.status !== 'CONFIRMED') throw invalidState('لم يتم تأكيد الدفع لهذه الصفقة');
-    if (deal.financialHold) throw invalidState('الصفقة موقوفة لمراجعة فريق العمليات');
+    if (pay?.status !== 'CONFIRMED') throw invalidState('الدفع للصفقة دي لسه متأكدش');
+    if (deal.financialHold) throw invalidState('الصفقة متوقفة لمراجعة فريق العمليات');
     const holds = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, HOLD_FLAG_CODES)));
-    if (holds.length) throw invalidState('الصفقة قيد مراجعة فريق العمليات');
+    if (holds.length) throw invalidState('الصفقة عند فريق العمليات للمراجعة');
     const now = new Date();
     await moveDeal(tx, actor, deal, 'BUYER_CONFIRMED_RECEIPT', { buyerConfirmedAt: now });
     await moveDeal(tx, actor, { ...deal, status: 'BUYER_CONFIRMED_RECEIPT' }, 'COMPLETED', { completedAt: now });

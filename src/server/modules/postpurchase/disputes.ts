@@ -23,20 +23,20 @@ export const openDisputeSchema = z.object({
   sellerOrderId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
   reasonCode: z.string().trim().min(3).max(60),
-  description: z.string().trim().min(20, 'اشرح المشكلة بتفصيل (20 حرفاً على الأقل)').max(4000),
+  description: z.string().trim().min(20, 'اشرح المشكلة بالتفصيل (20 حرف على الأقل)').max(4000),
   claimedAmount: z.string().trim().optional().default(''),
 });
 
 export async function openDispute(actor: Actor, input: z.input<typeof openDisputeSchema>, evidence: { data: Buffer; name: string }[] = []) {
   const userId = requireUser(actor);
   const d = parse(openDisputeSchema, input);
-  if (!!d.sellerOrderId === !!d.dealId) throw validation('حدد الطلب أو الصفقة');
+  if (!!d.sellerOrderId === !!d.dealId) throw validation('اختار الطلب أو الصفقة');
   let claimed: number | null = null;
   if (d.claimedAmount) {
     try {
       claimed = parseEgp(d.claimedAmount);
     } catch {
-      throw validation('المبلغ غير صحيح');
+      throw validation('المبلغ مش صحيح');
     }
   }
   return db.transaction(async (tx) => {
@@ -63,9 +63,9 @@ export async function openDisputeTx(
     const isBuyer = order.customerId === actor.userId;
     const isSellerSide = actor.type === 'SELLER' && actor.sellerId === so.sellerId;
     if (!isBuyer && !isSellerSide && !hasPermission(actor, 'disputes.manage') && !hasPermission(actor, 'returns.manage')) throw forbidden();
-    if (['PENDING_PAYMENT', 'PAYMENT_UNDER_REVIEW', 'CANCELLED'].includes(so.status)) throw invalidState('لا يمكن فتح نزاع على هذا الطلب في حالته الحالية');
+    if (['PENDING_PAYMENT', 'PAYMENT_UNDER_REVIEW', 'CANCELLED'].includes(so.status)) throw invalidState('مش ممكن تفتح نزاع على الطلب ده في حالته دلوقتي');
     const windowDays = await getSetting('disputes.windowDays', tx);
-    if (so.deliveredAt && Date.now() - so.deliveredAt.getTime() > windowDays * 86_400_000) throw invalidState(`انتهت مدة فتح النزاع (${windowDays} يوماً من الاستلام)`);
+    if (so.deliveredAt && Date.now() - so.deliveredAt.getTime() > windowDays * 86_400_000) throw invalidState(`انتهت مدة فتح النزاع (${windowDays} يوم من الاستلام)`);
     const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));
     respondentSellerId = so.sellerId;
     respondentUserId = s.ownerUserId;
@@ -76,7 +76,7 @@ export async function openDisputeTx(
     const isBuyer = deal.buyerId === actor.userId;
     const isSeller = deal.sellerUserId === actor.userId;
     if (!isBuyer && !isSeller) throw forbidden();
-    if (!['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('لا يمكن فتح نزاع على الصفقة في حالتها الحالية');
+    if (!['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('مش ممكن تفتح نزاع على الصفقة في حالتها دلوقتي');
     input.claimantUserId = actor.userId!;
     respondentUserId = isBuyer ? deal.sellerUserId : deal.buyerId;
     await transition(tx, actor, dealMachine, deal.id, deal.status, 'DISPUTED', input.description.slice(0, 200));
@@ -86,7 +86,7 @@ export async function openDisputeTx(
     .select({ id: disputes.id })
     .from(disputes)
     .where(and(input.sellerOrderId ? eq(disputes.sellerOrderId, input.sellerOrderId) : eq(disputes.dealId, input.dealId!), inArray(disputes.status, OPEN)));
-  if (existing.length) throw conflict('يوجد نزاع مفتوح بالفعل على هذا الطلب');
+  if (existing.length) throw conflict('فيه نزاع مفتوح بالفعل على الطلب ده');
   const [dispute] = await tx
     .insert(disputes)
     .values({
@@ -126,7 +126,7 @@ export async function addDisputeMessage(actor: Actor, disputeId: string, body: s
     const role = partyRole(actor, d);
     if (!role) throw forbidden();
     if (internal && role !== 'ADMIN') throw forbidden();
-    if (!OPEN.includes(d.status) && role !== 'ADMIN') throw invalidState('النزاع مغلق');
+    if (!OPEN.includes(d.status) && role !== 'ADMIN') throw invalidState('النزاع ده اتقفل');
     await tx.insert(disputeMessages).values({ disputeId: d.id, authorUserId: actor.userId!, authorRole: role, body: text.slice(0, 4000), isInternal: internal });
     if (attachment) {
       const f = await storeUpload(tx, actor, { purpose: 'DISPUTE_EVIDENCE', data: attachment.data, originalName: attachment.name });

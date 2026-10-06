@@ -26,7 +26,7 @@ export default async function OrdersPage(props: PageProps<'/account/orders'>) {
     <div>
       <PageHeader title="طلباتي" />
       {list.length === 0 ? (
-        <EmptyState icon={Package} title="لا توجد طلبات بعد" description="طلباتك من المتاجر ستظهر هنا." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
+        <EmptyState icon={Package} title="لسه مفيش طلبات" description="طلباتك من المتاجر هتظهر هنا." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
       ) : (
         <div className="space-y-3">
           {list.map((o) => (

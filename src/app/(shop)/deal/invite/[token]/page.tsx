@@ -23,40 +23,40 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
   const user = await currentUser();
   const inv = await invitationByToken(token, user?.id);
   if (!inv) {
-    return <div className="container-page py-10"><Alert tone="danger" title="رابط غير صالح">تأكد من الرابط أو اطلب من المشتري إرسال رابط جديد.</Alert></div>;
+    return <div className="container-page py-10"><Alert tone="danger" title="الرابط مش صالح">اتأكد من الرابط، أو اطلب من المشتري يبعتلك رابط جديد.</Alert></div>;
   }
   const s = inv.summary;
   const here = `/deal/invite/${token}`;
   return (
     <div className="container-page max-w-2xl space-y-4 py-6">
       <div className="rounded-2xl bg-gradient-to-l from-accent-600 to-brand-900 p-5 text-white">
-        <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-5" aria-hidden /> طلب صفقة محمية عبر اضمن</p>
+        <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-5" aria-hidden /> طلب صفقة محمية على اضمن</p>
         <h1 className="mt-2 text-xl font-bold sm:text-2xl">مشترٍ يريد شراء «{s.title}» منك</h1>
-        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري يدفع لاضمن أولاً، وبعد التسليم وتأكيد المشتري يتم تحويل مستحقك إليك.</p>
+        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري بيدفع لاضمن الأول، وبعد التسليم وتأكيد المشتري بيتحوّل لك مستحقك.</p>
       </div>
 
-      {inv.isBuyer && <Alert tone="info">هذا رابط الدعوة الخاص بصفقتك كمشترٍ. شاركه مع البائع.</Alert>}
-      {inv.boundToViewer && <Alert tone="success" title="أنت مرتبط بهذه الصفقة"><LinkButton href={`/account/deals/${inv.dealId}`} size="sm">متابعة الصفقة</LinkButton></Alert>}
-      {!inv.isBuyer && inv.boundToOther && <Alert tone="danger">هذه الدعوة مرتبطة بحساب آخر ولا يمكن استخدامها.</Alert>}
+      {inv.isBuyer && <Alert tone="info">ده رابط الدعوة بتاع صفقتك (انت المشتري). ابعته للبائع.</Alert>}
+      {inv.boundToViewer && <Alert tone="success" title="انت مرتبط بالصفقة دي"><LinkButton href={`/account/deals/${inv.dealId}`} size="sm">افتح الصفقة</LinkButton></Alert>}
+      {!inv.isBuyer && inv.boundToOther && <Alert tone="danger">الدعوة دي مرتبطة بحساب تاني، ومينفعش تستخدمها.</Alert>}
       {!inv.usable && !inv.boundToViewer && !inv.boundToOther && !inv.isBuyer && (
-        <Alert tone="warning">{inv.expired ? 'انتهت صلاحية هذه الدعوة. اطلب من المشتري رابطاً جديداً.' : 'هذه الدعوة لم تعد متاحة.'}</Alert>
+        <Alert tone="warning">{inv.expired ? 'الدعوة دي انتهت صلاحيتها. اطلب من المشتري رابط جديد.' : 'الدعوة دي مبقتش متاحة.'}</Alert>
       )}
 
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'المنتج', value: `${s.title} × ${s.quantity}` },
           { label: 'الحالة', value: s.condition === 'NEW' ? 'جديد' : 'مستعمل' },
-          { label: 'السعر الذي طلبه المشتري', value: formatEGP(s.totalAmount) },
+          { label: 'السعر اللي طلبه المشتري', value: formatEGP(s.totalAmount) },
           { label: 'رسوم الخدمة', value: `${formatEGP(s.feeAmount)} (${s.feePayer === 'SELLER' ? 'تُخصم من مستحقك' : 'يتحملها المشتري'})` },
-          { label: 'صافي ما ستستلمه (قبل الشحن)', value: formatEGP(s.sellerReceives) },
+          { label: 'صافي اللي هتستلمه (قبل الشحن)', value: formatEGP(s.sellerReceives) },
           { label: 'طريقة التسليم المفضلة للمشتري', value: s.deliveryMethod ?? '—' },
-          { label: 'يفضّل المشتري الاستلام قبل', value: formatDate(s.deliveryDeadline) },
+          { label: 'المشتري يفضّل يستلم قبل', value: formatDate(s.deliveryDeadline) },
           { label: 'محافظة المشتري', value: s.destinationGovernorate ?? '—' },
           { label: 'مدة فحص المشتري', value: `${s.inspectionDays} يوم` },
-          { label: 'شروط خاصة', value: s.customTerms ?? 'لا يوجد' },
+          { label: 'شروط خاصة', value: s.customTerms ?? 'مفيش' },
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{s.description}</p>
-        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان الاستلام، وسيلة استلام المستحقات) وتحدد السعر النهائي وتكلفة وطريقة ومدة الشحن وسياسة الاسترجاع، والمشتري هيراجع عرضك قبل أي دفع.</p>
+        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان استلام الشحنة منك، وسيلة استلام مستحقاتك)، وتحدد السعر النهائي ومصاريف وطريقة ومدة الشحن وسياسة الإرجاع. والمشتري هيراجع عرضك قبل أي دفع.</p>
       </section>
 
       {inv.usable && !inv.isBuyer && !inv.boundToViewer && (
@@ -77,11 +77,11 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
           </div>
         ) : (
           <div className="card space-y-3 p-5">
-            <p className="text-sm">للمتابعة سجّل الدخول أو أنشئ حساباً مجانياً — مش لازم تكون بائع في المتجر.</p>
+            <p className="text-sm">عشان تكمّل، سجّل دخول أو اعمل حساب مجاني. مش لازم تكون بائع على اضمن.</p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <LinkButton href={`/register?next=${encodeURIComponent(here)}`} variant="success" size="lg">قبول ومتابعة (حساب جديد)</LinkButton>
-              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="outline" size="lg">لدي حساب — تسجيل الدخول</LinkButton>
-              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="ghost" size="lg">سجّل الدخول لرفض الصفقة</LinkButton>
+              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="outline" size="lg">عندي حساب — سجّل دخول</LinkButton>
+              <LinkButton href={`/login?next=${encodeURIComponent(here)}`} variant="ghost" size="lg">سجّل دخول لرفض الصفقة</LinkButton>
             </div>
           </div>
         )

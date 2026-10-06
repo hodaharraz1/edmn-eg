@@ -31,13 +31,13 @@ export default async function NewReturnPage(props: PageProps<'/account/returns/n
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلباتي', href: '/account/orders' }, { label: `#${row.order.number}-${row.so.suffix}`, href: `/account/orders/${row.order.id}` }, { label: 'طلب إرجاع' }]} />} title="طلب إرجاع" description={`من ${row.store}`} />
       <Alert tone="info">
-        يمكنك طلب الإرجاع خلال {win.effective} يوم من الاستلام. {win.voluntary ? `يقبل هذا البائع الإرجاع الاختياري خلال ${win.voluntary} يوم.` : 'البائع لا يقدم إرجاعاً اختيارياً، دون الإخلال بحقوقك المقررة قانوناً.'} المنتج المعيب أو الخاطئ أو التالف أو غير المطابق للوصف يمكن الإبلاغ عنه خلال {Math.max(win.effective, disputeDays)} يوم بغض النظر عن سياسة البائع — أرفق صوراً واضحة.
+        تقدر تطلب الإرجاع خلال {win.effective} يوم من الاستلام. {win.voluntary ? `البائع ده بيقبل الإرجاع الاختياري خلال ${win.voluntary} يوم.` : 'البائع ده مش بيقدّم إرجاع اختياري، مع الاحتفاظ بحقوقك المقررة قانونًا.'} لو المنتج معيب أو غلط أو تالف أو مش مطابق للوصف، تقدر تبلّغ عنه خلال {Math.max(win.effective, disputeDays)} يوم مهما كانت سياسة البائع. ارفع صور واضحة.
         <ul className="mt-2 list-inside list-disc text-xs" data-testid="return-policy-snapshot">{items.map((it) => <li key={it.id}>{it.titleSnapshot}: {it.returnPolicySnapshot ? returnPolicySummary(it.returnPolicySnapshot) : 'حسب سياسة المتجر'}</li>)}</ul>
       </Alert>
       <ActionForm action={requestReturnAction} className="card space-y-5 p-5" encType="multipart/form-data">
         <input type="hidden" name="sellerOrderId" value={soId} />
         <fieldset className="space-y-2">
-          <legend className="mb-2 font-semibold">المنتجات المراد إرجاعها</legend>
+          <legend className="mb-2 font-semibold">المنتجات اللي عايز ترجّعها</legend>
           {items.map((it) => {
             const max = it.quantity - it.returnedQuantity;
             return (
@@ -55,7 +55,7 @@ export default async function NewReturnPage(props: PageProps<'/account/returns/n
         </fieldset>
         <Field label="سبب الإرجاع" htmlFor="reason" required>
           <Select id="reason" name="reason" required defaultValue="">
-            <option value="" disabled>اختر السبب</option>
+            <option value="" disabled>اختار السبب</option>
             {RETURN_REASONS.map((r) => (
               <option key={r} value={r}>{label('returnReason', r)}</option>
             ))}
@@ -64,8 +64,8 @@ export default async function NewReturnPage(props: PageProps<'/account/returns/n
         <Field label="اشرح المشكلة" htmlFor="description" required>
           <Textarea id="description" name="description" required minLength={10} rows={4} />
         </Field>
-        <FileInput name="evidence" multiple label="صور توضح حالة المنتج (مطلوبة للتالف / المعيب)" hint="حتى 6 صور" accept="image/jpeg,image/png,image/webp" />
-        <SubmitButton size="lg">إرسال طلب الإرجاع</SubmitButton>
+        <FileInput name="evidence" multiple label="صور لحالة المنتج" hint="مطلوبة لو المنتج غلط أو تالف أو معيب أو مش مطابق للوصف أو شاكك إنه مش أصلي · حتى 6 صور" accept="image/jpeg,image/png,image/webp" />
+        <SubmitButton size="lg">ابعت طلب الإرجاع</SubmitButton>
       </ActionForm>
     </div>
   );

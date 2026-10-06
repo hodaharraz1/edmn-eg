@@ -7,16 +7,16 @@ import { label } from '@/lib/i18n/labels';
 import { PageHeader } from '@/ui/data';
 import { EmptyState, StatusChip } from '@/ui/feedback';
 
-export const metadata = { title: 'المرتجعات' };
+export const metadata = { title: 'طلبات الإرجاع' };
 
 export default async function ReturnsPage() {
   const user = await requireUser('/account');
   const list = await returnsForCustomer(user.id);
   return (
     <div>
-      <PageHeader title="المرتجعات" description="لطلب إرجاع افتح الطلب واختر «طلب إرجاع» بعد تأكيد الاستلام." />
+      <PageHeader title="طلبات الإرجاع" description="عشان تطلب إرجاع، افتح الطلب واختار «طلب إرجاع» بعد ما تأكّد الاستلام." />
       {list.length === 0 ? (
-        <EmptyState icon={RotateCcw} title="لا توجد طلبات إرجاع" />
+        <EmptyState icon={RotateCcw} title="مفيش طلبات إرجاع" />
       ) : (
         <ul className="card divide-y divide-line">
           {list.map((r) => (

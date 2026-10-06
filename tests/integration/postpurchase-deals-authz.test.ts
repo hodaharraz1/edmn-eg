@@ -112,7 +112,7 @@ describe('reviews', () => {
     const stranger = await makeCustomer();
     await expect(createProductReview(stranger.actor, { orderItemId: item.id, rating: 1 })).rejects.toThrow(/صلاحية/);
     const r = await createProductReview(c.actor, { orderItemId: item.id, rating: 4, body: 'جيد' });
-    await expect(createProductReview(c.actor, { orderItemId: item.id, rating: 5 })).rejects.toThrow(/بالفعل/);
+    await expect(createProductReview(c.actor, { orderItemId: item.id, rating: 5 })).rejects.toThrow(/قيّمت المنتج ده قبل كده/);
     let [p] = await db.select().from(products).where(eq(products.id, item.productId));
     expect(Number(p.ratingAvg)).toBe(4);
     await moderateReview(admin, 'PRODUCT', r.id, 'HIDDEN', 'محتوى مخالف لسياسة التقييمات');

@@ -76,7 +76,7 @@ export async function dealProofAction(_p: ActionState, fd: FormData): Promise<Ac
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await submitProof(actor, str(fd, 'paymentId'), { claimedAmount: str(fd, 'claimedAmount'), reference: str(fd, 'reference'), clientKey: str(fd, 'clientKey') }, await fileOf(fd, 'proof'));
-    return { message: 'تم استلام إثبات الدفع وجارٍ التحقق منه.' };
+    return { message: 'إثبات الدفع وصلنا، وبنراجعه دلوقتي.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;
@@ -86,7 +86,7 @@ export async function dealDeliveredAction(_p: ActionState, fd: FormData): Promis
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await markDealDelivered(actor, str(fd, 'dealId'), str(fd, 'note'), await filesOf(fd, 'proof'));
-    return { message: 'تم تسجيل الشحن. عند التسليم اطلب رمز الاستلام من المشتري.' };
+    return { message: 'الشحن اتسجل. وقت التسليم اطلب رمز الاستلام من المشتري.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;
@@ -96,7 +96,7 @@ export async function dealConfirmAction(_p: ActionState, fd: FormData): Promise<
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await confirmDealReceipt(actor, str(fd, 'dealId'));
-    return { message: 'تم تأكيد الاستلام واكتمال الصفقة.' };
+    return { message: 'أكدت الاستلام وإن المنتج مطابق، والصفقة خلصت.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;
@@ -150,7 +150,7 @@ export async function sellerOfferAction(_p: ActionState, fd: FormData): Promise<
       },
       bool(fd, 'acceptTerms'),
     );
-    return { message: 'تم إرسال عرضك للمشتري للمراجعة.' };
+    return { message: 'عرضك اتبعت للمشتري يراجعه.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -163,7 +163,7 @@ export async function buyerOfferResponseAction(_p: ActionState, fd: FormData): P
   const decision = str(fd, 'decision') as 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT';
   const res = await runAction(async () => {
     await respondToOffer(actor, dealId, int(fd, 'version') ?? 0, decision, decision === 'REQUEST_CHANGE' ? { returnPolicy: policyFrom(fd), message: str(fd, 'message') } : undefined);
-    return { message: decision === 'ACCEPT' ? 'تم الاتفاق على الشروط. يمكنك الدفع الآن.' : decision === 'REJECT' ? 'تم رفض العرض وإلغاء الصفقة.' : 'تم إرسال طلب التعديل للبائع.' };
+    return { message: decision === 'ACCEPT' ? 'اتفقتوا على الشروط. تقدر تدفع دلوقتي.' : decision === 'REJECT' ? 'العرض اترفض والصفقة اتلغت.' : 'طلب التعديل اتبعت للبائع.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -176,7 +176,7 @@ export async function sellerChangeResponseAction(_p: ActionState, fd: FormData):
   const decision = str(fd, 'decision') === 'ACCEPT' ? 'ACCEPT' : 'REJECT';
   const res = await runAction(async () => {
     await respondToChangeRequest(actor, dealId, int(fd, 'version') ?? 0, decision);
-    return { message: decision === 'ACCEPT' ? 'تم قبول التعديل والاتفاق على الشروط.' : 'تم رفض التعديل، وعرضك السابق قائم.' };
+    return { message: decision === 'ACCEPT' ? 'التعديل اتقبل، واتفقتوا على الشروط.' : 'التعديل اترفض، وعرضك السابق لسه قائم.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -195,7 +195,7 @@ export async function rejectInviteAction(_p: ActionState, fd: FormData): Promise
   const actor = await requireCustomer(token ? `/deal/invite/${token}` : '/account/deals');
   const res = await runAction(async () => {
     await rejectInvitation(actor, token ? { token } : { dealId }, str(fd, 'reason'));
-    return { message: 'تم إبلاغ المشتري برفض الصفقة.' };
+    return { message: 'بلّغنا المشتري إنك رفضت الصفقة.' };
   });
   if (dealId) revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -207,7 +207,7 @@ export async function verifyDeliveryOtpAction(_p: ActionState, fd: FormData): Pr
   const dealId = str(fd, 'dealId');
   const res = await runAction(async () => {
     await verifyDeliveryOtp(actor, dealId, str(fd, 'code'));
-    return { message: 'تم التحقق من تسليم المنتج للمشتري.' };
+    return { message: 'التسليم اتأكد برمز الاستلام.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -219,7 +219,7 @@ export async function regenerateDeliveryOtpAction(_p: ActionState, fd: FormData)
   const dealId = str(fd, 'dealId');
   const res = await runAction(async () => {
     await regenerateDeliveryOtp(actor, dealId);
-    return { message: 'تم إصدار رمز استلام جديد وإرساله للمشتري. الرمز السابق لم يعد صالحًا.' };
+    return { message: 'رمز استلام جديد اتبعت للمشتري. الرمز القديم مبقاش صالح.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -231,7 +231,7 @@ export async function reportNotReceivedAction(_p: ActionState, fd: FormData): Pr
   const dealId = str(fd, 'dealId');
   const res = await runAction(async () => {
     const r = await reportNotReceived(actor, dealId, str(fd, 'description'));
-    return { message: r.conflict ? 'تم تسجيل البلاغ وتحويل الصفقة لمراجعة فريق العمليات. المبلغ محجوز لحين القرار.' : 'تم فتح نزاع عدم الاستلام. المبلغ محجوز لحين القرار.' };
+    return { message: r.conflict ? 'البلاغ اتسجل، والصفقة اتحولت لمراجعة فريق العمليات. المبلغ محجوز لحد القرار.' : 'نزاع عدم الاستلام اتفتح. المبلغ محجوز لحد القرار.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;
@@ -243,7 +243,7 @@ export async function reportDeliveryExceptionAction(_p: ActionState, fd: FormDat
   const dealId = str(fd, 'dealId');
   const res = await runAction(async () => {
     await reportDeliveryException(actor, dealId, str(fd, 'description'));
-    return { message: 'تم تحويل التسليم لمراجعة فريق العمليات. لن يُصرف أي مبلغ قبل القرار.' };
+    return { message: 'التسليم اتحوّل لمراجعة فريق العمليات. مفيش أي مبلغ هيتصرف قبل القرار.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;

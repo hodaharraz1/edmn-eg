@@ -36,7 +36,7 @@ export default async function StoresPage() {
           ))}
         </div>
       ) : (
-        <EmptyState icon={Store} title="لا توجد متاجر بعد" />
+        <EmptyState icon={Store} title="مفيش متاجر لسه" />
       )}
     </div>
   );

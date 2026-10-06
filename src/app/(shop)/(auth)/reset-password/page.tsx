@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'تعيين كلمة مرور جدي�
 export default async function ResetPasswordPage(props: PageProps<'/reset-password'>) {
   const sp = await props.searchParams;
   const token = typeof sp.token === 'string' ? sp.token : '';
-  if (!token) return <Alert tone="danger">الرابط غير صالح.</Alert>;
+  if (!token) return <Alert tone="danger">الرابط ده مش صالح.</Alert>;
   return (
     <>
       <h1 className="mb-6 text-xl font-bold">تعيين كلمة مرور جديدة</h1>

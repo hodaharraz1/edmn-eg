@@ -18,11 +18,11 @@ export default async function WishlistPage() {
   const items = await productsByIds(rows.map((r) => r.productId));
   return (
     <div>
-      <PageHeader title="المفضلة" description="المنتجات التي حفظتها. المنتجات غير المتاحة حالياً لا تظهر هنا." />
+      <PageHeader title="المفضلة" description="المنتجات اللي حفظتها. المنتجات غير المتاحة دلوقتي مش بتظهر هنا." />
       {items.length ? (
         <ProductGrid className="xl:grid-cols-4"><Cards items={items} back="/account/wishlist" /></ProductGrid>
       ) : (
-        <EmptyState icon={Heart} title="قائمة المفضلة فارغة" action={<LinkButton href="/">تصفح المنتجات</LinkButton>} />
+        <EmptyState icon={Heart} title="المفضلة فاضية" action={<LinkButton href="/">شوف المنتجات</LinkButton>} />
       )}
     </div>
   );

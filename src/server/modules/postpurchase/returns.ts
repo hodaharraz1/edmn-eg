@@ -17,20 +17,20 @@ import { parse, requireReason, transition } from '../_shared';
 export type Return = typeof returns.$inferSelect;
 
 export const STATUS_LABEL_FOR_NOTIFY: Partial<Record<ReturnStatus, string>> = {
-  APPROVED: 'تمت الموافقة — يرجى إرسال المنتج',
+  APPROVED: 'اتقبل — ابعت المنتج للبائع',
   REJECTED: 'مرفوض',
-  RECEIVED: 'استلم البائع المنتج',
+  RECEIVED: 'البائع استلم المنتج',
   INSPECTION: 'قيد الفحص',
-  REFUND_PENDING: 'تم قبول الاسترداد وجارٍ التحويل',
-  REFUNDED: 'تم رد المبلغ',
-  DISPUTED: 'محال لفريق اضمن',
+  REFUND_PENDING: 'الاسترداد اتقبل وجاري التحويل',
+  REFUNDED: 'المبلغ اترد',
+  DISPUTED: 'اتحوّل لفريق اضمن',
 };
 
 export const returnRequestSchema = z.object({
   sellerOrderId: z.string().uuid(),
   reason: z.enum(['CHANGED_MIND', 'WRONG_ITEM', 'DAMAGED', 'DEFECTIVE', 'MISSING_PARTS', 'NOT_AS_DESCRIBED', 'COUNTERFEIT_SUSPECTED', 'OTHER']),
-  description: z.string().trim().min(10, 'اشرح سبب الإرجاع بتفصيل أكثر').max(2000),
-  items: z.array(z.object({ orderItemId: z.string().uuid(), quantity: z.number().int().positive() })).min(1, 'اختر منتجاً واحداً على الأقل'),
+  description: z.string().trim().min(10, 'اشرح سبب الإرجاع بتفصيل أكتر').max(2000),
+  items: z.array(z.object({ orderItemId: z.string().uuid(), quantity: z.number().int().positive() })).min(1, 'اختار منتج واحد على الأقل'),
 });
 
 /** Eligibility window: the longer of the (legally-reviewed, configurable) statutory window and the store's voluntary window. */
@@ -62,14 +62,14 @@ export async function requestReturn(actor: Actor, input: z.input<typeof returnRe
   const d = parse(returnRequestSchema, input);
   if (evidence.length > 6) throw validation('الحد الأقصى 6 ملفات');
   if (['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM', 'NOT_AS_DESCRIBED', 'COUNTERFEIT_SUSPECTED'].includes(d.reason) && !evidence.length) {
-    throw validation('أرفق صوراً توضح المشكلة');
+    throw validation('ارفع صور توضّح المشكلة');
   }
   return db.transaction(async (tx) => {
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, d.sellerOrderId)).for('update');
     if (!so) throw notFound('الطلب');
     const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
     if (order.customerId !== userId) throw forbidden();
-    if (so.status !== 'DELIVERED' && so.status !== 'COMPLETED') throw invalidState('يمكن طلب الإرجاع بعد تأكيد استلام الطلب فقط');
+    if (so.status !== 'DELIVERED' && so.status !== 'COMPLETED') throw invalidState('تقدر تطلب الإرجاع بس بعد ما تأكّد استلام الطلب');
     const items = await tx.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
     const win = await returnWindow(tx, so.sellerId, items.filter((i) => d.items.some((r) => r.orderItemId === i.id)));
     const ageDays = (Date.now() - (so.deliveredAt ?? new Date()).getTime()) / 86400_000;
@@ -77,12 +77,12 @@ export async function requestReturn(actor: Actor, input: z.input<typeof returnRe
     // defective / not-as-described items stay claimable for the (longer) dispute window.
     const isProtected = (PROTECTED_REASONS as readonly string[]).includes(d.reason);
     const limit = isProtected ? Math.max(win.effective, await getSetting('disputes.windowDays', tx)) : win.effective;
-    if (ageDays > limit) throw invalidState(`انتهت مدة الإرجاع (${limit} يوم من الاستلام). يمكنك فتح نزاع أو تذكرة دعم إذا كان المنتج معيباً`);
+    if (ageDays > limit) throw invalidState(`انتهت مدة الإرجاع (${limit} يوم من الاستلام). لو المنتج معيب، تقدر تفتح نزاع أو تذكرة دعم`);
     for (const ri of d.items) {
       const it = items.find((i) => i.id === ri.orderItemId);
       if (!it) throw forbidden();
       const open = await openReturnedQty(tx, it.id);
-      if (ri.quantity > it.quantity - it.returnedQuantity - open) throw validation(`الكمية المطلوب إرجاعها من "${it.titleSnapshot}" أكبر من المتاح`);
+      if (ri.quantity > it.quantity - it.returnedQuantity - open) throw validation(`الكمية اللي عايز ترجّعها من "${it.titleSnapshot}" أكبر من المتاح`);
     }
     const [ret] = await tx
       .insert(returns)
@@ -148,7 +148,7 @@ export async function rejectReturn(actor: Actor, returnId: string, reason: strin
 
 export async function customerShipsReturn(actor: Actor, returnId: string, carrier: string, tracking: string) {
   const userId = requireUser(actor);
-  if (!carrier?.trim()) throw validation('اسم شركة الشحن مطلوب');
+  if (!carrier?.trim()) throw validation('اكتب اسم شركة الشحن');
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(returns).where(eq(returns.id, returnId)).for('update');
     if (!r) throw notFound('طلب الإرجاع');

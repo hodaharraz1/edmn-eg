@@ -21,7 +21,7 @@ export async function confirmReceiptAction(_p: ActionState, fd: FormData): Promi
   const actor = await requireCustomer('/account/orders');
   const res = await runAction(async () => {
     const r = await confirmReceipt(actor, str(fd, 'sellerOrderId'));
-    return { message: r.alreadyConfirmed ? 'تم تأكيد الاستلام مسبقاً.' : 'شكراً! تم تأكيد استلام الطلب. يمكنك الآن تقييم المنتج والبائع.' };
+    return { message: r.alreadyConfirmed ? 'أكّدت الاستلام قبل كده.' : 'شكراً! الاستلام اتأكد. تقدر دلوقتي تقيّم المنتج والبائع.' };
   });
   revalidatePath(`/account/orders/${str(fd, 'orderId')}`);
   return res;
@@ -46,7 +46,7 @@ export async function shipReturnAction(_p: ActionState, fd: FormData): Promise<A
   const actor = await requireCustomer('/account/returns');
   const res = await runAction(async () => {
     await customerShipsReturn(actor, str(fd, 'returnId'), str(fd, 'carrier'), str(fd, 'tracking'));
-    return { message: 'تم تسجيل بيانات شحن المرتجع' };
+    return { message: 'بيانات شحن الإرجاع اتسجلت' };
   });
   revalidatePath(`/account/returns/${str(fd, 'returnId')}`);
   return res;
@@ -143,21 +143,21 @@ export async function markNotificationsReadAction() {
 
 export async function changePasswordAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireCustomer('/account/security');
-  if (str(fd, 'next') !== str(fd, 'confirm')) return { ok: false, error: 'كلمتا المرور غير متطابقتين', at: Date.now() };
+  if (str(fd, 'next') !== str(fd, 'confirm')) return { ok: false, error: 'كلمة المرور وتأكيدها مش زي بعض', at: Date.now() };
   return runAction(async () => {
     const { token } = await changePassword(actor.userId!, str(fd, 'current'), str(fd, 'next'), { ...(await requestMeta()) });
     await setSessionCookie(WEB_COOKIE, token, env().SESSION_TTL_HOURS);
-    return { message: 'تم تغيير كلمة المرور. تم تسجيل خروج الأجهزة الأخرى.' };
+    return { message: 'كلمة المرور اتغيّرت، واتسجّل خروجك من الأجهزة التانية.' };
   });
 }
 
 export async function updateProfileAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireCustomer('/account/profile');
   const name = str(fd, 'fullName');
-  if (name.length < 3) return { ok: false, error: 'الاسم قصير جداً', at: Date.now() };
+  if (name.length < 3) return { ok: false, error: 'الاسم قصير أوي', at: Date.now() };
   return runAction(async () => {
     await db.update(users).set({ fullName: name.slice(0, 120) }).where(eq(users.id, actor.userId!));
-    return { message: 'تم حفظ البيانات' };
+    return { message: 'بياناتك اتحفظت' };
   });
 }
 
@@ -165,7 +165,7 @@ export async function sendCodeAction(_p: ActionState, fd: FormData): Promise<Act
   const actor = await requireCustomer('/account/security');
   return runAction(async () => {
     await sendVerificationCode(actor.userId!, str(fd, 'channel') === 'EMAIL' ? 'EMAIL' : 'PHONE');
-    return { message: 'تم إرسال رمز التحقق' };
+    return { message: 'رمز التحقق اتبعت' };
   });
 }
 
@@ -173,8 +173,8 @@ export async function confirmCodeAction(_p: ActionState, fd: FormData): Promise<
   const actor = await requireCustomer('/account/security');
   const res = await runAction(async () => {
     const ok = await confirmVerificationCode(actor.userId!, str(fd, 'channel') === 'EMAIL' ? 'EMAIL' : 'PHONE', str(fd, 'code'));
-    if (!ok) return { ok: false, error: 'الرمز غير صحيح أو منتهي الصلاحية' };
-    return { message: 'تم التحقق بنجاح' };
+    if (!ok) return { ok: false, error: 'الرمز غلط أو صلاحيته خلصت' };
+    return { message: 'البيانات اتأكدت' };
   });
   revalidatePath('/account/security');
   revalidatePath('/seller/onboarding');

@@ -17,7 +17,7 @@ import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 import Link from 'next/link';
 
 export const metadata = { title: 'صفقة محمية جديدة' };
-const STEPS = ['المنتج', 'السعر المطلوب', 'توقعات التسليم', 'شروط خاصة', 'عنوان الاستلام', 'مراجعة وإنشاء'];
+const STEPS = ['المنتج', 'السعر المطلوب', 'توقعات التسليم', 'شروط خاصة', 'عنوان الاستلام', 'المراجعة'];
 
 export default async function NewDealWizard(props: PageProps<'/account/deals/new'>) {
   const user = await requireUser('/account');
@@ -26,7 +26,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
   let step = Math.min(6, Math.max(1, Number(sp.step) || 1));
   const [deal] = dealId ? await db.select().from(externalDeals).where(eq(externalDeals.id, dealId)) : [];
   if (dealId && (!deal || deal.buyerId !== user.id)) notFound();
-  if (deal && deal.status !== 'DRAFT') return <Alert tone="info">تم إنشاء طلب هذه الصفقة بالفعل. <Link href={`/account/deals/${deal.id}`} className="underline">عرض الصفقة</Link></Alert>;
+  if (deal && deal.status !== 'DRAFT') return <Alert tone="info">طلب الصفقة دي اتعمل خلاص. <Link href={`/account/deals/${deal.id}`} className="underline">شوف الصفقة</Link></Alert>;
   if (!deal) step = 1;
   const govs = await db.select({ id: governorates.id, nameAr: governorates.nameAr }).from(governorates).orderBy(asc(governorates.sortOrder));
   const myLoc = deal ? decryptLocation(deal.buyerLocationEnc) : null;
@@ -34,7 +34,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
   const hrefFor = (n: number) => (deal && n <= deal.wizardStep ? `/account/deals/new?deal=${deal.id}&step=${n}` : null);
   return (
     <div className="space-y-4">
-      <PageHeader title="اضمن صفقة خارج السوق" description="اكتب تفاصيل الصفقة كما اتفقت مع البائع. بعد الإنشاء هتاخد رابط آمن تبعته للبائع، وهو يراجع ويوافق قبل أي دفع." />
+      <PageHeader title="اضمن صفقة خارج السوق" description="اكتب تفاصيل الصفقة زي ما اتفقت مع البائع. بعدها هتاخد رابط آمن تبعته له، وهو يراجع ويوافق قبل أي دفع." />
       <Stepper steps={STEPS} current={step} hrefFor={hrefFor} />
       {step < 6 ? (
         <ActionForm action={dealStepAction} className="card space-y-4 p-5" encType="multipart/form-data">
@@ -50,38 +50,38 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
                 <Field label="النوع / التصنيف" htmlFor="productCategory"><Input id="productCategory" name="productCategory" defaultValue={deal?.productCategory ?? ''} placeholder="موبايل، لابتوب…" /></Field>
               </div>
               <Field label="رابط الإعلان الأصلي (اختياري)" htmlFor="sourceUrl"><Input id="sourceUrl" name="sourceUrl" defaultValue={deal?.sourceUrl ?? ''} dir="ltr" /></Field>
-              <FileInput name="photos" multiple label="صور المنتج كما أرسلها البائع (اختياري)" />
+              <FileInput name="photos" multiple label="صور المنتج اللي بعتها البائع (اختياري)" />
             </>
           )}
           {step === 2 && (
             <>
               <Field label={`سعر الوحدة (ج.م) × الكمية ${deal?.quantity ?? 1}`} htmlFor="unitPrice" required><Input id="unitPrice" name="unitPrice" inputMode="decimal" dir="ltr" defaultValue={toInputAmount(deal?.unitPrice)} required /></Field>
-              <p className="text-xs text-muted">سيتم احتساب رسوم الخدمة حسب الإعدادات الحالية وعرضها في صفحة المراجعة قبل الإرسال.</p>
+              <p className="text-xs text-muted">رسوم الخدمة هتتحسب حسب الإعدادات الحالية، وهتشوفها في صفحة المراجعة قبل الإرسال.</p>
             </>
           )}
           {step === 3 && (
             <>
-              <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك فقط. البائع هو من يحدد طريقة ومدة التوصيل وتكلفة الشحن في عرضه، وأنت توافق عليها أو تطلب تعديل قبل أي دفع.</p>
+              <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك بس. البائع هو اللي بيحدد طريقة ومدة التوصيل ومصاريف الشحن في عرضه، وانت توافق أو تطلب تعديل قبل أي دفع.</p>
               <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم يد بيد في…" required /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="أقصى موعد تفضّل الاستلام قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
+                <Field label="آخر موعد تحب تستلم قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
                 <Field label="مدة الفحص بعد الاستلام (أيام)" htmlFor="inspectionDays"><Input id="inspectionDays" name="inspectionDays" type="number" min={1} max={14} defaultValue={deal?.inspectionDays ?? 2} /></Field>
               </div>
             </>
           )}
           {step === 4 && (
-            <Field label="شروط خاصة اتفقتم عليها (اختياري)" htmlFor="customTerms" hint="مثال: الجهاز بالعلبة والفاتورة، البطارية فوق 85%"><Textarea id="customTerms" name="customTerms" defaultValue={deal?.customTerms ?? ''} rows={5} /></Field>
+            <Field label="شروط خاصة اتفقتوا عليها (اختياري)" htmlFor="customTerms" hint="مثال: الجهاز بالعلبة والفاتورة، البطارية فوق 85%"><Textarea id="customTerms" name="customTerms" defaultValue={deal?.customTerms ?? ''} rows={5} /></Field>
           )}
           {step === 5 && (
             <>
               <LocationPicker governorates={govs} title="عنوان الاستلام (عنوانك)" defaults={myLoc ?? undefined} />
               <div className="space-y-3 rounded-xl border border-dashed border-line p-4">
                 <p className="text-sm font-semibold">بيانات البائع (اختياري)</p>
-                <p className="rounded-lg bg-brand-50 p-2 text-sm text-brand-900" data-testid="seller-optional-note">مش لازم تكون عارف بيانات البائع كاملة. بعد إنشاء الطلب هتاخد رابط آمن تبعته للبائع، وهو هيسجل بياناته ويراجع الصفقة بنفسه.</p>
+                <p className="rounded-lg bg-brand-50 p-2 text-sm text-brand-900" data-testid="seller-optional-note">مش لازم تكون عارف بيانات البائع كاملة. بعد ما الطلب يتعمل هتاخد رابط آمن تبعته للبائع، وهو هيسجّل بياناته ويراجع الصفقة بنفسه.</p>
                 <Field label="اسم البائع (للتذكير فقط)" htmlFor="sellerName"><Input id="sellerName" name="sellerName" defaultValue={deal?.sellerName ?? ''} /></Field>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="موبايل البائع" htmlFor="sellerPhone"><Input id="sellerPhone" name="sellerPhone" type="tel" dir="ltr" defaultValue={deal?.sellerPhone?.replace('+20', '0') ?? ''} /></Field>
-                  <Field label="بريد البائع" htmlFor="sellerEmail"><Input id="sellerEmail" name="sellerEmail" type="email" dir="ltr" defaultValue={deal?.sellerEmail ?? ''} /></Field>
+                  <Field label="إيميل البائع" htmlFor="sellerEmail"><Input id="sellerEmail" name="sellerEmail" type="email" dir="ltr" defaultValue={deal?.sellerEmail ?? ''} /></Field>
                 </div>
               </div>
             </>
@@ -94,25 +94,25 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
       ) : (
         deal && (
           <div className="space-y-4">
-            {dealProblems(deal).length > 0 && <Alert tone="warning">أكمل البيانات التالية: {dealProblems(deal).join('، ')}</Alert>}
+            {dealProblems(deal).length > 0 && <Alert tone="warning">كمّل البيانات دي: {dealProblems(deal).join('، ')}</Alert>}
             <section className="card p-5">
               <DefinitionList items={[
                 { label: 'المنتج', value: `${deal.title} × ${deal.quantity}` },
                 { label: 'عنوان الاستلام', value: myLoc ? `${govName(myLoc.governorateId)} · ${myLoc.city} · ${myLoc.street}${myLoc.gps ? ' · (موقع محدد)' : ''}` : '—' },
-                { label: 'البائع', value: deal.sellerName ? `${deal.sellerName} (للتذكير — البائع يسجل بياناته بنفسه)` : 'سيسجل البائع بياناته عبر الرابط' },
+                { label: 'البائع', value: deal.sellerName ? `${deal.sellerName} (للتذكير — البائع بيسجّل بياناته بنفسه)` : 'البائع هيسجّل بياناته من الرابط' },
                 { label: 'قيمة الصفقة', value: formatEGP(deal.totalAmount) },
                 { label: 'رسوم الخدمة', value: `${formatEGP(deal.feeAmount)} (يتحملها ${deal.feePayer === 'BUYER' ? 'المشتري' : 'البائع'})` },
-                { label: 'إجمالي ما ستدفعه', value: formatEGP(deal.buyerPays) },
-                { label: 'صافي ما يستلمه البائع', value: formatEGP(deal.sellerReceives) },
-                { label: 'توقعات التسليم (غير ملزمة)', value: `${deal.deliveryMethod ?? '—'} · يفضّل قبل ${formatDate(deal.deliveryDeadline)}` },
+                { label: 'إجمالي اللي هتدفعه', value: formatEGP(deal.buyerPays) },
+                { label: 'صافي اللي هيستلمه البائع', value: formatEGP(deal.sellerReceives) },
+                { label: 'توقعات التسليم (غير ملزمة)', value: `${deal.deliveryMethod ?? '—'} · يُفضّل قبل ${formatDate(deal.deliveryDeadline)}` },
                 { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
-                { label: 'الشروط الخاصة', value: deal.customTerms ?? 'لا يوجد' },
+                { label: 'الشروط الخاصة', value: deal.customTerms ?? 'مفيش' },
               ]} />
             </section>
             <ActionForm action={inviteSellerAction} className="card space-y-3 p-5">
               <input type="hidden" name="dealId" value={deal.id} />
               <Checkbox name="acceptTerms" required label={<>أوافق على <Link href="/legal/protected-deal-terms" target="_blank" className="text-brand-700 underline">شروط الصفقات المحمية</Link> وأقر بصحة البيانات</>} />
-              <p className="text-xs text-muted">السعر النهائي (مع الشحن) وسياسة الاسترجاع يحددهم البائع في عرضه، وهتراجعهم وتوافق قبل الدفع.</p>
+              <p className="text-xs text-muted">السعر النهائي (مع الشحن) وسياسة الإرجاع بيحددهم البائع في عرضه، وانت هتراجعهم وتوافق قبل الدفع.</p>
               <SubmitButton variant="accent" size="lg" className="w-full sm:w-auto">إنشاء طلب الصفقة</SubmitButton>
             </ActionForm>
           </div>

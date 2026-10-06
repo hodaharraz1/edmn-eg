@@ -10,8 +10,8 @@ export function TestMoneyNotice({ kind = 'payment', className }: { kind?: 'payme
         <p className="font-bold" dir="ltr">{kind === 'payment' ? 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' : 'TEST PAYOUT — NO REAL MONEY IS TRANSFERRED'}</p>
         <p>
           {kind === 'payment'
-            ? 'وجهة دفع تجريبية. لا تحوّل أي أموال حقيقية — ارفع أي صورة كإثبات اختباري، وسيؤكدها فريق اضمن يدوياً لاستكمال التجربة.'
-            : 'سحب تجريبي: إقفاله يحدّث الأرصدة في النظام فقط ولا يتم تحويل أي أموال فعلية للبائع.'}
+            ? 'دي وجهة دفع تجريبية. متحوّلش أي فلوس حقيقية — ارفع أي صورة كإثبات تجريبي، وفريق اضمن هيأكّدها يدوياً عشان تكمّل التجربة.'
+            : 'سحب تجريبي: تقفيله بيحدّث الأرصدة في النظام بس، ومفيش أي فلوس حقيقية بتتحوّل للبائع.'}
         </p>
       </div>
     </div>

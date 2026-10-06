@@ -76,7 +76,7 @@ export function ProductCard({ p, wishlistSlot, priority }: { p: CardProduct; wis
         {img ? (
           <img src={img} alt={p.titleAr} loading={priority ? 'eager' : 'lazy'} className={cn('size-full object-contain p-2 transition-transform duration-300 group-hover:scale-105', out && 'opacity-60')} />
         ) : (
-          <div className="grid size-full place-items-center text-xs text-muted">لا توجد صورة</div>
+          <div className="grid size-full place-items-center text-xs text-muted">مفيش صورة</div>
         )}
         <div className="absolute top-2 start-2 flex flex-col items-start gap-1">
           {p.condition === 'USED' && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold text-amber-950">مستعمل{p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}</span>}
@@ -88,7 +88,7 @@ export function ProductCard({ p, wishlistSlot, priority }: { p: CardProduct; wis
         <Link href={`/product/${p.slug}`} className="line-clamp-2 min-h-[2.6em] text-sm font-medium leading-snug hover:text-brand-700">
           {p.titleAr}
         </Link>
-        {p.ratingCount > 0 ? <Stars value={p.ratingAvg} count={p.ratingCount} /> : <span className="text-[11px] text-muted">لا توجد تقييمات بعد</span>}
+        {p.ratingCount > 0 ? <Stars value={p.ratingAvg} count={p.ratingCount} /> : <span className="text-[11px] text-muted">مفيش تقييمات لسه</span>}
         <Price value={p.minPrice} compareAt={p.maxCompareAtPrice} />
         <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-[11px] text-muted">
           <span className="inline-flex items-center gap-1">
@@ -99,7 +99,7 @@ export function ProductCard({ p, wishlistSlot, priority }: { p: CardProduct; wis
         </div>
         <div className="flex items-center justify-between gap-2">
           <ProtectedBadge compact />
-          {!out && p.totalAvailable <= 3 && <span className="text-[11px] font-semibold text-deal-600">متبقي {p.totalAvailable}</span>}
+          {!out && p.totalAvailable <= 3 && <span className="text-[11px] font-semibold text-deal-600">فاضل {p.totalAvailable}</span>}
         </div>
       </div>
     </article>
@@ -117,7 +117,7 @@ export function ProductRail({ title, href, children }: { title: ReactNode; href?
         <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
         {href && (
           <Link href={href} className="text-sm font-semibold text-brand-700 hover:underline">
-            عرض الكل
+            شوف الكل
           </Link>
         )}
       </div>

@@ -13,13 +13,13 @@ export default async function AccountLayout({ children }: { children: React.Reac
     <div className="container-page grid grid-cols-1 gap-6 py-6 lg:grid-cols-[220px_minmax(0,1fr)]">
       <aside className="min-w-0 space-y-3">
         <div className="hidden rounded-xl bg-white p-4 shadow-sm ring-1 ring-line lg:block">
-          <p className="text-xs text-muted">مرحباً</p>
+          <p className="text-xs text-muted">أهلاً</p>
           <p className="font-bold">{user.fullName}</p>
         </div>
         <AccountNav />
         <div className="hidden space-y-1 lg:block">
           <Link href={seller ? '/seller' : '/sell'} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-brand-700 hover:bg-white">
-            <Store className="size-4" /> {seller ? 'مركز البائع' : 'ابدأ البيع على اضمن'}
+            <Store className="size-4" /> {seller ? 'مركز البائع' : 'ابدأ بيع على اضمن'}
           </Link>
           <form action={logoutAction}>
             <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-white">

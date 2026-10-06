@@ -12,8 +12,8 @@ import { parse, transition } from '../_shared';
 
 export const ticketSchema = z.object({
   type: z.enum(['ORDER', 'PAYMENT', 'SHIPPING', 'RETURN', 'PRODUCT', 'SELLER', 'EXTERNAL_DEAL', 'ACCOUNT']),
-  subject: z.string().trim().min(5, 'اكتب عنواناً واضحاً').max(150),
-  body: z.string().trim().min(10, 'اشرح طلبك (10 أحرف على الأقل)').max(5000),
+  subject: z.string().trim().min(5, 'اكتب موضوع واضح').max(150),
+  body: z.string().trim().min(10, 'اشرح طلبك (10 حروف على الأقل)').max(5000),
   relatedType: z.string().trim().max(40).optional().default(''),
   relatedId: z.string().trim().max(60).optional().default(''),
 });
@@ -54,7 +54,7 @@ export async function replyToTicket(actor: Actor, ticketId: string, body: string
   if (!text || text.length < 2) throw validation('اكتب ردك');
   const { t, staff } = await loadTicket(actor, ticketId);
   if (opts.internal && !staff) throw forbidden();
-  if (!staff && t.status === 'CLOSED') throw invalidState('هذه التذكرة مغلقة. افتح تذكرة جديدة إذا احتجت مساعدة');
+  if (!staff && t.status === 'CLOSED') throw invalidState('التذكرة دي اتقفلت. لو محتاج مساعدة، افتح تذكرة جديدة');
   await db.transaction(async (tx) => {
     const file = opts.attachment ? await storeUpload(tx, actor, { purpose: 'SUPPORT_ATTACHMENT', data: opts.attachment.data, originalName: opts.attachment.name }) : null;
     await tx.insert(supportMessages).values({ ticketId: t.id, authorUserId: actor.userId!, body: text.slice(0, 5000), isStaff: staff, isInternal: !!opts.internal, attachmentFileId: file?.id ?? null });

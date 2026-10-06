@@ -21,7 +21,7 @@ export function WishlistButton({ productId, active, back, className }: { product
       <input type="hidden" name="back" value={back} />
       <button
         className={cn('grid size-9 place-items-center rounded-full bg-white/95 shadow ring-1 ring-line hover:scale-105', className)}
-        aria-label={active ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+        aria-label={active ? 'شيل من المفضلة' : 'ضيف للمفضلة'}
         aria-pressed={active}
       >
         <Heart className={cn('size-4', active ? 'fill-accent-600 text-accent-600' : 'text-slate-500')} />

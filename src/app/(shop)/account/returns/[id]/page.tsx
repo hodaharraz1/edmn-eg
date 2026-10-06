@@ -22,11 +22,11 @@ export default async function ReturnDetail(props: PageProps<'/account/returns/[i
   const r = g.ret;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'المرتجعات', href: '/account/returns' }, { label: `#${r.number}` }]} />} title={`طلب إرجاع #${r.number}`} description={`على الطلب ${g.orderLabel}`} actions={<StatusChip status={r.status} />} />
-      {r.status === 'APPROVED' && <Alert tone="success" title="تمت الموافقة على الإرجاع">أرسل المنتج إلى عنوان الإرجاع الخاص بالبائع ثم سجّل بيانات الشحن أدناه.</Alert>}
-      {r.status === 'REJECTED' && <Alert tone="danger" title="تم رفض طلب الإرجاع">السبب: {r.decisionReason}. إذا كنت ترى أن القرار غير عادل يمكنك تصعيد الأمر لفريق اضمن.</Alert>}
-      {r.status === 'REFUND_PENDING' && <Alert tone="info">تم قبول استرداد {formatEGP(r.refundAmount)} وسيتم تحويله إليك من فريق اضمن المالي.</Alert>}
-      {r.status === 'REFUNDED' && <Alert tone="success">تم رد المبلغ {formatEGP(r.refundAmount)}.</Alert>}
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلبات الإرجاع', href: '/account/returns' }, { label: `#${r.number}` }]} />} title={`طلب إرجاع #${r.number}`} description={`على الطلب ${g.orderLabel}`} actions={<StatusChip status={r.status} />} />
+      {r.status === 'APPROVED' && <Alert tone="success" title="طلب الإرجاع اتقبل">ابعت المنتج على عنوان الإرجاع بتاع البائع، وبعدها سجّل بيانات الشحن تحت.</Alert>}
+      {r.status === 'REJECTED' && <Alert tone="danger" title="طلب الإرجاع اترفض">السبب: {r.decisionReason}. لو شايف إن القرار مش عادل، تقدر تفتح نزاع وفريق اضمن يراجع الموضوع.</Alert>}
+      {r.status === 'REFUND_PENDING' && <Alert tone="info">استرداد {formatEGP(r.refundAmount)} اتقبل، وفريق اضمن المالي هيحوّله لك.</Alert>}
+      {r.status === 'REFUNDED' && <Alert tone="success">مبلغ {formatEGP(r.refundAmount)} اترد لك.</Alert>}
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'السبب', value: label('returnReason', r.reason) },
@@ -54,14 +54,14 @@ export default async function ReturnDetail(props: PageProps<'/account/returns/[i
           <input type="hidden" name="returnId" value={r.id} />
           <Field label="شركة الشحن" htmlFor="carrier" required><Input id="carrier" name="carrier" required /></Field>
           <Field label="رقم التتبع" htmlFor="tracking"><Input id="tracking" name="tracking" dir="ltr" /></Field>
-          <div className="flex items-end"><SubmitButton>تسجيل شحن المرتجع</SubmitButton></div>
+          <div className="flex items-end"><SubmitButton>سجّل الشحن</SubmitButton></div>
         </ActionForm>
       )}
       {r.status === 'REJECTED' && (
         <ActionForm action={escalateReturnAction} className="card space-y-3 p-5">
           <input type="hidden" name="returnId" value={r.id} />
-          <Field label="لماذا تعترض على القرار؟" htmlFor="description" required><Textarea id="description" name="description" required minLength={10} /></Field>
-          <SubmitButton variant="accent">تصعيد لفريق اضمن (فتح نزاع)</SubmitButton>
+          <Field label="ليه معترض على القرار؟" htmlFor="description" required><Textarea id="description" name="description" required minLength={10} /></Field>
+          <SubmitButton variant="accent">افتح نزاع</SubmitButton>
         </ActionForm>
       )}
     </div>

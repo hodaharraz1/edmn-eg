@@ -8,7 +8,7 @@ const LINKS: [string, string][] = [
   ['/account', 'لوحة الحساب'],
   ['/account/orders', 'طلباتي'],
   ['/account/deals', 'الصفقات المحمية'],
-  ['/account/returns', 'المرتجعات'],
+  ['/account/returns', 'طلبات الإرجاع'],
   ['/account/disputes', 'النزاعات'],
   ['/account/wishlist', 'المفضلة'],
   ['/account/reviews', 'تقييماتي'],

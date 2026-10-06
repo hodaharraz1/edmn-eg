@@ -42,7 +42,7 @@ test('a new seller registers, verifies the mobile number and submits the applica
 
   // Mobile verification (the development SMS driver records outbound messages).
   await page.goto('/account/security');
-  await page.getByRole('button', { name: 'إرسال رمز' }).first().click();
+  await page.getByRole('button', { name: 'ابعت الرمز' }).first().click();
   await expect.poll(async () => (await q(`select id from outbound_messages where recipient like $1`, [`%${SELLER.phone.slice(-8)}`])).length).toBeGreaterThan(0);
   const [{ body }] = await q<{ body: string }>(`select body from outbound_messages where recipient like $1 order by created_at desc limit 1`, [`%${SELLER.phone.slice(-8)}`]);
   await page.locator('input[name=code]').first().fill(body.match(/\d{6}/)![0]);
@@ -136,8 +136,8 @@ test('approved seller configures shipping, creates a product and submits it for 
   const html = await (await page.request.get(`/search?q=${encodeURIComponent(PRODUCT)}`)).text();
   expect(html).not.toContain(`/product/${encodeURIComponent(slug)}`);
   await page.goto(`/product/${encodeURIComponent(slug)}`);
-  await expect(page.getByRole('heading', { name: /غير موجود/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /إضافة إلى السلة/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /مش موجود/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /ضيف للسلة/ })).toHaveCount(0);
 });
 
 test('admin approves the product and it becomes live and searchable', async ({ browser }) => {
@@ -154,11 +154,11 @@ test('buyer finds the product, checks out and submits payment proof', async ({ b
   await page.locator('a[href^="/product/"]', { hasText: PRODUCT }).first().click();
   await page.waitForURL(/\/product\//);
   await expect(page.getByText(STORE).first()).toBeVisible();
-  await page.getByRole('button', { name: /إضافة إلى السلة/ }).first().click();
+  await page.getByRole('button', { name: /ضيف للسلة/ }).first().click();
   await expect.poll(async () => (await q(`select ci.id from cart_items ci join carts c on c.id = ci.cart_id join users u on u.id = c.user_id where u.email = 'mona@demo.edmn.local'`)).length).toBeGreaterThan(0);
   await page.goto('/checkout');
   await page.locator('input[name=paymentMethod][value=INSTAPAY]').check();
-  await page.getByRole('button', { name: /تأكيد الطلب/ }).click();
+  await page.getByRole('button', { name: /أكّد الطلب/ }).click();
   await page.waitForURL(/\/account\/orders\/[^/]+\/pay/);
   orderId = page.url().split('/orders/')[1].split('/')[0];
   await page.locator('input[name=payerName]').fill('منى خالد');
@@ -212,7 +212,7 @@ test('seller confirms, processes and ships with a mandatory waybill', async ({ b
 test('buyer confirms receipt and the seller balance becomes available', async ({ browser }) => {
   const page = await customerLogin(browser, 'mona@demo.edmn.local');
   await page.goto(`/account/orders/${orderId}`);
-  await page.getByRole('button', { name: 'تأكيد استلام الطلب' }).click();
+  await page.getByRole('button', { name: 'أكّد الاستلام' }).click();
   await expect.poll(soStatus).toBe('DELIVERED');
   const [{ net }] = await q<{ net: string }>(`select seller_net as net from seller_orders where id = $1`, [soId]);
   await expect.poll(async () => Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_AVAILABLE'`, [sellerId]))[0]?.b ?? 0)).toBe(Number(net));

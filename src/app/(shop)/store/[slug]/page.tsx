@@ -61,7 +61,7 @@ export default async function StorePage(props: PageProps<'/store/[slug]'>) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
               {seller.ratingCount ? <Stars value={seller.ratingAvg} count={seller.ratingCount} /> : <span>متجر جديد</span>}
               {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
-              <span className="inline-flex items-center gap-1"><CalendarDays className="size-4" /> انضم {formatDate(seller.approvedAt)}</span>
+              <span className="inline-flex items-center gap-1"><CalendarDays className="size-4" /> على اضمن من {formatDate(seller.approvedAt)}</span>
               <span>{count} منتج</span>
               {store.isVerified && <Badge tone="brand">بائع موثّق الهوية</Badge>}
             </div>
@@ -92,10 +92,10 @@ export default async function StorePage(props: PageProps<'/store/[slug]'>) {
             </div>
           </div>
           <div className="space-y-3">
-            <p className="flex items-start gap-2"><Truck className="mt-0.5 size-4 text-brand-600" /> {store.shippingPolicy || `يجهّز الطلبات خلال ${store.defaultProcessingDays} يوم عمل ويشحن للمحافظات المفعّلة.`}</p>
+            <p className="flex items-start gap-2"><Truck className="mt-0.5 size-4 text-brand-600" /> {store.shippingPolicy || `بيجهّز الطلبات خلال ${store.defaultProcessingDays} يوم عمل، وبيشحن للمحافظات اللي مفعّلها.`}</p>
             <p className="flex items-start gap-2">
               <RotateCcw className="mt-0.5 size-4 text-brand-600" />
-              {store.acceptsVoluntaryReturns ? `يقبل الإرجاع الاختياري خلال ${store.voluntaryReturnDays} يوم. ${store.returnConditions ?? ''}` : 'لا يقدم إرجاعاً اختيارياً، دون الإخلال بحقوق المستهلك المقررة قانوناً.'}
+              {store.acceptsVoluntaryReturns ? `بيقبل الإرجاع الاختياري خلال ${store.voluntaryReturnDays} يوم. ${store.returnConditions ?? ''}` : 'ما بيقدّمش إرجاع اختياري، مع الاحتفاظ بحقوق المستهلك المقررة قانونًا.'}
             </p>
             <p className="flex items-start gap-2"><Star className="mt-0.5 size-4 text-brand-600" /> كل البائعين على اضمن مرّوا بمراجعة هوية قبل البيع.</p>
           </div>
@@ -109,7 +109,7 @@ export default async function StorePage(props: PageProps<'/store/[slug]'>) {
 
 async function StoreReviews({ sellerId }: { sellerId: string }) {
   const reviews = await sellerReviewsPublic(sellerId, 50);
-  if (!reviews.length) return <EmptyState icon={Star} title="لا توجد تقييمات بعد" description="تظهر تقييمات العملاء بعد استلام طلباتهم." />;
+  if (!reviews.length) return <EmptyState icon={Star} title="مفيش تقييمات لسه" description="تقييمات العملاء بتظهر بعد ما يستلموا طلباتهم." />;
   return (
     <div className="card divide-y divide-line">
       {reviews.map(({ r, author }) => (

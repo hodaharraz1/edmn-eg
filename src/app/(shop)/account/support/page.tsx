@@ -16,7 +16,7 @@ export default async function SupportPage() {
   return (
     <div>
       <PageHeader title="الدعم الفني" actions={<LinkButton href="/account/support/new">تذكرة جديدة</LinkButton>} />
-      {list.length === 0 ? <EmptyState icon={LifeBuoy} title="لا توجد تذاكر" description="محتاج مساعدة؟ افتح تذكرة وسنرد عليك." action={<LinkButton href="/account/support/new">افتح تذكرة</LinkButton>} /> : (
+      {list.length === 0 ? <EmptyState icon={LifeBuoy} title="مفيش تذاكر" description="محتاج مساعدة؟ افتح تذكرة وهنرد عليك." action={<LinkButton href="/account/support/new">تواصل معانا</LinkButton>} /> : (
         <ul className="card divide-y divide-line">
           {list.map((t) => (
             <li key={t.id}>

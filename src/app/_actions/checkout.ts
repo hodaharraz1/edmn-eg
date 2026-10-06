@@ -31,7 +31,7 @@ export async function saveAddressAction(_p: ActionState, fd: FormData): Promise<
   let id = '';
   const res = await runAction(async () => {
     id = await saveAddress(actor, str(fd, 'id') || null, addressInput(fd));
-    return { message: 'تم حفظ العنوان' };
+    return { message: 'العنوان اتحفظ' };
   });
   const back = str(fd, 'back');
   if (res.ok && back === 'checkout') redirect(`/checkout?address=${id}`);
@@ -67,7 +67,7 @@ export async function submitProofAction(_p: ActionState, fd: FormData): Promise<
       { claimedAmount: str(fd, 'claimedAmount'), reference: str(fd, 'reference'), payerName: str(fd, 'payerName'), notes: str(fd, 'notes'), clientKey: str(fd, 'clientKey') },
       await fileOf(fd, 'proof'),
     );
-    return { message: 'تم استلام إثبات الدفع. سيقوم فريق اضمن بالتحقق منه ونبلغك فور التأكيد.' };
+    return { message: 'استلمنا إثبات الدفع. فريق اضمن هيراجعه ويبلغك أول ما يتأكد.' };
   });
   if (res.ok && back) redirect(safeNext(back, '/account/orders'));
   return res;

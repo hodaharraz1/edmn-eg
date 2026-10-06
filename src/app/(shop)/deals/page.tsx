@@ -8,8 +8,8 @@ export default async function DealsPage(props: PageProps<'/deals'>) {
   const sp = (await props.searchParams) as SP;
   return (
     <div className="container-page py-6">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الرئيسية', href: '/' }, { label: 'العروض' }]} />} title="العروض" description="منتجات عليها خصم حقيقي مقارنة بسعرها السابق." />
-      <Listing path="/deals" sp={sp} base={{ dealsOnly: true }} emptyHint="لا توجد عروض حالياً. تابعنا قريباً." />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الرئيسية', href: '/' }, { label: 'العروض' }]} />} title="العروض" description="منتجات عليها خصم حقيقي عن سعرها قبل كده." />
+      <Listing path="/deals" sp={sp} base={{ dealsOnly: true }} emptyHint="مفيش عروض دلوقتي. ارجع لنا قريب." />
     </div>
   );
 }

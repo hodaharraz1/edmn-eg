@@ -37,16 +37,16 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
   const lastRejected = subs.find((s) => s.status === 'REJECTED' || s.status === 'NEW_PROOF_REQUESTED');
   return (
     <div className="space-y-5">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلباتي', href: '/account/orders' }, { label: `#${g.order.number}`, href: `/account/orders/${id}` }, { label: 'الدفع' }]} />} title={`الدفع للطلب #${g.order.number}`} actions={<StatusChip status={p.status} />} />
-      {p.status === 'CONFIRMED' && <Alert tone="success" title="تم تأكيد الدفع" action={<LinkButton href={`/account/orders/${id}`} size="sm">متابعة الطلب</LinkButton>}>شكراً لك! سيبدأ البائع في تجهيز طلبك.</Alert>}
-      {(p.status === 'PAYMENT_SUBMITTED' || p.status === 'UNDER_REVIEW') && <Alert tone="info" title="إثبات الدفع قيد المراجعة">سيتحقق فريق اضمن من التحويل ويبلغك. لا داعي لرفع إثبات آخر.</Alert>}
-      {p.status === 'EXPIRED' && <Alert tone="danger" title="انتهت مهلة الدفع">تم إلغاء الطلب وإتاحة المنتجات لعملاء آخرين.</Alert>}
-      {p.status === 'REJECTED' && lastRejected && <Alert tone="danger" title="لم يتم قبول إثبات الدفع السابق">{lastRejected.reviewReason}. يمكنك رفع إثبات جديد قبل {formatDate(p.dueAt, true)}.</Alert>}
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلباتي', href: '/account/orders' }, { label: `#${g.order.number}`, href: `/account/orders/${id}` }, { label: 'الدفع' }]} />} title={`دفع الطلب #${g.order.number}`} actions={<StatusChip status={p.status} />} />
+      {p.status === 'CONFIRMED' && <Alert tone="success" title="الدفع اتأكد" action={<LinkButton href={`/account/orders/${id}`} size="sm">تابع طلبك</LinkButton>}>شكراً! البائع هيبدأ يجهّز طلبك.</Alert>}
+      {(p.status === 'PAYMENT_SUBMITTED' || p.status === 'UNDER_REVIEW') && <Alert tone="info" title="بنراجع إثبات الدفع">فريق اضمن هيراجع التحويل ويبلغك. مش محتاج ترفع إثبات تاني.</Alert>}
+      {p.status === 'EXPIRED' && <Alert tone="danger" title="مهلة الدفع خلصت">الطلب اتلغى، والمنتجات رجعت متاحة لعملاء تانيين.</Alert>}
+      {p.status === 'REJECTED' && lastRejected && <Alert tone="danger" title="إثبات الدفع اللي فات اترفض">{lastRejected.reviewReason}. تقدر ترفع إثبات جديد قبل {formatDate(p.dueAt, true)}.</Alert>}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="card space-y-4 p-5">
           <div className="rounded-xl bg-brand-50 p-4 text-center">
-            <p className="text-sm text-brand-800">المبلغ المطلوب تحويله بالضبط</p>
+            <p className="text-sm text-brand-800">حوّل المبلغ ده بالظبط</p>
             <p className="text-3xl font-bold text-brand-900">{formatEGP(p.amountDue, { fixed: true })}</p>
             <p className="mt-1 text-xs text-muted">طريقة الدفع: {label('paymentMethod', p.method)} · رقم الطلب للمرجع: <span className="font-semibold ltr">{g.order.number}</span></p>
           </div>
@@ -67,7 +67,7 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
               {d.instructions && <p className="text-xs text-muted">{d.instructions}</p>}
             </div>
           ))}
-          <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> لا تحوّل لأي حساب غير المذكور هنا. اضمن لن يطلب منك أبداً التحويل لحساب شخصي لبائع.</p>
+          <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> متحوّلش لأي حساب غير اللي مكتوب هنا. اضمن عمره ما هيطلب منك تحوّل لحساب شخصي لبائع.</p>
         </section>
 
         <section className="card p-5">
@@ -83,20 +83,20 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
                 <Input id="claimedAmount" name="claimedAmount" inputMode="decimal" defaultValue={toInputAmount(p.amountDue)} required dir="ltr" className="text-start" />
                 <FieldError name="claimedAmount" />
               </Field>
-              <Field label="رقم العملية / المرجع" htmlFor="reference" hint="يظهر في رسالة التأكيد من البنك أو التطبيق">
+              <Field label="رقم العملية / المرجع" htmlFor="reference" hint="هتلاقيه في رسالة التأكيد من البنك أو التطبيق">
                 <Input id="reference" name="reference" dir="ltr" className="text-start" />
               </Field>
-              <Field label="اسم المحوّل (كما يظهر في التحويل)" htmlFor="payerName"><Input id="payerName" name="payerName" /></Field>
+              <Field label="اسم صاحب التحويل (زي ما هو ظاهر في التحويل)" htmlFor="payerName"><Input id="payerName" name="payerName" /></Field>
               <Field label="ملاحظات" htmlFor="notes"><Textarea id="notes" name="notes" rows={2} /></Field>
-              <SubmitButton size="lg" className="w-full" pendingText="جارٍ الرفع…">رفع إثبات الدفع</SubmitButton>
-              <p className="text-xs text-muted">رفع الإثبات لا يعني تأكيد الدفع؛ يتم التأكيد فقط بعد تحقق فريق اضمن من وصول المبلغ.</p>
+              <SubmitButton size="lg" className="w-full" pendingText="بنرفع الإثبات…">رفع إثبات الدفع</SubmitButton>
+              <p className="text-xs text-muted">رفع الإثبات مش معناه إن الدفع اتأكد. الدفع بيتأكد بس بعد ما فريق اضمن يتحقق إن المبلغ وصل.</p>
             </ActionForm>
           ) : (
-            <p className="text-sm text-muted">لا يمكن رفع إثبات في الحالة الحالية.</p>
+            <p className="text-sm text-muted">مينفعش ترفع إثبات في الحالة دي.</p>
           )}
           {subs.length > 0 && (
             <div className="mt-5 border-t border-line pt-4">
-              <p className="mb-2 text-sm font-semibold">المحاولات السابقة</p>
+              <p className="mb-2 text-sm font-semibold">الإثباتات اللي رفعتها قبل كده</p>
               <ul className="space-y-2 text-xs">
                 {subs.map((s) => (
                   <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-page p-2">

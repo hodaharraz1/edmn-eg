@@ -93,17 +93,17 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات المحمية', href: '/account/deals' }, { label: g.ref }]} />}
         title={deal.title}
         description={`صفقة محمية · ${g.ref}`}
-        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'أنت المشتري' : 'أنت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} /></>}
+        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} /></>}
       />
 
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}
-      {isBuyer && deal.status === 'DRAFT' && <Alert tone="info">طلب الصفقة لم يكتمل بعد. <Link href={`/account/deals/new?deal=${deal.id}&step=${Math.min(deal.wizardStep, 6)}`} className="underline">أكمل الطلب</Link></Alert>}
+      {isBuyer && deal.status === 'DRAFT' && <Alert tone="info">طلب الصفقة لسه مكملش. <Link href={`/account/deals/new?deal=${deal.id}&step=${Math.min(deal.wizardStep, 6)}`} className="underline">كمّل الطلب</Link></Alert>}
       {isBuyer && deal.status === 'INVITED' && (
         <div className="card space-y-3 p-4 text-sm">
-          <p>بانتظار انضمام البائع عبر الرابط. لو ضاع الرابط أنشئ رابطاً جديداً (القديم يتوقف فوراً).</p>
+          <p>مستنيين البائع يدخل من الرابط. لو الرابط ضاع، اعمل رابط جديد (القديم هيبطل يشتغل فورًا).</p>
           <div className="flex flex-wrap gap-2">
-            <form action={refreshInviteAction}><input type="hidden" name="dealId" value={deal.id} /><button className={buttonClass('outline', 'sm')}>إنشاء رابط دعوة جديد</button></form>
-            <form action={revokeInviteAction}><input type="hidden" name="dealId" value={deal.id} /><button className={buttonClass('ghost', 'sm')}>إلغاء الرابط وتعديل الطلب</button></form>
+            <form action={refreshInviteAction}><input type="hidden" name="dealId" value={deal.id} /><button className={buttonClass('outline', 'sm')}>اعمل رابط جديد</button></form>
+            <form action={revokeInviteAction}><input type="hidden" name="dealId" value={deal.id} /><button className={buttonClass('ghost', 'sm')}>ألغِ الرابط وعدّل الطلب</button></form>
           </div>
         </div>
       )}
@@ -114,12 +114,12 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           { label: 'المنتج', value: `${deal.title} × ${deal.quantity}` },
           { label: 'الحالة', value: deal.condition === 'NEW' ? 'جديد' : 'مستعمل' },
           { label: 'المشتري', value: g.buyerName },
-          { label: 'البائع', value: deal.sellerFullName ?? (isBuyer && deal.sellerName ? `${deal.sellerName} (لم ينضم بعد)` : 'لم ينضم بعد') },
+          { label: 'البائع', value: deal.sellerFullName ?? (isBuyer && deal.sellerName ? `${deal.sellerName} (لسه مدخلش)` : 'لسه مدخلش') },
           { label: 'السعر', value: formatEGP(deal.totalAmount) },
           { label: isBuyer ? 'المطلوب دفعه' : 'صافي مستحقك', value: formatEGP(isBuyer ? deal.buyerPays : deal.sellerReceives) },
           { label: 'التسليم المتوقع', value: `${deal.deliveryMethod ?? '—'} · قبل ${formatDate(deal.deliveryDeadline)}` },
           { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
-          { label: 'شروط خاصة', value: deal.customTerms ?? 'لا يوجد' },
+          { label: 'شروط خاصة', value: deal.customTerms ?? 'مفيش' },
           ...(isSeller && deal.sellerPayoutMasked ? [{ label: 'وسيلة استلام مستحقاتك', value: deal.sellerPayoutMasked }] : []),
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{deal.description}</p>
@@ -129,7 +129,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         <section className="card grid gap-4 p-5 sm:grid-cols-2" data-testid="deal-locations">
           {g.buyerLocation && <LocationCard title={isBuyer ? 'عنوان الاستلام (عنوانك)' : 'عنوان المشتري'} loc={g.buyerLocation} gov={govName(g.buyerLocation.governorateId)} />}
           {g.sellerLocation && <LocationCard title={isSeller ? 'عنوان استلام الشحنة منك' : 'عنوان البائع'} loc={g.sellerLocation} gov={govName(g.sellerLocation.governorateId)} />}
-          {!(g.buyerLocation && g.sellerLocation) && <p className="text-xs text-muted sm:col-span-2">عنوان الطرف الآخر يظهر بعد تأكيد الدفع فقط.</p>}
+          {!(g.buyerLocation && g.sellerLocation) && <p className="text-xs text-muted sm:col-span-2">عنوان الطرف التاني بيظهر بس بعد تأكيد الدفع.</p>}
         </section>
       )}
 
@@ -139,7 +139,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           {!me.phoneVerifiedAt && (
             <section className="card space-y-2 p-5">
               <h2 className="font-bold">أكّد رقم موبايلك</h2>
-              <p className="text-sm text-muted">لازم رقم موبايل مؤكد قبل إرسال عرضك.</p>
+              <p className="text-sm text-muted">لازم تأكد رقم موبايلك قبل ما تبعت عرضك.</p>
               <ContactVerification user={me} only={['PHONE']} />
             </section>
           )}
@@ -150,7 +150,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
             <h2 className="text-lg font-bold">بياناتك وعرضك</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="الاسم بالكامل" htmlFor="fullName" required><Input id="fullName" name="fullName" defaultValue={me.fullName} required minLength={3} /></Field>
-              <Field label="البريد للتواصل (اختياري)" htmlFor="contactEmail"><Input id="contactEmail" name="contactEmail" type="email" dir="ltr" defaultValue={me.email ?? ''} /></Field>
+              <Field label="إيميل للتواصل (اختياري)" htmlFor="contactEmail"><Input id="contactEmail" name="contactEmail" type="email" dir="ltr" defaultValue={me.email ?? ''} /></Field>
             </div>
             <LocationPicker governorates={govs} title="عنوان استلام الشحنة منك" />
             <OfferFields condition={deal.condition} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} />
@@ -189,7 +189,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <input type="hidden" name="dealId" value={deal.id} />
               <input type="hidden" name="version" value={open.version} />
               <input type="hidden" name="decision" value="REJECT" />
-              <ConfirmSubmit confirm="رفض العرض وإلغاء الصفقة؟" variant="outline" size="lg" className="w-full">رفض</ConfirmSubmit>
+              <ConfirmSubmit confirm="ترفض العرض وتلغي الصفقة؟" variant="outline" size="lg" className="w-full">رفض</ConfirmSubmit>
             </ActionForm>
           </div>
           <details className="rounded-xl border border-line p-4">
@@ -198,23 +198,23 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <input type="hidden" name="dealId" value={deal.id} />
               <input type="hidden" name="version" value={open.version} />
               <input type="hidden" name="decision" value="REQUEST_CHANGE" />
-              <ReturnPolicyFields defaults={openTerms.returnPolicy} mandatoryNotice={mandatoryNotice} title="سياسة الاسترجاع المطلوبة" />
+              <ReturnPolicyFields defaults={openTerms.returnPolicy} mandatoryNotice={mandatoryNotice} title="سياسة الإرجاع المطلوبة" />
               <Field label="اكتب التعديل المطلوب" htmlFor="change-message" required><Textarea id="change-message" name="message" rows={2} required minLength={3} /></Field>
               <SubmitButton variant="secondary">إرسال طلب التعديل</SubmitButton>
             </ActionForm>
           </details>
         </section>
       )}
-      {isSeller && deal.status === 'OFFER_PENDING_BUYER' && <Alert tone="info">تم إرسال عرضك. بانتظار مراجعة المشتري.</Alert>}
-      {isBuyer && deal.status === 'SELLER_JOINED' && <Alert tone="info">انضم البائع للصفقة ويجهز عرضه (الشحن وسياسة الاسترجاع).</Alert>}
-      {isBuyer && deal.status === 'CHANGE_REQUESTED' && <Alert tone="info">تم إرسال طلب التعديل. بانتظار رد البائع.</Alert>}
+      {isSeller && deal.status === 'OFFER_PENDING_BUYER' && <Alert tone="info">عرضك اتبعت. مستنيين المشتري يراجعه.</Alert>}
+      {isBuyer && deal.status === 'SELLER_JOINED' && <Alert tone="info">البائع دخل الصفقة وبيجهّز عرضه (الشحن وسياسة الإرجاع).</Alert>}
+      {isBuyer && deal.status === 'CHANGE_REQUESTED' && <Alert tone="info">طلب التعديل اتبعت. مستنيين رد البائع.</Alert>}
 
       {/* ── Seller: answer a change request ── */}
       {isSeller && deal.status === 'CHANGE_REQUESTED' && open && openTerms && (
         <section className="card space-y-4 border-amber-200 p-5" data-testid="change-request">
           <h2 className="text-lg font-bold">المشتري طلب تعديل (نسخة {open.version})</h2>
           {open.message && <p className="rounded-lg bg-amber-50 p-2 text-sm">{open.message}</p>}
-          <div><p className="text-sm font-semibold">سياسة الاسترجاع المطلوبة</p><ReturnPolicyView policy={openTerms.returnPolicy} mandatoryNotice={openTerms.mandatoryRightsNotice} /></div>
+          <div><p className="text-sm font-semibold">سياسة الإرجاع المطلوبة</p><ReturnPolicyView policy={openTerms.returnPolicy} mandatoryNotice={openTerms.mandatoryRightsNotice} /></div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={sellerChangeResponseAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
@@ -238,7 +238,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <ReturnPolicyFields defaults={openTerms.returnPolicy} mandatoryNotice={mandatoryNotice} />
               <Field label="رسالة للمشتري" htmlFor="counter-message"><Textarea id="counter-message" name="message" rows={2} maxLength={1000} /></Field>
               <Checkbox name="acceptTerms" required label="أؤكد صحة العرض وأوافق على شروط الصفقات المحمية" />
-              <SubmitButton>إرسال العرض المقابل</SubmitButton>
+              <SubmitButton>ابعت العرض المقابل</SubmitButton>
             </ActionForm>
           </details>
         </section>
@@ -255,7 +255,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isBuyer && deal.status === 'PAYMENT_PENDING' && !payment && (
         <ActionForm action={startDealPaymentAction} className="card space-y-3 p-5">
           <input type="hidden" name="dealId" value={deal.id} />
-          <h2 className="font-bold">اختر طريقة الدفع</h2>
+          <h2 className="font-bold">اختار طريقة الدفع</h2>
           {methods.map((m, i) => <Radio key={m.code} name="method" value={m.code} defaultChecked={i === 0} label={m.nameAr} />)}
           <SubmitButton>متابعة</SubmitButton>
         </ActionForm>
@@ -272,7 +272,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
                 {Object.entries(d.details).map(([k, v]) => <dd key={k} className="flex justify-between gap-2"><span className="text-muted">{k}</span><span className="flex items-center gap-2 ltr">{v} <CopyButton value={v} /></span></dd>)}
               </dl>
             ))}
-            {payment.status === 'REJECTED' && <Alert tone="danger">لم يتم قبول الإثبات السابق: {subs[0]?.reviewReason}</Alert>}
+            {payment.status === 'REJECTED' && <Alert tone="danger">إثبات الدفع اللي فات اترفض: {subs[0]?.reviewReason}</Alert>}
           </div>
           <ActionForm action={dealProofAction} className="space-y-3" encType="multipart/form-data">
             <input type="hidden" name="dealId" value={deal.id} />
@@ -285,19 +285,19 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           </ActionForm>
         </section>
       )}
-      {deal.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info">إثبات الدفع قيد التحقق من فريق اضمن.</Alert>}
+      {deal.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info">فريق اضمن بيراجع إثبات الدفع.</Alert>}
       {deal.status === 'ACTIVE' && isBuyer && (
-        <Alert tone="success" title="الصفقة نشطة">
-          تم تأكيد استلام اضمن للدفع. لن يُتاح مستحق البائع إلا بعد التحقق من التسليم برمز الاستلام ثم تأكيدك أن المنتج مطابق.
-          {!dispute && <span className="mt-2 block"><Link href={`/account/disputes/new?deal=${deal.id}&reason=NOT_RECEIVED`} className="underline">لم أستلم حتى الآن</Link></span>}
+        <Alert tone="success" title="الصفقة شغالة">
+          اضمن أكّد إن الدفع وصل. البائع مش هياخد مستحقه غير بعد خطوتين: التحقق من التسليم برمز الاستلام، وبعدها تأكيدك إن المنتج مطابق.
+          {!dispute && <span className="mt-2 block"><Link href={`/account/disputes/new?deal=${deal.id}&reason=NOT_RECEIVED`} className="underline">لسه مستلمتش</Link></span>}
         </Alert>
       )}
 
       {isSeller && deal.status === 'ACTIVE' && (
         <ActionForm action={dealDeliveredAction} className="card space-y-3 p-5" encType="multipart/form-data">
           <input type="hidden" name="dealId" value={deal.id} />
-          <Alert tone="success">تم تأكيد دفع المشتري لدى اضمن. اشحن المنتج حسب الاتفاق ثم سجّل الشحن. عند التسليم الفعلي سيعطيك المشتري رمز الاستلام.</Alert>
-          <Field label="تفاصيل الشحن" htmlFor="note"><Textarea id="note" name="note" rows={2} placeholder="تم الشحن عبر… رقم البوليصة…" /></Field>
+          <Alert tone="success">اضمن أكّد إن المشتري دفع. اشحن المنتج حسب الاتفاق، وبعدها سجّل الشحن. وقت التسليم الفعلي المشتري هيديك رمز الاستلام.</Alert>
+          <Field label="تفاصيل الشحن" htmlFor="note"><Textarea id="note" name="note" rows={2} placeholder="اتشحن مع… رقم البوليصة…" /></Field>
           <FileInput name="proof" multiple label="إثبات الشحن (بوليصة / صورة)" accept="image/jpeg,image/png,image/webp,application/pdf" />
           <SubmitButton>تسجيل الشحن</SubmitButton>
         </ActionForm>
@@ -307,34 +307,34 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isBuyer && deal.status === 'DELIVERED' && !dispute && (
         <section className="card space-y-3 border-brand-200 p-5" data-testid="buyer-handover-code">
           <h2 className="font-bold">رمز الاستلام</h2>
-          <p className="text-sm">سجّل البائع الشحن في {formatDate(deal.deliveredAt, true)}. {deal.deliveryNote}</p>
-          <p className="text-sm">أعطِ الرمز للبائع أو المندوب <strong>فقط عند استلام المنتج فعليًا</strong>. الرمز يثبت التسليم فقط، ولا يعني موافقتك على حالة المنتج، ولا يُصرف أي مبلغ للبائع به.</p>
+          <p className="text-sm">البائع سجّل الشحن يوم {formatDate(deal.deliveredAt, true)}. {deal.deliveryNote}</p>
+          <p className="text-sm">ادّي الرمز للبائع أو المندوب <strong>بس لما تستلم المنتج فعلًا</strong>. الرمز بيثبت التسليم بس، ومش معناه إنك موافق على حالة المنتج، ومفيش أي مبلغ بيتصرف للبائع بيه.</p>
           {otpView?.active ? (
             <>
               {otpView.testCode ? (
                 <div className="rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 p-3 text-center" data-testid="staging-otp">
                   <p className="text-xs font-bold text-amber-900">رمز تجريبي — بيئة Staging</p>
                   <p className="mt-1 text-3xl font-bold tracking-[0.4em] ltr" data-testid="staging-otp-code">{otpView.testCode}</p>
-                  <p className="text-[11px] text-amber-900">في الإنتاج يصلك الرمز برسالة SMS فقط.</p>
+                  <p className="text-[11px] text-amber-900">في النسخة الحقيقية الرمز بيوصلك في رسالة SMS بس.</p>
                 </div>
               ) : (
-                <p className="rounded-lg bg-page p-2 text-sm">أرسلنا الرمز برسالة SMS على رقم موبايلك.</p>
+                <p className="rounded-lg bg-page p-2 text-sm">بعتنالك الرمز في رسالة SMS على رقم موبايلك.</p>
               )}
-              <p className="text-xs text-muted">صالح حتى {formatDate(otpView.expiresAt ?? null, true)} · المحاولات المتبقية {otpView.attemptsLeft}</p>
+              <p className="text-xs text-muted">صالح لحد {formatDate(otpView.expiresAt ?? null, true)} · المحاولات الباقية: {otpView.attemptsLeft}</p>
             </>
           ) : (
-            <p className="rounded-lg bg-amber-50 p-2 text-sm">لا يوجد رمز صالح حاليًا (انتهت صلاحيته أو تم تجاوز المحاولات). اطلب رمزًا جديدًا.</p>
+            <p className="rounded-lg bg-amber-50 p-2 text-sm">مفيش رمز صالح دلوقتي (صلاحيته خلصت أو المحاولات خلصت). اطلب رمز جديد.</p>
           )}
           <ActionForm action={regenerateDeliveryOtpAction}>
             <input type="hidden" name="dealId" value={deal.id} />
-            <SubmitButton variant="outline" size="sm">إرسال رمز جديد</SubmitButton>
+            <SubmitButton variant="outline" size="sm">ابعت رمز جديد</SubmitButton>
           </ActionForm>
           <details className="rounded-lg border border-line p-3 text-sm">
-            <summary className="cursor-pointer font-semibold">لم يصلني المنتج / مشكلة في التسليم</summary>
+            <summary className="cursor-pointer font-semibold">المنتج موصلش / مشكلة في التسليم</summary>
             <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
-              <Field label="اشرح ما حدث" htmlFor="nr-desc" required><Textarea id="nr-desc" name="description" rows={2} required minLength={3} /></Field>
-              <SubmitButton variant="outline" size="sm">فتح نزاع عدم الاستلام</SubmitButton>
+              <Field label="احكي اللي حصل" htmlFor="nr-desc" required><Textarea id="nr-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">افتح نزاع عدم استلام</SubmitButton>
             </ActionForm>
           </details>
         </section>
@@ -342,12 +342,12 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
 
       {legacyNoHandover && !dispute && (
         <section className="card space-y-2 border-amber-200 bg-amber-50 p-5 text-sm" data-testid="legacy-handover">
-          <p className="font-semibold">لم يتم التحقق من التسليم برمز الاستلام لهذه الصفقة.</p>
-          <p>لن يُصرف أي مبلغ تلقائيًا. اطلب مراجعة فريق العمليات لتأكيد التسليم أو حل المشكلة.</p>
+          <p className="font-semibold">الصفقة دي متمّش فيها تحقق من التسليم برمز الاستلام.</p>
+          <p>مفيش أي مبلغ هيتصرف تلقائيًا. اطلب مراجعة من فريق العمليات عشان يأكدوا التسليم أو يحلوا المشكلة.</p>
           <ActionForm action={reportDeliveryExceptionAction} className="space-y-2">
             <input type="hidden" name="dealId" value={deal.id} />
-            <Field label="اشرح الوضع" htmlFor="legacy-desc" required><Textarea id="legacy-desc" name="description" rows={2} required minLength={3} /></Field>
-            <SubmitButton variant="outline" size="sm">طلب مراجعة فريق العمليات</SubmitButton>
+            <Field label="اشرح الموقف" htmlFor="legacy-desc" required><Textarea id="legacy-desc" name="description" rows={2} required minLength={3} /></Field>
+            <SubmitButton variant="outline" size="sm">اطلب مراجعة العمليات</SubmitButton>
           </ActionForm>
         </section>
       )}
@@ -355,8 +355,8 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {/* ── Seller: handover verification. There is NO "buyer received" button for the seller. ── */}
       {isSeller && deal.status === 'DELIVERED' && !dispute && (
         <section className="card space-y-3 border-brand-200 p-5" data-testid="handover-verify">
-          <h2 className="font-bold">تأكيد تسليم الصفقة</h2>
-          <p className="text-sm text-muted">عند تسليم المنتج للمشتري يدًا بيد أو عبر المندوب، اطلب منه رمز الاستلام وأدخله هنا. الرمز يصل للمشتري فقط.</p>
+          <h2 className="font-bold">تأكيد التسليم</h2>
+          <p className="text-sm text-muted">لما تسلّم المنتج للمشتري إيد بإيد أو مع المندوب، اطلب منه رمز الاستلام واكتبه هنا. الرمز بيوصل للمشتري بس.</p>
           <ActionForm action={verifyDeliveryOtpAction} className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <input type="hidden" name="dealId" value={deal.id} />
             <Field label="رمز الاستلام" htmlFor="otp-code" className="sm:flex-1"><Input id="otp-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required dir="ltr" className="text-center text-lg tracking-[0.3em]" /></Field>
@@ -365,49 +365,49 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           <div className="flex flex-wrap gap-2">
             <ActionForm action={regenerateDeliveryOtpAction}>
               <input type="hidden" name="dealId" value={deal.id} />
-              <SubmitButton variant="ghost" size="sm">إعادة إرسال رمز جديد للمشتري</SubmitButton>
+              <SubmitButton variant="ghost" size="sm">ابعت رمز جديد للمشتري</SubmitButton>
             </ActionForm>
           </div>
           <details className="rounded-lg border border-line p-3 text-sm">
-            <summary className="cursor-pointer font-semibold">تعذر التحقق بالرمز؟</summary>
+            <summary className="cursor-pointer font-semibold">مش قادر تتحقق بالرمز؟</summary>
             <ActionForm action={reportDeliveryExceptionAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
-              <Field label="سبب تعذر التحقق" htmlFor="ex-desc" required><Textarea id="ex-desc" name="description" rows={2} required minLength={3} /></Field>
-              <SubmitButton variant="outline" size="sm">طلب مراجعة فريق العمليات</SubmitButton>
+              <Field label="إيه اللي منع التحقق؟" htmlFor="ex-desc" required><Textarea id="ex-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">اطلب مراجعة العمليات</SubmitButton>
             </ActionForm>
           </details>
         </section>
       )}
 
       {isSeller && handoverOpen && !dispute && (
-        <Alert tone="success" title="تم التحقق من تسليم المنتج للمشتري.">بانتظار تأكيد المشتري لمطابقة المنتج. مستحقك غير متاح للصرف حتى يؤكد المشتري أو يصدر قرار فريق العمليات.</Alert>
+        <Alert tone="success" title="التسليم اتأكد برمز الاستلام.">مستنيين المشتري يأكد إن المنتج مطابق. مستحقك مش هيتصرف غير لما المشتري يأكد أو فريق العمليات يصدر قرار.</Alert>
       )}
 
       {/* ── Buyer: explicit final choice after a verified handover (OTP ≠ acceptance) ── */}
       {isBuyer && handoverOpen && !dispute && (
         <section className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
-          <p className="font-semibold">تم التحقق من تسليم المنتج للمشتري.</p>
-          <p className="text-sm">افحص المنتج خلال {deal.inspectionDays} يوم ثم اختر. لن يُتاح أي مبلغ للبائع إلا إذا اخترت «استلمت والمنتج مطابق».</p>
+          <p className="font-semibold">تسليم المنتج ليك اتأكد برمز الاستلام.</p>
+          <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج خلال {deal.inspectionDays} يوم وبعدها اختار. البائع مش هياخد أي مبلغ غير لو اخترت «استلمت والمنتج مطابق».</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={dealConfirmAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
-              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="بتأكيدك أن المنتج مطابق سيُتاح مستحق البائع للصرف، ولن يمكنك فتح نزاع على عدم المطابقة بعد ذلك إلا وفق حقوقك القانونية. هل أنت متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
+              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="لو أكدت إن المنتج مطابق، مستحق البائع هيبقى متاح للصرف، ومش هتقدر تفتح نزاع على عدم المطابقة بعد كده إلا في حدود حقوقك القانونية. متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
             </ActionForm>
-            <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت ولكن توجد مشكلة</LinkButton>
+            <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت بس فيه مشكلة</LinkButton>
           </div>
           <details className="rounded-lg border border-line bg-white p-3 text-sm">
             <summary className="cursor-pointer font-semibold">لم أستلم المنتج فعليًا</summary>
             <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
-              <p className="text-xs text-muted">سيتم إيقاف أي صرف وتحويل الصفقة لمراجعة فريق العمليات (تعارض في التسليم).</p>
-              <Field label="اشرح ما حدث" htmlFor="conflict-desc" required><Textarea id="conflict-desc" name="description" rows={2} required minLength={3} /></Field>
-              <SubmitButton variant="outline" size="sm">إرسال البلاغ</SubmitButton>
+              <p className="text-xs text-muted">أي صرف هيتوقف، والصفقة هتتحول لمراجعة فريق العمليات (تعارض في التسليم).</p>
+              <Field label="احكي اللي حصل" htmlFor="conflict-desc" required><Textarea id="conflict-desc" name="description" rows={2} required minLength={3} /></Field>
+              <SubmitButton variant="outline" size="sm">ابعت البلاغ</SubmitButton>
             </ActionForm>
           </details>
         </section>
       )}
       {['ACTIVE', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status) && !dispute && isSeller && (
-        <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> الإبلاغ عن مشكلة</LinkButton>
+        <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> بلّغ عن مشكلة</LinkButton>
       )}
       {otpEvents.length > 0 && (
         <details className="card p-4 text-sm" data-testid="handover-history">
@@ -415,15 +415,15 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           <ul className="mt-2 space-y-1 text-xs">
             {otpEvents.map((o) => (
               <li key={o.id}>
-                أُصدر {formatDate(o.createdAt, true)} · المحاولات {o.attempts}/{o.maxAttempts} ·{' '}
-                {o.usedAt ? `تم التحقق ${formatDate(o.usedAt, true)}` : o.invalidatedAt ? `غير صالح (${OTP_REASON[o.invalidReason ?? ''] ?? o.invalidReason})` : `صالح حتى ${formatDate(o.expiresAt, true)}`}
+                صدر {formatDate(o.createdAt, true)} · المحاولات {o.attempts}/{o.maxAttempts} ·{' '}
+                {o.usedAt ? `اتستخدم ${formatDate(o.usedAt, true)}` : o.invalidatedAt ? `غير صالح (${OTP_REASON[o.invalidReason ?? ''] ?? o.invalidReason})` : `صالح لحد ${formatDate(o.expiresAt, true)}`}
               </li>
             ))}
           </ul>
         </details>
       )}
       {dispute && <LinkButton href={`/account/disputes/${dispute.id}`} variant="secondary">متابعة النزاع #{dispute.number}</LinkButton>}
-      {deal.status === 'COMPLETED' && <Alert tone="success" title="اكتملت الصفقة">{isSeller ? `سيتم تحويل مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} إلى ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'تم التحويل' : 'قيد التحويل'}` : 'شكراً لاستخدامك اضمن.'}</Alert>}
+      {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} هيتحوّل على ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'اتحوّل' : 'جاري التحويل'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
 
       {versions.length > 0 && (
         <details className="card p-4" data-testid="terms-history">
@@ -447,23 +447,23 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         <form action={async (fd) => { 'use server'; await cancelDealAction({}, fd); }} className="flex items-end gap-2">
           <input type="hidden" name="dealId" value={deal.id} />
           <input type="hidden" name="reason" value="ألغى المشتري الصفقة قبل الدفع" />
-          <ConfirmSubmit confirm="إلغاء الصفقة؟" variant="outline" size="sm">إلغاء الصفقة</ConfirmSubmit>
+          <ConfirmSubmit confirm="تلغي الصفقة؟" variant="outline" size="sm">ألغِ الصفقة</ConfirmSubmit>
         </form>
       )}
-      {NEGOTIATION.includes(deal.status) && <p className="text-xs text-muted">لا يتم أي دفع قبل موافقة الطرفين على نفس نسخة الشروط.</p>}
+      {NEGOTIATION.includes(deal.status) && <p className="text-xs text-muted">مفيش أي دفع قبل ما الطرفين يوافقوا على نفس نسخة الشروط.</p>}
       <p className="text-xs text-muted"><Link href="/legal/protected-deal-terms" className="underline">شروط الصفقات المحمية</Link></p>
     </div>
   );
 }
 
-const OTP_REASON: Record<string, string> = { REGENERATED: 'استُبدل برمز جديد', EXPIRED: 'انتهت صلاحيته', LOCKED: 'تجاوز المحاولات', CLOSED: 'أُغلق للمراجعة' };
-const VERSION_STATUS: Record<string, string> = { PROPOSED: 'بانتظار الرد', ACCEPTED: 'تم الاتفاق', REJECTED: 'مرفوضة', SUPERSEDED: 'استُبدلت' };
+const OTP_REASON: Record<string, string> = { REGENERATED: 'اتغيّر برمز جديد', EXPIRED: 'صلاحيته خلصت', LOCKED: 'المحاولات خلصت', CLOSED: 'اتقفل للمراجعة' };
+const VERSION_STATUS: Record<string, string> = { PROPOSED: 'مستنية الرد', ACCEPTED: 'متفق عليها', REJECTED: 'اترفضت', SUPERSEDED: 'اتغيّرت' };
 
 function TermsTable({ t }: { t: Terms }) {
   return (
     <DefinitionList items={[
       { label: 'السعر', value: formatEGP(t.price.goodsTotal) },
-      { label: 'تكلفة الشحن', value: t.price.shippingFee ? formatEGP(t.price.shippingFee) : 'مجاناً / مشمول' },
+      { label: 'مصاريف الشحن', value: t.price.shippingFee ? formatEGP(t.price.shippingFee) : 'مجاني / مشمول' },
       { label: 'طريقة الشحن', value: t.delivery.method ?? '—' },
       { label: 'مدة التجهيز', value: `${t.delivery.processingDays} يوم` },
       {
@@ -471,8 +471,8 @@ function TermsTable({ t }: { t: Terms }) {
         value: t.delivery.expectedMaxDays != null ? `خلال ${t.delivery.expectedMinDays}–${t.delivery.expectedMaxDays} يوم بعد التجهيز` : t.delivery.deadline ? `قبل ${formatDate(new Date(t.delivery.deadline))}` : '—',
       },
       { label: 'حالة المنتج', value: <span>{t.product.condition === 'NEW' ? 'جديد' : 'مستعمل'}{t.disclosure.defects ? ` · العيوب: ${t.disclosure.defects}` : ''}{t.disclosure.accessories ? ` · الملحقات: ${t.disclosure.accessories}` : ''}{t.disclosure.warranty ? ` · الضمان: ${t.disclosure.warranty}` : ''}</span> },
-      { label: 'سياسة الاسترجاع', value: <ReturnPolicyView policy={t.returnPolicy} mandatoryNotice={t.mandatoryRightsNotice} /> },
-      { label: 'الشروط الخاصة', value: t.customTerms ?? 'لا يوجد' },
+      { label: 'سياسة الإرجاع', value: <ReturnPolicyView policy={t.returnPolicy} mandatoryNotice={t.mandatoryRightsNotice} /> },
+      { label: 'الشروط الخاصة', value: t.customTerms ?? 'مفيش' },
       { label: `رسوم الخدمة (${t.price.feePayer === 'BUYER' ? 'على المشتري' : 'على البائع'})`, value: formatEGP(t.price.feeAmount) },
       { label: 'الإجمالي المطلوب من المشتري', value: <strong>{formatEGP(t.price.buyerPays)}</strong> },
       { label: 'صافي البائع', value: formatEGP(t.price.sellerReceives) },
@@ -485,14 +485,14 @@ function OfferFields({ condition, defaults, request }: { condition: string | nul
     <fieldset className="space-y-3 rounded-xl border border-line p-4">
       <legend className="px-1 text-sm font-bold">تفاصيل العرض</legend>
       <p className="text-xs text-muted">
-        طلب المشتري: السعر {request.unitPrice != null ? formatEGP(request.unitPrice) : '—'} للوحدة · {request.deliveryMethod ?? '—'}
-        {request.deadline ? ` · يفضّل الاستلام قبل ${formatDate(request.deadline)}` : ''}. أنت من يحدد السعر النهائي وطريقة ومدة التوصيل.
+        المشتري طلب: السعر {request.unitPrice != null ? formatEGP(request.unitPrice) : '—'} للوحدة · {request.deliveryMethod ?? '—'}
+        {request.deadline ? ` · يفضّل يستلم قبل ${formatDate(request.deadline)}` : ''}. انت اللي بتحدد السعر النهائي وطريقة ومدة التوصيل.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="السعر النهائي للوحدة (ج.م)" htmlFor="unitPrice" required><Input id="unitPrice" name="unitPrice" inputMode="decimal" dir="ltr" required defaultValue={toInputAmount(defaults?.price.unitPrice ?? request.unitPrice)} /></Field>
-        <Field label="تكلفة الشحن (ج.م)" htmlFor="shippingFee" hint="0 لو الشحن مجاني أو تسليم يد بيد"><Input id="shippingFee" name="shippingFee" inputMode="decimal" dir="ltr" defaultValue={defaults ? toInputAmount(defaults.price.shippingFee) : '0'} /></Field>
+        <Field label="مصاريف الشحن (ج.م)" htmlFor="shippingFee" hint="اكتب 0 لو الشحن مجاني أو التسليم إيد بإيد"><Input id="shippingFee" name="shippingFee" inputMode="decimal" dir="ltr" defaultValue={defaults ? toInputAmount(defaults.price.shippingFee) : '0'} /></Field>
       </div>
-      <Field label="طريقة الشحن / التسليم" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" required minLength={3} defaultValue={defaults?.delivery.method ?? request.deliveryMethod ?? ''} placeholder="شحن عبر شركة… / تسليم يد بيد في…" /></Field>
+      <Field label="طريقة الشحن / التسليم" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" required minLength={3} defaultValue={defaults?.delivery.method ?? request.deliveryMethod ?? ''} placeholder="شحن مع شركة… / تسليم إيد بإيد في…" /></Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="مدة التجهيز (أيام)" htmlFor="processingDays" required><Input id="processingDays" name="processingDays" type="number" min={0} max={30} defaultValue={defaults?.delivery.processingDays ?? 1} required /></Field>
         <Field label="التوصيل من (يوم)" htmlFor="deliveryMinDays" required><Input id="deliveryMinDays" name="deliveryMinDays" type="number" min={0} max={60} defaultValue={defaults?.delivery.expectedMinDays ?? 1} required /></Field>

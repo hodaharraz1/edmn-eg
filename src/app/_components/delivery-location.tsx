@@ -47,7 +47,7 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
         popoverTarget={popId}
         className={cn('flex min-w-0 shrink items-center gap-1 rounded-lg px-1.5 py-1 text-start text-xs hover:bg-page', className)}
         data-testid="delivery-location"
-        aria-label={`التوصيل إلى ${current.nameAr} – تغيير محافظة التوصيل`}
+        aria-label={`التوصيل إلى ${current.nameAr} – غيّر محافظة التوصيل`}
       >
         <MapPin className="size-4 shrink-0 text-brand-700" aria-hidden />
         <span className="min-w-0 leading-tight">
@@ -73,9 +73,9 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
       >
         <form action={setGovernorateAction as unknown as (fd: FormData) => void} onSubmit={onSubmit} className="space-y-3">
           <h2 id={`${popId}-title`} className="flex items-center gap-1.5 font-bold">
-            <MapPin className="size-5 text-brand-700" aria-hidden /> اختر محافظة التوصيل
+            <MapPin className="size-5 text-brand-700" aria-hidden /> اختار محافظة التوصيل
           </h2>
-          <p className="text-xs text-muted">تُستخدم لعرض توفر الشحن وتكلفته أثناء التصفح. تكلفة الشحن النهائية تُحسب من عنوان التوصيل عند إتمام الشراء.</p>
+          <p className="text-xs text-muted">بنستخدمها علشان نوريك المنتجات اللي بتتشحن لمحافظتك ومصاريف شحنها. مصاريف الشحن النهائية بتتحسب على عنوان التوصيل لما تكمّل الشراء.</p>
           <label htmlFor={`${popId}-select`} className="sr-only">
             المحافظة
           </label>
@@ -107,7 +107,7 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
               className="h-11 flex-1 rounded-lg bg-brand-700 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
               data-testid="delivery-location-apply"
             >
-              {pending ? 'جارٍ الحفظ…' : 'تأكيد'}
+              {pending ? 'جارٍ الحفظ…' : 'احفظ'}
             </button>
             <button type="button" popoverTarget={popId} popoverTargetAction="hide" className="h-11 rounded-lg border border-line px-4 text-sm">
               إلغاء

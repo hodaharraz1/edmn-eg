@@ -147,8 +147,8 @@ test.describe('header delivery governorate', () => {
     await chooseGovernorate(page, DAMIETTA);
     await expect(main.getByTestId('product-delivery-governorate')).toContainText(DAMIETTA);
     await expect(main.getByTestId('delivery-line').first()).toContainText(formatEGP(prod.dmt));
-    await page.getByRole('button', { name: /إضافة إلى السلة/ }).click();
-    await expect(page.getByText('تمت الإضافة إلى السلة').first()).toBeVisible();
+    await page.getByRole('button', { name: /ضيف للسلة/ }).click();
+    await expect(page.getByText('المنتج اتضاف للسلة').first()).toBeVisible();
     await page.goto('/cart');
     await expect(nameOf(page)).toHaveText(DAMIETTA);
     const group = page.locator('section.card', { hasText: prod.store });
@@ -194,15 +194,15 @@ test.describe.serial('signed-in customer: header context vs checkout address', (
     await page.goto(`/product/${prod.slug}`);
     await expect(page.locator('#main').getByTestId('delivery-line').first()).toContainText(formatEGP(prod.dmt));
     if (cartBefore[0].n === 0) {
-      await page.getByRole('button', { name: /إضافة إلى السلة/ }).click();
-      await expect(page.getByText('تمت الإضافة إلى السلة').first()).toBeVisible();
+      await page.getByRole('button', { name: /ضيف للسلة/ }).click();
+      await expect(page.getByText('المنتج اتضاف للسلة').first()).toBeVisible();
     }
 
     // Ensure the buyer has one Damietta address (created once through the real checkout form, never as default).
     let dam = addrsAfter.find((a) => a.governorate_id === 11);
     if (!dam) {
       await page.goto('/checkout');
-      await page.getByText('+ إضافة عنوان جديد').click();
+      await page.getByText('+ ضيف عنوان جديد').click();
       const form = page.locator('form', { has: page.locator('#governorateId') });
       await form.locator('#recipientName').fill('أحمد اختبار دمياط');
       await form.locator('#phone').fill('01000000011');
@@ -228,7 +228,7 @@ test.describe.serial('signed-in customer: header context vs checkout address', (
     // Switch the checkout address to another governorate: shipping recalculates from that address while the header stays Damietta.
     await page.goto(`/checkout?address=${other.id}`);
     await expect(page.getByTestId('checkout-governorate')).toHaveText(otherRate.name);
-    await expect(page.getByTestId('checkout-shipping-basis')).toContainText(`«${DAMIETTA}» لا تؤثر على هذا الطلب`);
+    await expect(page.getByTestId('checkout-shipping-basis')).toContainText(`«${DAMIETTA}» مش بتأثر على الطلب ده`);
     await expect(group()).toContainText(formatEGP(Number(otherRate.fee)));
     await expect(nameOf(page)).toHaveText(DAMIETTA);
 

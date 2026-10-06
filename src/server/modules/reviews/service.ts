@@ -18,7 +18,7 @@ async function verifiedSellerOrder(tx: DbOrTx, userId: string, soId: string) {
     .where(eq(sellerOrders.id, soId));
   if (!row) throw notFound('الطلب');
   if (row.customerId !== userId) throw forbidden();
-  if (row.so.status !== 'DELIVERED' && row.so.status !== 'COMPLETED') throw invalidState('يمكن التقييم بعد تأكيد استلام الطلب');
+  if (row.so.status !== 'DELIVERED' && row.so.status !== 'COMPLETED') throw invalidState('تقدر تقيّم بعد ما تأكّد استلام الطلب');
   return row.so;
 }
 
@@ -41,7 +41,7 @@ export async function refreshSellerRating(tx: DbOrTx, sellerId: string) {
 
 export const productReviewSchema = z.object({
   orderItemId: z.string().uuid(),
-  rating: z.coerce.number().int().min(1, 'اختر التقييم').max(5),
+  rating: z.coerce.number().int().min(1, 'اختار التقييم').max(5),
   title: z.string().trim().max(120).optional().default(''),
   body: z.string().trim().max(3000).optional().default(''),
 });
@@ -54,7 +54,7 @@ export async function createProductReview(actor: Actor, input: z.input<typeof pr
     if (!item) throw notFound('المنتج');
     await verifiedSellerOrder(tx, userId, item.sellerOrderId);
     const [dupe] = await tx.select({ id: productReviews.id }).from(productReviews).where(eq(productReviews.orderItemId, item.id));
-    if (dupe) throw conflict('قمت بتقييم هذا المنتج بالفعل');
+    if (dupe) throw conflict('إنت قيّمت المنتج ده قبل كده');
     const photoIds: string[] = [];
     for (const p of photos.slice(0, 4)) photoIds.push((await storeUpload(tx, actor, { purpose: 'REVIEW_PHOTO', data: p.data, originalName: p.name })).id);
     const [r] = await tx
@@ -71,7 +71,7 @@ export async function createProductReview(actor: Actor, input: z.input<typeof pr
 
 export const sellerReviewSchema = z.object({
   sellerOrderId: z.string().uuid(),
-  rating: z.coerce.number().int().min(1, 'اختر التقييم').max(5),
+  rating: z.coerce.number().int().min(1, 'اختار التقييم').max(5),
   deliveryRating: z.coerce.number().int().min(1).max(5).optional(),
   packagingRating: z.coerce.number().int().min(1).max(5).optional(),
   accuracyRating: z.coerce.number().int().min(1).max(5).optional(),
@@ -85,7 +85,7 @@ export async function createSellerReview(actor: Actor, input: z.input<typeof sel
   return db.transaction(async (tx) => {
     const so = await verifiedSellerOrder(tx, userId, d.sellerOrderId);
     const [dupe] = await tx.select({ id: sellerReviews.id }).from(sellerReviews).where(eq(sellerReviews.sellerOrderId, so.id));
-    if (dupe) throw conflict('قمت بتقييم هذا البائع على هذا الطلب بالفعل');
+    if (dupe) throw conflict('إنت قيّمت البائع ده على الطلب ده قبل كده');
     const [r] = await tx
       .insert(sellerReviews)
       .values({ sellerOrderId: so.id, sellerId: so.sellerId, customerId: userId, rating: d.rating, deliveryRating: d.deliveryRating ?? null, packagingRating: d.packagingRating ?? null, accuracyRating: d.accuracyRating ?? null, communicationRating: d.communicationRating ?? null, body: d.body || null })

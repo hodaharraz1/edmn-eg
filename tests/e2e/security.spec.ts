@@ -29,7 +29,7 @@ test('customers cannot open other customers’ orders', async ({ browser }) => {
   const page = await customerLogin(browser, 'omar@demo.edmn.local');
   await page.goto(`/account/orders/${o.id}`);
   // Streaming pages render the not-found view (same response as a non-existent id → no existence leak).
-  await expect(page.getByRole('heading', { name: /غير موجود/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /مش موجود/ })).toBeVisible();
   await expect(page.getByText(`#${o.number}`)).toHaveCount(0);
 });
 
@@ -38,7 +38,7 @@ test('sellers cannot open other sellers’ orders', async ({ browser }) => {
   test.skip(!so, 'no order for another seller in demo data');
   const page = await customerLogin(browser, 'techzone@demo.edmn.local');
   await page.goto(`/seller/orders/${so.id}`);
-  await expect(page.getByRole('heading', { name: /غير موجود/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /مش موجود/ })).toBeVisible();
 });
 
 test('security headers are present', async ({ request }) => {

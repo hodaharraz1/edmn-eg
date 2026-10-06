@@ -17,7 +17,7 @@ export default async function SecurityPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="الأمان" />
-      <FormSection title="التحقق من بيانات التواصل">
+      <FormSection title="تأكيد بيانات التواصل">
         <ContactVerification user={user} />
       </FormSection>
       <FormSection title="تغيير كلمة المرور">
@@ -28,7 +28,7 @@ export default async function SecurityPage() {
           <div><SubmitButton>تغيير كلمة المرور</SubmitButton></div>
         </ActionForm>
       </FormSection>
-      <FormSection title="الجلسات النشطة" description="تغيير كلمة المرور يُنهي كل الجلسات الأخرى.">
+      <FormSection title="الأجهزة المسجّل دخولك عليها" description="لما تغيّر كلمة المرور، هنسجّل خروجك من كل الأجهزة التانية.">
         <ul className="divide-y divide-line text-sm">
           {active.map((s) => (
             <li key={s.id} className="py-2"><span className="ltr">{s.userAgent?.slice(0, 60) ?? 'جهاز'}</span> · <span className="text-muted">آخر نشاط {formatDate(s.lastSeenAt, true)}</span></li>

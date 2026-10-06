@@ -9,7 +9,7 @@ export function ReturnPolicyView({ policy, mandatoryNotice, compact }: { policy:
     <div className="space-y-1 text-sm" data-testid="return-policy-view">
       {policy.type === 'VOLUNTARY' ? (
         <>
-          <p className="font-semibold">يسمح بالاسترجاع الاختياري خلال {policy.windowDays} يوم من الاستلام</p>
+          <p className="font-semibold">بيقبل الإرجاع الاختياري خلال {policy.windowDays} يوم من الاستلام</p>
           {!compact && policy.conditions && policy.conditions.length > 0 && (
             <ul className="list-inside list-disc text-muted">{policy.conditions.map((c) => <li key={c}>{RETURN_CONDITION_LABELS[c]}</li>)}</ul>
           )}
@@ -18,7 +18,7 @@ export function ReturnPolicyView({ policy, mandatoryNotice, compact }: { policy:
       ) : (
         <>
           <p className="font-semibold">{NO_VOLUNTARY_TEXT}</p>
-          {!compact && <p className="text-xs text-muted">يظل من حقك الإبلاغ عن منتج معيب أو خاطئ أو تالف أو غير مطابق للوصف.</p>}
+          {!compact && <p className="text-xs text-muted">ومن حقك برضه تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف.</p>}
         </>
       )}
       {!compact && policy.notes ? <p className="whitespace-pre-line text-muted">{policy.notes}</p> : null}

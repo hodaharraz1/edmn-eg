@@ -21,7 +21,7 @@ export function RecentlyViewed() {
   }, []);
   if (!items.length) return null;
   return (
-    <ProductRail title="شاهدتها مؤخراً">
+    <ProductRail title="شُفتها مؤخراً">
       {items.map((p) => (
         <RailItem key={p.id}>
           <ProductCard p={p} />

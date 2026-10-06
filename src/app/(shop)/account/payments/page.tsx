@@ -27,7 +27,7 @@ export default async function PaymentsPage() {
       <DataTable
         rows={rows}
         rowKey={(r) => r.p.id}
-        empty={<EmptyState icon={Wallet} title="لا توجد مدفوعات" />}
+        empty={<EmptyState icon={Wallet} title="مفيش مدفوعات" />}
         columns={[
           { key: 'ref', header: 'الطلب / الصفقة', cell: (r) => (r.p.orderId ? <Link className="text-brand-700 hover:underline" href={`/account/orders/${r.p.orderId}/pay`}>طلب #{r.orderNumber}</Link> : <Link className="text-brand-700 hover:underline" href={`/account/deals/${r.p.dealId}`}>صفقة #{r.dealNumber}</Link>) },
           { key: 'method', header: 'الطريقة', cell: (r) => label('paymentMethod', r.p.method) },

@@ -15,7 +15,7 @@ test.describe('storefront (Arabic RTL)', () => {
       expect(await overflow()).toBeLessThanOrEqual(1);
       await first.click();
       await page.waitForURL(/\/product\//);
-      await expect(page.getByRole('button', { name: /إضافة إلى السلة/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /ضيف للسلة/ })).toBeVisible();
       expect(await overflow()).toBeLessThanOrEqual(1);
     });
   }

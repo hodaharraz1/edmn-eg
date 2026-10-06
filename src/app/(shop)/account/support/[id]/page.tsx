@@ -37,7 +37,7 @@ export default async function TicketPage(props: PageProps<'/account/support/[id]
           <input type="hidden" name="ticketId" value={t.id} />
           <Textarea name="body" required rows={3} placeholder="اكتب ردك…" aria-label="الرد" />
           <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
-          <SubmitButton size="sm">إرسال</SubmitButton>
+          <SubmitButton size="sm">ابعت</SubmitButton>
         </ActionForm>
       )}
     </div>

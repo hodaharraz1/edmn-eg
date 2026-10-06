@@ -47,7 +47,7 @@ test('buyer creates a request without seller details, shares a secure link (GPS 
   await next(page);
   await page.waitForURL(/step=5/);
   await expect(page.getByTestId('seller-optional-note')).toContainText('مش لازم تكون عارف بيانات البائع كاملة');
-  await page.getByRole('button', { name: 'استخدام موقعي الحالي' }).click();
+  await page.getByRole('button', { name: 'استخدم موقعي الحالي' }).click();
   await expect(page.getByTestId('location-ok')).toBeVisible();
   await page.locator('select[name=loc_governorateId]').selectOption({ index: 1 });
   await page.locator('input[name=loc_city]').fill('مدينة نصر');
@@ -60,14 +60,14 @@ test('buyer creates a request without seller details, shares a secure link (GPS 
   await page.locator('input[name=acceptTerms]').check();
   await page.getByRole('button', { name: 'إنشاء طلب الصفقة' }).click();
   await page.waitForURL(new RegExp(`/account/deals/${dealId}$`));
-  await expect(page.getByText('تم إنشاء طلب الصفقة')).toBeVisible();
+  await expect(page.getByText('طلب الصفقة اتعمل')).toBeVisible();
   await expect(page.getByTestId('deal-ref')).toHaveText(/^EDMN-\d{8}$/);
   link = await page.getByTestId('invite-link').inputValue();
   expect(link).toMatch(/\/deal\/invite\/[A-Za-z0-9_-]{40,}$/);
   expect(page.url()).not.toContain(link.split('/').pop()!);
-  const wa = await page.getByRole('link', { name: 'مشاركة عبر WhatsApp' }).getAttribute('href');
-  expect(decodeURIComponent(wa!)).toContain('أنشأت طلب صفقة محمية على اضمن.');
-  await expect(page.getByRole('button', { name: 'نسخ رابط الدعوة' })).toBeVisible();
+  const wa = await page.getByRole('link', { name: 'ابعت على WhatsApp' }).getAttribute('href');
+  expect(decodeURIComponent(wa!)).toContain('عملت طلب صفقة محمية على اضمن.');
+  await expect(page.getByRole('button', { name: 'انسخ رابط الدعوة' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'مشاركة', exact: true })).toBeVisible();
   expect(await status()).toBe('INVITED');
   const [d] = await q<{ enc: string; seller_name: string | null; dest: number }>(`select buyer_location_enc enc, seller_name, destination_governorate_id dest from external_deals where id = $1`, [dealId]);
@@ -111,12 +111,12 @@ test('another account cannot use the bound link', async ({ browser }) => {
   const page = await customerLogin(browser, 'omar@demo.edmn.local');
   await page.goto(link.replace(/^https?:\/\/[^/]+/, ''));
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await expect(page.getByText('هذه الدعوة مرتبطة بحساب آخر')).toBeVisible();
+  await expect(page.getByText('الدعوة دي مرتبطة بحساب تاني')).toBeVisible();
   await expect(page.getByRole('button', { name: 'قبول ومتابعة' })).toHaveCount(0);
   await page.goto(`/account/deals/${dealId}`);
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
   // Streaming pages render the not-found view (same as a non-existent id → no existence leak).
-  await expect(page.getByRole('heading', { name: /غير موجود/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /مش موجود/ })).toBeVisible();
   await expect(page.getByText('موبايل سامسونج S22 مستعمل')).toHaveCount(0);
 });
 
@@ -134,7 +134,7 @@ test('seller verifies phone, location denied → manual address, offers with "no
   });
   await page.goto(`/account/deals/${dealId}`);
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await page.getByRole('button', { name: 'إرسال رمز' }).click();
+  await page.getByRole('button', { name: 'ابعت الرمز' }).click();
   const tail = NEW_SELLER.phone.slice(-8);
   await expect.poll(async () => (await q(`select id from outbound_messages where recipient like $1`, [`%${tail}`])).length).toBeGreaterThan(0);
   const [{ body }] = await q<{ body: string }>(`select body from outbound_messages where recipient like $1 order by created_at desc limit 1`, [`%${tail}`]);
@@ -145,8 +145,8 @@ test('seller verifies phone, location denied → manual address, offers with "no
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
 
   const form = page.getByTestId('seller-offer-form');
-  await form.getByRole('button', { name: 'استخدام موقعي الحالي' }).click(); // permission not granted
-  await expect(form.getByTestId('location-error')).toContainText('لم يتم السماح بالوصول للموقع');
+  await form.getByRole('button', { name: 'استخدم موقعي الحالي' }).click(); // permission not granted
+  await expect(form.getByTestId('location-error')).toContainText('ما سمحتش بالوصول لموقعك');
   await form.locator('select[name=loc_governorateId]').selectOption({ index: 2 });
   await form.locator('input[name=loc_city]').fill('الهرم');
   await form.locator('input[name=loc_street]').fill('شارع فيصل الرئيسي');
@@ -155,7 +155,7 @@ test('seller verifies phone, location denied → manual address, offers with "no
   await form.locator('textarea[name=defects]').fill('خدش بسيط في الإطار');
   await form.locator('input[name=accessories]').fill('العلبة والشاحن');
   await form.locator('input[name=rp_type][value=NONE]').check();
-  await expect(form.getByText('البائع لا يقدم استرجاعًا اختياريًا لهذا المنتج.')).toBeVisible();
+  await expect(form.getByText('البائع مش بيقدّم إرجاع اختياري للمنتج ده.')).toBeVisible();
   await form.locator('select[name=payoutType]').selectOption('INSTAPAY');
   await form.locator('input[name=instapayAddress]').fill('karim.e2e@instapay');
   await form.locator('input[name=acceptTerms]').check();
@@ -172,8 +172,8 @@ test('buyer reviews the offer (policy visible) and requests a return-policy chan
   await buyer.goto(`/account/deals/${dealId}`);
   await buyer.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
   const review = buyer.getByTestId('offer-review');
-  for (const label of ['السعر', 'تكلفة الشحن', 'طريقة الشحن', 'مدة التجهيز', 'موعد التسليم المتوقع', 'حالة المنتج', 'سياسة الاسترجاع', 'الشروط الخاصة']) await expect(review.getByText(label, { exact: true }).first()).toBeVisible();
-  await expect(review.getByText('البائع لا يقدم استرجاعًا اختياريًا لهذا المنتج.').first()).toBeVisible();
+  for (const label of ['السعر', 'مصاريف الشحن', 'طريقة الشحن', 'مدة التجهيز', 'موعد التسليم المتوقع', 'حالة المنتج', 'سياسة الإرجاع', 'الشروط الخاصة']) await expect(review.getByText(label, { exact: true }).first()).toBeVisible();
+  await expect(review.getByText('البائع مش بيقدّم إرجاع اختياري للمنتج ده.').first()).toBeVisible();
   await expect(review.getByText('مع عدم الإخلال بأي حقوق إلزامية للمستهلك تنطبق وفق القانون.').first()).toBeVisible();
   await expect(review.getByRole('button', { name: 'موافق على العرض' })).toBeVisible();
   await expect(review.getByRole('button', { name: 'رفض', exact: true })).toBeVisible();
@@ -189,7 +189,7 @@ test('buyer reviews the offer (policy visible) and requests a return-policy chan
   const seller = await sellerPage(browser);
   await seller.goto(`/account/deals/${dealId}`);
   await seller.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await expect(seller.getByTestId('change-request')).toContainText('يسمح بالاسترجاع الاختياري خلال 3 يوم');
+  await expect(seller.getByTestId('change-request')).toContainText('بيقبل الإرجاع الاختياري خلال 3 يوم');
   await seller.getByRole('button', { name: 'قبول التعديل' }).click();
   await expect.poll(status).toBe('PAYMENT_PENDING');
   const [d] = await q<{ t: { returnPolicy: { type: string; windowDays: number }; price: { shippingFee: number } }; v: number }>(`select agreed_terms t, agreed_version v from external_deals where id = $1`, [dealId]);
@@ -202,7 +202,7 @@ test('buyer pays and admin verifies; addresses become visible to the parties', a
   const page = await customerLogin(browser, 'ahmed@demo.edmn.local');
   await page.goto(`/account/deals/${dealId}`);
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await expect(page.getByTestId('agreed-terms')).toContainText('يسمح بالاسترجاع الاختياري خلال 3 يوم');
+  await expect(page.getByTestId('agreed-terms')).toContainText('بيقبل الإرجاع الاختياري خلال 3 يوم');
   await page.getByRole('button', { name: 'متابعة' }).click();
   await expect.poll(async () => (await q(`select id from payments where deal_id = $1`, [dealId])).length).toBe(1);
   await page.reload();
@@ -248,7 +248,7 @@ test('seller ships → buyer gets the handover code → seller verifies it; fund
   await expect.poll(status).toBe('DELIVERY_HANDOVER_VERIFIED');
   await seller.reload();
   await seller.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await expect(seller.getByText('تم التحقق من تسليم المنتج للمشتري.')).toBeVisible();
+  await expect(seller.getByText('التسليم اتأكد برمز الاستلام.')).toBeVisible();
   // OTP alone releases nothing.
   expect(await q(`select id from deal_payouts where deal_id = $1`, [dealId])).toHaveLength(0);
   expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
@@ -260,8 +260,8 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   await buyer.goto(`/account/deals/${dealId}`);
   await buyer.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
   const choice = buyer.getByTestId('delivery-choice');
-  await expect(choice.getByText('تم التحقق من تسليم المنتج للمشتري.')).toBeVisible();
-  await expect(choice.getByRole('link', { name: /استلمت ولكن توجد مشكلة/ })).toBeVisible();
+  await expect(choice.getByText('تسليم المنتج ليك اتأكد برمز الاستلام.')).toBeVisible();
+  await expect(choice.getByRole('link', { name: /استلمت بس فيه مشكلة/ })).toBeVisible();
   await expect(choice.getByText('لم أستلم المنتج فعليًا')).toBeVisible();
   await choice.getByRole('button', { name: 'استلمت والمنتج مطابق' }).click();
   await expect.poll(status).toBe('COMPLETED');
@@ -380,11 +380,11 @@ test('OTP handover then "received but there is a problem" → dispute, funds sta
   const buyer = await customerLogin(browser, 'ahmed@demo.edmn.local');
   await buyer.goto(`/account/deals/${deal2}`);
   await buyer.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await buyer.getByTestId('delivery-choice').getByRole('link', { name: /استلمت ولكن توجد مشكلة/ }).click();
+  await buyer.getByTestId('delivery-choice').getByRole('link', { name: /استلمت بس فيه مشكلة/ }).click();
   await buyer.waitForURL(/\/account\/disputes\/new/);
   await buyer.locator('select[name=reasonCode]').selectOption('NOT_AS_DESCRIBED');
   await buyer.locator('textarea[name=description]').fill('السماعة اليمنى لا تعمل نهائيًا رغم أن العرض لم يذكر ذلك.');
-  await buyer.getByRole('button', { name: 'فتح النزاع' }).click();
+  await buyer.getByRole('button', { name: 'افتح النزاع' }).click();
   await expect.poll(status2).toBe('DISPUTED');
   expect(await q(`select id from deal_payouts where deal_id = $1`, [deal2])).toHaveLength(0);
   expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [deal2])).toHaveLength(0);

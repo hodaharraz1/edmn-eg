@@ -88,8 +88,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
       <Breadcrumbs items={crumbs} />
 
       {!d.visible && (
-        <Alert tone="warning" title="هذا المنتج غير متاح حالياً">
-          قد يكون البائع أوقفه مؤقتاً أو أنه قيد المراجعة. <Link href="/search" className="underline">تصفح منتجات مشابهة</Link>
+        <Alert tone="warning" title="المنتج ده مش متاح دلوقتي">
+          ممكن يكون البائع وقّفه مؤقتاً أو لسه تحت المراجعة. <Link href="/search" className="underline">شوف منتجات مشابهة</Link>
         </Alert>
       )}
 
@@ -116,7 +116,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           {p.condition === 'USED' && (
             <p className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
               <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل
-              <span className="font-normal">— راجع إفصاح الحالة والعيوب قبل الشراء</span>
+              <span className="font-normal">— راجع حالته وعيوبه قبل ما تشتري</span>
             </p>
           )}
           <h1 className="text-xl font-bold leading-snug sm:text-2xl">{p.titleAr}</h1>
@@ -126,18 +126,18 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
                 <Stars value={p.ratingAvg} count={p.ratingCount} size="md" />
               </a>
             ) : (
-              <span className="text-muted">لا توجد تقييمات بعد</span>
+              <span className="text-muted">مفيش تقييمات لسه</span>
             )}
             {v && <span className="text-xs text-muted ltr">SKU: {v.sku}</span>}
           </div>
           <div className="border-y border-line py-4">
             <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" />
-            <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة إن وجدت. مصاريف الشحن تُحسب عند الدفع.</p>
+            <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة لو موجودة. مصاريف الشحن بتتحسب وقت الدفع.</p>
           </div>
 
           {d.variants.length > 1 && (
             <div className="space-y-2">
-              <p className="text-sm font-semibold">اختر النوع:</p>
+              <p className="text-sm font-semibold">اختار النوع:</p>
               <div className="flex flex-wrap gap-2">
                 {d.variants.map((x) => {
                   const out = x.stockOnHand - x.reserved <= 0;
@@ -168,17 +168,17 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           {p.condition === 'USED' && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
               <p className="mb-2 flex items-center gap-2 font-bold text-amber-900">
-                <CircleAlert className="size-4" /> إفصاح حالة المنتج المستعمل
+                <CircleAlert className="size-4" /> تفاصيل حالة المنتج المستعمل
               </p>
               <dl className="space-y-1.5 text-amber-950">
                 <div><dt className="inline font-semibold">الحالة: </dt><dd className="inline">{label('usedGrade', p.usedGrade)} — {p.conditionNotes}</dd></div>
-                <div><dt className="inline font-semibold">العيوب المعلنة: </dt><dd className="inline">{p.defects || 'لا يوجد'}</dd></div>
+                <div><dt className="inline font-semibold">العيوب المعلنة: </dt><dd className="inline">{p.defects || 'مفيش'}</dd></div>
                 {p.includedAccessories && <div><dt className="inline font-semibold">المرفقات: </dt><dd className="inline">{p.includedAccessories}</dd></div>}
                 {p.usageInfo && <div><dt className="inline font-semibold">مدة الاستخدام: </dt><dd className="inline">{p.usageInfo}</dd></div>}
-                <div><dt className="inline font-semibold">الضمان: </dt><dd className="inline">{p.warrantyInfo || 'لا يوجد ضمان معلن من البائع'}</dd></div>
+                <div><dt className="inline font-semibold">الضمان: </dt><dd className="inline">{p.warrantyInfo || 'البائع ما أعلنش عن ضمان'}</dd></div>
                 <div><dt className="inline font-semibold">صور القطعة الفعلية: </dt><dd className="inline">{d.images.filter((i) => i.isActualItem).length} صورة</dd></div>
               </dl>
-              <p className="mt-2 text-xs text-amber-800">الصور المميزة بعلامة «صورة حقيقية» هي صور للقطعة نفسها المعروضة للبيع.</p>
+              <p className="mt-2 text-xs text-amber-800">الصور اللي عليها علامة «صورة حقيقية للقطعة» متصوّرة للقطعة نفسها اللي معروضة للبيع.</p>
             </div>
           )}
         </div>
@@ -187,9 +187,9 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           <div className="card space-y-4 p-4">
             <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} />
             <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
-            <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (يمكنك تغييرها من أعلى الصفحة)</p>
+            <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (تقدر تغيّرها من أعلى الصفحة)</p>
             <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-              {available > 5 ? 'متوفر' : available > 0 ? `متبقي ${available} فقط` : 'نفدت الكمية'}
+              {available > 5 ? 'متوفر' : available > 0 ? `فاضل ${available} بس` : 'نفدت الكمية'}
             </p>
             {d.visible && v && available > 0 && shipFee !== null ? (
               <AddToCartForm variantId={v.id} max={available} />
@@ -198,32 +198,32 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              <p>تدفع لاضمن، ولا يصبح صافي مستحق البائع متاحاً للسحب إلا بعد تأكيدك استلام الطلب. لو حصلت مشكلة تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
+              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته غير بعد ما تأكّد إنك استلمت الطلب. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
             </div>
           </div>
           <div className="card space-y-3 p-4 text-sm">
-            <p className="text-xs text-muted">يُباع ويُشحن بواسطة</p>
+            <p className="text-xs text-muted">بيبيعه ويشحنه</p>
             <Link href={`/store/${d.store.slug}`} className="flex items-center gap-2 font-bold hover:text-brand-700">
               <Store className="size-4" /> {d.store.name}
             </Link>
             {d.store.isVerified && (
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — تمت مراجعة هويته ومستنداته</p>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — هويته ومستنداته اتراجعت</p>
             )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
               {d.seller.ratingCount > 0 ? <Stars value={d.seller.ratingAvg} count={d.seller.ratingCount} /> : <span>متجر جديد</span>}
               {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
-              {d.seller.approvedAt && <span>على اضمن منذ {formatDate(d.seller.approvedAt)}</span>}
+              {d.seller.approvedAt && <span>على اضمن من {formatDate(d.seller.approvedAt)}</span>}
             </div>
             <p className="flex items-start gap-2 text-xs">
               <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
               <span className="space-y-1" data-testid="pdp-return-policy">
-                <span className="block font-semibold">سياسة الاسترجاع</span>
+                <span className="block font-semibold">سياسة الإرجاع</span>
                 <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
-                <span className="block">يمكنك دائماً الإبلاغ عن منتج معيب أو خاطئ أو تالف أو غير مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
+                <span className="block">وتقدر دايماً تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
               </span>
             </p>
             <p className="flex items-start gap-2 text-xs">
-              <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> يجهّز البائع الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
+              <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> البائع بيجهّز الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
             </p>
           </div>
         </aside>
@@ -257,8 +257,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         </section>
         <section className="card space-y-3 p-5 text-sm">
           <h2 className="flex items-center gap-2 text-lg font-bold"><Truck className="size-5 text-brand-600" /> الشحن والإرجاع</h2>
-          <p>الشحن يتم بواسطة البائع مباشرة، ويمكنك متابعة رقم التتبع من صفحة الطلب.</p>
-          <p>حق الإرجاع القانوني: يمكن تقديم طلب إرجاع خلال {statutoryDays} يوم من الاستلام وفقاً لـ <Link href="/legal/returns" className="underline">سياسة الإرجاع والاسترداد</Link>.</p>
+          <p>البائع بيشحن الطلب بنفسه، وتقدر تتابع رقم التتبع من صفحة الطلب.</p>
+          <p>حق الإرجاع القانوني: تقدر تقدّم طلب إرجاع خلال {statutoryDays} يوم من الاستلام حسب <Link href="/legal/returns" className="underline">سياسة الإرجاع والاسترداد</Link>.</p>
           {d.store.shippingPolicy && <p className="text-muted">{d.store.shippingPolicy}</p>}
           {d.store.returnConditions && <p className="text-muted">شروط البائع: {d.store.returnConditions}</p>}
         </section>
@@ -268,7 +268,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         <div className="space-y-3">
           <h2 className="text-lg font-bold">تقييمات المنتج</h2>
           {p.ratingCount === 0 ? (
-            <p className="text-sm text-muted">لم يُقيَّم هذا المنتج بعد.</p>
+            <p className="text-sm text-muted">محدش قيّم المنتج ده لسه.</p>
           ) : (
           <>
           <div className="flex items-center gap-2">
@@ -288,10 +288,10 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           </ul>
           </>
           )}
-          <p className="text-xs text-muted">التقييمات من مشترين مؤكدين فقط. تقييم المنتج منفصل عن تقييم البائع.</p>
+          <p className="text-xs text-muted">التقييمات من ناس اشترت المنتج فعلاً بس. تقييم المنتج منفصل عن تقييم البائع.</p>
         </div>
         <div className="space-y-4">
-          {reviews.length === 0 && <p className="text-sm text-muted">لا توجد تقييمات بعد. التقييم متاح للمشترين بعد استلام الطلب.</p>}
+          {reviews.length === 0 && <p className="text-sm text-muted">مفيش تقييمات لسه. اللي يشتري يقدر يقيّم بعد ما يستلم الطلب.</p>}
           {reviews.map(({ r, author }) => (
             <article key={r.id} className="border-b border-line pb-4 last:border-0">
               <div className="flex items-center gap-2">

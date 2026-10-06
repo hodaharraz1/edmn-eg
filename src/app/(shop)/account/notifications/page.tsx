@@ -17,8 +17,8 @@ export default async function NotificationsPage() {
   const list = await db.select().from(notifications).where(eq(notifications.userId, user.id)).orderBy(desc(notifications.createdAt)).limit(100);
   return (
     <div>
-      <PageHeader title="الإشعارات" actions={list.some((n) => !n.readAt) && <form action={markNotificationsReadAction}><Button type="submit" variant="outline" size="sm">تحديد الكل كمقروء</Button></form>} />
-      {list.length === 0 ? <EmptyState icon={Bell} title="لا توجد إشعارات" /> : (
+      <PageHeader title="الإشعارات" actions={list.some((n) => !n.readAt) && <form action={markNotificationsReadAction}><Button type="submit" variant="outline" size="sm">علّم الكل كمقروء</Button></form>} />
+      {list.length === 0 ? <EmptyState icon={Bell} title="مفيش إشعارات" /> : (
         <ul className="card divide-y divide-line">
           {list.map((n) => (
             <li key={n.id} className={`p-4 text-sm ${n.readAt ? '' : 'bg-brand-50/50'}`}>

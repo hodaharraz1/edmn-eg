@@ -23,7 +23,7 @@ export type GovernorateResult = { ok: true; id: number; nameAr: string } | { ok:
 export async function setGovernorateAction(fd: FormData): Promise<GovernorateResult> {
   const id = int(fd, 'governorateId');
   const gov = id ? (await allGovernorates()).find((g) => g.id === id) : undefined;
-  if (!gov) return { ok: false, error: 'اختر محافظة صحيحة' };
+  if (!gov) return { ok: false, error: 'اختار محافظة صحيحة' };
   (await cookies()).set(GOV_COOKIE, String(gov.id), { path: '/', maxAge: 365 * 86400, sameSite: 'lax', secure: cookieSecure(), httpOnly: true });
   revalidatePath('/', 'layout');
   return { ok: true, id: gov.id, nameAr: gov.nameAr };
@@ -36,7 +36,7 @@ export async function addToCartAction(_prev: ActionState, fd: FormData): Promise
     const variantId = str(fd, 'variantId');
     const qty = int(fd, 'quantity') ?? 1;
     await addToCart(ref!, variantId, qty);
-    return { message: 'تمت الإضافة إلى السلة' };
+    return { message: 'المنتج اتضاف للسلة' };
   });
   if (res.ok && buyNow) redirect('/cart');
   revalidatePath('/', 'layout');

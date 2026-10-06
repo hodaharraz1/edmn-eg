@@ -15,13 +15,13 @@ export function AddToCartForm({ variantId, max, disabled }: { variantId: string;
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <SubmitButton size="lg" className="w-full" name="intent" value="add" pendingText="جارٍ الإضافة…">
-          <ShoppingCart className="size-5" /> إضافة إلى السلة
+          <ShoppingCart className="size-5" /> ضيف للسلة
         </SubmitButton>
         <SubmitButton size="lg" variant="secondary" className="w-full" name="intent" value="buy">
-          <Zap className="size-5" /> اشترِ الآن
+          <Zap className="size-5" /> اشتري دلوقتي
         </SubmitButton>
       </div>
-      {disabled && <p className="text-xs text-muted">هذا المنتج غير متاح للطلب حالياً.</p>}
+      {disabled && <p className="text-xs text-muted">المنتج ده مش متاح للطلب دلوقتي.</p>}
     </ActionForm>
   );
 }

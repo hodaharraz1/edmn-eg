@@ -27,7 +27,7 @@ export class DomainError extends Error {
   }
 }
 
-export const notFound = (what = 'العنصر') => new DomainError('NOT_FOUND', `${what} غير موجود`);
+export const notFound = (what = 'العنصر') => new DomainError('NOT_FOUND', `ملقيناش ${what}`);
 export const forbidden = (msg = 'ليست لديك صلاحية لتنفيذ هذا الإجراء') => new DomainError('FORBIDDEN', msg);
 export const unauthenticated = () => new DomainError('UNAUTHENTICATED', 'يجب تسجيل الدخول أولاً');
 export const invalidState = (msg: string, detail?: unknown) => new DomainError('INVALID_STATE', msg, detail);

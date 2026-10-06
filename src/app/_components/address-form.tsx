@@ -7,7 +7,7 @@ import type { addresses } from '@/server/db/schema';
 export async function AddressForm({ back, address, defaultName, defaultPhone }: { back?: string; address?: typeof addresses.$inferSelect; defaultName?: string; defaultPhone?: string }) {
   const govs = await allGovernorates();
   return (
-    <ActionForm action={saveAddressAction} className="grid gap-3 sm:grid-cols-2" successMessage="تم حفظ العنوان">
+    <ActionForm action={saveAddressAction} className="grid gap-3 sm:grid-cols-2" successMessage="العنوان اتحفظ">
       {back && <input type="hidden" name="back" value={back} />}
       {address && <input type="hidden" name="id" value={address.id} />}
       <Field label="اسم المستلم" htmlFor="recipientName" required>
@@ -20,7 +20,7 @@ export async function AddressForm({ back, address, defaultName, defaultPhone }: 
       </Field>
       <Field label="المحافظة" htmlFor="governorateId" required>
         <Select id="governorateId" name="governorateId" defaultValue={address?.governorateId ?? ''} required>
-          <option value="" disabled>اختر المحافظة</option>
+          <option value="" disabled>اختار المحافظة</option>
           {govs.map((g) => (
             <option key={g.id} value={g.id}>{g.nameAr}</option>
           ))}
@@ -42,8 +42,8 @@ export async function AddressForm({ back, address, defaultName, defaultPhone }: 
         <Field label="الشقة" htmlFor="apartment"><Input id="apartment" name="apartment" defaultValue={address?.apartment ?? ''} /></Field>
       </div>
       <Field label="علامة مميزة" htmlFor="landmark" className="sm:col-span-2"><Input id="landmark" name="landmark" defaultValue={address?.landmark ?? ''} /></Field>
-      <Field label="اسم العنوان (اختياري)" htmlFor="label"><Input id="label" name="label" placeholder="المنزل / العمل" defaultValue={address?.label ?? ''} /></Field>
-      <div className="flex items-end"><Checkbox name="isDefault" defaultChecked={address?.isDefault} label="اجعله العنوان الافتراضي" /></div>
+      <Field label="اسم العنوان (اختياري)" htmlFor="label"><Input id="label" name="label" placeholder="البيت / الشغل" defaultValue={address?.label ?? ''} /></Field>
+      <div className="flex items-end"><Checkbox name="isDefault" defaultChecked={address?.isDefault} label="خليه العنوان الافتراضي" /></div>
       <div className="sm:col-span-2"><SubmitButton>حفظ العنوان</SubmitButton></div>
     </ActionForm>
   );
