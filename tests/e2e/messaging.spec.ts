@@ -23,7 +23,7 @@ async function multiSellerFixture(): Promise<SoRow> {
      where bu.email like '%@demo.edmn.local' and su.email like '%@demo.edmn.local' and su2.email like '%@demo.edmn.local'
        and so.status in ('PAID','SELLER_CONFIRMED','PROCESSING','READY_TO_SHIP','SHIPPED','DELIVERED')
        and se.status = 'APPROVED' and su.email <> su2.email
-     order by o.number limit 1`);
+     order by o.number, so.suffix, so2.suffix limit 1`);
   expect(row, 'demo multi-seller paid order').toBeTruthy();
   return row;
 }
@@ -130,7 +130,8 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
   test('admin (authorized role): read-only viewer from the order page; the view is audited', async ({ browser }) => {
     const admin = await adminLogin(browser);
     await admin.goto(`/admin/orders/${fx.order_id}`);
-    await admin.getByTestId('admin-conversation-link').first().click();
+    // The link inside THIS sub-order's section (each seller sub-order has its own conversation).
+    await admin.locator('section', { hasText: `${fx.number}-${fx.suffix} ·` }).getByTestId('admin-conversation-link').click();
     await admin.waitForURL(/\/admin\/messages\/[0-9a-f-]{36}/);
     await expect(admin.getByText('دليل مساعد فقط')).toBeVisible();
     await expect(admin.getByTestId('message-body').filter({ hasText: text })).toBeVisible();
@@ -157,8 +158,8 @@ test('protected deal: both parties can talk after the seller joined; chat never 
   const [deal] = await q<{ id: string; buyer: string; seller: string; unit_price: string | null; status: string }>(`
     select d.id, bu.email as buyer, su.email as seller, d.unit_price::text as unit_price, d.status from external_deals d
       join users bu on bu.id = d.buyer_id join users su on su.id = d.seller_user_id
-     where bu.email like '%@demo.edmn.local' and su.email like '%@demo.edmn.local' and d.seller_joined_at is not null
-       and d.status not in ('DRAFT','INVITED') order by d.number limit 1`);
+     where bu.email like '%@demo.edmn.local' and (su.email like '%@demo.edmn.local' or su.email like 'ext-seller%@e2e.local')
+       and d.seller_joined_at is not null and d.status not in ('DRAFT','INVITED') order by d.number desc limit 1`);
   test.skip(!deal, 'no demo deal with a bound seller');
   const buyer = await customerLogin(browser, deal.buyer);
   await buyer.goto(`/account/deals/${deal.id}`);
@@ -170,7 +171,8 @@ test('protected deal: both parties can talk after the seller joined; chat never 
   await buyer.getByTestId('message-input').fill(`خليه 5000 بدل 5500 ${stamp()}`);
   await buyer.getByTestId('message-send').click();
   await expect(buyer.getByTestId('message-status')).toContainText('تم الإرسال');
-  const seller = await customerLogin(browser, deal.seller);
+  // Sellers created by the protected-deal E2E use that spec's fixed test password.
+  const seller = await customerLogin(browser, deal.seller, deal.seller.endsWith('@e2e.local') ? 'E2e@ExtSeller2026' : undefined);
   await seller.goto(`/account/deals/${deal.id}`);
   await expect(seller.getByTestId('message-cta')).toHaveText(/تواصل مع المشتري/);
   const [after] = await q<{ unit_price: string | null; status: string }>(`select unit_price::text as unit_price, status from external_deals where id = $1`, [deal.id]);
