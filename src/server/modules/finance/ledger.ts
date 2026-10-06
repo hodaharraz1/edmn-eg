@@ -64,6 +64,8 @@ export interface PostInput {
   /** After posting, each listed account balance must be >= min (checked under row lock). */
   guards?: { account: AccountRef; min: number }[];
   reversesEntryId?: string;
+  /** The operation-specific Admin approval this entry executes. Mandatory (DB trigger enforces it too). */
+  approvalId: string;
 }
 
 async function ensureAccount(tx: DbOrTx, ref: AccountRef): Promise<string> {
@@ -98,6 +100,7 @@ export async function postEntry(tx: DbOrTx, actor: Actor, input: PostInput): Pro
     .from(journalEntries)
     .where(eq(journalEntries.idempotencyKey, input.idempotencyKey));
   if (existing) return { entryId: existing.id, created: false };
+  if (!input.approvalId) throw new DomainError('FORBIDDEN', 'لا يمكن تسجيل أي حركة مالية بدون موافقة صريحة من الإدارة');
 
   const lines = input.lines.filter((l) => (l.debit ?? 0) !== 0 || (l.credit ?? 0) !== 0);
   let dr = 0;
@@ -129,6 +132,7 @@ export async function postEntry(tx: DbOrTx, actor: Actor, input: PostInput): Pro
       idempotencyKey: input.idempotencyKey,
       description: input.description,
       reversesEntryId: input.reversesEntryId ?? null,
+      approvalId: input.approvalId,
       createdBy: actor.userId,
     })
     .returning({ id: journalEntries.id });

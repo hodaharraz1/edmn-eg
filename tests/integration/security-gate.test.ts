@@ -20,7 +20,7 @@ import { redactExpiredSecrets, REDACTED_BODY } from '@/server/jobs/worker';
 import { clientIp } from '@/server/web/client-ip';
 import { safeNext } from '@/server/web/safe-next';
 import { SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
-import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, paymentOf, pdf, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, paymentOf, pdf, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, testApproval } from '../helpers/factory';
 
 /**
  * Security gate regression suite — one test per confirmed finding fixed in the pre-pilot audit
@@ -40,7 +40,7 @@ async function releasedOrder(price = 1000_00) {
   await submitAndConfirm(c, order.id, admin);
   const [so] = await sellerOrdersOf(order.id);
   await shipIt(s.actor, so.id);
-  await confirmReceipt(c.actor, so.id);
+  await receiveAndRelease(c.actor, so.id);
   return { s, c, p, order, so };
 }
 
@@ -120,7 +120,9 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     const { s } = await releasedOrder(1000_00);
     const available = await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId: s.actor.sellerId! });
     const amount = String(Math.floor(available / 100) - 1);
-    const r = await Promise.allSettled([requestWithdrawal(s.actor, { amount, clientKey: randomUUID() }), requestWithdrawal(s.actor, { amount, clientKey: randomUUID() })]);
+    // Requests promise nothing; the Admin approval re-checks and reserves under the account lock.
+    const [w1, w2] = await Promise.all([requestWithdrawal(s.actor, { amount, clientKey: randomUUID() }), requestWithdrawal(s.actor, { amount, clientKey: randomUUID() })]);
+    const r = await Promise.allSettled([approveWithdrawal(admin, w1.withdrawal.id), approveWithdrawal(admin, w2.withdrawal.id)]);
     expect(r.filter((x) => x.status === 'fulfilled')).toHaveLength(1);
     expect(await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId: s.actor.sellerId! })).toBeGreaterThanOrEqual(0);
   });
@@ -145,9 +147,12 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
   it('SEC-WD-3: a seller with a negative available balance (debt after a post-release refund) cannot be paid out', async () => {
     const { s } = await releasedOrder(1000_00);
     const w = await requestWithdrawal(s.actor, { amount: '500', clientKey: randomUUID() });
+    await approveWithdrawal(admin, w.withdrawal.id);
     const available = await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId: s.actor.sellerId! });
     // Simulate a refund approved after release that exceeds what is left (the debt case).
+    const ap1 = await testApproval(['REFUND_DECISION'], available + 10_000);
     await db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, {
+      approvalId: ap1,
       entryType: 'REFUND_DECISION',
       sourceType: 'test',
       sourceId: randomUUID(),
@@ -158,11 +163,12 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
         { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: available + 10_000 },
       ],
     }));
-    await approveWithdrawal(admin, w.withdrawal.id);
     await expect(markWithdrawalPaid(admin, w.withdrawal.id, 'TRX-DEBT')).rejects.toThrow(/مديونية/);
     await expect(requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() })).rejects.toThrow();
     // Reverse the synthetic debt so the shared refunds-payable account is left as other suites expect.
+    const ap2 = await testApproval(['REFUND_DECISION'], available + 10_000);
     await db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, {
+      approvalId: ap2,
       entryType: 'REFUND_DECISION',
       sourceType: 'test',
       sourceId: randomUUID(),
@@ -253,11 +259,12 @@ describe('ledger integrity', () => {
 
   it('SEC-LG-2: an unbalanced entry cannot be posted, and a duplicate idempotency key posts nothing new', async () => {
     const key = `test-unbalanced:${randomUUID()}`;
+    const ap = await testApproval(['ADJUSTMENT'], 100);
     await expect(
-      db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, { entryType: 'ADJUSTMENT', sourceType: 'test', sourceId: randomUUID(), idempotencyKey: key, description: 'x', lines: [{ account: { code: 'PLATFORM_CASH' }, debit: 100 }, { account: { code: 'COMMISSION_REVENUE' }, credit: 99 }] })),
+      db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, { approvalId: ap, entryType: 'ADJUSTMENT', sourceType: 'test', sourceId: randomUUID(), idempotencyKey: key, description: 'x', lines: [{ account: { code: 'PLATFORM_CASH' }, debit: 100 }, { account: { code: 'COMMISSION_REVENUE' }, credit: 99 }] })),
     ).rejects.toThrow();
     const okKey = `test-dup:${randomUUID()}`;
-    const e: Parameters<typeof postEntry>[2] = { entryType: 'ADJUSTMENT', sourceType: 'test', sourceId: randomUUID(), idempotencyKey: okKey, description: 'x', lines: [{ account: { code: 'PLATFORM_CASH' }, debit: 100 }, { account: { code: 'COMMISSION_REVENUE' }, credit: 100 }] };
+    const e: Parameters<typeof postEntry>[2] = { approvalId: await testApproval(['ADJUSTMENT'], 100), entryType: 'ADJUSTMENT', sourceType: 'test', sourceId: randomUUID(), idempotencyKey: okKey, description: 'x', lines: [{ account: { code: 'PLATFORM_CASH' }, debit: 100 }, { account: { code: 'COMMISSION_REVENUE' }, credit: 100 }] };
     await db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, e));
     await db.transaction((tx) => postEntry(tx, SYSTEM_ACTOR, e)).catch(() => undefined);
     expect(await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, okKey))).toHaveLength(1);

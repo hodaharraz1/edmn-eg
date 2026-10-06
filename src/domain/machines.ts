@@ -58,14 +58,26 @@ export const ORDER_STATUSES = [
   'PAYMENT_UNDER_REVIEW',
   'PAID',
   'COMPLETED',
+  'PARTIALLY_COMPLETED',
+  'CLOSED_UNFULFILLED',
   'CANCELLED',
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+/**
+ * The parent order is DERIVED from its seller sub-orders (see syncParentStatus):
+ *  - all sub-orders CANCELLED                                  → CANCELLED
+ *  - all COMPLETED                                             → COMPLETED
+ *  - all final, at least one COMPLETED and one not completed   → PARTIALLY_COMPLETED
+ *  - all final, none completed, at least one DELIVERY_FAILED   → CLOSED_UNFULFILLED
+ * A cancelled or failed sub-order is never presented as successfully completed.
+ */
 export const orderMachine = defineMachine<OrderStatus>('order', ORDER_STATUSES, {
   PENDING_PAYMENT: ['PAYMENT_UNDER_REVIEW', 'PAID', 'CANCELLED'],
   PAYMENT_UNDER_REVIEW: ['PAID', 'PENDING_PAYMENT', 'CANCELLED'],
-  PAID: ['COMPLETED', 'CANCELLED'],
+  PAID: ['COMPLETED', 'PARTIALLY_COMPLETED', 'CLOSED_UNFULFILLED', 'CANCELLED'],
   COMPLETED: [],
+  PARTIALLY_COMPLETED: [],
+  CLOSED_UNFULFILLED: [],
   CANCELLED: [],
 });
 
@@ -78,11 +90,24 @@ export const SELLER_ORDER_STATUSES = [
   'PROCESSING',
   'READY_TO_SHIP',
   'SHIPPED',
+  'AWAITING_BUYER_RESPONSE',
   'DELIVERED',
   'COMPLETED',
+  'DELIVERY_FAILED',
   'CANCELLED',
 ] as const;
 export type SellerOrderStatus = (typeof SELLER_ORDER_STATUSES)[number];
+/**
+ * Fulfilment + entitlement lifecycle of one seller sub-order.
+ *  SHIPPED                  in transit; a seller statement alone never proves delivery
+ *  AWAITING_BUYER_RESPONSE  valid delivery evidence established (authoritative delivery event + timely
+ *                           seller evidence, or Operations review); the buyer's 24-hour window is running
+ *  DELIVERED                receipt basis established (BUYER_CONFIRMED or TIMEOUT_ENTITLEMENT…):
+ *                           ENTITLED, AWAITING ADMIN RELEASE — funds are still pending, NOT available
+ *  COMPLETED                only after a committed, Admin-approved seller release (DB-enforced)
+ *  DELIVERY_FAILED          final: returned to seller / lost — refund path, never a completion
+ * Cancellation is possible only before SHIPPED.
+ */
 export const sellerOrderMachine = defineMachine<SellerOrderStatus>('seller_order', SELLER_ORDER_STATUSES, {
   PENDING_PAYMENT: ['PAYMENT_UNDER_REVIEW', 'PAID', 'CANCELLED'],
   PAYMENT_UNDER_REVIEW: ['PAID', 'PENDING_PAYMENT', 'CANCELLED'],
@@ -90,18 +115,34 @@ export const sellerOrderMachine = defineMachine<SellerOrderStatus>('seller_order
   SELLER_CONFIRMED: ['PROCESSING', 'READY_TO_SHIP', 'CANCELLED'],
   PROCESSING: ['READY_TO_SHIP', 'CANCELLED'],
   READY_TO_SHIP: ['SHIPPED', 'CANCELLED'],
-  SHIPPED: ['DELIVERED'],
+  SHIPPED: ['AWAITING_BUYER_RESPONSE', 'DELIVERED', 'DELIVERY_FAILED'],
+  AWAITING_BUYER_RESPONSE: ['DELIVERED', 'DELIVERY_FAILED'],
   DELIVERED: ['COMPLETED'],
   COMPLETED: [],
+  DELIVERY_FAILED: [],
   CANCELLED: [],
 });
-/** Statuses in which the seller can still cancel (stock goes back, customer gets a refund record). */
+/** Statuses in which a sub-order can still be cancelled: strictly BEFORE shipment. */
 export const SELLER_ORDER_CANCELLABLE: readonly SellerOrderStatus[] = [
   'PAID',
   'SELLER_CONFIRMED',
   'PROCESSING',
   'READY_TO_SHIP',
 ];
+/** How the receipt / entitlement basis of a seller sub-order was established (never a single boolean). */
+export const RECEIPT_BASES = ['BUYER_CONFIRMED', 'TIMEOUT_ENTITLEMENT', 'DISPUTE_DECISION', 'LEGACY_ADMIN_ON_BEHALF', 'LEGACY_PRE_HARDENING'] as const;
+export type ReceiptBasis = (typeof RECEIPT_BASES)[number];
+export const CANCELLATION_REASON_CODES = [
+  'BUYER_REQUEST',
+  'SELLER_UNABLE_TO_FULFIL',
+  'OUT_OF_STOCK',
+  'PAYMENT_FAILURE',
+  'RISK_REVIEW',
+  'ADMIN_OPERATIONAL',
+  'DUPLICATE_ORDER',
+  'OTHER',
+] as const;
+export type CancellationReasonCode = (typeof CANCELLATION_REASON_CODES)[number];
 
 /* ───────────────────────── Payment (manual verification) ───────────────────────── */
 export const PAYMENT_STATUSES = [
@@ -127,15 +168,33 @@ export const PAYMENT_SUBMISSION_STATUSES = ['SUBMITTED', 'ACCEPTED', 'REJECTED',
 export type PaymentSubmissionStatus = (typeof PAYMENT_SUBMISSION_STATUSES)[number];
 
 /* ───────────────────────── Shipment ───────────────────────── */
-export const SHIPMENT_STATUSES = ['CREATED', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'FAILED'] as const;
+export const SHIPMENT_STATUSES = ['CREATED', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'FAILED', 'EXCEPTION', 'RETURNED_TO_SELLER', 'LOST'] as const;
 export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
+/** DELIVERED here means an AUTHORITATIVE delivery event was recorded (carrier / Operations), never a seller claim. */
 export const shipmentMachine = defineMachine<ShipmentStatus>('shipment', SHIPMENT_STATUSES, {
   CREATED: ['SHIPPED'],
-  SHIPPED: ['IN_TRANSIT', 'DELIVERED', 'FAILED'],
-  IN_TRANSIT: ['DELIVERED', 'FAILED'],
-  FAILED: ['SHIPPED'],
+  SHIPPED: ['IN_TRANSIT', 'DELIVERED', 'FAILED', 'EXCEPTION'],
+  IN_TRANSIT: ['DELIVERED', 'FAILED', 'EXCEPTION'],
+  FAILED: ['SHIPPED', 'IN_TRANSIT', 'EXCEPTION', 'RETURNED_TO_SELLER'],
+  EXCEPTION: ['IN_TRANSIT', 'SHIPPED', 'DELIVERED', 'RETURNED_TO_SELLER', 'LOST'],
+  RETURNED_TO_SELLER: ['SHIPPED'],
   DELIVERED: [],
+  LOST: [],
 });
+export const SHIPMENT_EXCEPTION_CODES = [
+  'DELIVERY_ATTEMPT_FAILED',
+  'BUYER_UNAVAILABLE',
+  'BUYER_REFUSED',
+  'WRONG_ADDRESS',
+  'RETURN_TO_SELLER',
+  'LOST_IN_TRANSIT',
+  'DAMAGED_IN_TRANSIT',
+  'CARRIER_EXCEPTION',
+] as const;
+export type ShipmentExceptionCode = (typeof SHIPMENT_EXCEPTION_CODES)[number];
+/** Where an authoritative delivery event came from. A seller statement is deliberately NOT a source. */
+export const DELIVERY_EVENT_SOURCES = ['OPERATIONS_CARRIER_CHECK', 'CARRIER_INTEGRATION'] as const;
+export type DeliveryEventSource = (typeof DELIVERY_EVENT_SOURCES)[number];
 
 /* ───────────────────────── Return ───────────────────────── */
 export const RETURN_STATUSES = [
@@ -165,13 +224,38 @@ export const returnMachine = defineMachine<ReturnStatus>('return', RETURN_STATUS
 });
 
 /* ───────────────────────── Refund record (manual money-out to customer) ───────────────────────── */
-export const REFUND_STATUSES = ['PENDING', 'PAID', 'CANCELLED'] as const;
+export const REFUND_STATUSES = [
+  'REQUESTED',
+  'UNDER_REVIEW',
+  'APPROVED',
+  'PROCESSING',
+  'COMPLETED',
+  'REJECTED',
+  'FAILED',
+  'CANCELLED',
+  // Legacy (pre-hardening) records: PENDING = reversal already posted, awaiting payout; PAID = paid out.
+  'PENDING',
+  'PAID',
+] as const;
 export type RefundStatus = (typeof REFUND_STATUSES)[number];
+/**
+ * REQUESTED → (Admin approval: reversal journal) APPROVED → PROCESSING → (execution evidence: payout journal) COMPLETED.
+ * Nothing moves money before APPROVED; a FAILED payout keeps the liability and can be retried after reconciliation.
+ */
 export const refundMachine = defineMachine<RefundStatus>('refund', REFUND_STATUSES, {
-  PENDING: ['PAID'],
+  REQUESTED: ['UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'],
+  UNDER_REVIEW: ['APPROVED', 'REJECTED'],
+  APPROVED: ['PROCESSING', 'COMPLETED', 'FAILED'],
+  PROCESSING: ['COMPLETED', 'FAILED'],
+  FAILED: ['PROCESSING', 'COMPLETED'],
+  PENDING: ['PAID', 'PROCESSING', 'FAILED', 'COMPLETED'],
+  COMPLETED: [],
   PAID: [],
+  REJECTED: [],
   CANCELLED: [],
 });
+/** Refund statuses in which money is still owed to the customer or about to be (blocks closure / completion). */
+export const REFUND_OPEN_STATUSES: readonly RefundStatus[] = ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'FAILED', 'PENDING'];
 
 /* ───────────────────────── External protected deal ───────────────────────── */
 export const DEAL_STATUSES = [
@@ -188,8 +272,10 @@ export const DEAL_STATUSES = [
   'DELIVERY_HANDOVER_VERIFIED',
   'BUYER_CONFIRMATION_PENDING',
   'BUYER_CONFIRMED_RECEIPT',
+  'ENTITLED_AWAITING_RELEASE',
   'COMPLETED',
   'DISPUTED',
+  'REFUND_PENDING',
   'CANCELLED',
   'REFUNDED',
 ] as const;
@@ -207,10 +293,16 @@ export const dealMachine = defineMachine<DealStatus>('external_deal', DEAL_STATU
   // DELIVERED = shipped / out for handover. Only a verified delivery OTP moves it on; the seller can
   // never mark the buyer as having received the goods.
   DELIVERED: ['DELIVERY_HANDOVER_VERIFIED', 'DISPUTED'],
-  DELIVERY_HANDOVER_VERIFIED: ['BUYER_CONFIRMED_RECEIPT', 'BUYER_CONFIRMATION_PENDING', 'DISPUTED'],
-  BUYER_CONFIRMATION_PENDING: ['BUYER_CONFIRMED_RECEIPT', 'DISPUTED'],
-  BUYER_CONFIRMED_RECEIPT: ['COMPLETED'],
-  DISPUTED: ['COMPLETED', 'REFUNDED', 'ACTIVE'],
+  // After a verified OTP handover the buyer has a response window: explicit confirmation, a problem
+  // report (dispute + hold) or — only once the window expires with no objection — timeout entitlement.
+  DELIVERY_HANDOVER_VERIFIED: ['BUYER_CONFIRMED_RECEIPT', 'ENTITLED_AWAITING_RELEASE', 'BUYER_CONFIRMATION_PENDING', 'DISPUTED'],
+  BUYER_CONFIRMATION_PENDING: ['BUYER_CONFIRMED_RECEIPT', 'ENTITLED_AWAITING_RELEASE', 'DISPUTED'],
+  // Entitled, still held: only an explicit Admin release (approval + DEAL_SETTLEMENT journal) completes it.
+  BUYER_CONFIRMED_RECEIPT: ['COMPLETED', 'DISPUTED'],
+  ENTITLED_AWAITING_RELEASE: ['COMPLETED', 'DISPUTED'],
+  DISPUTED: ['ENTITLED_AWAITING_RELEASE', 'REFUND_PENDING', 'ACTIVE', 'COMPLETED', 'REFUNDED'],
+  // Refund decided; the reversal journal posts only on Admin refund approval.
+  REFUND_PENDING: ['REFUNDED'],
   COMPLETED: [],
   CANCELLED: [],
   REFUNDED: [],
@@ -250,6 +342,10 @@ export const WITHDRAWAL_STATUSES = [
   'CANCELLED',
 ] as const;
 export type WithdrawalStatus = (typeof WITHDRAWAL_STATUSES)[number];
+/**
+ * A REQUEST moves no money. APPROVED = Admin approval atomically reserves available funds
+ * (AVAILABLE → WITHDRAWAL_RESERVED). PAID = separately authorized payout recording.
+ */
 export const withdrawalMachine = defineMachine<WithdrawalStatus>('withdrawal', WITHDRAWAL_STATUSES, {
   REQUESTED: ['UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'],
   UNDER_REVIEW: ['APPROVED', 'REJECTED'],

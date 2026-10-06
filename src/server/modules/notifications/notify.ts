@@ -9,6 +9,8 @@ export interface NotifyInput {
   userIds: (string | null | undefined)[];
   vars?: Record<string, string | number | null | undefined>;
   link?: string;
+  /** Business-event identity: retries of the same event never notify the same user twice. */
+  dedupeKey?: string;
 }
 
 /**
@@ -27,12 +29,23 @@ export async function notify(tx: DbOrTx, input: NotifyInput): Promise<void> {
   const title = render(inApp?.subject ?? def.title, vars);
   const body = render(inApp?.body ?? def.body, vars);
 
-  await tx.insert(notifications).values(ids.map((userId) => ({ userId, event: input.event, title, body, link: input.link ?? null })));
+  const inserted = input.dedupeKey
+    ? await tx
+        .insert(notifications)
+        .values(ids.map((userId) => ({ userId, event: input.event, title, body, link: input.link ?? null, dedupeKey: input.dedupeKey })))
+        .onConflictDoNothing()
+        .returning({ userId: notifications.userId })
+    : await tx
+        .insert(notifications)
+        .values(ids.map((userId) => ({ userId, event: input.event, title, body, link: input.link ?? null })))
+        .returning({ userId: notifications.userId });
+  const fresh = [...new Set(inserted.map((r) => r.userId))];
+  if (!fresh.length) return;
 
   const recipients = await tx
     .select({ id: users.id, email: users.email, phone: users.phone })
     .from(users)
-    .where(inArray(users.id, ids));
+    .where(inArray(users.id, fresh));
   const email = byChannel.get('EMAIL');
   const sms = byChannel.get('SMS');
   const rows: (typeof outboundMessages.$inferInsert)[] = [];

@@ -81,7 +81,7 @@ describe('multi-seller checkout', () => {
     await db.update(productVariants).set({ price: 120_00 }).where(eq(productVariants.id, p.variantId));
     const view = await cartView({ userId: c.user.id }, 1);
     expect(view.groups[0].lines[0].issues).toContain('PRICE_CHANGED');
-    await expect(placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: oldTotal })).rejects.toThrow(/تغيّرت الأسعار/);
+    await expect(placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: oldTotal })).rejects.toThrow(/السعر اتغير/);
     const fresh = await cartView({ userId: c.user.id }, 1);
     const { order } = await placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: fresh.grandTotal });
     expect(order.merchandiseTotal).toBe(120_00);

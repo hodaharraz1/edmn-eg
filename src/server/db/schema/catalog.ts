@@ -342,7 +342,7 @@ export const listingPolicyRules = pgTable(
   (t) => [enumCheck('listing_policy_rules_kind_chk', t.kind, POLICY_RULE_KINDS)],
 );
 
-export const INVENTORY_RESERVATION_STATUSES = ['ACTIVE', 'COMMITTED', 'RELEASED'] as const;
+export const INVENTORY_RESERVATION_STATUSES = ['ACTIVE', 'COMMITTED', 'RELEASED', 'EXPIRED'] as const;
 export const inventoryReservations = pgTable(
   'inventory_reservations',
   {

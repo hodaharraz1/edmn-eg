@@ -7,7 +7,7 @@ import { forbidden, invalidState, notFound, validation } from '@/server/core/err
 import { db, type DbOrTx } from '@/server/db/client';
 import { orderItems, orders, returnEvidence, returnItems, returns, sellerOrders, sellers, stores } from '@/server/db/schema';
 import { restock } from '@/server/modules/catalog/inventory';
-import { createSellerOrderRefund } from '@/server/modules/finance/postings';
+import { requestRefundTx } from '@/server/modules/finance/refunds';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
@@ -187,31 +187,43 @@ export async function returnRefundCeiling(conn: DbOrTx, r: Return, includeShippi
 }
 
 /**
- * Accept the refund for an inspected return: creates the refund record (proportional commission
- * reversal), marks items as returned and optionally restocks them. The customer is paid by finance.
+ * Accept the refund for an inspected return: marks the units as returned (optionally restocks them) and
+ * creates a refund REQUEST for exactly those units (their snapshotted price and fee shares). Shipping is
+ * refunded only when explicitly chosen (no invented shipping policy). Money moves only when an Admin
+ * approves the refund; the customer is then paid by finance.
  */
-export async function acceptReturnRefund(actor: Actor, returnId: string, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string }) {
+export async function acceptReturnRefund(actor: Actor, returnId: string, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string; shippingAmount?: number }) {
   return db.transaction(async (tx) => {
     const r = await lockForHandler(tx, actor, returnId);
     return acceptReturnRefundTx(tx, actor, r, input);
   });
 }
 
-export async function acceptReturnRefundTx(tx: DbOrTx, actor: Actor, r: Return, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string }) {
-  const { max, items } = await returnRefundCeiling(tx, r, !!input.includeShipping);
-  // Blank amount = the full ceiling (items, plus shipping when "include shipping" is ticked).
-  const amount = input.amount ?? max;
-  void items;
-  if (!Number.isInteger(amount) || amount <= 0 || amount > max) throw validation(`مبلغ الاسترداد يجب أن يكون بين 0.01 و ${max / 100} ج.م`);
-  await moveReturn(tx, actor, r, 'REFUND_PENDING', { refundAmount: amount, includeShipping: !!input.includeShipping, inspectionNote: input.note ?? r.inspectionNote }, input.note);
+export async function acceptReturnRefundTx(tx: DbOrTx, actor: Actor, r: Return, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string; shippingAmount?: number }) {
   const rItems = await tx.select().from(returnItems).where(eq(returnItems.returnId, r.id));
+  const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId)).for('update');
+  const { refundableOf } = await import('@/server/modules/finance/refunds');
+  const left = await refundableOf(tx, so);
+  const shipping = input.shippingAmount ?? (input.includeShipping ? left.shipping : 0);
+  const refund = await requestRefundTx(tx, actor, {
+    sellerOrderId: r.sellerOrderId,
+    sourceType: 'RETURN',
+    sourceId: r.id,
+    items: rItems.map((ri) => ({ orderItemId: ri.orderItemId, quantity: ri.quantity })),
+    shippingAmount: shipping,
+    reason: `إرجاع #${r.number}${input.note ? ` — ${input.note}` : ''}`,
+  });
+  if (input.amount !== undefined && input.amount !== refund.amount) {
+    throw validation(`مبلغ الاسترداد للوحدات المرتجعة ${refund.amount / 100} ج.م (محسوب من سعر الشراء المسجل)`);
+  }
+  await moveReturn(tx, actor, r, 'REFUND_PENDING', { refundAmount: refund.amount, includeShipping: shipping > 0, inspectionNote: input.note ?? r.inspectionNote }, input.note);
   for (const ri of rItems) {
     const [it] = await tx.select().from(orderItems).where(eq(orderItems.id, ri.orderItemId)).for('update');
     await tx.update(orderItems).set({ returnedQuantity: it.returnedQuantity + ri.quantity }).where(eq(orderItems.id, it.id));
     if (input.restock) await restock(tx, it.variantId, ri.quantity, `return:${r.id}`);
   }
-  await createSellerOrderRefund(tx, actor, { sellerOrderId: r.sellerOrderId, customerId: r.customerId, amount, sourceType: 'RETURN', sourceId: r.id, reason: `إرجاع #${r.number}` });
-  await audit(tx, actor, { action: 'return.refund_accepted', entityType: 'return', entityId: r.id, newValues: { amount, restock: !!input.restock } });
+  await audit(tx, actor, { action: 'return.refund_accepted', entityType: 'return', entityId: r.id, newValues: { refundId: refund.id, amount: refund.amount, restock: !!input.restock } });
+  return refund;
 }
 
 /** Inspection failed / seller disputes the claim → escalate to EDMN dispute officers. */

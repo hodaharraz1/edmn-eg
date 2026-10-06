@@ -2,7 +2,8 @@ import { sql } from 'drizzle-orm';
 import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, enumCheck, ts, updatedAt } from './_helpers';
 
-export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DISABLED'] as const;
+/** CLOSED = account closed on request after all obligations were settled (history kept, PII pseudonymised). */
+export const USER_STATUSES = ['ACTIVE', 'LOCKED', 'DISABLED', 'CLOSED'] as const;
 
 export const users = pgTable(
   'users',
@@ -25,6 +26,8 @@ export const users = pgTable(
     lastLoginAt: ts(),
     failedLoginCount: integer().notNull().default(0),
     lockedUntil: ts(),
+    closedAt: ts(),
+    anonymizedAt: ts(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

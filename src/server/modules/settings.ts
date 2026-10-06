@@ -62,6 +62,31 @@ export const SETTINGS_SCHEMA = {
    * period: conversations themselves are never deleted (evidence), whatever this value is.
    */
   'messaging.postCloseWriteDays': z.number().int().min(0).max(365).default(30),
+  /**
+   * Transparent shared EDMN fee: share (bps of the total fee F) paid by the BUYER; the seller pays F − Fb.
+   * No default: null = not configured → new checkouts are blocked. Existing deployments carry over the
+   * historical configuration (buyer 0%, seller 100%) recorded as NOT owner-approved (migration 0008).
+   */
+  'fees.buyerShareBps': z.number().int().min(0).max(10000).nullable().default(null),
+  /** Set only by the owner after approving the fee configuration. Real money stays blocked while false. */
+  'fees.ownerApproved': z.boolean().default(false),
+  /** Set only after jurisdiction-specific legal approval of the published policies. Never automatic. */
+  'legal.policiesApproved': z.boolean().default(false),
+  /** Operational SLA (hours) for the seller to confirm a paid order. OPERATIONAL DEFAULT — owner approval pending. */
+  'sla.sellerConfirmHours': z.number().int().min(1).max(240).default(48),
+  /** Extra days after the seller's own processing promise before a shipment is flagged overdue. */
+  'sla.shipGraceDays': z.number().int().min(0).max(30).default(1),
+  /** Days after the shipping ETA without an authoritative delivery event before Operations is alerted. */
+  'delivery.eventMissingGraceDays': z.number().int().min(0).max(60).default(3),
+  // ── Financial kill switches (true = PAUSED). Server-side, audited, safe-by-default: an unreadable
+  //    switch is treated as paused. They stop NEW actions only; history is never touched.
+  'killswitch.paymentConfirmation': z.boolean().default(false),
+  'killswitch.sellerRelease': z.boolean().default(false),
+  'killswitch.refunds': z.boolean().default(false),
+  'killswitch.withdrawals': z.boolean().default(false),
+  'killswitch.payouts': z.boolean().default(false),
+  'killswitch.dealRelease': z.boolean().default(false),
+  'killswitch.adjustments': z.boolean().default(false),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -82,6 +107,22 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'settlement.daysOfMonth',
   'settlement.minimumAmount',
   'withdrawals.slaBusinessHours',
+  'fees.buyerShareBps',
+  'fees.ownerApproved',
+  'legal.policiesApproved',
+];
+
+/** Keys that can never be changed through the generic settings screen (dedicated, separately-authorized flows). */
+export const RESTRICTED_SETTINGS: readonly SettingKey[] = [
+  'killswitch.paymentConfirmation',
+  'killswitch.sellerRelease',
+  'killswitch.refunds',
+  'killswitch.withdrawals',
+  'killswitch.payouts',
+  'killswitch.dealRelease',
+  'killswitch.adjustments',
+  'fees.ownerApproved',
+  'legal.policiesApproved',
 ];
 
 export function settingDefault<K extends SettingKey>(key: K): SettingValue<K> {
@@ -111,11 +152,16 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   if (SENSITIVE_SETTINGS.includes(key)) requireStepUp(actor);
   const schema = SETTINGS_SCHEMA[key];
   if (!schema) throw validation('إعداد غير معروف');
+  if (RESTRICTED_SETTINGS.includes(key)) throw validation('هذا الإعداد يتغير من شاشته المخصصة فقط');
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw validation('قيمة غير صالحة لهذا الإعداد');
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر سبب التعديل');
   if (key === 'payments.realMoneyEnabled' && parsed.data === true) {
     if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');
+    // Fail closed: every mandatory go-live control must pass (and the owner must still decide).
+    const { goLiveGate } = await import('@/server/modules/finance/controls');
+    const gate = await goLiveGate();
+    if (!gate.pass) throw validation(`لا يمكن تفعيل الأموال الحقيقية: ${gate.blockers.map((b) => b.label).join('، ')}`);
     const [real] = await db.select({ id: paymentDestinations.id }).from(paymentDestinations).where(and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, false))).limit(1);
     if (!real) throw validation('أضف أولاً وجهة دفع حقيقية مفعّلة (غير تجريبية) من «طرق وحسابات الدفع».');
     // Test money must never become real: go-live requires a clean financial state (no test payment,

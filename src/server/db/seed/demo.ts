@@ -14,7 +14,7 @@ import { placeOrder } from '@/server/modules/commerce/orders';
 import { priceLines } from '@/server/modules/commerce/pricing';
 import { cartLines } from '@/server/modules/commerce/cart';
 import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
-import { confirmReceipt, confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
+import { confirmReceipt, confirmSellerOrder, markShipped, releaseSellerOrder, saveShipment } from '@/server/modules/commerce/fulfilment';
 import { approveWithdrawal, markWithdrawalPaid, markWithdrawalProcessing, requestWithdrawal } from '@/server/modules/finance/withdrawals';
 import { createProductReview, createSellerReview } from '@/server/modules/reviews/service';
 import { requestReturn } from '@/server/modules/postpurchase/returns';
@@ -219,6 +219,15 @@ export async function seedDemo() {
   await user('support@edmn.local', 'خدمة العملاء (تجريبي)', '+201000000006', { staff: true, roles: ['CUSTOMER_SUPPORT'], password: demoCredentials().adminPassword });
   await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: demoCredentials().adminPassword });
   const A = await adminActor(admin.id, { stepUpAt: new Date() });
+  const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
+  const operatorActor = await adminActor(operator.id, { stepUpAt: new Date() });
+  // Receipt confirmation never releases funds: a finance checker approves each seller release.
+  async function release(soId: string) {
+    const { sellerOrderPosition } = await import('@/server/modules/finance/postings');
+    const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
+    const pos = await sellerOrderPosition(db, so);
+    await releaseSellerOrder(checkerActor, soId, { expectedSellerAmount: pos.pending, reason: 'إتاحة بعد تأكيد المشتري للاستلام (بيانات عرض)' });
+  }
 
   // ── Payment methods enabled; destinations are TEST placeholders
   await db.update(paymentMethods).set({ isEnabled: true });
@@ -316,6 +325,7 @@ export async function seedDemo() {
   for (const so of await sos(o1.order.id)) {
     await ship(so.id);
     await confirmReceipt(o1.ca, so.id);
+    await release(so.id);
     const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
     await createProductReview(o1.ca, { orderItemId: items[0].id, rating: 5, title: 'منتج ممتاز', body: 'وصل بسرعة والمنتج أصلي ومطابق للوصف. أنصح بالتعامل مع المتجر.' });
     await createSellerReview(o1.ca, { sellerOrderId: so.id, rating: 5, deliveryRating: 5, packagingRating: 4, accuracyRating: 5, body: 'تعامل محترم وتغليف ممتاز.' });
@@ -337,6 +347,8 @@ export async function seedDemo() {
   for (const so of await sos(o5.order.id)) {
     await ship(so.id, 'J&T Express');
     await confirmReceipt(o5.ca, so.id);
+    // The used-electronics part is released; the fashion part stays "entitled, awaiting Admin release".
+    if (so.sellerId === usedSeller.sellerId) await release(so.id);
   }
 
   // ── Post-purchase examples for the operations queues
@@ -351,8 +363,6 @@ export async function seedDemo() {
   await openTicket(o1.ca, { type: 'PAYMENT', subject: 'استفسار عن طريقة الدفع بإنستاباي', body: 'هل يمكنني الدفع من حساب إنستاباي باسم زوجتي؟ وما المدة المتاحة للدفع؟', relatedType: 'order', relatedId: '' });
 
   // ── Withdrawals: one paid (maker/checker), one pending
-  const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
-  const operatorActor = await adminActor(operator.id, { stepUpAt: new Date() });
   const w1 = await requestWithdrawal(tech, { amount: '1000', clientKey: randomUUID() });
   await approveWithdrawal(checkerActor, w1.withdrawal.id);
   await markWithdrawalProcessing(operatorActor, w1.withdrawal.id);

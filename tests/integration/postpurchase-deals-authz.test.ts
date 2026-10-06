@@ -4,16 +4,16 @@ import { eq } from 'drizzle-orm';
 import { customerActor } from '@/server/auth/actors';
 import { db } from '@/server/db/client';
 import { externalDeals, files, orderItems, payments, productReviews, products, refunds, returns, sellerOrders, sellerDocuments, sellers } from '@/server/db/schema';
-import { confirmReceipt } from '@/server/modules/commerce/fulfilment';
+import { confirmReceipt, releaseSellerOrder } from '@/server/modules/commerce/fulfilment';
 import { orderForCustomer } from '@/server/modules/commerce/orders';
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { acceptReturnRefund, approveReturn, customerShipsReturn, markReturnReceived, requestReturn, startInspection } from '@/server/modules/postpurchase/returns';
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
 import { createProductReview, moderateReview } from '@/server/modules/reviews/service';
-import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, deliveryOtpForBuyer, verifyDeliveryOtp, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
+import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, deliveryOtpForBuyer, verifyDeliveryOtp, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, releaseDeal } from '@/server/modules/deals/service';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { canReadPrivateFile } from '@/server/storage/access';
-import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveRefundsOf, checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -31,7 +31,7 @@ async function delivered(items: { price: number; qty: number }[]) {
   await submitAndConfirm(c, order.id, admin);
   const [so] = await sellerOrdersOf(order.id);
   await shipIt(s.actor, so.id);
-  await confirmReceipt(c.actor, so.id);
+  await receiveAndRelease(c.actor, so.id);
   return { s, c, order, so };
 }
 
@@ -47,9 +47,13 @@ describe('returns', () => {
     await markReturnReceived(s.actor, ret.id);
     await startInspection(s.actor, ret.id);
     await acceptReturnRefund(s.actor, ret.id, { restock: true });
-    const [r] = await db.select().from(refunds).where(eq(refunds.sourceId, ret.id));
+    let [r] = await db.select().from(refunds).where(eq(refunds.sourceId, ret.id));
     expect(r.amount).toBe(300_00);
     expect(r.commissionReversal).toBeGreaterThan(0);
+    expect(r.status).toBe('REQUESTED');
+    expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(availableBefore); // nothing moved yet
+    await approveRefundsOf(so.id);
+    [r] = await db.select().from(refunds).where(eq(refunds.sourceId, ret.id));
     const [it1] = await db.select().from(orderItems).where(eq(orderItems.id, cheap.id));
     expect(it1.returnedQuantity).toBe(1);
     const other = items.find((i) => i.id !== cheap.id)!;
@@ -83,6 +87,8 @@ describe('disputes', () => {
     await expect(resolveDispute(c.actor, d.id, { decision: 'FULL_REFUND', reasonCode: 'X', note: 'قرار من العميل نفسه' })).rejects.toThrow(/صلاحية/);
     const officer = await makeAdmin(['DISPUTE_OFFICER']);
     await resolveDispute(officer, d.id, { decision: 'FULL_REFUND', reasonCode: 'ITEM_NOT_AS_DESCRIBED', note: 'الأدلة تؤكد اختلاف المنتج عن الوصف' });
+    expect((await sellerBalances(db, s.actor.sellerId!)).pending).toBe(so.sellerNet); // decision ≠ money movement
+    await approveRefundsOf(so.id);
     const b = await sellerBalances(db, s.actor.sellerId!);
     expect(b.available).toBe(0);
     expect(b.pending).toBe(0);
@@ -101,6 +107,8 @@ describe('disputes', () => {
     const d = await openDispute(c.actor, { sellerOrderId: so.id, reasonCode: 'OTHER', description: 'شكوى للاختبار بدون أدلة كافية من العميل' });
     await confirmReceipt(c.actor, so.id);
     await resolveDispute(admin, d.id, { decision: 'REJECT_CLAIM', reasonCode: 'NO_EVIDENCE', note: 'لم تقدم أدلة تدعم الشكوى' });
+    expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(0); // the decision lifts the hold, it does not pay
+    await releaseSellerOrder(await makeAdmin(['FINANCE_CHECKER']), so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد رفض الشكوى' });
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(so.sellerNet);
   });
 });
@@ -164,7 +172,10 @@ describe('external protected deals', () => {
     await verifyDeliveryOtp(seller, deal.id, (await deliveryOtpForBuyer(buyer, deal.id))!.testCode!);
     await confirmDealReceipt(buyer, deal.id);
     const again = await confirmDealReceipt(buyer, deal.id);
-    expect(again.alreadyCompleted).toBe(true);
+    expect(again.alreadyConfirmed).toBe(true);
+    [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
+    expect(d.status).toBe('BUYER_CONFIRMED_RECEIPT');
+    await releaseDeal(admin, deal.id, { expectedPayout: d.buyerPays! - Math.min(d.feeAmount, d.buyerPays!), reason: 'إتاحة بعد تأكيد المشتري' });
     [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('COMPLETED');
     void payments;

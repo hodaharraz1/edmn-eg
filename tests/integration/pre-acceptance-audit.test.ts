@@ -20,10 +20,11 @@ import {
   startDealPayment,
   submitSellerOffer,
   verifyDeliveryOtp,
+  releaseDeal,
 } from '@/server/modules/deals/service';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
-import { confirmReceipt, setFinancialHold } from '@/server/modules/commerce/fulfilment';
+import { confirmReceipt, releaseSellerOrder, setFinancialHold } from '@/server/modules/commerce/fulfilment';
 import { createAdjustment } from '@/server/modules/finance/withdrawals';
 import { flushOutbound, REDACTED_BODY } from '@/server/jobs/worker';
 import { assertDemoSeedAllowed } from '@/server/db/seed/demo';
@@ -90,6 +91,9 @@ describe('pre-acceptance audit — protected deal fixes', () => {
     await markDealDelivered(d.seller, d.dealId, 'إعادة شحن');
     await verifyDeliveryOtp(d.seller, d.dealId, (await deliveryOtpForBuyer(d.buyer, d.dealId))!.testCode!);
     await confirmDealReceipt(d.buyer, d.dealId);
+    [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
+    expect(deal.status).toBe('BUYER_CONFIRMED_RECEIPT');
+    await releaseDeal(admin, d.dealId, { expectedPayout: deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!), reason: 'إتاحة بعد إعادة التسليم' });
     [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
     expect(deal.status).toBe('COMPLETED');
   });
@@ -180,7 +184,10 @@ describe('pre-acceptance audit — separation of duties on money', () => {
     await submitAndConfirm(c, order.id, admin);
     const [so] = await sellerOrdersOf(order.id);
     await shipIt(s.actor, so.id);
-    await expect(confirmReceipt(insider, so.id, { onBehalfReason: 'العميل أكد هاتفيًا' })).rejects.toThrow(/متجر أنت مالكه/);
+    // Nobody but the buyer can confirm receipt (Admin can never impersonate the buyer).
+    await expect(confirmReceipt(insider, so.id)).rejects.toThrow(/للمشتري نفسه/);
+    await expect(confirmReceipt(admin, so.id)).rejects.toThrow(/للمشتري نفسه/);
+    await expect(releaseSellerOrder(insider, so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة لمتجري' })).rejects.toThrow();
     await setFinancialHold(admin, so.id, true, 'مراجعة احتيال');
     await expect(setFinancialHold(insider, so.id, false, 'رفع الإيقاف')).rejects.toThrow(/متجر أنت مالكه/);
     const noStepUp = await adminActor((await makeUser({ staff: true, roles: ['SUPER_ADMIN'] })).id, {});

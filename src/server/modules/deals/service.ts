@@ -785,7 +785,10 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
       };
     }
     await tx.update(dealDeliveryOtps).set({ attempts, lastAttemptAt: now, usedAt: now, usedBy: userId }).where(eq(dealDeliveryOtps.id, otp.id));
-    await moveDeal(tx, actor, deal, 'DELIVERY_HANDOVER_VERIFIED', { handoverVerifiedAt: now, handoverOtpId: otp.id });
+    // The buyer's response window starts at the verified handover (server time) and is never restarted:
+    // 24 hours, or the inspection period agreed in the deal terms when that is longer (terms are authoritative).
+    const windowMs = Math.max(BUYER_RESPONSE_HOURS * 3600_000, (deal.inspectionDays ?? 0) * 86400_000);
+    await moveDeal(tx, actor, deal, 'DELIVERY_HANDOVER_VERIFIED', { handoverVerifiedAt: now, handoverOtpId: otp.id, buyerResponseDueAt: new Date(now.getTime() + windowMs) });
     await audit(tx, actor, { action: 'deal.delivery_otp_verified', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, deliveryAttempt: otp.deliveryAttempt } });
     await notify(tx, { event: 'DEAL_HANDOVER_VERIFIED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
     return { ok: true };
@@ -914,7 +917,7 @@ export async function setDealFinancialHold(actor: Actor, dealId: string, hold: b
   });
 }
 
-async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundToBuyer = 0) {
+async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundToBuyer: number, approvalId: string) {
   const held = deal.buyerPays!;
   const remaining = held - refundToBuyer;
   const fee = Math.min(deal.feeAmount, remaining);
@@ -930,50 +933,120 @@ async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundTo
     sourceType: 'external_deal',
     sourceId: deal.id,
     idempotencyKey: `deal-settle:${deal.id}`,
-    description: `تسوية الصفقة المحمية #${deal.number}`,
+    description: `تسوية الصفقة المحمية #${deal.number} بموافقة الإدارة`,
+    approvalId,
     lines,
   });
   if (payout > 0) {
     await tx.insert(dealPayouts).values({ dealId: deal.id, payeeUserId: deal.sellerUserId, amount: payout }).onConflictDoNothing();
   }
   if (refundToBuyer > 0) {
+    // Approved together with the release (one approval, enumerated balanced legs).
     await tx
       .insert(refunds)
-      .values({ sourceType: 'DEAL', sourceId: deal.id, customerId: deal.buyerId, dealId: deal.id, amount: refundToBuyer, reason: 'قرار نزاع صفقة محمية', createdBy: actor.userId })
+      .values({
+        sourceType: 'DEAL',
+        sourceId: deal.id,
+        customerId: deal.buyerId,
+        dealId: deal.id,
+        amount: refundToBuyer,
+        principalAmount: refundToBuyer,
+        status: 'APPROVED',
+        approvalId,
+        approvedBy: actor.userId,
+        approvedAt: new Date(),
+        reason: 'قرار نزاع صفقة محمية (استرداد جزئي)',
+        idempotencyKey: `DEAL:${deal.id}`,
+        createdBy: actor.userId,
+      })
       .onConflictDoNothing();
   }
+  return { payout, fee };
 }
 
 /**
- * Buyer: "استلمت والمنتج مطابق" (explicit, after a VERIFIED handover). Only this — never the OTP, the
- * waybill, tracking or GPS — makes the seller's net amount payable, and only when payment is confirmed,
- * there is no dispute, no Operations hold and no open hold risk flag. Exactly once (row lock +
- * idempotent settlement key).
+ * Buyer: "استلمت والمنتج مطابق" (explicit, after a VERIFIED OTP handover). Establishes the seller's
+ * ENTITLEMENT only (receipt basis BUYER_CONFIRMED). Nothing is paid or released: the funds stay held
+ * until an Admin approves the release. Exactly once (row lock).
  */
 export async function confirmDealReceipt(actor: Actor, dealId: string) {
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
-    if (deal.status === 'COMPLETED') return { alreadyCompleted: true };
+    if (deal.status === 'COMPLETED' || deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') return { alreadyCompleted: deal.status === 'COMPLETED', alreadyConfirmed: true };
     if (deal.status !== 'DELIVERY_HANDOVER_VERIFIED' && deal.status !== 'BUYER_CONFIRMATION_PENDING') {
       throw invalidState(deal.status === 'DELIVERED' ? 'لازم التسليم يتأكد برمز الاستلام الأول' : 'مينفعش تأكد الاستلام في حالة الصفقة دي');
     }
     if (!deal.handoverVerifiedAt || !deal.handoverOtpId) throw invalidState('لازم التسليم يتأكد برمز الاستلام الأول');
     const [pay] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.dealId, deal.id));
     if (pay?.status !== 'CONFIRMED') throw invalidState('الدفع للصفقة دي لسه متأكدش');
-    if (deal.financialHold) throw invalidState('الصفقة متوقفة لمراجعة فريق العمليات');
-    const holds = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, HOLD_FLAG_CODES)));
-    if (holds.length) throw invalidState('الصفقة عند فريق العمليات للمراجعة');
     const now = new Date();
-    await moveDeal(tx, actor, deal, 'BUYER_CONFIRMED_RECEIPT', { buyerConfirmedAt: now });
-    await moveDeal(tx, actor, { ...deal, status: 'BUYER_CONFIRMED_RECEIPT' }, 'COMPLETED', { completedAt: now });
-    await postDealCompletion(tx, actor, deal);
-    await audit(tx, actor, { action: 'deal.receipt_confirmed', entityType: 'external_deal', entityId: deal.id });
-    await notify(tx, { event: 'EXTERNAL_DEAL_COMPLETED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}` });
-    return { alreadyCompleted: false };
+    await moveDeal(tx, actor, deal, 'BUYER_CONFIRMED_RECEIPT', { buyerConfirmedAt: now, receiptBasis: 'BUYER_CONFIRMED', entitledAt: now });
+    await audit(tx, actor, { action: 'deal.receipt_confirmed', entityType: 'external_deal', entityId: deal.id, newValues: { receiptBasis: 'BUYER_CONFIRMED', released: false } });
+    await notify(tx, { event: 'DEAL_ENTITLED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}`, dedupeKey: `deal:${deal.id}:entitled` });
+    return { alreadyCompleted: false, alreadyConfirmed: false };
   });
 }
 
-/** Called by dispute resolution. */
+/** Everything that blocks a deal release (fail closed). */
+async function dealReleaseBlockers(tx: DbOrTx, deal: Deal): Promise<string[]> {
+  const out: string[] = [];
+  if (deal.financialHold) out.push('تجميد من العمليات');
+  const holds = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, HOLD_FLAG_CODES)));
+  if (holds.length) out.push('مراجعة تسليم مفتوحة');
+  const open = await tx.execute(sql`select 1 from disputes where deal_id = ${deal.id} and status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION') limit 1`);
+  if (open.rows.length) out.push('نزاع مفتوح');
+  const [pay] = await tx.select({ status: payments.status }).from(payments).where(eq(payments.dealId, deal.id));
+  if (pay?.status !== 'CONFIRMED') out.push('الدفع غير مؤكد');
+  return out;
+}
+
+/**
+ * Admin release of a protected deal: settles the held funds (seller payout payable + EDMN fee, and any
+ * dispute-decided buyer refund) under ONE operation-specific approval. Requires an entitlement basis
+ * (buyer confirmation, timeout after a verified OTP handover, or a dispute decision). Idempotent.
+ * Never pays the seller — the payout is recorded separately.
+ */
+export async function releaseDeal(actor: Actor, dealId: string, input: { expectedPayout: number; reason: string }) {
+  if (!hasPermission(actor, 'finance.release')) throw forbidden();
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  return db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
+    if (!deal) throw notFound('الصفقة');
+    if (deal.status === 'COMPLETED') return { alreadyReleased: true };
+    const { assertNotPaused } = await import('@/server/modules/finance/controls');
+    await assertNotPaused(tx, 'killswitch.dealRelease');
+    if (deal.buyerId === actor.userId || deal.sellerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد صفقة أنت طرف فيها');
+    if (deal.status !== 'BUYER_CONFIRMED_RECEIPT' && deal.status !== 'ENTITLED_AWAITING_RELEASE') throw invalidState('الإتاحة ممكنة بعد تأكيد المشتري أو انتهاء مهلته بدون اعتراض أو قرار نزاع فقط');
+    if (!deal.receiptBasis) throw invalidState('لا يوجد أساس استحقاق مسجل');
+    const blockers = await dealReleaseBlockers(tx, deal);
+    if (blockers.length) throw invalidState(`لا يمكن الإتاحة الآن: ${blockers.join('، ')}`);
+    const remaining = deal.buyerPays! - deal.pendingBuyerRefund;
+    const payout = remaining - Math.min(deal.feeAmount, remaining);
+    if (payout !== input.expectedPayout) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
+    const { grantApproval } = await import('@/server/modules/finance/approvals');
+    const approval = await grantApproval(tx, actor, {
+      action: 'DEAL_RELEASE',
+      entityType: 'external_deal',
+      entityId: deal.id,
+      amount: deal.buyerPays!,
+      economicVersion: `held:${deal.buyerPays}:refund:${deal.pendingBuyerRefund}:fee:${deal.feeAmount}:basis:${deal.receiptBasis}`,
+      reason: why,
+      idempotencyKey: `deal-release:${deal.id}`,
+      destinationSnapshot: { payoutMasked: deal.sellerPayoutMasked, payoutType: deal.sellerPayoutType },
+    });
+    await postDealCompletion(tx, actor, deal, deal.pendingBuyerRefund, approval.id);
+    await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date(), releaseApprovalId: approval.id }, why);
+    await audit(tx, actor, { action: 'deal.released', entityType: 'external_deal', entityId: deal.id, newValues: { approvalId: approval.id, payout, buyerRefund: deal.pendingBuyerRefund, receiptBasis: deal.receiptBasis }, reason: why });
+    await notify(tx, { event: 'EXTERNAL_DEAL_COMPLETED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}`, dedupeKey: `deal:${deal.id}:completed` });
+    return { alreadyReleased: false, approvalId: approval.id };
+  });
+}
+
+/**
+ * Dispute decision on a deal. Decides the outcome only: every money movement still needs its own
+ * Admin approval (refund approval, or release approval for the seller / partial-refund settlement).
+ */
 export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string, decision: DisputeDecision, amount: number | null, disputeId: string, note: string) {
   const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
   if (deal.status !== 'DISPUTED') return;
@@ -982,53 +1055,88 @@ export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string
     .update(riskFlags)
     .set({ status: 'RESOLVED', resolvedBy: actor.userId ?? null, resolvedAt: new Date() })
     .where(and(eq(riskFlags.entityType, 'external_deal'), eq(riskFlags.entityId, deal.id), eq(riskFlags.status, 'OPEN'), inArray(riskFlags.code, ['DELIVERY_CONFLICT', 'DELIVERY_EXCEPTION'])));
+  const now = new Date();
   if (decision === 'FULL_REFUND') {
-    await moveDeal(tx, actor, deal, 'REFUNDED', {}, note);
-    await postEntry(tx, actor, {
-      entryType: 'DEAL_REFUND',
-      sourceType: 'external_deal',
-      sourceId: deal.id,
-      idempotencyKey: `deal-refund:${deal.id}`,
-      description: `استرداد كامل للصفقة #${deal.number} (نزاع)`,
-      lines: [
-        { account: { code: 'DEAL_FUNDS_HELD' }, debit: deal.buyerPays! },
-        { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
-      ],
-    });
+    await moveDeal(tx, actor, deal, 'REFUND_PENDING', {}, note);
     await tx
       .insert(refunds)
-      .values({ sourceType: 'DEAL', sourceId: deal.id, customerId: deal.buyerId, dealId: deal.id, amount: deal.buyerPays!, reason: `قرار نزاع ${disputeId}`, createdBy: actor.userId })
+      .values({
+        sourceType: 'DEAL',
+        sourceId: deal.id,
+        customerId: deal.buyerId,
+        dealId: deal.id,
+        amount: deal.buyerPays!,
+        principalAmount: deal.buyerPays!,
+        status: 'REQUESTED',
+        reason: `قرار نزاع ${disputeId}: ${note}`.slice(0, 1000),
+        idempotencyKey: `DEAL:${deal.id}`,
+        requestedBy: actor.userId,
+        createdBy: actor.userId,
+      })
       .onConflictDoNothing();
   } else if (decision === 'PARTIAL_REFUND') {
     if (!amount || amount <= 0 || amount >= deal.buyerPays!) throw validation('مبلغ الاسترداد الجزئي غير صحيح');
-    await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date() }, note);
-    await postDealCompletion(tx, actor, deal, amount);
+    await moveDeal(tx, actor, deal, 'ENTITLED_AWAITING_RELEASE', { pendingBuyerRefund: amount, receiptBasis: deal.receiptBasis ?? 'DISPUTE_DECISION', entitledAt: deal.entitledAt ?? now }, note);
   } else if (decision === 'RELEASE_TO_SELLER' || decision === 'REJECT_CLAIM') {
-    await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date() }, note);
-    await postDealCompletion(tx, actor, deal);
+    await moveDeal(tx, actor, deal, 'ENTITLED_AWAITING_RELEASE', { receiptBasis: deal.receiptBasis ?? 'DISPUTE_DECISION', entitledAt: deal.entitledAt ?? now }, note);
   } else {
     // RETURN_REQUIRED / REPLACEMENT → the deal continues with a fresh delivery (new handover code on re-ship).
     await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
-    await moveDeal(tx, actor, deal, 'ACTIVE', { handoverVerifiedAt: null, handoverOtpId: null, deliveryConflictAt: null }, note);
+    await moveDeal(tx, actor, deal, 'ACTIVE', { handoverVerifiedAt: null, handoverOtpId: null, deliveryConflictAt: null, buyerResponseDueAt: null }, note);
   }
+}
+
+/** Admin approval of a deal refund (FULL_REFUND decision): posts DEAL_REFUND and closes the deal REFUNDED. */
+export async function approveDealRefundTx(tx: DbOrTx, actor: Actor, refund: typeof refunds.$inferSelect, approvalId: string) {
+  const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, refund.dealId!)).for('update');
+  if (deal.status !== 'REFUND_PENDING') throw invalidState('حالة الصفقة لا تسمح بالاسترداد');
+  if (refund.amount !== deal.buyerPays) throw invalidState('مبلغ الاسترداد لا يطابق المبلغ المحجوز');
+  await postEntry(tx, actor, {
+    entryType: 'DEAL_REFUND',
+    sourceType: 'external_deal',
+    sourceId: deal.id,
+    idempotencyKey: `deal-refund:${deal.id}`,
+    description: `استرداد كامل للصفقة #${deal.number} بموافقة الإدارة`,
+    approvalId,
+    lines: [
+      { account: { code: 'DEAL_FUNDS_HELD' }, debit: deal.buyerPays! },
+      { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
+    ],
+  });
+  await moveDeal(tx, actor, deal, 'REFUNDED', {}, 'اعتماد الاسترداد');
 }
 
 export async function onDealRefundPaid(_tx: DbOrTx, _actor: Actor, _dealId: string) {
   // Refund status is tracked on the refund record itself; deal is already REFUNDED/COMPLETED.
 }
 
-/** Job: inspection period over without buyer action → flag for operations (no automatic release). */
-export async function flagDealsAwaitingConfirmation(now = new Date()) {
-  // The inspection period starts at the verified handover; the buyer still has to choose explicitly.
-  const rows = await db.select().from(externalDeals).where(eq(externalDeals.status, 'DELIVERY_HANDOVER_VERIFIED'));
+export const BUYER_RESPONSE_HOURS = 24;
+
+/**
+ * Job: buyer response window over after a VERIFIED OTP handover, with no objection, dispute, hold or
+ * open review → TIMEOUT_ENTITLEMENT (recorded once, never backdated). Never releases money and never
+ * bypasses a missing/failed OTP handover.
+ */
+export async function flagDealsAwaitingConfirmation() {
+  const rows = await db.select().from(externalDeals).where(inArray(externalDeals.status, ['DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING']));
   let n = 0;
   for (const deal of rows) {
-    if (!deal.handoverVerifiedAt || deal.handoverVerifiedAt.getTime() + deal.inspectionDays * 86400_000 > now.getTime()) continue;
     await db.transaction(async (tx) => {
       const [d] = await tx.select().from(externalDeals).where(eq(externalDeals.id, deal.id)).for('update');
-      if (d.status !== 'DELIVERY_HANDOVER_VERIFIED') return;
-      await moveDeal(tx, SYSTEM_ACTOR, d, 'BUYER_CONFIRMATION_PENDING', {}, 'انتهت مدة الفحص دون تأكيد');
-      await notify(tx, { event: 'DELIVERY_FOLLOW_UP', userIds: [d.buyerId], vars: { order: `صفقة ${d.number}` }, link: `/account/deals/${d.id}` });
+      if (d.status !== 'DELIVERY_HANDOVER_VERIFIED' && d.status !== 'BUYER_CONFIRMATION_PENDING') return;
+      if (!d.handoverVerifiedAt || !d.handoverOtpId) return;
+      const due = d.buyerResponseDueAt ?? new Date(d.handoverVerifiedAt.getTime() + Math.max(BUYER_RESPONSE_HOURS * 3600_000, d.inspectionDays * 86400_000));
+      const [{ expired }] = (await tx.execute<{ expired: boolean }>(sql`select now() >= ${due.toISOString()}::timestamptz as expired`)).rows;
+      if (!expired) return;
+      const blockers = await dealReleaseBlockers(tx, d);
+      if (blockers.length) {
+        if (d.status === 'DELIVERY_HANDOVER_VERIFIED') await moveDeal(tx, SYSTEM_ACTOR, d, 'BUYER_CONFIRMATION_PENDING', {}, `انتهت المهلة لكن: ${blockers.join('، ')}`);
+        return;
+      }
+      const [{ now }] = (await tx.execute<{ now: Date }>(sql`select now() as now`)).rows;
+      await moveDeal(tx, SYSTEM_ACTOR, d, 'ENTITLED_AWAITING_RELEASE', { receiptBasis: 'TIMEOUT_ENTITLEMENT', entitledAt: new Date(now), buyerResponseDueAt: due }, 'انتهت مهلة المشتري بدون اعتراض');
+      await audit(tx, SYSTEM_ACTOR, { action: 'deal.timeout_entitlement', entityType: 'external_deal', entityId: d.id, newValues: { due: due.toISOString(), released: false } });
+      await notify(tx, { event: 'DEAL_ENTITLED', userIds: [d.buyerId, d.sellerUserId], vars: { deal: d.number }, link: `/account/deals/${d.id}`, dedupeKey: `deal:${d.id}:entitled` });
       n++;
     });
   }

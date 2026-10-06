@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
-import { dealMachine, disputeMachine, returnMachine, type DisputeDecision, type DisputeStatus } from '@/domain/machines';
+import { dealMachine, disputeMachine, returnMachine, sellerOrderMachine, type DisputeDecision, type DisputeStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { hasPermission, requirePermission, requireStepUp, requireUser, type Actor } from '@/server/core/actor';
 import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
@@ -8,8 +8,7 @@ import { conflict, forbidden, invalidState, notFound, validation } from '@/serve
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
 import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerOrders, sellers, users } from '@/server/db/schema';
-import { releaseIfEligible } from '@/server/modules/commerce/fulfilment';
-import { createSellerOrderRefund } from '@/server/modules/finance/postings';
+import { requestRefundTx } from '@/server/modules/finance/refunds';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
@@ -76,7 +75,8 @@ export async function openDisputeTx(
     const isBuyer = deal.buyerId === actor.userId;
     const isSeller = deal.sellerUserId === actor.userId;
     if (!isBuyer && !isSeller) throw forbidden();
-    if (!['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING'].includes(deal.status)) throw invalidState('مش ممكن تفتح نزاع على الصفقة في حالتها دلوقتي');
+    // Also after entitlement and before the Admin release: an eligible problem still enters the hold path.
+    if (!['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING', 'BUYER_CONFIRMED_RECEIPT', 'ENTITLED_AWAITING_RELEASE'].includes(deal.status)) throw invalidState('مش ممكن تفتح نزاع على الصفقة في حالتها دلوقتي');
     input.claimantUserId = actor.userId!;
     respondentUserId = isBuyer ? deal.sellerUserId : deal.buyerId;
     await transition(tx, actor, dealMachine, deal.id, deal.status, 'DISPUTED', input.description.slice(0, 200));
@@ -230,7 +230,9 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
   const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, dispute.sellerOrderId!)).for('update');
   const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
   const ret = dispute.returnId ? (await tx.select().from(returns).where(eq(returns.id, dispute.returnId)).for('update'))[0] : null;
-  const refundAmount = decision === 'FULL_REFUND' ? so.grossTotal - so.refundedTotal : decision === 'PARTIAL_REFUND' ? amount! : 0;
+  const { refundableOf } = await import('@/server/modules/finance/refunds');
+  const left = await refundableOf(tx, so);
+  const refundAmount = decision === 'FULL_REFUND' ? left.total : decision === 'PARTIAL_REFUND' ? amount! : 0;
 
   if (ret && ret.status === 'DISPUTED') {
     if (decision === 'FULL_REFUND' || decision === 'PARTIAL_REFUND') {
@@ -239,7 +241,7 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
       await tx.update(returns).set({ status: 'APPROVED' }).where(eq(returns.id, ret.id));
       await transition(tx, actor, returnMachine, ret.id, 'APPROVED', 'RECEIVED', 'قرار نزاع');
       await tx.update(returns).set({ status: 'RECEIVED' }).where(eq(returns.id, ret.id));
-      await acceptReturnRefundTx(tx, actor, { ...approved, status: 'RECEIVED' }, { amount: Math.min(refundAmount, so.grossTotal - so.refundedTotal), includeShipping: decision === 'FULL_REFUND', note });
+      await acceptReturnRefundTx(tx, actor, { ...approved, status: 'RECEIVED' }, { includeShipping: decision === 'FULL_REFUND', note });
     } else if (decision === 'RETURN_REQUIRED') {
       await transition(tx, actor, returnMachine, ret.id, ret.status, 'APPROVED', note);
       await tx.update(returns).set({ status: 'APPROVED' }).where(eq(returns.id, ret.id));
@@ -247,8 +249,22 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
       await transition(tx, actor, returnMachine, ret.id, ret.status, 'REJECTED', note);
       await tx.update(returns).set({ status: 'REJECTED', decisionReason: note }).where(eq(returns.id, ret.id));
     }
-  } else if (refundAmount > 0) {
-    await createSellerOrderRefund(tx, actor, { sellerOrderId: so.id, customerId: order.customerId, amount: refundAmount, sourceType: 'DISPUTE', sourceId: dispute.id, reason: note });
+  } else if (decision === 'FULL_REFUND' && refundAmount > 0) {
+    // Everything still refundable (units, shipping, buyer fee) — a REQUEST; money moves on Admin approval.
+    await requestRefundTx(tx, actor, {
+      sellerOrderId: so.id,
+      sourceType: 'DISPUTE',
+      sourceId: dispute.id,
+      items: left.items.filter((i) => i.refundableQty > 0).map((i) => ({ orderItemId: i.item.id, quantity: i.refundableQty })),
+      shippingAmount: left.shipping,
+      buyerFeeRefund: left.buyerFee,
+      sellerFeeReversal: left.sellerFee,
+      reason: note,
+    });
+  } else if (decision === 'PARTIAL_REFUND' && refundAmount > 0) {
+    // Compensation not tied to units: principal only; fee reversal proportional to the principal share.
+    const sellerFee = Math.min(left.sellerFee, Math.round((left.sellerFee * refundAmount) / Math.max(1, left.principal)));
+    await requestRefundTx(tx, actor, { sellerOrderId: so.id, sourceType: 'DISPUTE', sourceId: dispute.id, principalAmount: refundAmount, buyerFeeRefund: 0, sellerFeeReversal: sellerFee, reason: note });
   } else if (decision === 'RETURN_REQUIRED') {
     // Open an approved return for all remaining items so the normal return workflow takes over.
     const { orderItems } = await import('@/server/db/schema');
@@ -262,8 +278,13 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
       await tx.insert(returnItems).values(remaining.map((i) => ({ returnId: r.id, orderItemId: i.id, quantity: i.quantity - i.returnedQuantity })));
     }
   }
-  // Clear the dispute hold and release whatever is left for the seller (if delivered).
-  await releaseIfEligible(tx, actor, so.id);
+  // The dispute (the hold) is resolved by this decision. A decision in the seller's favour on a shipped,
+  // not-yet-accepted order establishes the receipt basis; the funds still need an Admin release.
+  if ((decision === 'RELEASE_TO_SELLER' || decision === 'REJECT_CLAIM') && (so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE')) {
+    await transition(tx, actor, sellerOrderMachine, so.id, so.status, 'DELIVERED', note);
+    const now = new Date();
+    await tx.update(sellerOrders).set({ status: 'DELIVERED', receiptBasis: 'DISPUTE_DECISION', entitledAt: now, deliveredAt: so.deliveryEventAt ?? now }).where(eq(sellerOrders.id, so.id));
+  }
 }
 
 export async function closeDispute(actor: Actor, disputeId: string) {

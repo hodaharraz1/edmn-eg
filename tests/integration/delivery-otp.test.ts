@@ -23,6 +23,7 @@ import {
   submitSellerOffer,
   termsHistory,
   verifyDeliveryOtp,
+  releaseDeal,
 } from '@/server/modules/deals/service';
 import { deliveryOtpTestMode, generateDeliveryCode } from '@/server/modules/deals/delivery-otp';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
@@ -294,13 +295,23 @@ describe('delivery OTP — money', () => {
     expect(await payouts(d.dealId)).toHaveLength(0);
   });
 
-  it('20 + 23 — the buyer’s explicit confirmation after OTP releases the eligible amount exactly once', async () => {
+  it('20 + 23 — buyer confirmation after OTP = entitlement only; the Admin release settles exactly once', async () => {
     const d = await shippedDeal();
     await verifyDeliveryOtp(d.seller, d.dealId, d.code);
     const results = await Promise.allSettled([confirmDealReceipt(d.buyer, d.dealId), confirmDealReceipt(d.buyer, d.dealId), confirmDealReceipt(d.buyer, d.dealId)]);
     expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
-    expect(await confirmDealReceipt(d.buyer, d.dealId)).toEqual({ alreadyCompleted: true });
-    const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
+    expect(await confirmDealReceipt(d.buyer, d.dealId)).toEqual({ alreadyCompleted: false, alreadyConfirmed: true });
+    let [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
+    expect(deal.status).toBe('BUYER_CONFIRMED_RECEIPT');
+    expect(deal.receiptBasis).toBe('BUYER_CONFIRMED');
+    expect(await payouts(d.dealId)).toHaveLength(0);
+    expect(await settlements(d.dealId)).toHaveLength(0);
+    const expectedPayout = deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!);
+    await Promise.allSettled([
+      releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد تأكيد المشتري' }),
+      releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد تأكيد المشتري' }),
+    ]);
+    [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
     expect(deal.status).toBe('COMPLETED');
     expect(deal.buyerConfirmedAt).not.toBeNull();
     const po = await payouts(d.dealId);
@@ -354,12 +365,17 @@ describe('delivery OTP — money', () => {
     const d = await shippedDeal();
     await verifyDeliveryOtp(d.seller, d.dealId, d.code);
     await setDealFinancialHold(admin, d.dealId, true, 'مراجعة احتيال محتمل');
-    await expect(confirmDealReceipt(d.buyer, d.dealId)).rejects.toThrow(/مراجعة/);
+    await confirmDealReceipt(d.buyer, d.dealId); // entitlement may be recorded…
+    const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
+    const expectedPayout = deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!);
+    // …but the hold blocks the Admin release.
+    await expect(releaseDeal(admin, d.dealId, { expectedPayout, reason: 'محاولة إتاحة' })).rejects.toThrow(/تجميد/);
     expect(await payouts(d.dealId)).toHaveLength(0);
     const plain = customerActor(d.buyerUser.id);
     await expect(setDealFinancialHold(plain, d.dealId, false, 'x x x')).rejects.toThrow();
     await setDealFinancialHold(admin, d.dealId, false, 'تمت المراجعة');
-    await confirmDealReceipt(d.buyer, d.dealId);
+    expect(await payouts(d.dealId)).toHaveLength(0); // lifting the hold releases nothing by itself
+    await releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد المراجعة' });
     expect(await payouts(d.dealId)).toHaveLength(1);
   });
 

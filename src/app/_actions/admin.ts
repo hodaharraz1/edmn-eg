@@ -13,7 +13,17 @@ import { db } from '@/server/db/client';
 import { riskFlags, rolePermissions, roles, userRoles, users, notificationTemplates } from '@/server/db/schema';
 import { addPolicyRule, saveAttribute, saveBrand, saveCategory, setCategoryAttribute, togglePolicyRule } from '@/server/modules/catalog/taxonomy';
 import { moderateProduct, moderateRevision, type ModerationDecision } from '@/server/modules/catalog/products';
-import { cancelSellerOrder, confirmReceipt, setFinancialHold } from '@/server/modules/commerce/fulfilment';
+import {
+  cancelSellerOrder,
+  decideCancellationRequest,
+  recordDeliveryEvent,
+  recordShipmentException,
+  releaseSellerOrder,
+  resolveShipmentException,
+  reviewDeliveryException,
+  setFinancialHold,
+} from '@/server/modules/commerce/fulfilment';
+import type { CancellationReasonCode, ShipmentExceptionCode } from '@/domain/machines';
 import { createRule, setRuleEnabled } from '@/server/modules/finance/commissions';
 import { approveWithdrawal, createAdjustment, decideAdjustment, markDealPayoutPaid, markRefundPaid, markWithdrawalPaid, markWithdrawalProcessing, revealPayoutDetails, rejectWithdrawal, reviewWithdrawal, runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { confirmPayment, rejectPayment, saveDestination, startReview, updatePaymentMethod } from '@/server/modules/payments/service';
@@ -153,10 +163,18 @@ export async function adminOrderAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const op = str(fd, 'op');
     const so = str(fd, 'sellerOrderId');
-    if (op === 'cancel') await cancelSellerOrder(a, so, str(fd, 'reason'));
+    if (op === 'cancel') await cancelSellerOrder(a, so, str(fd, 'reason'), (str(fd, 'code') || 'ADMIN_OPERATIONAL') as CancellationReasonCode);
     else if (op === 'hold') await setFinancialHold(a, so, true, str(fd, 'reason'));
     else if (op === 'release') await setFinancialHold(a, so, false, str(fd, 'reason'));
-    else if (op === 'confirmReceipt') await confirmReceipt(a, so, { onBehalfReason: str(fd, 'reason') });
+    else if (op === 'releaseFunds') await releaseSellerOrder(a, so, { expectedSellerAmount: Number(str(fd, 'expectedAmount')), reason: str(fd, 'reason') });
+    else if (op === 'deliveryEvent') await recordDeliveryEvent(a, so, { reference: str(fd, 'reference') });
+    else if (op === 'establishDelivery') await reviewDeliveryException(a, so, 'ESTABLISH', str(fd, 'reason'));
+    else if (op === 'shipmentException') await recordShipmentException(a, so, str(fd, 'code') as ShipmentExceptionCode, str(fd, 'reason'));
+    else if (op === 'reship') await resolveShipmentException(a, so, 'RESHIP', str(fd, 'reason'));
+    else if (op === 'returnedToSeller') await resolveShipmentException(a, so, 'RETURNED_TO_SELLER', str(fd, 'reason'));
+    else if (op === 'lost') await resolveShipmentException(a, so, 'LOST', str(fd, 'reason'));
+    else if (op === 'acceptCancellation') await decideCancellationRequest(a, str(fd, 'requestId'), true, str(fd, 'reason'));
+    else if (op === 'rejectCancellation') await decideCancellationRequest(a, str(fd, 'requestId'), false, str(fd, 'reason'));
     return done();
   }, [str(fd, 'back')]);
 }

@@ -24,7 +24,9 @@ export const PERMISSIONS = {
   // Orders & fulfilment
   'orders.view': 'عرض الطلبات',
   'orders.manage': 'إدارة الطلبات',
-  'orders.confirm_receipt_on_behalf': 'تأكيد الاستلام نيابة عن العميل',
+  /** Retired: Admin can never confirm receipt on the buyer's behalf (kept only so old grants stay valid data). */
+  'orders.confirm_receipt_on_behalf': 'تأكيد الاستلام نيابة عن العميل (موقوف)',
+  'delivery.verify': 'تسجيل حدث التسليم من شركة الشحن ومراجعة أدلة التسليم',
   'shipping.view': 'عرض مستندات الشحن',
   // Payments
   'payments.view': 'عرض المدفوعات',
@@ -32,6 +34,7 @@ export const PERMISSIONS = {
   'payments.destinations.manage': 'إدارة حسابات الاستلام',
   // Returns, refunds, disputes
   'returns.manage': 'إدارة المرتجعات',
+  'refunds.approve': 'اعتماد الاسترداد (قيد عكسي)',
   'refunds.pay': 'تسجيل صرف المبالغ المستردة',
   'disputes.manage': 'إدارة النزاعات',
   'deals.view': 'عرض الصفقات الخارجية',
@@ -48,6 +51,9 @@ export const PERMISSIONS = {
   'ledger.adjust.create': 'إنشاء تسوية مالية',
   'ledger.adjust.approve': 'اعتماد تسوية مالية',
   'settlements.manage': 'إدارة التسويات الدورية',
+  'finance.release': 'اعتماد إتاحة أرباح البائع بعد الاستلام',
+  'finance.controls': 'مفاتيح الإيقاف المالية والإقفال اليومي',
+  'reconciliation.manage': 'المطابقة مع كشوف الحسابات',
   // Ops
   'support.manage': 'إدارة الدعم الفني',
   // Buyer ↔ seller conversations (private customer communication — every staff view is audited)
@@ -73,7 +79,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'reports.view', 'reports.export', 'customers.view', 'sellers.view', 'sellers.review',
       'sellers.suspend', 'products.view', 'products.moderate', 'orders.view', 'orders.manage', 'shipping.view',
-      'orders.confirm_receipt_on_behalf', 'payments.view', 'returns.manage', 'disputes.manage', 'deals.view',
+      'delivery.verify', 'payments.view', 'returns.manage', 'disputes.manage', 'deals.view',
       'deals.manage', 'reviews.moderate', 'support.manage', 'cms.manage', 'audit.view', 'finance.view',
       'withdrawals.view', 'messages.view', 'messages.moderate',
     ],
@@ -99,6 +105,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.pay', 'refunds.pay', 'deals.payout',
       'ledger.adjust.create', 'payments.view', 'orders.view', 'settlements.manage', 'reports.view', 'reports.export',
+      'reconciliation.manage',
     ],
   },
   FINANCE_CHECKER: {
@@ -107,12 +114,13 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.approve', 'ledger.adjust.approve',
       'commissions.manage', 'payments.destinations.manage', 'payments.view', 'orders.view', 'reports.view',
+      'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage',
     ],
   },
   DISPUTE_OFFICER: {
     nameAr: 'مسؤول النزاعات',
     nameEn: 'Dispute officer',
-    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view'],
+    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view', 'delivery.verify'],
   },
   CUSTOMER_SUPPORT: {
     nameAr: 'خدمة العملاء',

@@ -186,3 +186,42 @@ export async function pendingSubmission(paymentId: string) {
   const [s] = await db.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, paymentId), eq(paymentSubmissions.status, 'SUBMITTED')));
   return s;
 }
+
+/** Buyer confirms receipt, then a finance checker explicitly approves the seller release (the only path to available). */
+export async function receiveAndRelease(buyer: Actor, soId: string, admin?: Actor) {
+  const { confirmReceipt, releaseSellerOrder } = await import('@/server/modules/commerce/fulfilment');
+  const { sellerOrderPosition } = await import('@/server/modules/finance/postings');
+  await confirmReceipt(buyer, soId);
+  const releaser = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
+  const pos = await sellerOrderPosition(db, so);
+  return releaseSellerOrder(releaser, soId, { expectedSellerAmount: pos.pending, reason: 'اعتماد الإتاحة في الاختبار' });
+}
+
+/** Approve every REQUESTED refund of a seller order (finance checker). */
+export async function approveRefundsOf(soId: string, admin?: Actor) {
+  const { refunds } = await import('@/server/db/schema');
+  const { approveRefund } = await import('@/server/modules/finance/refunds');
+  const checker = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const rows = await db.select().from(refunds).where(and(eq(refunds.sellerOrderId, soId), eq(refunds.status, 'REQUESTED')));
+  for (const r of rows) await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد الاسترداد في الاختبار' });
+  return rows;
+}
+
+/** Seller available balance with Admin-approved withdrawal reservation semantics. */
+export async function approveAndPayWithdrawal(withdrawalId: string, checker?: Actor, payer?: Actor) {
+  const { approveWithdrawal, markWithdrawalPaid } = await import('@/server/modules/finance/withdrawals');
+  const c = checker ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const p = payer ?? (await makeAdmin(['FINANCE_OPERATOR']));
+  await approveWithdrawal(c, withdrawalId);
+  await markWithdrawalPaid(p, withdrawalId, 'REF-TEST-1');
+}
+
+/** A real approval row for tests that post synthetic journal entries directly (DB requires one). */
+export async function testApproval(entryTypes: string[], amount: number, approver?: Actor) {
+  const { sql } = await import('drizzle-orm');
+  const a = approver ?? (await makeAdmin());
+  const r = await db.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
+    values ('MANUAL_ADJUSTMENT', 'test', ${randomUUID()}, ${amount}, 'test', ${sql.raw(`array[${entryTypes.map((t) => `'${t.replace(/[^A-Z_]/g, '')}'`).join(',')}]`)}, 'test fixture', ${a.userId}, now(), ${randomUUID()}) returning id`);
+  return r.rows[0].id;
+}

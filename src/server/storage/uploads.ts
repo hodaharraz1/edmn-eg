@@ -45,6 +45,8 @@ export interface StoredFile {
   storageKey: string;
   visibility: 'PUBLIC' | 'PRIVATE';
   mimeType: string;
+  /** sha256 of the bytes as uploaded (before any re-encoding) — used for duplicate-proof signals. */
+  sourceSha256: string;
 }
 
 export async function fileFromForm(value: FormDataEntryValue | null): Promise<{ data: Buffer; name: string } | null> {
@@ -137,7 +139,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
     originalName: input.originalName ? input.originalName.slice(0, 120) : null,
     ownerUserId: userId,
   });
-  return { id, storageKey, visibility, mimeType: mime };
+  return { id, storageKey, visibility, mimeType: mime, sourceSha256: sha256(input.data) };
 }
 
 /** Public URL for a PUBLIC file (optionally a resized rendition). */

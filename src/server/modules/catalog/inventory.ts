@@ -42,8 +42,8 @@ export async function commitReservation(tx: DbOrTx, orderItemId: string): Promis
   await refreshProductReadModel(tx, v.productId);
 }
 
-/** Unpaid order expired / cancelled → units go back to available. Idempotent. */
-export async function releaseReservation(tx: DbOrTx, orderItemId: string): Promise<void> {
+/** Unpaid order expired (EXPIRED) / cancelled (RELEASED) → units go back to available. Idempotent: a second worker finds it resolved. */
+export async function releaseReservation(tx: DbOrTx, orderItemId: string, as: 'RELEASED' | 'EXPIRED' = 'RELEASED'): Promise<void> {
   const [r] = await tx.select().from(inventoryReservations).where(eq(inventoryReservations.orderItemId, orderItemId)).for('update');
   if (!r || r.status !== 'ACTIVE') return;
   const [v] = await tx
@@ -51,8 +51,8 @@ export async function releaseReservation(tx: DbOrTx, orderItemId: string): Promi
     .set({ reserved: sql`${productVariants.reserved} - ${r.quantity}` })
     .where(eq(productVariants.id, r.variantId))
     .returning({ productId: productVariants.productId });
-  await tx.update(inventoryReservations).set({ status: 'RELEASED', resolvedAt: new Date() }).where(eq(inventoryReservations.id, r.id));
-  await tx.insert(inventoryMovements).values({ variantId: r.variantId, type: 'RELEASE', deltaReserved: -r.quantity, reference: `order_item:${orderItemId}` });
+  await tx.update(inventoryReservations).set({ status: as, resolvedAt: new Date() }).where(eq(inventoryReservations.id, r.id));
+  await tx.insert(inventoryMovements).values({ variantId: r.variantId, type: 'RELEASE', deltaReserved: -r.quantity, reference: `order_item:${orderItemId}:${as.toLowerCase()}` });
   await refreshProductReadModel(tx, v.productId);
 }
 

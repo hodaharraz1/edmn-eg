@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, bigserial, boolean, check, index, pgTable, text, uniqueIndex, uuid, date } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, check, index, jsonb, pgTable, text, uniqueIndex, uuid, date } from 'drizzle-orm/pg-core';
 import { ADJUSTMENT_STATUSES, PAYOUT_TYPES, WITHDRAWAL_STATUSES } from '@/domain/machines';
 import { createdAt, enumCheck, money, ts, updatedAt } from './_helpers';
 import { files } from './files';
@@ -47,11 +47,15 @@ export const journalEntries = pgTable(
     description: text().notNull(),
     currency: text().notNull().default('EGP'),
     reversesEntryId: uuid(),
+    /** The operation-specific Admin financial approval this entry executes (DB trigger: mandatory for new entries). */
+    approvalId: uuid(),
     createdBy: uuid().references(() => users.id),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex('journal_entries_idem_uq').on(t.idempotencyKey),
+    index('journal_entries_approval_idx').on(t.approvalId),
+    index('journal_entries_type_idx').on(t.entryType, t.createdAt),
     index('journal_entries_source_idx').on(t.sourceType, t.sourceId),
     index('journal_entries_created_idx').on(t.createdAt),
   ],
@@ -130,6 +134,12 @@ export const withdrawalRequests = pgTable(
     paidReference: text(),
     proofFileId: uuid().references(() => files.id),
     rejectReason: text(),
+    /** Set when Admin approval reserved the funds (AVAILABLE → RESERVED). A bare request moves no money. */
+    reservedAt: ts(),
+    reserveApprovalId: uuid(),
+    payoutApprovalId: uuid(),
+    /** Destination frozen at approval: a later payout-method change never redirects this payout. */
+    destinationSnapshot: jsonb(),
     /** Snapshot: requested while real money was disabled — closing it moves no money. */
     isTest: boolean().notNull().default(true),
     createdAt: createdAt(),

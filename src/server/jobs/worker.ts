@@ -4,7 +4,7 @@ import { db } from '@/server/db/client';
 import { jobs, outboundMessages } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
-import { completeDeliveredOrders, flagUnconfirmedDeliveries } from '@/server/modules/commerce/fulfilment';
+import { flagMissingDeliveryEvents, flagMissingDeliveryEvidence, flagSellerSlaBreaches, processBuyerResponseTimeouts } from '@/server/modules/commerce/fulfilment';
 import { expireDealInvitations, expireDeliveryOtps, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { providerFor } from '@/server/modules/notifications/providers';
@@ -61,9 +61,12 @@ export const HANDLERS: Record<string, Handler> = {
 /** Periodic maintenance tasks run by the worker (cron-like). */
 export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unknown> }[] = [
   { name: 'orders.expire_overdue', everyMs: 5 * 60_000, run: () => expireOverdueOrders() },
-  { name: 'orders.flag_unconfirmed', everyMs: 60 * 60_000, run: () => flagUnconfirmedDeliveries() },
-  { name: 'orders.complete_delivered', everyMs: 60 * 60_000, run: () => completeDeliveredOrders() },
-  { name: 'deals.flag_unconfirmed', everyMs: 60 * 60_000, run: () => flagDealsAwaitingConfirmation() },
+  // Entitlement only (never a release): buyer window expiry, missing evidence/events, SLA flags.
+  { name: 'orders.buyer_response_timeouts', everyMs: 5 * 60_000, run: () => processBuyerResponseTimeouts() },
+  { name: 'orders.missing_delivery_evidence', everyMs: 15 * 60_000, run: () => flagMissingDeliveryEvidence() },
+  { name: 'orders.missing_delivery_events', everyMs: 60 * 60_000, run: () => flagMissingDeliveryEvents() },
+  { name: 'orders.seller_sla', everyMs: 15 * 60_000, run: () => flagSellerSlaBreaches() },
+  { name: 'deals.buyer_response_timeouts', everyMs: 5 * 60_000, run: () => flagDealsAwaitingConfirmation() },
   { name: 'deals.expire_invitations', everyMs: 60 * 60_000, run: () => expireDealInvitations() },
   { name: 'deals.expire_delivery_otps', everyMs: 15 * 60_000, run: () => expireDeliveryOtps() },
   { name: 'settlement.scheduled', everyMs: 60 * 60_000, run: () => runScheduledSettlement() },

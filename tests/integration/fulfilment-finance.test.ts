@@ -3,13 +3,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { auditLogs, journalEntries, orderItems, orders, productVariants, refunds, sellerOrders, withdrawalRequests } from '@/server/db/schema';
-import { cancelSellerOrder, confirmReceipt, confirmSellerOrder, markShipped, saveShipment, sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
+import { cancelSellerOrder, confirmReceipt, confirmSellerOrder, markShipped, releaseSellerOrder, saveShipment, sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
 import { createRule } from '@/server/modules/finance/commissions';
 import { accountBalance, reconcile, sellerBalances } from '@/server/modules/finance/ledger';
 import { approveWithdrawal, cancelWithdrawal, createAdjustment, decideAdjustment, markRefundPaid, markWithdrawalPaid, rejectWithdrawal, requestWithdrawal, revealPayoutDetails } from '@/server/modules/finance/withdrawals';
 import { adminActor } from '@/server/auth/actors';
 import { addPayoutMethod } from '@/server/modules/sellers/service';
-import { checkout, categoryId, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveRefundsOf, checkout, categoryId, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -50,20 +50,33 @@ describe('shipping & buyer receipt confirmation', () => {
     await expect(saveShipment(s.actor, so.id, { carrierName: 'XX', shippedAt: new Date() }, { data: pdf(), name: 'waybill.exe' })).rejects.toThrow(/امتداد/);
   });
 
-  it('EDGE 10 — buyer confirms receipt twice: funds become available exactly once', async () => {
+  it('EDGE 10 — buyer confirms receipt twice: entitlement recorded once, NO money moves; the Admin release posts exactly once', async () => {
     const { s, c, so } = await deliveredOrder();
     await shipIt(s.actor, so.id);
     const results = await Promise.allSettled([confirmReceipt(c.actor, so.id), confirmReceipt(c.actor, so.id)]);
     expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
     await confirmReceipt(c.actor, so.id); // later retry
-    const b = await sellerBalances(db, s.actor.sellerId!);
-    expect(b.available).toBe(so.sellerNet);
-    expect(b.pending).toBe(0);
-    const releases = await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, `release:${so.id}`));
-    expect(releases).toHaveLength(1);
+    let b = await sellerBalances(db, s.actor.sellerId!);
+    expect(b.available).toBe(0);
+    expect(b.pending).toBe(so.sellerNet);
+    expect(await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, `release:${so.id}`))).toHaveLength(0);
     const [after] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, so.id));
     expect(after.status).toBe('DELIVERED');
+    expect(after.receiptBasis).toBe('BUYER_CONFIRMED');
     expect(after.receiptConfirmedBy).toBe(c.user.id);
+    // Admin release — double click / concurrent retry → exactly one release journal.
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    const rel = await Promise.allSettled([
+      releaseSellerOrder(checker, so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد الاستلام' }),
+      releaseSellerOrder(checker, so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد الاستلام' }),
+    ]);
+    expect(rel.every((r) => r.status === 'fulfilled')).toBe(true);
+    b = await sellerBalances(db, s.actor.sellerId!);
+    expect(b.available).toBe(so.sellerNet);
+    expect(b.pending).toBe(0);
+    expect(await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, `release:${so.id}`))).toHaveLength(1);
+    const [done] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, so.id));
+    expect(done.status).toBe('COMPLETED');
     const audit = await db.select().from(auditLogs).where(eq(auditLogs.entityId, so.id));
     expect(audit.some((a) => a.action === 'seller_order.receipt_confirmed')).toBe(true);
   });
@@ -118,6 +131,10 @@ describe('cancellations & refunds', () => {
     const [r] = await db.select().from(refunds).where(eq(refunds.sellerOrderId, a.id));
     expect(r.amount).toBe(a.grossTotal);
     expect(r.commissionReversal).toBe(a.commissionTotal);
+    // Cancellation creates a refund OBLIGATION only: nothing moves before Admin approval.
+    expect(r.status).toBe('REQUESTED');
+    expect((await sellerBalances(db, seller1.actor.sellerId!)).pending).toBe(a.sellerNet);
+    await approveRefundsOf(a.id);
     expect((await sellerBalances(db, seller1.actor.sellerId!)).pending).toBe(0);
     // finance pays the refund (step-up required)
     const operator = await makeAdmin(['FINANCE_OPERATOR']);
@@ -128,7 +145,7 @@ describe('cancellations & refunds', () => {
 });
 
 async function outstandingRefunds() {
-  const r = await db.execute<{ s: string }>(sql`select coalesce(sum(amount),0) s from refunds where status = 'PENDING'`);
+  const r = await db.execute<{ s: string }>(sql`select coalesce(sum(amount),0) s from refunds where status in ('PENDING','APPROVED','PROCESSING','FAILED')`);
   return Number(r.rows[0].s);
 }
 
@@ -136,7 +153,7 @@ describe('withdrawals', () => {
   async function sellerWithAvailable() {
     const d = await deliveredOrder(1000_00);
     await shipIt(d.s.actor, d.so.id);
-    await confirmReceipt(d.c.actor, d.so.id);
+    await receiveAndRelease(d.c.actor, d.so.id);
     return d;
   }
 
@@ -147,8 +164,16 @@ describe('withdrawals', () => {
     const w2 = await requestWithdrawal(s.actor, { amount: '200', clientKey: key });
     expect(w2.created).toBe(false);
     expect(w2.withdrawal.id).toBe(w1.withdrawal.id);
-    const b = await sellerBalances(db, s.actor.sellerId!);
+    // A request alone moves no money and reserves nothing.
+    let b = await sellerBalances(db, s.actor.sellerId!);
+    expect(b.reserved).toBe(0);
+    expect(await db.select().from(journalEntries).where(eq(journalEntries.sourceId, w1.withdrawal.id))).toHaveLength(0);
+    // Admin approval reserves atomically (and only once).
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await Promise.allSettled([approveWithdrawal(checker, w1.withdrawal.id), approveWithdrawal(checker, w1.withdrawal.id)]);
+    b = await sellerBalances(db, s.actor.sellerId!);
     expect(b.reserved).toBe(200_00);
+    expect(await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, `wd:${w1.withdrawal.id}`))).toHaveLength(1);
   });
 
   it('full payout details are revealed only to payout operators after step-up, and the reveal is audited', async () => {
@@ -167,14 +192,14 @@ describe('withdrawals', () => {
     expect(logs.some((l) => l.action === 'payout.details_revealed' && l.actorUserId === operator.userId)).toBe(true);
   });
 
-  it('EDGE 12 — two concurrent withdrawals cannot spend the same available balance', async () => {
+  it('EDGE 12 — two concurrent withdrawals cannot spend the same available balance (approval re-checks under lock)', async () => {
     const { s } = await sellerWithAvailable();
     const available = (await sellerBalances(db, s.actor.sellerId!)).available;
     const amount = String(Math.floor((available * 0.7) / 100));
-    const results = await Promise.allSettled([
-      requestWithdrawal(s.actor, { amount, clientKey: randomUUID() }),
-      requestWithdrawal(s.actor, { amount, clientKey: randomUUID() }),
-    ]);
+    // Two requests may both exist — they promise nothing.
+    const [w1, w2] = await Promise.all([requestWithdrawal(s.actor, { amount, clientKey: randomUUID() }), requestWithdrawal(s.actor, { amount, clientKey: randomUUID() })]);
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    const results = await Promise.allSettled([approveWithdrawal(checker, w1.withdrawal.id), approveWithdrawal(checker, w2.withdrawal.id)]);
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     const b = await sellerBalances(db, s.actor.sellerId!);
     expect(b.available).toBeGreaterThanOrEqual(0);
@@ -184,9 +209,11 @@ describe('withdrawals', () => {
   it('cannot withdraw more than available; rejection/cancellation returns the reserved amount', async () => {
     const { s } = await sellerWithAvailable();
     const b0 = await sellerBalances(db, s.actor.sellerId!);
-    await expect(requestWithdrawal(s.actor, { amount: String(b0.available / 100 + 1), clientKey: randomUUID() })).rejects.toThrow(/غير كاف/);
+    await expect(requestWithdrawal(s.actor, { amount: String(b0.available / 100 + 1), clientKey: randomUUID() })).rejects.toThrow(/أكبر من رصيدك/);
     const { withdrawal } = await requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() });
     const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await approveWithdrawal(checker, withdrawal.id);
+    expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(b0.available - 100_00);
     await rejectWithdrawal(checker, withdrawal.id, 'بيانات الحساب غير مطابقة');
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(b0.available);
     const w2 = await requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() });
@@ -247,10 +274,18 @@ describe('ledger integrity', () => {
     expect(r.trialBalanceOk).toBe(true);
   });
 
+  it('a journal entry without an Admin approval is refused by the database', async () => {
+    await expect(
+      db.execute(sql`insert into journal_entries (entry_type, source_type, source_id, idempotency_key, description) values ('X','test','x', ${randomUUID()}, 'no approval')`),
+    ).rejects.toEqual(expect.objectContaining({ cause: expect.objectContaining({ message: expect.stringMatching(/no Admin financial approval/) }) }));
+  });
+
   it('an unbalanced entry is rejected by the database at commit', async () => {
     await expect(
       db.transaction(async (tx) => {
-        const [e] = await tx.execute<{ id: string }>(sql`insert into journal_entries (entry_type, source_type, source_id, idempotency_key, description) values ('X','test','x', ${randomUUID()}, 'bad') returning id`).then((r) => r.rows);
+        const [ap] = (await tx.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
+          values ('MANUAL_ADJUSTMENT', 'test', 'x', 100, 'v', array['X'], 'test', ${admin.userId}, now(), ${randomUUID()}) returning id`)).rows;
+        const [e] = await tx.execute<{ id: string }>(sql`insert into journal_entries (entry_type, source_type, source_id, idempotency_key, description, approval_id) values ('X','test','x', ${randomUUID()}, 'bad', ${ap.id}) returning id`).then((r) => r.rows);
         const [acc] = (await tx.execute<{ id: string }>(sql`select id from ledger_accounts limit 1`)).rows;
         await tx.execute(sql`insert into journal_lines (entry_id, account_id, debit, credit) values (${e.id}, ${acc.id}, 100, 0)`);
       }),

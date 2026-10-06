@@ -4,6 +4,9 @@ import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
 import type { DbOrTx } from '@/server/db/client';
 import { sql } from 'drizzle-orm';
 import { productVariants, products, sellerShippingRates, sellers, stores } from '@/server/db/schema';
+import { computeLineCommission, resolveRule } from '@/server/modules/finance/commissions';
+import { splitFee } from '@/server/modules/finance/controls';
+import { getSetting } from '@/server/modules/settings';
 
 /**
  * Single source of truth for cart/checkout pricing. Used to DISPLAY the cart and, again,
@@ -37,6 +40,8 @@ export interface PricedLine {
   issues: LineIssue[];
   /** Seller's voluntary return policy for this listing, shown before purchase (snapshotted on the order item). */
   returnPolicy: ReturnPolicy;
+  /** Transparent EDMN fee on this line (basis: product subtotal), and its buyer / seller shares. */
+  fee: { ruleId: string; bps: number; total: number; buyer: number; seller: number } | null;
 }
 
 export interface SellerGroup {
@@ -51,6 +56,9 @@ export interface SellerGroup {
   etaMinDays: number | null;
   etaMaxDays: number | null;
   processingDays: number;
+  /** Buyer share of the EDMN fee for this seller group (added to the buyer total). */
+  buyerFee: number;
+  sellerFee: number;
   total: number;
 }
 
@@ -59,6 +67,11 @@ export interface PricedCart {
   merchandiseTotal: number;
   shippingTotal: number;
   discountTotal: number;
+  /** Buyer share of the EDMN fee (Fb). Seller share (Fs) is deducted from the seller's proceeds. */
+  buyerFeeTotal: number;
+  sellerFeeTotal: number;
+  /** Buyer share in bps of the total fee, or null when the fee is not configured (checkout blocked). */
+  buyerShareBps: number | null;
   grandTotal: number;
   itemCount: number;
   hasIssues: boolean;
@@ -67,7 +80,7 @@ export interface PricedCart {
 
 export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], governorateId: number | null): Promise<PricedCart> {
   if (!inputs.length) {
-    return { groups: [], merchandiseTotal: 0, shippingTotal: 0, discountTotal: 0, grandTotal: 0, itemCount: 0, hasIssues: false, shippingResolved: true };
+    return { groups: [], merchandiseTotal: 0, shippingTotal: 0, discountTotal: 0, buyerFeeTotal: 0, sellerFeeTotal: 0, buyerShareBps: null, grandTotal: 0, itemCount: 0, hasIssues: false, shippingResolved: true };
   }
   const rows = await conn
     .select({
@@ -112,6 +125,8 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
         etaMinDays: null,
         etaMaxDays: null,
         processingDays: r.store.defaultProcessingDays,
+        buyerFee: 0,
+        sellerFee: 0,
         total: 0,
       });
     }
@@ -136,6 +151,7 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
       priceSeen: input.priceSeen,
       issues,
       returnPolicy: listingReturnPolicy(r.product, r.store),
+      fee: null,
     });
     g.merchandiseSubtotal += lineTotal;
     g.processingDays = Math.max(g.processingDays, r.product.processingDays ?? r.store.defaultProcessingDays);
@@ -157,17 +173,34 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
     g.etaMinDays = rate.etaMinDays;
     g.etaMaxDays = rate.etaMaxDays;
   }
-  for (const g of groups.values()) g.total = g.merchandiseSubtotal + (g.shippingFee ?? 0);
+  // Transparent shared fee: the same rule resolution and split used inside the order transaction.
+  const buyerShareBps = await getSetting('fees.buyerShareBps', conn);
+  const now = new Date();
+  for (const g of groups.values()) {
+    for (const l of g.lines) {
+      const rule = await resolveRule(conn, l.categoryId, now);
+      const c = computeLineCommission(rule, l.unitPrice, l.quantity);
+      const split = splitFee(c.amount, buyerShareBps ?? 0);
+      l.fee = { ruleId: rule.id, bps: c.bps, total: c.amount, buyer: split.buyer, seller: split.seller };
+      g.buyerFee += split.buyer;
+      g.sellerFee += split.seller;
+    }
+    g.total = g.merchandiseSubtotal + (g.shippingFee ?? 0) + g.buyerFee;
+  }
 
   const list = [...groups.values()];
   const merchandiseTotal = list.reduce((a, g) => a + g.merchandiseSubtotal, 0);
   const shippingTotal = list.reduce((a, g) => a + (g.shippingFee ?? 0), 0);
+  const buyerFeeTotal = list.reduce((a, g) => a + g.buyerFee, 0);
   return {
     groups: list,
     merchandiseTotal,
     shippingTotal,
     discountTotal: 0,
-    grandTotal: merchandiseTotal + shippingTotal,
+    buyerFeeTotal,
+    sellerFeeTotal: list.reduce((a, g) => a + g.sellerFee, 0),
+    buyerShareBps,
+    grandTotal: merchandiseTotal + shippingTotal + buyerFeeTotal,
     itemCount: list.reduce((a, g) => a + g.lines.reduce((b, l) => b + l.quantity, 0), 0),
     hasIssues: list.some((g) => g.lines.some((l) => l.issues.length)),
     shippingResolved,

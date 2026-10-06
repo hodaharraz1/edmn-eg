@@ -17,11 +17,13 @@ import {
   stores,
   users,
   products,
+  cancellationRequests,
 } from '@/server/db/schema';
 import { enqueueJob } from '@/server/jobs/queue';
 import { resolveRule, computeLineCommission } from '@/server/modules/finance/commissions';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
+import { FEE_ROUNDING_RULE, requireFeeConfig, splitFee } from '@/server/modules/finance/controls';
 import { releaseReservation, reserve } from '@/server/modules/catalog/inventory';
 import { transition, parse } from '../_shared';
 import { acknowledgePrices, cartLines, clearVariants } from './cart';
@@ -71,6 +73,14 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'checkout:' + customerId}))`);
     const [dupe] = await tx.select().from(orders).where(and(eq(orders.customerId, customerId), eq(orders.checkoutKey, d.checkoutKey)));
     if (dupe) return { order: dupe, created: false };
+    // Same lock as account closure: a closing account can never race a new order.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'account:' + customerId}))`);
+    const [buyer] = await tx.select({ status: users.status }).from(users).where(eq(users.id, customerId));
+    if (buyer?.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'الشراء غير متاح لحالة حسابك الحالية');
+    const pendingClosure = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${customerId} and status = 'PENDING' limit 1`);
+    if (pendingClosure.rows.length) throw invalidState('عندك طلب إغلاق حساب قيد التنفيذ. ألغِه الأول لو عايز تشتري');
+    // Fee configuration must exist (never guessed); missing config blocks new financial checkout.
+    const feeConfig = await requireFeeConfig(tx);
 
     const [address] = await tx.select().from(addresses).where(eq(addresses.id, d.addressId));
     if (!address || address.userId !== customerId || address.archivedAt) throw validation('عنوان التوصيل ده غير صالح. اختار عنوان تاني');
@@ -94,6 +104,7 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       if (g.lines.some((l) => l.issues.includes('NO_SHIPPING'))) problems.push(`المتجر "${g.storeName}" لا يشحن إلى ${gov?.nameAr ?? 'محافظتك'}`);
       for (const l of g.lines) {
         if (l.issues.includes('UNAVAILABLE') || l.issues.includes('SELLER_UNAVAILABLE')) problems.push(`"${l.title}" مبقاش متاح`);
+        else if (l.available === 0) problems.push(`"${l.title}" المنتج خلص`);
         else if (l.issues.includes('INSUFFICIENT_STOCK')) problems.push(`الكمية اللي طلبتها من "${l.title}" مش متوفرة (المتاح ${l.available})`);
       }
     }
@@ -104,8 +115,11 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         where s.id = ${g.sellerId} and (s.owner_user_id = ${customerId} or m.user_id is not null) limit 1`);
       if (own.rows.length) throw new DomainError('INVALID_STATE', `مينفعش تشتري منتجات من متجرك "${g.storeName}"`);
     }
-    if (priced.grandTotal !== d.expectedTotal || priced.groups.some((g) => g.lines.some((l) => l.issues.includes('PRICE_CHANGED')))) {
-      throw new DomainError('CONFLICT', 'تغيّرت الأسعار أو تكلفة الشحن. راجع الإجمالي الجديد وأكّد تاني');
+    const changedPrices = priced.groups.flatMap((g) => g.lines.filter((l) => l.issues.includes('PRICE_CHANGED')).map((l) => l.title));
+    if (changedPrices.length) throw new DomainError('CONFLICT', `السعر اتغير: ${changedPrices.join('، ')}. راجع الإجمالي الجديد وأكّد تاني`);
+    if (priced.grandTotal !== d.expectedTotal) {
+      // Never silently charge an old or new amount: the buyer must see and confirm the changed total.
+      throw new DomainError('CONFLICT', `الإجمالي اتغير من ${formatEGP(d.expectedTotal)} إلى ${formatEGP(priced.grandTotal)} (الشحن أو رسوم الخدمة اتغيرت). راجع وأكّد تاني`);
     }
 
     const windowHours = await getSetting('payments.paymentWindowHours', tx);
@@ -133,7 +147,25 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         merchandiseTotal: priced.merchandiseTotal,
         shippingTotal: priced.shippingTotal,
         discountTotal: priced.discountTotal,
+        buyerFeeTotal: priced.buyerFeeTotal,
         grandTotal: priced.grandTotal,
+        economicSnapshot: {
+          version: 1,
+          currency: 'EGP',
+          feeBasis: 'PRODUCT_SUBTOTAL',
+          feeBuyerShareBps: feeConfig.buyerShareBps,
+          feeSellerShareBps: 10000 - feeConfig.buyerShareBps,
+          feeConfigOwnerApproved: feeConfig.ownerApproved,
+          feeRounding: FEE_ROUNDING_RULE,
+          buyerFeeTotal: priced.buyerFeeTotal,
+          sellerFeeTotal: priced.sellerFeeTotal,
+          shippingPayer: 'BUYER',
+          shippingPayee: 'SELLER_FULFILMENT',
+          shippingInputs: { governorateId: address.governorateId, perSeller: priced.groups.map((g) => ({ sellerId: g.sellerId, fee: g.shippingFee, free: g.freeShippingApplied })) },
+          discounts: { total: 0, funder: null },
+          termsVersions: { buyerTerms: await currentLegalVersion(tx, 'BUYER_TERMS'), feesPolicy: await currentLegalVersion(tx, 'FEES_POLICY'), termsOfUse: await currentLegalVersion(tx, 'TERMS_OF_USE') },
+          acceptedAt: new Date().toISOString(),
+        },
         paymentMethod: d.paymentMethod,
         paymentDueAt: dueAt,
         checkoutKey: d.checkoutKey,
@@ -150,10 +182,15 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       const [store] = await tx.select().from(stores).where(eq(stores.sellerId, g.sellerId));
       const policyProducts = await tx.select().from(products).where(inArray(products.id, g.lines.map((l) => l.productId)));
       const legalNoticeVersion = await currentLegalVersion(tx, 'RETURNS_POLICY');
+      let buyerFee = 0;
+      let sellerFee = 0;
       for (const l of g.lines) {
         const rule = await resolveRule(tx, l.categoryId, now);
         const c = computeLineCommission(rule, l.unitPrice, l.quantity);
+        const split = splitFee(c.amount, feeConfig.buyerShareBps);
         commissionTotal += c.amount;
+        buyerFee += split.buyer;
+        sellerFee += split.seller;
         itemRows.push({
           sellerOrderId: '',
           productId: l.productId,
@@ -170,10 +207,12 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           commissionRuleId: rule.id,
           commissionBps: c.bps,
           commissionAmount: c.amount,
+          buyerFeeAmount: split.buyer,
+          sellerFeeAmount: split.seller,
           returnPolicySnapshot: { ...listingReturnPolicy(policyProducts.find((x) => x.id === l.productId)!, store), legalNoticeVersion },
         });
       }
-      const gross = g.merchandiseSubtotal + (g.shippingFee ?? 0);
+      const gross = g.merchandiseSubtotal + (g.shippingFee ?? 0) + buyerFee;
       const [so] = await tx
         .insert(sellerOrders)
         .values({
@@ -183,9 +222,12 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           status: 'PENDING_PAYMENT',
           merchandiseSubtotal: g.merchandiseSubtotal,
           shippingFee: g.shippingFee ?? 0,
+          buyerFeeTotal: buyerFee,
+          sellerFeeTotal: sellerFee,
           grossTotal: gross,
           commissionBasis: g.merchandiseSubtotal,
           commissionTotal,
+          shippingPayee: 'SELLER_FULFILMENT',
           sellerNet: gross - commissionTotal,
           shippingEtaMinDays: g.etaMinDays,
           shippingEtaMaxDays: g.etaMaxDays,
@@ -247,9 +289,16 @@ async function closeUnpaid(tx: DbOrTx, actor: Actor, orderId: string, paymentTo:
   const sos = await tx.select().from(sellerOrders).where(eq(sellerOrders.orderId, order.id)).for('update');
   for (const so of sos) {
     await transition(tx, actor, sellerOrderMachine, so.id, so.status, 'CANCELLED', reason);
-    await tx.update(sellerOrders).set({ status: 'CANCELLED', cancelledAt: new Date(), cancelReason: reason, cancelledBy: actor.userId }).where(eq(sellerOrders.id, so.id));
+    await tx
+      .update(sellerOrders)
+      .set({ status: 'CANCELLED', cancelledAt: new Date(), cancelReason: reason, cancelledBy: actor.userId, cancelReasonCode: paymentTo === 'EXPIRED' ? 'PAYMENT_FAILURE' : 'BUYER_REQUEST', cancellationRequestedAt: null })
+      .where(eq(sellerOrders.id, so.id));
     const items = await tx.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
-    for (const it of items) await releaseReservation(tx, it.id);
+    for (const it of items) await releaseReservation(tx, it.id, paymentTo === 'EXPIRED' ? 'EXPIRED' : 'RELEASED');
+    await tx
+      .update(cancellationRequests)
+      .set({ status: 'ACCEPTED', decidedAt: new Date(), decisionNote: reason })
+      .where(and(eq(cancellationRequests.sellerOrderId, so.id), eq(cancellationRequests.status, 'PENDING')));
   }
   await audit(tx, actor, { action: paymentTo === 'EXPIRED' ? 'order.expired' : 'order.cancelled_unpaid', entityType: 'order', entityId: order.id, reason });
   return true;
@@ -295,13 +344,25 @@ export async function expireOverdueOrders(now = new Date()) {
 export async function syncParentStatus(tx: DbOrTx, actor: Actor, orderId: string) {
   const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
   const sos = await tx.select({ status: sellerOrders.status }).from(sellerOrders).where(eq(sellerOrders.orderId, orderId));
-  let to: OrderStatus | null = null;
-  if (sos.every((s) => s.status === 'CANCELLED')) to = 'CANCELLED';
-  else if (sos.every((s) => s.status === 'COMPLETED' || s.status === 'CANCELLED')) to = 'COMPLETED';
+  const to = deriveParentStatus(sos.map((s) => s.status));
   if (to && to !== order.status && orderMachine.can(order.status, to)) {
     await transition(tx, actor, orderMachine, order.id, order.status, to);
-    await tx.update(orders).set({ status: to, ...(to === 'COMPLETED' ? { completedAt: new Date() } : { cancelledAt: new Date() }) }).where(eq(orders.id, order.id));
+    await tx.update(orders).set({ status: to, ...(to === 'CANCELLED' ? { cancelledAt: new Date() } : { completedAt: new Date() }) }).where(eq(orders.id, order.id));
   }
+}
+
+/**
+ * Parent status from its sub-orders. Mixed outcomes stay explicit: a cancelled or failed sub-order is
+ * never presented as successfully completed. Returns null while any sub-order is still in progress.
+ */
+export function deriveParentStatus(statuses: string[]): OrderStatus | null {
+  if (!statuses.length) return null;
+  const finalStates = ['COMPLETED', 'CANCELLED', 'DELIVERY_FAILED'];
+  if (statuses.every((s) => s === 'CANCELLED')) return 'CANCELLED';
+  if (!statuses.every((s) => finalStates.includes(s))) return null;
+  if (statuses.every((s) => s === 'COMPLETED')) return 'COMPLETED';
+  if (statuses.some((s) => s === 'COMPLETED')) return 'PARTIALLY_COMPLETED';
+  return 'CLOSED_UNFULFILLED';
 }
 
 /* ───────── Reads (ownership enforced) ───────── */

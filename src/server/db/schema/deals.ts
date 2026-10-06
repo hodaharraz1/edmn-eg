@@ -58,6 +58,14 @@ export const externalDeals = pgTable(
     handoverOtpId: uuid(),
     buyerConfirmedAt: ts(),
     deliveryConflictAt: ts(),
+    /** Buyer response window after the verified OTP handover (server time; never restarted). */
+    buyerResponseDueAt: ts(),
+    /** BUYER_CONFIRMED | TIMEOUT_ENTITLEMENT | DISPUTE_DECISION — entitlement only; release needs Admin approval. */
+    receiptBasis: text(),
+    entitledAt: ts(),
+    /** Refund to the buyer decided by a dispute, to be settled together with the Admin release. */
+    pendingBuyerRefund: money().notNull().default(0),
+    releaseApprovalId: uuid(),
     /** Operations hold: while true the buyer's confirmation cannot make the payout payable. */
     financialHold: boolean().notNull().default(false),
     // Step 3 — price & terms
@@ -161,6 +169,7 @@ export const dealPayouts = pgTable(
     payeeUserId: uuid().references(() => users.id),
     amount: money().notNull(),
     status: text({ enum: DEAL_PAYOUT_STATUSES }).notNull().default('PENDING'),
+    payoutApprovalId: uuid(),
     paidReference: text(),
     paidProofFileId: uuid().references(() => files.id),
     paidBy: uuid().references(() => users.id),

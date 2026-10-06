@@ -51,9 +51,10 @@ describe('pilot safety — real money is off unless explicitly enabled', () => {
   it('with real money enabled only real destinations are offered and payments are not test', async () => {
     delete process.env.EDMN_ENVIRONMENT;
     await saveDestination(admin, null, { methodCode: 'INSTAPAY', label: 'حساب الشركة الرسمي', details: { instapayAddress: 'company@instapay' }, isEnabled: true, isTest: false }, 'حساب معتمد');
-    // P0 regression: go-live is refused while any test payment, withdrawal, refund, deal payout or
-    // seller/deal balance still exists — test money can never become real money.
-    await expect(updateSetting(admin, 'payments.realMoneyEnabled', true, 'go-live approved')).rejects.toThrow(/تجريبية مفتوحة/);
+    // P0 regression: go-live is refused (fail closed) while any mandatory control is missing — the go-live
+    // gate (restore drill, providers, legal/fee approval, 2FA, maker/checker 0, invariants …) and, after
+    // it, any open test payment/withdrawal/refund/balance. Test money can never become real money.
+    await expect(updateSetting(admin, 'payments.realMoneyEnabled', true, 'go-live approved')).rejects.toThrow(/لا يمكن تفعيل الأموال الحقيقية/);
     // Simulate a clean production database where an authorized admin enabled real money.
     await db.insert(systemSettings).values({ key: 'payments.realMoneyEnabled', value: true }).onConflictDoUpdate({ target: systemSettings.key, set: { value: true } });
     expect(await realMoneyEnabled()).toBe(true);

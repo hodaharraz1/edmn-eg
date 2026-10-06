@@ -19,9 +19,14 @@ export const notifications = pgTable(
     body: text().notNull(),
     link: text(),
     readAt: ts(),
+    /** Business-event identity: a retried event never creates a second identical notification. */
+    dedupeKey: text(),
     createdAt: createdAt(),
   },
-  (t) => [index('notifications_user_idx').on(t.userId, t.readAt, t.createdAt)],
+  (t) => [
+    index('notifications_user_idx').on(t.userId, t.readAt, t.createdAt),
+    uniqueIndex('notifications_dedupe_uq').on(t.userId, t.dedupeKey).where(sql`${t.dedupeKey} is not null`),
+  ],
 );
 
 export const OUTBOUND_STATUSES = ['PENDING', 'SENT', 'FAILED'] as const;
