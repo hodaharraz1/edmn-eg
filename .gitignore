@@ -5,6 +5,7 @@
 /coverage
 /playwright-report
 /test-results
+/test-results-*
 /storage
 .DS_Store
 *.pem
