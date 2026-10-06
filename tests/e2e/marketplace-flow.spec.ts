@@ -6,8 +6,9 @@ import { acceptDialogs, adminLogin, customerLogin, PDF, png, q } from './helpers
  * seller registers → verifies mobile → submits identity/store/documents/payout → admin approves →
  * seller sets governorate shipping and adds a product → admin approves it → it is live →
  * buyer finds it, adds to cart, checks out, uploads manual payment proof → admin confirms →
- * seller confirms, uploads the mandatory waybill and ships → buyer confirms receipt →
- * seller balance becomes available → seller requests a withdrawal → admin approves and pays it.
+ * seller confirms, uploads the mandatory waybill and ships → buyer confirms receipt (entitlement only,
+ * no money moves) → a finance checker explicitly approves the seller release → seller balance becomes
+ * available → seller requests a withdrawal (reserves nothing) → admin approves (reserves) and pays it.
  * Every state change is asserted against the database.
  */
 test.describe.configure({ mode: 'serial' });
@@ -178,7 +179,7 @@ test('admin verifies the payment', async ({ browser }) => {
   const page = await adminLogin(browser, 'payments@edmn.local');
   acceptDialogs(page);
   await page.goto(`/admin/payments/${p.id}`);
-  await page.getByRole('button', { name: /تأكيد الدفع/ }).click();
+  await page.getByRole('button', { name: /تأكيد دفع/ }).click();
   await expect.poll(async () => (await q<{ status: string }>(`select status from payments where id = $1`, [p.id]))[0].status).toBe('CONFIRMED');
   expect(await soStatus()).toBe('PAID');
 });
@@ -209,14 +210,28 @@ test('seller confirms, processes and ships with a mandatory waybill', async ({ b
   expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_AVAILABLE'`, [sellerId]))[0]?.b ?? 0)).toBe(0);
 });
 
-test('buyer confirms receipt and the seller balance becomes available', async ({ browser }) => {
+test('buyer confirms receipt: entitlement only — nothing becomes available without an Admin release', async ({ browser }) => {
   const page = await customerLogin(browser, 'mona@demo.edmn.local');
   await page.goto(`/account/orders/${orderId}`);
   await page.getByRole('button', { name: 'أكّد الاستلام' }).click();
   await expect.poll(soStatus).toBe('DELIVERED');
+  const [{ basis }] = await q<{ basis: string }>(`select receipt_basis basis from seller_orders where id = $1`, [soId]);
+  expect(basis).toBe('BUYER_CONFIRMED');
+  expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_AVAILABLE'`, [sellerId]))[0]?.b ?? 0)).toBe(0);
+  expect((await q(`select id from journal_entries where entry_type = 'SELLER_RELEASE' and source_id = $1`, [soId])).length).toBe(0);
+});
+
+test('finance checker explicitly approves the seller release → available, order COMPLETED', async ({ browser }) => {
+  const checker = await adminLogin(browser, 'checker@edmn.local');
+  await checker.goto(`/admin/releases/${soId}`);
+  await checker.locator('input[name=reason]').fill('استلام مؤكد من المشتري ولا توجد موانع');
+  await checker.getByRole('button', { name: /اعتماد إتاحة/ }).click();
   const [{ net }] = await q<{ net: string }>(`select seller_net as net from seller_orders where id = $1`, [soId]);
   await expect.poll(async () => Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_AVAILABLE'`, [sellerId]))[0]?.b ?? 0)).toBe(Number(net));
-  // 1000 EGP item, kitchen category commission (13% benchmark) → seller net excludes commission.
+  await expect.poll(soStatus).toBe('COMPLETED');
+  const [{ approval }] = await q<{ approval: string | null }>(`select release_approval_id approval from seller_orders where id = $1`, [soId]);
+  expect(approval).toBeTruthy();
+  expect((await q(`select id from journal_entries where entry_type = 'SELLER_RELEASE' and source_id = $1 and approval_id = $2`, [soId, approval])).length).toBe(1);
   const [{ c }] = await q<{ c: string }>(`select commission_total c from seller_orders where id = $1`, [soId]);
   expect(Number(c)).toBeGreaterThan(0);
 });
@@ -228,14 +243,16 @@ test('seller requests a withdrawal; admin approves and records the transfer', as
   await seller.getByRole('button', { name: 'تقديم طلب السحب' }).click();
   await expect.poll(async () => (await q(`select id from withdrawal_requests where seller_id = $1 and amount = 50000 and status = 'REQUESTED'`, [sellerId])).length).toBe(1);
   const [w] = await q<{ id: string }>(`select id from withdrawal_requests where seller_id = $1`, [sellerId]);
-  // Reserved immediately: available decreased, reserved increased.
-  expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_WITHDRAWAL_RESERVED'`, [sellerId]))[0].b)).toBe(50000);
+  // A request moves no money and reserves nothing; the Admin approval reserves.
+  expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_WITHDRAWAL_RESERVED'`, [sellerId]))[0]?.b ?? 0)).toBe(0);
+  expect((await q(`select id from journal_entries where source_id = $1`, [w.id])).length).toBe(0);
 
   const checker = await adminLogin(browser, 'checker@edmn.local');
   await checker.goto(`/admin/withdrawals/${w.id}`);
   await expect(checker.getByRole('button', { name: 'تأكيد الصرف' })).toHaveCount(0); // checker cannot pay
   await checker.getByRole('button', { name: 'اعتماد للصرف' }).click();
   await expect.poll(async () => (await q<{ status: string }>(`select status from withdrawal_requests where id = $1`, [w.id]))[0].status).toBe('APPROVED');
+  expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_WITHDRAWAL_RESERVED'`, [sellerId]))[0].b)).toBe(50000);
 
   const operator = await adminLogin(browser, 'finance@edmn.local');
   await operator.goto(`/admin/withdrawals/${w.id}`);

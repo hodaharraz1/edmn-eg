@@ -8,7 +8,8 @@ import { acceptDialogs, adminLogin, customerLogin, png, q } from './helpers';
  * → seller verifies the phone, enters own details / pickup address (GPS denied → manual) / offer with
  * "no voluntary returns" → buyer requests a return-policy change → seller accepts → terms frozen →
  * buyer pays (manual proof) → admin verifies → addresses become visible → seller delivers → buyer
- * confirms "received and as described" → payout payable and paid by finance.
+ * confirms "received and as described" (entitlement) → finance checker approves the settlement →
+ * payout payable and paid by finance.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -216,7 +217,7 @@ test('buyer pays and admin verifies; addresses become visible to the parties', a
   acceptDialogs(admin);
   await admin.goto(`/admin/payments/${p.id}`);
   await admin.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await admin.getByRole('button', { name: /تأكيد الدفع/ }).click();
+  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
   await expect.poll(status).toBe('ACTIVE');
   await page.reload();
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
@@ -264,6 +265,15 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   await expect(choice.getByRole('link', { name: /استلمت بس فيه مشكلة/ })).toBeVisible();
   await expect(choice.getByText('لم أستلم المنتج فعليًا')).toBeVisible();
   await choice.getByRole('button', { name: 'استلمت والمنتج مطابق' }).click();
+  // Buyer confirmation = entitlement only: no settlement and no payout until an Admin approves.
+  await expect.poll(status).toBe('ENTITLED_AWAITING_RELEASE');
+  expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
+  expect(await q(`select id from deal_payouts where deal_id = $1`, [dealId])).toHaveLength(0);
+  const checker = await adminLogin(browser, 'checker@edmn.local');
+  await checker.goto(`/admin/deals/${dealId}`);
+  await checker.waitForLoadState('networkidle');
+  await checker.getByLabel('سبب الاعتماد').fill('استلام مؤكد من المشتري');
+  await checker.getByRole('button', { name: /اعتماد تسوية الصفقة/ }).click();
   await expect.poll(status).toBe('COMPLETED');
   const pos = await q<{ id: string; amount: string; status: string }>(`select id, amount, status from deal_payouts where deal_id = $1`, [dealId]);
   expect(pos).toHaveLength(1);
@@ -359,7 +369,7 @@ test('second deal reaches ACTIVE with the existing seller account (login path)',
   acceptDialogs(admin);
   await admin.goto(`/admin/payments/${p.id}`);
   await admin.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await admin.getByRole('button', { name: /تأكيد الدفع/ }).click();
+  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
   await expect.poll(status2).toBe('ACTIVE');
 });
 
