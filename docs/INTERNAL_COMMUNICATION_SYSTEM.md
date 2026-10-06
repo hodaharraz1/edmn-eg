@@ -129,7 +129,7 @@ Server actions: `sendMessageAction`, `reportMessageAction`, `hideMessageAction`,
 ## 14. Known limitations (V1)
 
 - Polling, not push; a new message appears within ~7 s.
-- The Seller Center sidebar unread badge may still show the conversation being opened until the next refresh (layout and page render in parallel).
+- Layout and page render in parallel, so the nav unread badge is corrected by one client refresh right after the conversation opens (`RefreshAfterRead`), not in the very first paint.
 - No per-message delivery receipts for each store member; «اتشافت» means any authorized store member (or the buyer) has opened it.
 - No full-text search of conversations for staff (deliberately; access is per order/deal/dispute and audited).
 - Attachments are images/PDF only.

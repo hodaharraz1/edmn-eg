@@ -82,8 +82,19 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
     await row.click();
     await expect(seller.getByRole('heading', { name: 'تواصل مع المشتري' })).toBeVisible();
     await expect(seller.getByTestId('message-body').filter({ hasText: text })).toBeVisible();
-    // Opening the conversation clears the sidebar badge right away (well before the 7 s polling refresh).
-    await expect(seller.locator('aside').getByTestId('unread-badge')).toHaveCount(0, { timeout: 4000 });
+    // Opening the conversation clears it from the sidebar badge right away (well before the 7 s polling refresh).
+    // Persistent staging data may hold other unread conversations of this store (e.g. manual acceptance tests), so the
+    // badge must equal exactly the unread count of the store's *other* conversations (read-only query).
+    const [{ n: otherUnread }] = await q<{ n: number }>(`
+      select count(*)::int as n from conversation_messages m
+        join conversations c on c.id = m.conversation_id
+        join sellers se on se.id = c.seller_id join users u on u.id = se.owner_user_id
+        left join conversation_reads r on r.conversation_id = c.id and r.user_id = u.id
+       where u.email = $1 and c.id <> $2 and m.sender_role = 'BUYER' and m.hidden_at is null
+         and (r.last_read_at is null or m.created_at > r.last_read_at)`, [fx.seller, convId]);
+    const badge = seller.locator('aside').getByTestId('unread-badge');
+    if (Number(otherUnread) === 0) await expect(badge).toHaveCount(0, { timeout: 4000 });
+    else await expect(badge).toHaveText(new RegExp(`^${otherUnread > 99 ? '99\\+' : otherUnread}`), { timeout: 4000 });
     await seller.waitForLoadState('networkidle');
     await seller.getByTestId('message-input').fill('أيوه مظبوط، وهشحنه بكرة');
     await seller.getByTestId('message-send').click();
