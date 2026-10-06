@@ -27,13 +27,13 @@ const anon = (meta: RequestMeta): Actor => ({ type: 'ANONYMOUS', userId: null, p
 export const registerSchema = z.object({
   fullName: z.string().trim().min(3, 'الاسم قصير جداً').max(120),
   email: z.string().trim().toLowerCase().email('البريد الإلكتروني غير صحيح').max(200),
-  phone: z.string().trim().min(8, 'رقم الهاتف غير صحيح'),
+  phone: z.string().trim().min(8, 'رقم الموبايل غير صحيح'),
   password: z.string().min(1),
 });
 
 export async function register(input: z.input<typeof registerSchema>, meta: RequestMeta) {
   const parsed = registerSchema.safeParse(input);
-  if (!parsed.success) throw validation('يرجى مراجعة البيانات', z.flattenError(parsed.error).fieldErrors as Record<string, string[]>);
+  if (!parsed.success) throw validation('راجع البيانات اللي كتبتها', z.flattenError(parsed.error).fieldErrors as Record<string, string[]>);
   const { fullName, email, password } = parsed.data;
   const phone = normalizeEgyptMobile(parsed.data.phone);
   if (!phone) throw validation('رقم الموبايل المصري غير صحيح', { phone: ['رقم الموبايل المصري غير صحيح'] });
@@ -45,7 +45,7 @@ export async function register(input: z.input<typeof registerSchema>, meta: Requ
     .select({ id: users.id })
     .from(users)
     .where(or(eq(users.email, email), eq(users.phone, phone)));
-  if (existing.length) throw validation('البريد الإلكتروني أو رقم الهاتف مسجل بالفعل. جرّب تسجيل الدخول.');
+  if (existing.length) throw validation('البريد الإلكتروني أو رقم الموبايل متسجل قبل كده. جرّب تسجّل دخول.');
 
   const passwordHash = await hashPassword(password);
   return db.transaction(async (tx) => {
@@ -115,7 +115,7 @@ export async function login(identifier: string, password: string, scope: Scope, 
     });
     throw generic;
   }
-  if (user.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'هذا الحساب غير مفعّل. تواصل مع الدعم');
+  if (user.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'الحساب ده مش مفعّل. تواصل مع الدعم');
   if (scope === 'ADMIN' && !user.isStaff) throw generic; // one hash already ran: equal timing
   return db.transaction(async (tx) => {
     await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
@@ -226,7 +226,7 @@ export async function requestPasswordReset(identifier: string, meta: RequestMeta
       expiresAt: new Date(Date.now() + 30 * 60_000),
     });
     const link = `${env().APP_URL}/reset-password?token=${token}`;
-    await sendDirect(tx, 'ACCOUNT_SECURITY', { email: user.email }, { message: `لإعادة تعيين كلمة المرور استخدم الرابط التالي خلال 30 دقيقة: ${link}` });
+    await sendDirect(tx, 'ACCOUNT_SECURITY', { email: user.email }, { message: `عشان تغيّر كلمة المرور، افتح الرابط ده خلال 30 دقيقة: ${link}` });
   });
 }
 
@@ -235,7 +235,7 @@ export async function resetPassword(token: string, newPassword: string, meta: Re
     .select()
     .from(authTokens)
     .where(and(eq(authTokens.tokenHash, sha256(token)), eq(authTokens.purpose, 'PASSWORD_RESET'), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())));
-  if (!row) throw validation('رابط إعادة التعيين غير صالح أو منتهي الصلاحية');
+  if (!row) throw validation('رابط تغيير كلمة المرور غير صالح أو انتهت صلاحيته');
   const [user] = await db.select().from(users).where(eq(users.id, row.userId));
   const problem = passwordProblems(newPassword, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY);
   if (problem) throw validation(problem);
@@ -246,7 +246,7 @@ export async function resetPassword(token: string, newPassword: string, meta: Re
       .set({ usedAt: new Date() })
       .where(and(eq(authTokens.id, row.id), isNull(authTokens.usedAt)))
       .returning();
-    if (!used.length) throw validation('تم استخدام هذا الرابط بالفعل');
+    if (!used.length) throw validation('الرابط ده اتستخدم قبل كده');
     await tx.update(users).set({ passwordHash: hash, passwordChangedAt: new Date(), failedLoginCount: 0, lockedUntil: null }).where(eq(users.id, row.userId));
     await tx.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.userId, row.userId), isNull(sessions.revokedAt)));
     await audit(tx, { ...anon(meta), userId: row.userId }, { action: 'auth.password_reset', entityType: 'user', entityId: row.userId });
@@ -281,7 +281,7 @@ export async function sendVerificationCode(userId: string, channel: 'EMAIL' | 'P
     await tx.update(authTokens).set({ usedAt: new Date() }).where(and(eq(authTokens.userId, userId), eq(authTokens.purpose, purpose), isNull(authTokens.usedAt)));
     await tx.insert(authTokens).values({ userId, purpose, tokenHash: codeHash(userId, purpose, code), expiresAt: new Date(Date.now() + 15 * 60_000) });
     await sendDirect(tx, 'ACCOUNT_SECURITY', channel === 'EMAIL' ? { email: user.email } : { phone: user.phone }, {
-      message: `رمز التحقق الخاص بك في اضمن: ${code} (صالح لمدة 15 دقيقة)`,
+      message: `رمز التحقق بتاعك في اضمن: ${code}. صالح لمدة 15 دقيقة. ما تشاركوش مع حد.`,
     });
   });
 }

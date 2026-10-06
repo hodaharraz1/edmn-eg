@@ -17,7 +17,7 @@ export async function hit(key: string, limit: number, windowSeconds: number): Pr
 
 export async function enforce(key: string, limit: number, windowSeconds: number): Promise<void> {
   if (!(await hit(key, limit, windowSeconds))) {
-    throw new DomainError('RATE_LIMITED', 'محاولات كثيرة. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى');
+    throw new DomainError('RATE_LIMITED', 'محاولات كتير. استنى شوية وجرّب تاني');
   }
 }
 

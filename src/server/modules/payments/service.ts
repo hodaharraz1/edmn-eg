@@ -59,9 +59,9 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
     if (p.payerUserId !== userId) throw forbidden();
     const [same] = await tx.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, p.id), eq(paymentSubmissions.clientKey, d.clientKey)));
     if (same) return { submission: same, created: false };
-    if (p.status === 'PAYMENT_SUBMITTED' || p.status === 'UNDER_REVIEW') throw invalidState('تم استلام إثبات دفع لهذا الطلب وهو قيد المراجعة بالفعل');
-    if (p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('لا يمكن رفع إثبات دفع لهذه العملية');
-    if (p.dueAt < new Date() && p.status === 'AWAITING_PAYMENT') throw invalidState('انتهت مهلة الدفع لهذا الطلب');
+    if (p.status === 'PAYMENT_SUBMITTED' || p.status === 'UNDER_REVIEW') throw invalidState('إثبات الدفع للطلب ده وصلنا وهو قيد المراجعة');
+    if (p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('مينفعش ترفع إثبات دفع للطلب ده دلوقتي');
+    if (p.dueAt < new Date() && p.status === 'AWAITING_PAYMENT') throw invalidState('مهلة الدفع للطلب ده خلصت');
     if (!proof) throw validation('ارفع صورة أو ملف إثبات الدفع', { proof: ['مطلوب'] });
     const file = await storeUpload(tx, actor, { purpose: 'PAYMENT_PROOF', data: proof.data, originalName: proof.name });
     const [sub] = await tx

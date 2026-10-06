@@ -29,7 +29,7 @@ export async function saveAddress(actor: Actor, id: string | null, input: z.inpu
   if (!phone) throw validation('رقم الموبايل غير صحيح', { phone: ['رقم الموبايل غير صحيح'] });
   return db.transaction(async (tx) => {
     const existing = await tx.select().from(addresses).where(and(eq(addresses.userId, userId), isNull(addresses.archivedAt)));
-    if (!id && existing.length >= 20) throw validation('الحد الأقصى 20 عنواناً');
+    if (!id && existing.length >= 20) throw validation('تقدر تحفظ 20 عنوان بالكتير');
     const makeDefault = d.isDefault || existing.length === 0;
     if (makeDefault) await tx.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, userId));
     const values = { ...d, phone, label: d.label || null, district: d.district || null, building: d.building || null, floor: d.floor || null, apartment: d.apartment || null, landmark: d.landmark || null, isDefault: makeDefault };

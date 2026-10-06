@@ -32,8 +32,8 @@ import { currentLegalVersion } from '@/server/modules/sellers/service';
 import { formatEGP } from '@/lib/format';
 
 export const checkoutSchema = z.object({
-  addressId: z.string().uuid('اختر عنوان التوصيل'),
-  paymentMethod: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'], { message: 'اختر طريقة الدفع' }),
+  addressId: z.string().uuid('اختار عنوان التوصيل'),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'], { message: 'اختار طريقة الدفع' }),
   checkoutKey: z.string().min(8).max(100),
   expectedTotal: z.number().int().min(0),
   note: z.string().trim().max(500).optional().default(''),
@@ -73,28 +73,28 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     if (dupe) return { order: dupe, created: false };
 
     const [address] = await tx.select().from(addresses).where(eq(addresses.id, d.addressId));
-    if (!address || address.userId !== customerId || address.archivedAt) throw validation('عنوان التوصيل غير صالح');
+    if (!address || address.userId !== customerId || address.archivedAt) throw validation('عنوان التوصيل ده غير صالح. اختار عنوان تاني');
     const [gov] = await tx.select().from(governorates).where(eq(governorates.id, address.governorateId));
 
     const [method] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, d.paymentMethod));
-    if (!method?.isEnabled) throw validation('طريقة الدفع غير متاحة حالياً');
+    if (!method?.isEnabled) throw validation('طريقة الدفع دي مش متاحة دلوقتي');
     const destinations = await tx
       .select()
       .from(paymentDestinations)
       .where(and(eq(paymentDestinations.methodCode, d.paymentMethod), offeredDestinations(await realMoneyEnabled(tx))))
       .orderBy(asc(paymentDestinations.sortOrder));
-    if (!destinations.length) throw validation('طريقة الدفع غير مهيأة حالياً. اختر طريقة أخرى');
+    if (!destinations.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي. اختار طريقة تانية');
 
     const lines = await cartLines(tx, { userId: customerId });
-    if (!lines.length) throw validation('سلة التسوق فارغة');
+    if (!lines.length) throw validation('السلة فاضية');
     const priced = await priceLines(tx, lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity, priceSeen: l.priceSeen })), address.governorateId);
 
     const problems: string[] = [];
     for (const g of priced.groups) {
       if (g.lines.some((l) => l.issues.includes('NO_SHIPPING'))) problems.push(`المتجر "${g.storeName}" لا يشحن إلى ${gov?.nameAr ?? 'محافظتك'}`);
       for (const l of g.lines) {
-        if (l.issues.includes('UNAVAILABLE') || l.issues.includes('SELLER_UNAVAILABLE')) problems.push(`"${l.title}" لم يعد متاحاً`);
-        else if (l.issues.includes('INSUFFICIENT_STOCK')) problems.push(`الكمية المطلوبة من "${l.title}" غير متوفرة (المتاح ${l.available})`);
+        if (l.issues.includes('UNAVAILABLE') || l.issues.includes('SELLER_UNAVAILABLE')) problems.push(`"${l.title}" مبقاش متاح`);
+        else if (l.issues.includes('INSUFFICIENT_STOCK')) problems.push(`الكمية اللي طلبتها من "${l.title}" مش متوفرة (المتاح ${l.available})`);
       }
     }
     if (problems.length) throw new DomainError('INVALID_STATE', problems.join('، '));
@@ -102,10 +102,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     for (const g of priced.groups) {
       const own = await tx.execute(sql`select 1 from sellers s left join seller_members m on m.seller_id = s.id and m.user_id = ${customerId} and m.is_active
         where s.id = ${g.sellerId} and (s.owner_user_id = ${customerId} or m.user_id is not null) limit 1`);
-      if (own.rows.length) throw new DomainError('INVALID_STATE', `لا يمكنك شراء منتجات من متجرك "${g.storeName}"`);
+      if (own.rows.length) throw new DomainError('INVALID_STATE', `مينفعش تشتري منتجات من متجرك "${g.storeName}"`);
     }
     if (priced.grandTotal !== d.expectedTotal || priced.groups.some((g) => g.lines.some((l) => l.issues.includes('PRICE_CHANGED')))) {
-      throw new DomainError('CONFLICT', 'تغيّرت الأسعار أو تكلفة الشحن. يرجى مراجعة الإجمالي الجديد ثم التأكيد مرة أخرى');
+      throw new DomainError('CONFLICT', 'تغيّرت الأسعار أو تكلفة الشحن. راجع الإجمالي الجديد وأكّد تاني');
     }
 
     const windowHours = await getSetting('payments.paymentWindowHours', tx);
@@ -262,7 +262,7 @@ export async function cancelUnpaidOrder(actor: Actor, orderId: string) {
     if (!o) throw notFound('الطلب');
     if (o.customerId !== userId) throw forbidden();
     const ok = await closeUnpaid(tx, actor, orderId, 'CANCELLED', 'ألغى العميل الطلب قبل الدفع');
-    if (!ok) throw invalidState('لا يمكن إلغاء الطلب بعد إرسال إثبات الدفع. تواصل مع الدعم');
+    if (!ok) throw invalidState('مينفعش تلغي الطلب بعد ما بعت إثبات الدفع. تواصل مع الدعم');
   });
 }
 

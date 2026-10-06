@@ -30,7 +30,7 @@ export async function runAction(fn: () => Promise<ActionState | void>): Promise<
     }
     const ref = Math.random().toString(36).slice(2, 10).toUpperCase();
     logger.error('action.failed', { ref, error: e as Error });
-    return { ok: false, error: `حدث خطأ غير متوقع. حاول مرة أخرى (مرجع: ${ref})`, at: Date.now() };
+    return { ok: false, error: `حصلت مشكلة غير متوقعة. جرّب تاني (مرجع: ${ref})`, at: Date.now() };
   }
 }
 

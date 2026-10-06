@@ -172,7 +172,7 @@ export async function confirmReceipt(actor: Actor, soId: string, opts: { onBehal
     if (!onBehalf && order.customerId !== userId) throw forbidden();
     if (onBehalf) await assertNotSelfDealing(tx, actor, so.sellerId);
     if (so.status === 'DELIVERED' || so.status === 'COMPLETED') return { alreadyConfirmed: true, released: !!so.fundsReleasedAt };
-    if (so.status !== 'SHIPPED') throw invalidState('يمكن تأكيد الاستلام بعد شحن الطلب فقط');
+    if (so.status !== 'SHIPPED') throw invalidState('تأكيد الاستلام بيبقى متاح بعد ما الطلب يتشحن بس');
 
     const now = new Date();
     await move(tx, actor, so, 'DELIVERED', {

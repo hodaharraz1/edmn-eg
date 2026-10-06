@@ -37,14 +37,14 @@ export async function addToCart(ref: CartRef, variantId: string, quantity: numbe
       .innerJoin(sellers, eq(sellers.id, products.sellerId))
       .where(eq(productVariants.id, variantId));
     if (!row || row.status !== 'LIVE' || !row.v.isActive || !['APPROVED', 'RESTRICTED'].includes(row.sellerStatus)) {
-      throw new DomainError('INVALID_STATE', 'هذا المنتج غير متاح حالياً');
+      throw new DomainError('INVALID_STATE', 'المنتج ده غير متاح دلوقتي');
     }
-    if ('userId' in ref && row.sellerOwner === ref.userId) throw validation('لا يمكنك شراء منتجات متجرك');
+    if ('userId' in ref && row.sellerOwner === ref.userId) throw validation('مينفعش تشتري منتجات من متجرك');
     const cart = await getOrCreateCart(tx, ref);
     const [existing] = await tx.select().from(cartItems).where(and(eq(cartItems.cartId, cart.id), eq(cartItems.variantId, variantId)));
     const newQty = Math.min(99, (existing?.quantity ?? 0) + quantity);
     const available = row.v.stockOnHand - row.v.reserved;
-    if (newQty > available) throw new DomainError('INSUFFICIENT_STOCK', available > 0 ? `المتاح ${available} فقط` : 'نفدت الكمية');
+    if (newQty > available) throw new DomainError('INSUFFICIENT_STOCK', available > 0 ? `المتاح ${available} فقط` : 'الكمية خلصت');
     if (existing) await tx.update(cartItems).set({ quantity: newQty, priceSeen: row.v.price }).where(eq(cartItems.id, existing.id));
     else await tx.insert(cartItems).values({ cartId: cart.id, variantId, quantity: newQty, priceSeen: row.v.price });
     return newQty;

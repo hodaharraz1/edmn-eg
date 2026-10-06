@@ -94,7 +94,7 @@ describe('multi-seller checkout', () => {
     await addToCart({ userId: c.user.id }, p.variantId, 1);
     await setListingActive(s.actor, p.productId, false);
     const view = await cartView({ userId: c.user.id }, 1);
-    await expect(placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: view.grandTotal })).rejects.toThrow(/لم يعد متاحاً/);
+    await expect(placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: view.grandTotal })).rejects.toThrow(/مبقاش متاح/);
   });
 
   it('EDGE 7 — suspended seller: new checkout blocked, existing paid orders remain intact', async () => {

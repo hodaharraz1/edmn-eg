@@ -21,7 +21,7 @@ export async function reserve(tx: DbOrTx, variantId: string, quantity: number, o
     .set({ reserved: sql`${productVariants.reserved} + ${quantity}` })
     .where(and(eq(productVariants.id, variantId), eq(productVariants.isActive, true), sql`${productVariants.stockOnHand} - ${productVariants.reserved} >= ${quantity}`))
     .returning({ id: productVariants.id, productId: productVariants.productId });
-  if (!res.length) throw new DomainError('INSUFFICIENT_STOCK', 'الكمية المطلوبة لم تعد متوفرة');
+  if (!res.length) throw new DomainError('INSUFFICIENT_STOCK', 'الكمية اللي طلبتها مبقتش متوفرة');
   await tx.insert(inventoryReservations).values({ variantId, orderItemId, quantity, expiresAt });
   await tx.insert(inventoryMovements).values({ variantId, type: 'RESERVE', deltaReserved: quantity, reference: `order_item:${orderItemId}` });
   await refreshProductReadModel(tx, res[0].productId);
