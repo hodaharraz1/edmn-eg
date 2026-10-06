@@ -89,6 +89,25 @@ test.describe('header delivery governorate', () => {
     await ctx.close();
   });
 
+  test('rapid switching through all 27: the header shows the new governorate the instant the selector closes', async ({ browser }) => {
+    test.setTimeout(240_000);
+    const { ctx, page } = await freshGuest(browser, 1440);
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    for (const name of [...GOV_NAMES, DAMIETTA]) {
+      await page.getByTestId('delivery-location').click();
+      await dialog(page).getByTestId('delivery-location-select').selectOption({ label: name });
+      await dialog(page).getByTestId('delivery-location-apply').click();
+      await expect(dialog(page)).toBeHidden();
+      // Deliberately NOT a retrying assertion: a stale header at close time is exactly the regression.
+      expect(await nameOf(page).innerText(), `header right after choosing ${name}`).toBe(name);
+    }
+    // Re-opening immediately shows the stored choice, not a previous one.
+    await page.getByTestId('delivery-location').click();
+    expect(await dialog(page).getByTestId('delivery-location-select').inputValue()).toBe('11');
+    await ctx.close();
+  });
+
   test('works before/without client JavaScript (no double click, native popover + form post)', async ({ browser }) => {
     const ctx = await browser.newContext({ locale: 'ar-EG', javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     const page = await ctx.newPage();

@@ -1,7 +1,7 @@
 'use client';
 
 import { MapPin } from 'lucide-react';
-import { useId, useRef, useState, useTransition, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, useTransition, type FormEvent } from 'react';
 import { setGovernorateAction } from '@/app/_actions/shop';
 import { cn } from '@/lib/cn';
 
@@ -25,6 +25,17 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
   const selectRef = useRef<HTMLSelectElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Set when the server stored the choice. The popover is closed only once the transition has committed
+  // (pending → false), i.e. after the refreshed header with the new governorate is on screen. Closing
+  // right after the action resolved left a window where the header (and a re-opened selector) still
+  // showed the previous governorate.
+  const saved = useRef(false);
+  useEffect(() => {
+    if (!pending && saved.current) {
+      saved.current = false;
+      popRef.current?.hidePopover();
+    }
+  }, [pending]);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,7 +47,7 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
         setError(res.error);
         return;
       }
-      popRef.current?.hidePopover();
+      saved.current = true;
     });
   }
 
