@@ -4,10 +4,10 @@ import { notFound } from 'next/navigation';
 import { and, eq, inArray } from 'drizzle-orm';
 import { MapPin, PackageCheck, RotateCcw, Scale, Star, Truck } from 'lucide-react';
 import { db } from '@/server/db/client';
-import { disputes, productReviews, returns, sellerReviews, shipmentDocuments, shipments, trackingEvents } from '@/server/db/schema';
+import { cancellationRequests, disputes, productReviews, refunds, returns, sellerReviews, shipmentDocuments, shipments, trackingEvents } from '@/server/db/schema';
 import { orderForCustomer } from '@/server/modules/commerce/orders';
 import { cancelUnpaidOrderAction } from '@/app/_actions/checkout';
-import { confirmReceiptAction } from '@/app/_actions/account';
+import { confirmReceiptAction, reportProblemAction, requestCancellationAction } from '@/app/_actions/account';
 import { isDomainError } from '@/server/core/errors';
 import { requireCustomer } from '@/server/web/session';
 import { sellerOrderMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
@@ -21,6 +21,7 @@ import { Breadcrumbs, PageHeader, Timeline } from '@/ui/data';
 import { Alert, StatusChip } from '@/ui/feedback';
 
 const STEPS = ['PAID', 'SELLER_CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED'] as const;
+const PRE_SHIP = ['PAID', 'SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP'];
 const STEP_LABEL: Record<string, string> = { PAID: 'اتدفع', SELLER_CONFIRMED: 'البائع أكّده', READY_TO_SHIP: 'جاهز للشحن', SHIPPED: 'اتشحن', DELIVERED: 'اتسلّم' };
 
 export default async function OrderDetail(props: PageProps<'/account/orders/[id]'>) {
@@ -44,6 +45,11 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
     soIds.length ? db.select({ soId: sellerReviews.sellerOrderId }).from(sellerReviews).where(and(eq(sellerReviews.customerId, actor.userId!), inArray(sellerReviews.sellerOrderId, soIds))) : [],
   ]);
   const events = ships.length ? await db.select().from(trackingEvents).where(inArray(trackingEvents.shipmentId, ships.map((s) => s.id))) : [];
+  const refundRows = soIds.length ? await db.select().from(refunds).where(inArray(refunds.sellerOrderId, soIds)) : [];
+  const refundsBySo = new Map<string, typeof refundRows>();
+  for (const r of refundRows) refundsBySo.set(r.sellerOrderId!, [...(refundsBySo.get(r.sellerOrderId!) ?? []), r]);
+  const cancelRows = soIds.length ? await db.select().from(cancellationRequests).where(and(inArray(cancellationRequests.sellerOrderId, soIds), eq(cancellationRequests.status, 'PENDING'))) : [];
+  const cancelsBySo = new Map(cancelRows.map((c) => [c.sellerOrderId, c]));
   const docs = ships.length ? await db.select().from(shipmentDocuments).where(inArray(shipmentDocuments.shipmentId, ships.map((s) => s.id))) : [];
   const reviewedItems = new Set(pReviews.map((r) => r.itemId));
   const reviewedSos = new Set(sReviews.map((r) => r.soId));
@@ -72,7 +78,9 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
         const ret = rets.filter((r) => r.sellerOrderId === so.id);
         const dsp = disp.find((d) => d.sellerOrderId === so.id);
         // PROCESSING sits between "confirmed" and "ready to ship"; COMPLETED is past delivery.
-        const stepIdx = so.status === 'PROCESSING' ? 1 : so.status === 'COMPLETED' ? STEPS.length - 1 : STEPS.indexOf(so.status as (typeof STEPS)[number]);
+        const stepIdx = so.status === 'PROCESSING' ? 1 : so.status === 'COMPLETED' ? STEPS.length - 1 : so.status === 'AWAITING_BUYER_RESPONSE' ? 3 : STEPS.indexOf(so.status as (typeof STEPS)[number]);
+        const soRefunds = refundsBySo.get(so.id) ?? [];
+        const pendingCancel = cancelsBySo.get(so.id);
         const delivered = so.status === 'DELIVERED' || so.status === 'COMPLETED';
         return (
           <section key={so.id} className="card overflow-hidden">
@@ -101,7 +109,15 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                   ))}
                 </ol>
               )}
-              {so.status === 'CANCELLED' && <Alert tone="danger" title="الشحنة دي اتلغت">السبب: {so.cancelReason ?? '—'}. أي مبلغ دفعته هيرجعلك.</Alert>}
+              {so.status === 'CANCELLED' && <Alert tone="danger" title="الشحنة دي اتلغت">السبب: {so.cancelReason ?? '—'}. لو كنت دفعت، طلب استرداد المبلغ اتسجل ومتابعته تحت.</Alert>}
+              {so.status === 'DELIVERY_FAILED' && <Alert tone="danger" title="التوصيل فشل">الشحنة رجعت للبائع أو اتفقدت. طلب استرداد المبلغ اتسجل ومتابعته تحت.</Alert>}
+              {so.status === 'AWAITING_BUYER_RESPONSE' && so.buyerResponseDueAt && (
+                <Alert tone="info" title="الطلب اتسلّم حسب شركة الشحن — عندك 24 ساعة">لو وصلك تمام أكّد الاستلام. لو ماوصلكش أو فيه مشكلة بلّغنا قبل <b>{formatDate(so.buyerResponseDueAt, true)}</b>. بعد المهلة بدون اعتراض المبلغ يفضل محجوز لحد موافقة الإدارة، وحقك في الإرجاع/النزاع حسب السياسة لسه قائم.</Alert>
+              )}
+              {pendingCancel && <Alert tone="warning">طلب الإلغاء بتاعك مستني رد البائع أو فريق اضمن، والشحن موقوف.</Alert>}
+              {soRefunds.map((r) => (
+                <p key={r.id} className="rounded-lg bg-page p-2 text-sm" data-testid="refund-status">استرداد {formatEGP(r.amount)}: <StatusChip status={r.status} /> {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) ? '— قيد مراجعة الإدارة' : ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) ? '— معتمد وجاري التحويل' : ['COMPLETED', 'PAID'].includes(r.status) ? `— اتحول${r.paidReference ? ` (مرجع ${r.paidReference})` : ''}` : ''}</p>
+              ))}
               <ul className="divide-y divide-line">
                 {items.map((it) => (
                   <li key={it.id} className="flex gap-3 py-3">
@@ -129,12 +145,29 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {so.status === 'SHIPPED' && (
+                {(so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE') && (
                   <ActionForm action={confirmReceiptAction} className="w-full space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                     <input type="hidden" name="sellerOrderId" value={so.id} />
                     <input type="hidden" name="orderId" value={order.id} />
-                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ لما تأكّد الاستلام، المبلغ بيتحوّل للبائع. متأكّدش قبل ما المنتج يوصلك فعلاً.</p>
+                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ تأكيدك بيثبت إن البائع يستحق المبلغ، والإدارة بتراجع وتوافق على تحويله له. متأكّدش قبل ما المنتج يوصلك فعلاً.</p>
                     <SubmitButton variant="success">أكّد الاستلام</SubmitButton>
+                  </ActionForm>
+                )}
+                {['SHIPPED', 'AWAITING_BUYER_RESPONSE', 'DELIVERED'].includes(so.status) && !so.fundsReleasedAt && !dsp && (
+                  <ActionForm action={reportProblemAction} className="w-full space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4" data-testid="report-problem-form">
+                    <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="orderId" value={order.id} />
+                    <p className="text-sm font-semibold">ماستلمتش الطلب أو فيه مشكلة؟</p>
+                    <select name="kind" className="rounded-lg border border-line bg-white p-2 text-sm" aria-label="نوع المشكلة"><option value="NOT_RECEIVED">ماستلمتش الطلب</option><option value="PRODUCT_PROBLEM">استلمت بس فيه مشكلة</option></select>
+                    <textarea name="description" required minLength={20} rows={2} className="block w-full rounded-lg border border-line bg-white p-2 text-sm" placeholder="اشرح المشكلة (20 حرف على الأقل)" aria-label="وصف المشكلة" />
+                    <SubmitButton variant="outline" size="sm">بلّغ فريق اضمن (المبلغ يتجمد)</SubmitButton>
+                  </ActionForm>
+                )}
+                {PRE_SHIP.includes(so.status) && !pendingCancel && (
+                  <ActionForm action={requestCancellationAction} className="w-full space-y-2 rounded-xl border border-line p-4">
+                    <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="orderId" value={order.id} />
+                    <p className="text-sm">ممكن تلغي الشحنة دي <b>قبل الشحن فقط</b>. {so.status === 'PAID' ? 'هتتلغي فورًا.' : 'البائع بيجهزها — هيتبعتله طلب إلغاء والشحن يتوقف لحد ما يتحسم.'} المبلغ المدفوع بيتسجل له طلب استرداد بيراجعه فريق اضمن.</p>
+                    <input name="reason" required minLength={3} className="block w-full rounded-lg border border-line bg-white p-2 text-sm" placeholder="سبب الإلغاء" aria-label="سبب الإلغاء" />
+                    <SubmitButton variant="outline" size="sm">إلغاء الشحنة</SubmitButton>
                   </ActionForm>
                 )}
                 {delivered && (
@@ -143,7 +176,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                     {!reviewedSos.has(so.id) && <LinkButton href={`/account/reviews?so=${so.id}`} variant="outline" size="sm"><Star className="size-4" /> قيّم البائع</LinkButton>}
                   </>
                 )}
-                {['PAID', 'SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(so.status) && !dsp && (
+                {['PAID', 'SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP', 'COMPLETED'].includes(so.status) && !dsp && (
                   <LinkButton href={`/account/disputes/new?so=${so.id}`} variant="ghost" size="sm"><Scale className="size-4" /> عندك مشكلة في الطلب؟</LinkButton>
                 )}
                 {dsp && <LinkButton href={`/account/disputes/${dsp.id}`} variant="secondary" size="sm">تابع النزاع #{dsp.number}</LinkButton>}
@@ -154,6 +187,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               <dl className="grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4">
                 <div><dt className="text-xs text-muted">المنتجات</dt><dd>{formatEGP(so.merchandiseSubtotal)}</dd></div>
                 <div><dt className="text-xs text-muted">الشحن</dt><dd>{formatEGP(so.shippingFee)}</dd></div>
+                {so.buyerFeeTotal > 0 && <div><dt className="text-xs text-muted">رسوم خدمة اضمن</dt><dd>{formatEGP(so.buyerFeeTotal)}</dd></div>}
                 <div><dt className="text-xs text-muted">الإجمالي</dt><dd className="font-semibold">{formatEGP(so.grossTotal)}</dd></div>
                 {so.refundedTotal > 0 && <div><dt className="text-xs text-muted">المسترد</dt><dd className="text-emerald-700">{formatEGP(so.refundedTotal)}</dd></div>}
               </dl>
@@ -172,7 +206,9 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
           <h2 className="mb-2 font-bold">ملخص الفاتورة</h2>
           <dl className="space-y-1">
             <div className="flex justify-between"><dt className="text-muted">المنتجات</dt><dd>{formatEGP(order.merchandiseTotal)}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd>{formatEGP(order.shippingTotal)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">الشحن (على المشتري)</dt><dd>{formatEGP(order.shippingTotal)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن (حصتك)</dt><dd>{formatEGP(order.buyerFeeTotal)}</dd></div>
+            <div className="flex justify-between text-xs"><dt className="text-muted">رسوم خدمة اضمن (حصة البائع — تُخصم منه)</dt><dd>{formatEGP(g.sellerOrders.reduce((a, { so }) => a + (so.buyerFeeTotal + so.sellerFeeTotal === 0 ? so.commissionTotal : so.sellerFeeTotal), 0))}</dd></div>
             <div className="flex justify-between font-bold"><dt>الإجمالي</dt><dd>{formatEGP(order.grandTotal)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">طريقة الدفع</dt><dd>{label('paymentMethod', order.paymentMethod)} · <StatusChip status={payment?.status} /></dd></div>
           </dl>

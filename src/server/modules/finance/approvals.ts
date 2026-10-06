@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { requireStepUp, type Actor } from '@/server/core/actor';
+import { enforce } from '@/server/auth/rate-limit';
 import { forbidden, invalidState } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { financialApprovals, type FinancialAction } from '@/server/db/schema';
@@ -47,6 +48,9 @@ export interface ApprovalRequest {
 export async function grantApproval(tx: DbOrTx, actor: Actor, req: ApprovalRequest): Promise<FinancialApproval> {
   if (actor.type !== 'ADMIN' || !actor.userId) throw forbidden('الحركات المالية تحتاج موافقة صريحة من الإدارة');
   requireStepUp(actor);
+  // Rate limit per approver (a runaway script / stolen session cannot fire unlimited approvals).
+  // Counted outside the business transaction so a refused operation still counts.
+  await enforce(`fin-approve:${actor.userId}`, 300, 3600);
   if (!Number.isSafeInteger(req.amount) || req.amount < 0) throw invalidState('مبلغ الموافقة غير صالح');
   if (req.dualControl && req.dualControl.requestedBy === actor.userId) {
     throw forbidden('هذه العملية تتطلب شخصين: لا يمكن لنفس الشخص أن يكون المنشئ والمعتمد');

@@ -67,7 +67,8 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             {hidden}<input type="hidden" name="op" value="approve" />
             <h2 className="font-bold">اعتماد (المراجِع)</h2>
             <Field label="ملاحظة"><Input name="note" /></Field>
-            <SubmitButton>اعتماد للصرف</SubmitButton>
+            <p className="text-xs text-muted">الاعتماد يعيد فحص الرصيد المتاح والحالة ويحجز {formatEGP(w.amount)} فورًا (قيد واحد بموافقتك). الطلب نفسه لم يحجز أي مبلغ.</p>
+            <SubmitButton>اعتماد وحجز {formatEGP(w.amount)}</SubmitButton>
           </ActionForm>
         )}
         {canPay && w.status === 'APPROVED' && <ActionForm action={withdrawalAdminAction} className="card p-5">{hidden}<input type="hidden" name="op" value="processing" /><SubmitButton variant="outline">بدء التحويل (قيد التنفيذ)</SubmitButton></ActionForm>}
@@ -86,7 +87,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5">
             {hidden}<input type="hidden" name="op" value="reject" />
             <h2 className="font-bold">رفض الطلب</h2>
-            <p className="text-xs text-muted">يُعاد المبلغ المحجوز إلى رصيد البائع المتاح.</p>
+            <p className="text-xs text-muted">{w.reservedAt ? 'يُعاد المبلغ المحجوز إلى رصيد البائع المتاح (قيد عكسي بموافقتك).' : 'لم يُحجز أي مبلغ لهذا الطلب.'}</p>
             <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
             <SubmitButton variant="danger">رفض</SubmitButton>
           </ActionForm>

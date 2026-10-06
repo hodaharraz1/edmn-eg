@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { addImages, archiveProduct, createDraft, markOutOfStock, removeImage, saveVariants, setListingActive, submitForReview, updateDetails, updateLogistics, withdrawSubmission } from '@/server/modules/catalog/products';
 import { setStock } from '@/server/modules/catalog/inventory';
-import { addTrackingEvent, advanceSellerOrder, cancelSellerOrder, confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
+import { addTrackingEvent, advanceSellerOrder, cancelSellerOrder, confirmSellerOrder, markShipped, saveShipment, decideCancellationRequest, recordShipmentException, submitDeliveryEvidence } from '@/server/modules/commerce/fulfilment';
 import { acceptReturnRefund, approveReturn, escalateReturn, markReturnReceived, rejectReturn, startInspection } from '@/server/modules/postpurchase/returns';
 import { respondToReview } from '@/server/modules/reviews/service';
 import { cancelWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
@@ -203,7 +203,12 @@ export async function sellerOrderAction(_p: ActionState, fd: FormData): Promise<
     else if (op === 'processing') await advanceSellerOrder(actor, id, 'PROCESSING');
     else if (op === 'ready') await advanceSellerOrder(actor, id, 'READY_TO_SHIP');
     else if (op === 'ship') await markShipped(actor, id);
-    else if (op === 'cancel') await cancelSellerOrder(actor, id, str(fd, 'reason'));
+    else if (op === 'cancel') await cancelSellerOrder(actor, id, str(fd, 'reason'), (['SELLER_UNABLE_TO_FULFIL', 'OUT_OF_STOCK', 'OTHER'].includes(str(fd, 'code')) ? str(fd, 'code') : 'SELLER_UNABLE_TO_FULFIL') as 'OTHER');
+    else if (op === 'acceptCancel') await decideCancellationRequest(actor, str(fd, 'requestId'), true, str(fd, 'reason'));
+    else if (op === 'deliveryEvidence') {
+      const f = await fileOf(fd, 'evidence');
+      await submitDeliveryEvidence(actor, id, { carrierReference: str(fd, 'carrierReference'), note: str(fd, 'note') }, f ? [f] : []);
+    } else if (op === 'shipmentException') await recordShipmentException(actor, id, str(fd, 'code') as 'CARRIER_EXCEPTION', str(fd, 'reason'));
     else if (op === 'tracking') await addTrackingEvent(actor, id, { status: str(fd, 'status') as 'IN_TRANSIT', description: str(fd, 'description') });
     return { message: 'تم التحديث' };
   });

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import {
   attributeOptions,
@@ -18,6 +18,7 @@ import { DEFAULT_ROLES } from '@/server/rbac/permissions';
 import { audit } from '@/server/audit/audit';
 import { SYSTEM_ACTOR } from '@/server/core/actor';
 import { LEGAL_TEXTS, LEGAL_VERSION } from './legal-texts';
+import { LEGAL_TEXTS_V11, LEGAL_V11_VERSION } from './legal-texts-v1_1';
 import type { LegalCode } from '@/server/modules/cms/service';
 import { LEGAL_CODES } from '@/server/modules/cms/service';
 
@@ -357,19 +358,35 @@ export async function seedReference() {
     });
   }
 
+  // Version 1.1 DRAFTS matching the hardened behaviour: published as the current version with status DRAFT
+  // (public pages show «مسودة قيد المراجعة القانونية»). Never marked APPROVED automatically.
+  for (const [code, body] of Object.entries(LEGAL_TEXTS_V11) as [LegalCode, string][]) {
+    const rows = await db.select().from(legalDocuments).where(eq(legalDocuments.code, code));
+    if (rows.some((r) => r.version === LEGAL_V11_VERSION)) continue;
+    const current = rows.find((r) => r.isCurrent);
+    await db.transaction(async (tx) => {
+      if (current) await tx.update(legalDocuments).set({ isCurrent: false }).where(eq(legalDocuments.id, current.id));
+      await tx.insert(legalDocuments).values({ code, version: LEGAL_V11_VERSION, title: LEGAL_CODES[code].title, body, status: 'DRAFT', isCurrent: true });
+      await audit(tx, SYSTEM_ACTOR, { action: 'legal.draft_published_for_review', entityType: 'legal_document', entityId: `${code}@${LEGAL_V11_VERSION}`, newValues: { status: 'DRAFT', previous: current ? `${current.version}/${current.status}` : null }, reason: 'Production hardening: text aligned with the implemented business rules — LEGAL REVIEW REQUIRED' });
+    });
+  }
+  // Homepage trust copy that described the old automatic release (content only; edited text is left alone).
+  await db.execute(sql`update cms_blocks set data = replace(data::text, ${'بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.'}, ${'تأكيدك للاستلام يثبت استحقاق البائع، والإدارة توافق يدويًا على إتاحة المبلغ له.'})::jsonb
+    where data::text like ${'%بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.%'}`);
+
   // Homepage CMS defaults (editable from Admin → CMS)
   const [anyBlock] = await db.select({ id: cmsBlocks.id }).from(cmsBlocks).limit(1);
   if (!anyBlock) {
     // Order follows the homepage hierarchy.
     const blocks: (typeof cmsBlocks.$inferInsert)[] = [
-      { type: 'HERO', title: 'الرئيسية', sortOrder: 0, data: { heading: 'كل اللي محتاجه من بائعين موثّقين', subheading: 'منتجات جديدة ومستعملة من متاجر مصرية تمت مراجعتها. ادفع لاضمن، والبائع يستلم مستحقاته بعد ما تأكد استلام طلبك.', ctaLabel: 'تسوّق العروض', ctaHref: '/deals' } },
+      { type: 'HERO', title: 'الرئيسية', sortOrder: 0, data: { heading: 'كل اللي محتاجه من بائعين موثّقين', subheading: 'منتجات جديدة ومستعملة من متاجر مصرية تمت مراجعتها. ادفع لاضمن، والبائع ما يستلمش مستحقاته غير بعد استلامك وموافقة الإدارة.', ctaLabel: 'تسوّق العروض', ctaHref: '/deals' } },
       { type: 'FEATURED_CATEGORIES', title: 'تسوّق حسب التصنيف', sortOrder: 1, data: { categorySlugs: ['mobile-phones', 'computers', 'tvs', 'large-appliances', 'small-appliances', 'men', 'women', 'shoes', 'home', 'beauty', 'toys', 'sports'] } },
       { type: 'PRODUCT_RAIL', title: 'عروض اليوم', sortOrder: 2, data: { source: 'DEALS', limit: 8 } },
       { type: 'PRODUCT_RAIL', title: 'مقترحات لك', sortOrder: 3, data: { source: 'RECOMMENDED', limit: 8 } },
       { type: 'PRODUCT_RAIL', title: 'الأكثر مبيعاً', sortOrder: 4, data: { source: 'BEST_SELLERS', limit: 8 } },
       { type: 'PRODUCT_RAIL', title: 'مستعمل بحالة ممتازة', sortOrder: 5, data: { source: 'USED', limit: 8 } },
       { type: 'FEATURED_SELLERS', title: 'متاجر موثّقة', sortOrder: 6, data: { storeSlugs: [] } },
-      { type: 'DEAL_CTA', title: 'صفقة خارج السوق', sortOrder: 7, data: { heading: 'لقيت حاجة برّه اضمن؟ اشتريها بأمان أكتر', body: 'لو اتفقت مع بائع على فيسبوك أو أي مكان، اعمل صفقة محمية: تدفع لاضمن، والبائع يستلم مستحقاته بعد ما تأكد الاستلام أو بعد انتهاء مدة الفحص المتفق عليها.', ctaLabel: 'ابدأ صفقة محمية' } },
+      { type: 'DEAL_CTA', title: 'صفقة خارج السوق', sortOrder: 7, data: { heading: 'لقيت حاجة برّه اضمن؟ اشتريها بأمان أكتر', body: 'لو اتفقت مع بائع على فيسبوك أو أي مكان، اعمل صفقة محمية: تدفع لاضمن، والبائع يستلم مستحقاته بعد تأكيدك للاستلام أو انتهاء مدة الفحص بدون اعتراض، وبموافقة الإدارة.', ctaLabel: 'ابدأ صفقة محمية' } },
       { type: 'TRUST', title: 'ليه تشتري من اضمن؟', sortOrder: 8, data: { items: [
         { title: 'بائعون تمت مراجعتهم', body: 'كل بائع يمر بمراجعة الهوية والمستندات قبل ما يبدأ البيع.' },
         { title: 'صور حقيقية للمستعمل', body: 'المنتج المستعمل يُعرض بصور القطعة نفسها مع حالتها وعيوبها.' },
@@ -379,7 +396,7 @@ export async function seedReference() {
       { type: 'TRUST', title: 'إزاي بنحمي مشترياتك؟', sortOrder: 9, data: { items: [
         { title: '١. تدفع لاضمن', body: 'التحويل يكون لحسابات اضمن المعلنة فقط، وفريقنا يتحقق من الدفع يدوياً.' },
         { title: '٢. البائع يشحن', body: 'البائع يرفع بوليصة الشحن، ورفعها لا يعني تحويل أي مستحقات له.' },
-        { title: '٣. تستلم وتأكد', body: 'بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.' },
+        { title: '٣. تستلم وتأكد', body: 'تأكيدك للاستلام يثبت استحقاق البائع، والإدارة توافق يدويًا على إتاحة المبلغ له.' },
         { title: '٤. مشكلة؟', body: 'تقدر تطلب إرجاع أو تفتح نزاع حسب السياسات قبل تأكيد الاستلام أو خلال المدة المحددة.' },
       ] } },
     ];

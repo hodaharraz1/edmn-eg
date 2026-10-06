@@ -287,6 +287,7 @@ export async function invitationByToken(token: string, viewerUserId?: string | n
  */
 export async function claimInvitation(actor: Actor, token: string) {
   const userId = requireUser(actor);
+  await enforce(`deal-claim:${userId}`, 20, 3600);
   return db.transaction(async (tx) => {
     // Lock order deal → invitation (same as refresh/revoke) to avoid deadlocks.
     const [found] = await tx.select({ dealId: dealInvitations.dealId }).from(dealInvitations).where(eq(dealInvitations.tokenHash, sha256(token)));

@@ -28,7 +28,9 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
     if (isDomainError(e)) notFound();
     throw e;
   }
-  const { so, order, items, shipment, documents, tracking } = g;
+  const { so, order, items, shipment, documents, tracking, deliveryEvidence, cancellations } = g;
+  const pendingCancel = cancellations.find((c) => c.status === 'PENDING');
+  const sellerFee = so.buyerFeeTotal + so.sellerFeeTotal === 0 ? so.commissionTotal : so.sellerFeeTotal;
   const addr = order.shippingAddress as Record<string, string | null>;
   const [dispute] = await db.select().from(disputes).where(eq(disputes.sellerOrderId, so.id));
   const rets = await db.select().from(returns).where(eq(returns.sellerOrderId, so.id));
@@ -43,6 +45,25 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الطلبات', href: '/seller/orders' }, { label: `#${order.number}-${so.suffix}` }]} />} title={`طلب #${order.number}-${so.suffix}`} description={`مدفوع في ${formatDate(so.paidAt, true)}`} actions={<><StatusChip status={so.status} />{canMessage && <MessageCtaLink href={`/seller/messages/open?so=${so.id}`} label="تواصل مع المشتري" unread={unreadMsgs} />}</>} />
       {so.status === 'PAID' && <Alert tone="warning" title="طلب جديد بانتظار تأكيدك">أكّد الطلب ثم جهّزه للشحن خلال {so.processingDays ?? 2} يوم عمل.</Alert>}
       {so.financialHold && <Alert tone="danger">يوجد تجميد إداري على مستحقات هذا الطلب: {so.holdReason}</Alert>}
+      {so.sellerResponseOverdueAt && so.status === 'PAID' && <Alert tone="danger">تأخرت في تأكيد الطلب (الموعد كان {formatDate(so.sellerResponseDueAt, true)}). فريق اضمن بيتابع.</Alert>}
+      {so.shipByDueAt && ['PAID', 'SELLER_CONFIRMED', 'PROCESSING', 'READY_TO_SHIP'].includes(so.status) && <p className="text-sm">آخر موعد للشحن: <b>{formatDate(so.shipByDueAt, true)}</b>{so.shipmentOverdueAt && ' — متأخر'}</p>}
+      {pendingCancel && (
+        <Alert tone="warning" title="المشتري طلب إلغاء الطلب قبل الشحن">
+          الشحن موقوف لحد ما الطلب يتحسم. {pendingCancel.note}
+          <ActionForm action={sellerOrderAction} className="mt-2 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="requestId" value={pendingCancel.id} /><input type="hidden" name="op" value="acceptCancel" />
+            <Input name="reason" required minLength={3} placeholder="ملاحظة" className="w-48" aria-label="ملاحظة" />
+            <SubmitButton size="sm">قبول الإلغاء</SubmitButton>
+          </ActionForm>
+          <p className="mt-1 text-xs">لو مش موافق، تواصل مع فريق اضمن — رفض الإلغاء قبل الشحن قرار إداري.</p>
+        </Alert>
+      )}
+      {so.status === 'SHIPPED' && so.deliveryReportDueAt && !so.sellerDeliveryConfirmedAt && (
+        <Alert tone="warning" title="مطلوب دليل التسليم">شركة الشحن أفادت بالتسليم. ارفع دليل التسليم قبل <b>{formatDate(so.deliveryReportDueAt, true)}</b> (24 ساعة)، وإلا الطلب يتحول لمراجعة فريق العمليات ومهلة المشتري مش هتبدأ.</Alert>
+      )}
+      {so.status === 'AWAITING_BUYER_RESPONSE' && <Alert tone="info">التسليم اتأكد. المشتري عنده لحد {formatDate(so.buyerResponseDueAt, true)} يأكد الاستلام أو يبلّغ عن مشكلة.</Alert>}
+      {so.status === 'DELIVERED' && !so.fundsReleasedAt && <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{label('receiptBasis', so.receiptBasis)}. المبلغ لسه مش متاح للسحب لحد موافقة الإدارة على الإتاحة.</Alert>}
+      {so.deliveryExceptionCode && <Alert tone="danger">الطلب عند فريق العمليات للمراجعة: {label('deliveryException', so.deliveryExceptionCode.replace(/^SHIPMENT_/, ''))}</Alert>}
       {dispute && <Alert tone="danger" title={`نزاع مفتوح #${dispute.number}`}>{dispute.description}</Alert>}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="card p-5">
@@ -58,7 +79,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4">
             <div><dt className="text-xs text-muted">المنتجات</dt><dd>{formatEGP(so.merchandiseSubtotal)}</dd></div>
             <div><dt className="text-xs text-muted">الشحن المحصّل</dt><dd>{formatEGP(so.shippingFee)}</dd></div>
-            <div><dt className="text-xs text-muted">عمولة اضمن</dt><dd>-{formatEGP(so.commissionTotal)}</dd></div>
+            <div><dt className="text-xs text-muted">رسوم اضمن عليك</dt><dd>-{formatEGP(sellerFee)}{so.buyerFeeTotal > 0 && <span className="block text-[11px] text-muted">+ {formatEGP(so.buyerFeeTotal)} يدفعها المشتري</span>}</dd></div>
             <div><dt className="text-xs text-muted">صافيك</dt><dd className="font-bold">{formatEGP(so.sellerNet)}</dd></div>
           </dl>
           {order.customerNote && <p className="mt-3 rounded-lg bg-page p-3 text-sm">ملاحظة العميل: {order.customerNote}</p>}
@@ -94,7 +115,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           {documents.length > 0 && <p className="text-xs text-emerald-700">تم رفع {documents.length} مستند: {documents.map((d, i) => <a key={d.id} href={`/api/files/${d.fileId}`} target="_blank" className="underline">بوليصة {i + 1}</a>)}</p>}
           {so.status !== 'SHIPPED' && <Checkbox name="markShipped" label="تحديد الطلب كـ «تم الشحن» وإبلاغ العميل الآن" />}
           <SubmitButton>حفظ</SubmitButton>
-          <p className="text-xs text-muted">ملاحظة: رفع البوليصة لا يُتيح أرباحك؛ تصبح أرباحك متاحة بعد تأكيد العميل الاستلام.</p>
+          <p className="text-xs text-muted">ملاحظة: رفع البوليصة لا يُتيح أرباحك. بعد التسليم: دليل تسليم خلال 24 ساعة ← مهلة المشتري 24 ساعة ← موافقة الإدارة على الإتاحة.</p>
         </ActionForm>
       )}
 
@@ -111,6 +132,27 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
             </ActionForm>
           )}
         </section>
+      )}
+
+      {(so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE') && (
+        <ActionForm action={sellerOrderAction} className="card space-y-3 p-5" encType="multipart/form-data" data-testid="delivery-evidence-form">
+          <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="op" value="deliveryEvidence" />
+          <h2 className="font-bold">دليل التسليم</h2>
+          <p className="text-xs text-muted">إيصال استلام موقّع أو إثبات تسليم من شركة الشحن. كلامك لوحده مش دليل تسليم؛ لازم كمان تأكيد من شركة الشحن/العمليات.{so.sellerDeliveryConfirmedAt && ` أرسلت الدليل في ${formatDate(so.sellerDeliveryConfirmedAt, true)}${so.sellerDeliveryLate ? ' (متأخر)' : ''}.`}</p>
+          <Field label="مرجع شركة الشحن" htmlFor="carrierReference" required><Input id="carrierReference" name="carrierReference" required defaultValue={shipment?.trackingNumber ?? ''} className="ltr" /></Field>
+          <FileInput name="evidence" label="ملف الدليل" accept="application/pdf,image/jpeg,image/png,image/webp" maxMb={10} />
+          <Field label="ملاحظة" htmlFor="evidenceNote"><Input id="evidenceNote" name="note" /></Field>
+          <SubmitButton size="sm">إرسال دليل التسليم</SubmitButton>
+          {deliveryEvidence.length > 0 && <p className="text-xs">{deliveryEvidence.map((e, i) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="me-2 text-brand-700 underline">دليل {i + 1}</a>)}</p>}
+        </ActionForm>
+      )}
+      {(so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE') && (
+        <ActionForm action={sellerOrderAction} className="card flex flex-wrap items-end gap-2 p-5">
+          <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="op" value="shipmentException" />
+          <Field label="مشكلة في الشحن" htmlFor="excCode"><Select id="excCode" name="code">{['DELIVERY_ATTEMPT_FAILED', 'BUYER_UNAVAILABLE', 'BUYER_REFUSED', 'WRONG_ADDRESS', 'RETURN_TO_SELLER', 'LOST_IN_TRANSIT', 'DAMAGED_IN_TRANSIT', 'CARRIER_EXCEPTION'].map((c) => <option key={c} value={c}>{label('shipmentException', c)}</option>)}</Select></Field>
+          <Field label="التفاصيل" htmlFor="excReason" required><Input id="excReason" name="reason" required minLength={3} /></Field>
+          <SubmitButton size="sm" variant="outline">إبلاغ فريق اضمن</SubmitButton>
+        </ActionForm>
       )}
 
       {rets.length > 0 && <section className="card p-5 text-sm"><h2 className="mb-2 font-bold">المرتجعات</h2>{rets.map((r) => <Link key={r.id} href={`/seller/returns/${r.id}`} className="block text-brand-700 hover:underline">مرتجع #{r.number} — <StatusChip status={r.status} /></Link>)}</section>}
@@ -150,7 +192,8 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
         <ActionForm action={sellerOrderAction} className="card space-y-2 border-red-200 p-5">
           <input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="op" value="cancel" />
           <h2 className="font-bold text-red-700">إلغاء الطلب</h2>
-          <p className="text-xs text-muted">الإلغاء يؤثر على مؤشر صحة حسابك. سيتم رد المبلغ للعميل وإعادة الكمية للمخزون.</p>
+          <p className="text-xs text-muted">الإلغاء متاح قبل الشحن فقط ويؤثر على مؤشر صحة حسابك. يتم تسجيل طلب استرداد للعميل (بانتظار اعتماد الإدارة) وإعادة الكمية للمخزون.</p>
+          <Field label="نوع السبب" htmlFor="code"><Select id="code" name="code"><option value="SELLER_UNABLE_TO_FULFIL">لا أستطيع تنفيذ الطلب</option><option value="OUT_OF_STOCK">نفاد المخزون</option><option value="OTHER">سبب آخر</option></Select></Field>
           <Field label="سبب الإلغاء" htmlFor="reason" required><Input id="reason" name="reason" required minLength={3} /></Field>
           <ConfirmSubmit confirm="تأكيد إلغاء الطلب؟">إلغاء الطلب</ConfirmSubmit>
         </ActionForm>

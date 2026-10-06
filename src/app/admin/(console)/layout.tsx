@@ -14,7 +14,10 @@ const GROUPS: { title: string; items: Item[] }[] = [
   { title: 'القيادة', items: [{ href: '/admin', label: 'اللوحة التنفيذية', perm: 'dashboard.view' }] },
   {
     title: 'العملاء',
-    items: [{ href: '/admin/customers', label: 'المستخدمون وملف 360°', perm: 'customers.view' }],
+    items: [
+      { href: '/admin/customers', label: 'المستخدمون وملف 360°', perm: 'customers.view' },
+      { href: '/admin/closures', label: 'طلبات إغلاق الحسابات', perm: ['customers.manage', 'customers.view'] },
+    ],
   },
   {
     title: 'السوق',
@@ -44,12 +47,16 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: 'المالية',
     items: [
+      { href: '/admin/finance-control', label: 'مركز الرقابة المالية', perm: ['finance.view', 'finance.controls'] },
+      { href: '/admin/operations', label: 'طوابير العمليات', perm: ['orders.view', 'finance.view'] },
       { href: '/admin/payments', label: 'التحقق من المدفوعات اليدوية', perm: 'payments.view', badgeKey: 'payments' },
+      { href: '/admin/releases', label: 'إتاحة أرباح البائعين', perm: ['finance.release', 'finance.view'] },
       { href: '/admin/transactions', label: 'المعاملات', perm: ['finance.view', 'payments.view'] },
       { href: '/admin/balances', label: 'أرصدة البائعين', perm: 'finance.view' },
       { href: '/admin/withdrawals', label: 'السحوبات', perm: 'withdrawals.view', badgeKey: 'withdrawals' },
       { href: '/admin/settlements', label: 'التسويات', perm: ['settlements.manage', 'finance.view'] },
-      { href: '/admin/refunds', label: 'المستردات والمستحقات', perm: ['refunds.pay', 'deals.payout', 'finance.view'], badgeKey: 'refunds' },
+      { href: '/admin/refunds', label: 'المستردات والمستحقات', perm: ['refunds.pay', 'refunds.approve', 'deals.payout', 'finance.view'], badgeKey: 'refunds' },
+      { href: '/admin/reconciliation', label: 'المطابقة مع الكشوف', perm: ['reconciliation.manage', 'finance.view'] },
       { href: '/admin/commissions', label: 'العمولات', perm: 'commissions.manage' },
       { href: '/admin/ledger', label: 'دفتر القيود المالي', perm: 'finance.view' },
     ],
@@ -103,7 +110,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
     (select count(*) from payments where status in ('PAYMENT_SUBMITTED','UNDER_REVIEW')) payments,
     (select count(*) from disputes where status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION')) disputes,
     (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING')) withdrawals,
-    (select count(*) from refunds where status = 'PENDING') + (select count(*) from deal_payouts where status = 'PENDING') refunds,
+    (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')) + (select count(*) from deal_payouts where status = 'PENDING') refunds,
     (select count(*) from support_tickets where status in ('OPEN','ESCALATED')) tickets,
     (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments`);
   const counts: Record<string, string> = { ...r.rows[0] };

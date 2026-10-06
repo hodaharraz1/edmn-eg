@@ -171,6 +171,8 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
             <dl className="space-y-2">
               <div className="flex justify-between"><dt className="text-muted">المنتجات ({cart.itemCount})</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd data-testid="checkout-shipping-total">{!chosen ? '—' : cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'غير متاح'}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن (حصتك)</dt><dd data-testid="checkout-buyer-fee">{formatEGP(cart.buyerFeeTotal)}</dd></div>
+              <p className="text-[11px] text-muted">رسوم خدمة اضمن تُحسب على قيمة المنتجات وتتقسم بين المشتري والبائع حسب الإعداد المعلن{cart.buyerShareBps !== null ? ` (حصتك ${(cart.buyerShareBps / 100).toFixed(2)}% من الرسوم)` : ''}. حصة البائع ({formatEGP(cart.sellerFeeTotal)}) تُخصم من مستحقاته ولا تدفعها أنت. الشحن على المشتري.</p>
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي المطلوب</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. الطلب بيتقسم تلقائياً على حسب كل بائع.</p>

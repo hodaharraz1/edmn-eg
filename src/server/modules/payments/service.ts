@@ -29,6 +29,7 @@ import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { grantApproval } from '@/server/modules/finance/approvals';
 import { assertNotPaused } from '@/server/modules/finance/controls';
 import { formatEGP } from '@/lib/format';
+import { enforce } from '@/server/auth/rate-limit';
 
 export type Payment = typeof payments.$inferSelect;
 
@@ -48,6 +49,7 @@ export const proofSchema = z.object({
 export async function submitProof(actor: Actor, paymentId: string, input: z.input<typeof proofSchema>, proof: { data: Buffer; name: string } | null) {
   const userId = requireUser(actor);
   const d = parse(proofSchema, input);
+  await enforce(`proof:${userId}`, 10, 3600);
   let claimed: number;
   try {
     claimed = parseEgp(d.claimedAmount);

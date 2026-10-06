@@ -385,18 +385,18 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       )}
 
       {isSeller && handoverOpen && !dispute && (
-        <Alert tone="success" title="التسليم اتأكد برمز الاستلام.">مستنيين المشتري يأكد إن المنتج مطابق. مستحقك مش هيتصرف غير لما المشتري يأكد أو فريق العمليات يصدر قرار.</Alert>
+        <Alert tone="success" title="التسليم اتأكد برمز الاستلام.">مستنيين المشتري يأكد إن المنتج مطابق (أو تنتهي مهلته{deal.buyerResponseDueAt ? ` ${formatDate(deal.buyerResponseDueAt, true)}` : ''} بدون اعتراض). بعدها مستحقك بيتراجع ويتعتمد يدويًا من الإدارة قبل الإتاحة.</Alert>
       )}
 
       {/* ── Buyer: explicit final choice after a verified handover (OTP ≠ acceptance) ── */}
       {isBuyer && handoverOpen && !dispute && (
         <section className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
           <p className="font-semibold">تسليم المنتج ليك اتأكد برمز الاستلام.</p>
-          <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج خلال {deal.inspectionDays} يوم وبعدها اختار. البائع مش هياخد أي مبلغ غير لو اخترت «استلمت والمنتج مطابق».</p>
+          <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج واختار قبل {deal.buyerResponseDueAt ? formatDate(deal.buyerResponseDueAt, true) : `${deal.inspectionDays} يوم`}. لو المهلة خلصت من غير ما تبلّغ عن مشكلة، البائع بيبقى مستحق للمبلغ (من غير ما يتحسب إنك أكدت)، والمبلغ بيتحول له بس بموافقة الإدارة.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={dealConfirmAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
-              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="لو أكدت إن المنتج مطابق، مستحق البائع هيبقى متاح للصرف، ومش هتقدر تفتح نزاع على عدم المطابقة بعد كده إلا في حدود حقوقك القانونية. متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
+              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="لو أكدت إن المنتج مطابق، البائع بيبقى مستحق للمبلغ والإدارة بتراجع وتوافق على إتاحته. حقوقك القانونية محفوظة. متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
             </ActionForm>
             <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت بس فيه مشكلة</LinkButton>
           </div>
@@ -428,6 +428,13 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         </details>
       )}
       {dispute && <LinkButton href={`/account/disputes/${dispute.id}`} variant="secondary">متابعة النزاع #{dispute.number}</LinkButton>}
+      {(deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') && (
+        <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{deal.status === 'BUYER_CONFIRMED_RECEIPT' ? 'المشتري أكد الاستلام.' : 'انتهت مهلة المشتري بدون اعتراض.'} المبلغ لسه محجوز لحد ما الإدارة توافق على التسوية. {isBuyer ? 'لو ظهرت مشكلة قبل الإتاحة تقدر تبلّغ.' : ''}</Alert>
+      )}
+      {(deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') && isBuyer && !dispute && (
+        <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> ظهرت مشكلة؟ بلّغ قبل الإتاحة</LinkButton>
+      )}
+      {deal.status === 'REFUND_PENDING' && <Alert tone="warning" title="استرداد قيد الاعتماد">قرار النزاع استرداد كامل للمشتري، والإدارة بتراجع وتعتمد الاسترداد قبل التحويل.</Alert>}
       {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} هيتحوّل على ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'اتحوّل' : 'جاري التحويل'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
 
       {versions.length > 0 && (

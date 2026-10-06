@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { changePassword, confirmVerificationCode, sendVerificationCode } from '@/server/auth/service';
-import { confirmReceipt } from '@/server/modules/commerce/fulfilment';
+import { confirmReceipt, reportOrderProblem, requestCancellation } from '@/server/modules/commerce/fulfilment';
 import { archiveAddress } from '@/server/modules/customers/addresses';
 import { markRead } from '@/server/modules/notifications/notify';
 import { addDisputeMessage, openDispute } from '@/server/modules/postpurchase/disputes';
@@ -24,6 +24,45 @@ export async function confirmReceiptAction(_p: ActionState, fd: FormData): Promi
     return { message: r.alreadyConfirmed ? 'أكّدت الاستلام قبل كده.' : 'شكراً! الاستلام اتأكد. تقدر دلوقتي تقيّم المنتج والبائع.' };
   });
   revalidatePath(`/account/orders/${str(fd, 'orderId')}`);
+  return res;
+}
+
+/** Buyer cancellation of a paid sub-order before shipment (immediate, or a request while being prepared). */
+export async function requestCancellationAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/orders');
+  const res = await runAction(async () => {
+    const r = await requestCancellation(actor, str(fd, 'sellerOrderId'), str(fd, 'reason'));
+    return { message: r.status === 'CANCELLED' ? 'الطلب اتلغى. طلب استرداد المبلغ اتسجل وبيتراجع من الإدارة قبل التحويل.' : 'طلب الإلغاء اتبعت للبائع، والشحن موقوف لحد ما يتحسم.' };
+  });
+  revalidatePath(`/account/orders/${str(fd, 'orderId')}`);
+  return res;
+}
+
+/** «ماستلمتش» / «استلمت بس فيه مشكلة» → dispute + protective hold (no money moves). */
+export async function reportProblemAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/orders');
+  const res = await runAction(async () => {
+    const kind = str(fd, 'kind') === 'NOT_RECEIVED' ? 'NOT_RECEIVED' : 'PRODUCT_PROBLEM';
+    await reportOrderProblem(actor, str(fd, 'sellerOrderId'), kind, str(fd, 'description'));
+    return { message: 'البلاغ وصل. المبلغ محجوز ومش هيتحول للبائع لحد ما فريق اضمن يراجع.' };
+  });
+  revalidatePath(`/account/orders/${str(fd, 'orderId')}`);
+  return res;
+}
+
+export async function accountClosureAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/security');
+  const { requestAccountClosure, withdrawAccountClosure, CLOSURE_BLOCKED_MESSAGE, closureBlockerLabel } = await import('@/server/modules/customers/closure');
+  const res = await runAction(async () => {
+    if (str(fd, 'op') === 'withdraw') {
+      await withdrawAccountClosure(actor);
+      return { message: 'تم إلغاء طلب الإغلاق' };
+    }
+    const r = await requestAccountClosure(actor, str(fd, 'reason'));
+    if (r.blockers.length) return { ok: false, message: `${CLOSURE_BLOCKED_MESSAGE} (${r.blockers.map((b) => closureBlockerLabel(b.code)).join('، ')})` };
+    return { message: 'طلب الإغلاق اتسجل. فريق اضمن هيراجعه ويعيد التأكد إن مفيش أي عمليات مفتوحة.' };
+  });
+  revalidatePath('/account/security');
   return res;
 }
 

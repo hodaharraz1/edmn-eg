@@ -5,10 +5,12 @@ import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { canViewConversations, conversationIdFor } from '@/server/modules/messaging/service';
 
 import { isDomainError } from '@/server/core/errors';
+import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { auditLogs, dealInvitations, disputes, riskFlags, statusHistory } from '@/server/db/schema';
-import { dealHoldAction } from '@/app/_actions/admin';
+import { dealHoldAction, dealReleaseAction } from '@/app/_actions/admin';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
+import { Input } from '@/ui/form';
 import { Field, Textarea } from '@/ui/form';
 import { dealGraph, deliveryOtpEvents } from '@/server/modules/deals/service';
 import { formatDate, formatEGP } from '@/lib/format';
@@ -92,6 +94,18 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
           <Field label="سبب الإجراء (يتطلب تأكيد 2FA حديث)" htmlFor="hold-reason" required><Textarea id="hold-reason" name="reason" rows={2} required minLength={3} /></Field>
           <SubmitButton variant={d.financialHold ? 'outline' : 'danger'} size="sm">{d.financialHold ? 'رفع إيقاف الصرف' : 'إيقاف الصرف لحين المراجعة'}</SubmitButton>
         </ActionForm>
+        {(d.status === 'BUYER_CONFIRMED_RECEIPT' || d.status === 'ENTITLED_AWAITING_RELEASE') && hasPermission(actor, 'finance.release') && (() => {
+          const remaining = (d.buyerPays ?? 0) - d.pendingBuyerRefund;
+          const payout = remaining - Math.min(d.feeAmount, remaining);
+          return (
+            <ActionForm action={dealReleaseAction} className="space-y-2 border-t border-line pt-3">
+              <input type="hidden" name="dealId" value={d.id} /><input type="hidden" name="expectedPayout" value={payout} /><input type="hidden" name="back" value={`/admin/deals/${d.id}`} />
+              <p className="text-sm">أساس الاستحقاق: {label('receiptBasis', d.receiptBasis)} · المحجوز {formatEGP(d.buyerPays ?? 0)} · رسوم {formatEGP(Math.min(d.feeAmount, remaining))} · استرداد للمشتري {formatEGP(d.pendingBuyerRefund)} → مستحق البائع {formatEGP(payout)}. التسوية لا تصرف للبائع؛ الصرف خطوة منفصلة.</p>
+              <Input name="reason" required minLength={3} placeholder="سبب الاعتماد" aria-label="سبب الاعتماد" />
+              <SubmitButton size="sm">اعتماد تسوية الصفقة ({formatEGP(payout)} للبائع)</SubmitButton>
+            </ActionForm>
+          );
+        })()}
       </section>
       {disp.length > 0 && <section className="card p-5"><h2 className="mb-2 font-bold">النزاعات</h2>{disp.map((x) => <Link key={x.id} href={`/admin/disputes/${x.id}`} className="block text-brand-700">نزاع #{x.number} <StatusChip status={x.status} /></Link>)}</section>}
       <section className="card p-5">

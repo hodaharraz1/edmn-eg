@@ -96,6 +96,7 @@ export default async function CartPage() {
               <div className="flex justify-between"><dt className="text-muted">المنتجات</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-muted">الشحن ({cart.groups.length} متجر)</dt><dd>{cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'بيتحدد عند الدفع'}</dd></div>
               {cart.discountTotal > 0 && <div className="flex justify-between text-emerald-700"><dt>الخصم</dt><dd>-{formatEGP(cart.discountTotal)}</dd></div>}
+              <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن (حصتك)</dt><dd>{formatEGP(cart.buyerFeeTotal)}</dd></div>
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             {blocking && <Alert tone="warning">راجع المنتجات غير المتاحة الأول عشان تكمّل الشراء.</Alert>}

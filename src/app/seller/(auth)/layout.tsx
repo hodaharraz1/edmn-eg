@@ -24,7 +24,7 @@ export default function SellerAuthLayout({ children }: { children: React.ReactNo
           {[
             [BadgeCheck, 'تسجيل مفتوح للأفراد والشركات بعد مراجعة البيانات'],
             [Truck, 'تحديد سعر ومدة الشحن لكل محافظة'],
-            [Wallet, 'الرصيد يصبح متاحاً بعد تأكيد العميل الاستلام'],
+            [Wallet, 'الرصيد يصبح متاحاً بعد استلام العميل وموافقة الإدارة على الإتاحة'],
             [ShieldCheck, 'مستنداتك وبيانات الدفع خاصة ومشفّرة'],
           ].map(([I, t]) => {
             const Icon = I as typeof BadgeCheck;

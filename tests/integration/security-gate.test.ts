@@ -7,7 +7,7 @@ import { adminActor } from '@/server/auth/actors';
 import { beginTotpEnrollment, login, sendVerificationCode, verifyTotpForUser } from '@/server/auth/service';
 import { totpCode } from '@/server/auth/totp';
 import { sha256 } from '@/server/core/crypto';
-import { confirmReceipt, confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
+import { confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
 import { placeOrder } from '@/server/modules/commerce/orders';
 import { addToCart, mergeGuestCart } from '@/server/modules/commerce/cart';
 import { setListingActive, moderateProduct } from '@/server/modules/catalog/products';

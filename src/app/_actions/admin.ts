@@ -140,7 +140,8 @@ export async function paymentDecisionAction(_p: ActionState, fd: FormData) {
     const op = str(fd, 'op');
     if (op === 'review') await startReview(a, str(fd, 'paymentId'));
     else if (op === 'confirm') {
-      const r = await confirmPayment(a, str(fd, 'paymentId'), str(fd, 'submissionId'), str(fd, 'note'));
+      const expected = str(fd, 'expectedAmount');
+      const r = await confirmPayment(a, str(fd, 'paymentId'), str(fd, 'submissionId'), str(fd, 'note'), expected ? Number(expected) : undefined);
       return done(r.alreadyConfirmed ? 'تم تأكيد هذا الدفع مسبقاً (لم يتم تكرار أي قيد)' : 'تم تأكيد الدفع وإبلاغ العميل والبائعين');
     } else await rejectPayment(a, str(fd, 'paymentId'), str(fd, 'submissionId'), str(fd, 'reason'), op === 'newproof');
     return done();
@@ -167,7 +168,7 @@ export async function adminOrderAction(_p: ActionState, fd: FormData) {
     else if (op === 'hold') await setFinancialHold(a, so, true, str(fd, 'reason'));
     else if (op === 'release') await setFinancialHold(a, so, false, str(fd, 'reason'));
     else if (op === 'releaseFunds') await releaseSellerOrder(a, so, { expectedSellerAmount: Number(str(fd, 'expectedAmount')), reason: str(fd, 'reason') });
-    else if (op === 'deliveryEvent') await recordDeliveryEvent(a, so, { reference: str(fd, 'reference') });
+    else if (op === 'deliveryEvent') await recordDeliveryEvent(a, so, { reference: str(fd, 'reference') || str(fd, 'reason') });
     else if (op === 'establishDelivery') await reviewDeliveryException(a, so, 'ESTABLISH', str(fd, 'reason'));
     else if (op === 'shipmentException') await recordShipmentException(a, so, str(fd, 'code') as ShipmentExceptionCode, str(fd, 'reason'));
     else if (op === 'reship') await resolveShipmentException(a, so, 'RESHIP', str(fd, 'reason'));
@@ -417,4 +418,78 @@ export async function dealHoldAction(_p: ActionState, fd: FormData) {
     await setDealFinancialHold(a, str(fd, 'dealId'), hold, str(fd, 'reason'));
     return done(hold ? 'تم إيقاف الصرف للصفقة لحين المراجعة' : 'تم رفع الإيقاف عن الصفقة');
   }, ['/admin/deals', `/admin/deals/${str(fd, 'dealId')}`]);
+}
+
+/* ═════════════ Production hardening: approvals, releases, refunds, controls ═════════════ */
+
+/** Refund workflow: approve (reversal journal) / reject / record payout / failed / destination exception. */
+export async function refundDecisionAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const op = str(fd, 'op');
+    const id = str(fd, 'refundId');
+    const { approveRefund, markRefundFailed, overrideRefundDestination, rejectRefund, recordRefundPayout } = await import('@/server/modules/finance/refunds');
+    if (op === 'approve') await approveRefund(a, id, { expectedAmount: Number(str(fd, 'expectedAmount')), reason: str(fd, 'reason') });
+    else if (op === 'reject') await rejectRefund(a, id, str(fd, 'reason'));
+    else if (op === 'pay') await recordRefundPayout(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'));
+    else if (op === 'failed') await markRefundFailed(a, id, str(fd, 'reason'));
+    else if (op === 'destination') await overrideRefundDestination(a, id, { method: str(fd, 'method'), details: str(fd, 'details') }, str(fd, 'reason'));
+    else throw validation('إجراء غير معروف');
+    return done();
+  }, ['/admin/refunds', str(fd, 'back')]);
+}
+
+export async function dealReleaseAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { releaseDeal } = await import('@/server/modules/deals/service');
+    await releaseDeal(a, str(fd, 'dealId'), { expectedPayout: Number(str(fd, 'expectedPayout')), reason: str(fd, 'reason') });
+    return done('تمت التسوية');
+  }, ['/admin/releases', `/admin/deals/${str(fd, 'dealId')}`]);
+}
+
+export async function killSwitchAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { setKillSwitch } = await import('@/server/modules/finance/controls');
+    await setKillSwitch(a, str(fd, 'key') as Parameters<typeof setKillSwitch>[1], str(fd, 'paused') === 'true', str(fd, 'reason'));
+    return done();
+  }, ['/admin/finance-control']);
+}
+
+export async function closeDayAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { closeFinancialDay } = await import('@/server/modules/finance/controls');
+    const row = await closeFinancialDay(a, str(fd, 'date'));
+    return done(row.balanced ? 'تم إقفال اليوم — متوازن' : `تم إقفال اليوم مع ${row.issues} مخالفة (لم يتم إصلاح أي شيء تلقائيًا)`);
+  }, ['/admin/finance-control']);
+}
+
+export async function reconciliationAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const rec = await import('@/server/modules/finance/reconciliation');
+    const op = str(fd, 'op');
+    if (op === 'import') {
+      const file = await fileOf(fd, 'file');
+      const csv = file ? file.data.toString('utf8') : str(fd, 'csv');
+      const r = await rec.importStatement(a, str(fd, 'channel') as 'BANK_TRANSFER', csv, file?.name);
+      return done(`تم استيراد ${r.inserted} حركة (${r.suggested} بمطابقة مقترحة — تحتاج تأكيد يدوي)`);
+    }
+    if (op === 'match') await rec.confirmMatch(a, str(fd, 'id'), { type: str(fd, 'type') as 'payment', id: str(fd, 'targetId') }, str(fd, 'note'));
+    else await rec.setReconState(a, str(fd, 'id'), op === 'ignore' ? 'IGNORED_WITH_REASON' : op === 'mismatch' ? 'MISMATCH' : 'UNMATCHED', str(fd, 'note'));
+    return done();
+  }, ['/admin/reconciliation']);
+}
+
+export async function closureAdminAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { completeAccountClosure } = await import('@/server/modules/customers/closure');
+    const r = await completeAccountClosure(a, str(fd, 'requestId'));
+    return done(r.closed ? 'تم إغلاق الحساب (مع الاحتفاظ بالسجلات المالية)' : 'لا يمكن الإغلاق: توجد عمليات مفتوحة');
+  }, ['/admin/closures']);
+}
+
+export async function revokeApprovalAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { revokeApproval } = await import('@/server/modules/finance/approvals');
+    await revokeApproval(a, str(fd, 'approvalId'), str(fd, 'reason'));
+    return done();
+  }, ['/admin/finance-control']);
 }

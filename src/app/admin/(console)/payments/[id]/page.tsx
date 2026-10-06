@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { paymentDecisionAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { externalDeals, orders, payments, users } from '@/server/db/schema';
-import { submissionsFor } from '@/server/modules/payments/service';
+import { paymentReviewSignals, submissionsFor } from '@/server/modules/payments/service';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
@@ -24,6 +24,10 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
   const subs = await submissionsFor(p.id);
   const open = subs.find((s) => s.status === 'SUBMITTED');
   const can = hasPermission(actor, 'payments.verify');
+  const signals = await paymentReviewSignals(p.id);
+  const pendingCancels = p.orderId
+    ? (await db.execute<{ n: string }>(sql`select count(*)::text n from cancellation_requests c join seller_orders so on so.id = c.seller_order_id where so.order_id = ${p.orderId} and c.status = 'PENDING'`)).rows[0].n
+    : '0';
   return (
     <div className="space-y-4">
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'المدفوعات', href: '/admin/payments' }, { label: row.orderNumber ? `طلب #${row.orderNumber}` : `صفقة #${row.deal?.number}` }]} />} title="مراجعة دفعة" actions={<StatusChip status={p.status} />} />
@@ -36,6 +40,12 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
         { label: 'مهلة الدفع', value: formatDate(p.dueAt, true) },
         { label: 'التأكيد', value: p.confirmedAt ? `${formatDate(p.confirmedAt, true)} · ${formatEGP(p.confirmedAmount)}` : '—' },
       ]} /></section>
+      {signals.length > 0 && (
+        <Alert tone="warning" title="إشارات مراجعة (لا تعني رفضًا تلقائيًا)">
+          <ul className="list-disc ps-5">{signals.map((sg) => <li key={sg.code + sg.label} data-testid="payment-signal">{sg.label}{sg.refs.length ? ` — ${sg.refs.map((r) => r.slice(0, 8)).join('، ')}` : ''}</li>)}</ul>
+        </Alert>
+      )}
+      {Number(pendingCancels) > 0 && <Alert tone="warning">العميل طلب إلغاء الطلب أثناء مراجعة الدفع. لو اتأكد الدفع، الإلغاء يتنفذ ويتسجل طلب استرداد للمبلغ (بانتظار اعتماد الإدارة).</Alert>}
       {subs.length === 0 && <Alert tone="info">لم يرفع العميل إثبات دفع بعد.</Alert>}
       {subs.map((s, i) => (
         <section key={s.id} className={`card grid gap-4 p-4 md:grid-cols-[1fr_1.2fr] ${s.status === 'SUBMITTED' ? 'border-brand-300' : ''}`}>
@@ -57,9 +67,9 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
               <div className="space-y-3 border-t border-line pt-3">
                 {p.status === 'PAYMENT_SUBMITTED' && <ActionForm action={paymentDecisionAction}><input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="op" value="review" /><SubmitButton size="sm" variant="outline">بدء المراجعة</SubmitButton></ActionForm>}
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
-                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} /><input type="hidden" name="op" value="confirm" />
+                  <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} /><input type="hidden" name="op" value="confirm" /><input type="hidden" name="expectedAmount" value={p.amountDue} />
                   <Field label="ملاحظة داخلية (اختياري)" htmlFor="note"><Input id="note" name="note" /></Field>
-                  <ConfirmSubmit confirm={`تأكيد استلام ${formatEGP(p.amountDue)} فعلياً في حساب اضمن؟ لا يمكن التراجع.`} variant="success">تأكيد الدفع (تم التحقق من الحساب)</ConfirmSubmit>
+                  <ConfirmSubmit confirm={`تأكيد استلام ${formatEGP(p.amountDue)} فعلياً في حساب اضمن؟ يُسجل قيد دفع واحد بموافقتك. لا يمكن التراجع.`} variant="success">تأكيد دفع {formatEGP(p.amountDue)} (تم التحقق من الحساب)</ConfirmSubmit>
                 </ActionForm>
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
                   <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} />
