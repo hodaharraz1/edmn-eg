@@ -125,3 +125,16 @@ export function ScrollToLatest({ count }: { count: number }) {
   }, [count]);
   return <div ref={ref} aria-hidden />;
 }
+
+/**
+ * The layout (nav unread badges) renders in parallel with the page that marks the conversation read,
+ * so on first open it can still count it. One refresh right after mount re-renders the layout with
+ * the updated read position. Idempotent; no business effect.
+ */
+export function RefreshAfterRead({ conversationId }: { conversationId: string }) {
+  const router = useRouter();
+  useEffect(() => {
+    router.refresh();
+  }, [router, conversationId]);
+  return null;
+}

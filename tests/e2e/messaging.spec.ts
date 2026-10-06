@@ -82,6 +82,8 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
     await row.click();
     await expect(seller.getByRole('heading', { name: 'تواصل مع المشتري' })).toBeVisible();
     await expect(seller.getByTestId('message-body').filter({ hasText: text })).toBeVisible();
+    // Opening the conversation clears the sidebar badge right away (well before the 7 s polling refresh).
+    await expect(seller.locator('aside').getByTestId('unread-badge')).toHaveCount(0, { timeout: 4000 });
     await seller.waitForLoadState('networkidle');
     await seller.getByTestId('message-input').fill('أيوه مظبوط، وهشحنه بكرة');
     await seller.getByTestId('message-send').click();

@@ -1,7 +1,7 @@
 import { CheckCheck, Check, FileText, Flag, Info, Lock, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { reportMessageAction } from '@/app/_actions/messaging';
-import { AutoRefresh, Composer, ScrollToLatest } from '@/app/_components/conversation-client';
+import { AutoRefresh, Composer, RefreshAfterRead, ScrollToLatest } from '@/app/_components/conversation-client';
 import { formatDate } from '@/lib/format';
 import { REPORT_REASON_LABELS, type ConversationContextInfo, type ThreadMessage } from '@/server/modules/messaging/service';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -168,6 +168,7 @@ export function ParticipantConversation({
   return (
     <div className="space-y-4">
       <AutoRefresh />
+      <RefreshAfterRead conversationId={conversationId} />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{side === 'BUYER' ? 'تواصل مع البائع' : 'تواصل مع المشتري'}</h1>
         <Link href={backHref} className="text-sm text-brand-700 hover:underline">
