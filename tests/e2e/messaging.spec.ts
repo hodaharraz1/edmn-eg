@@ -32,6 +32,7 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
   let fx: SoRow;
   let convId = '';
   const text = `هو المقاس ده مظبوط؟ ${stamp()}`;
+  const reply = `أيوه مظبوط، وهشحنه بكرة ${stamp()}`;
   const xss = `<img src=x onerror="window.__xss=1"><script>window.__xss=2</script> ${stamp()}`;
 
   test.beforeAll(async () => {
@@ -96,7 +97,7 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
     if (Number(otherUnread) === 0) await expect(badge).toHaveCount(0, { timeout: 4000 });
     else await expect(badge).toHaveText(new RegExp(`^${otherUnread > 99 ? '99\\+' : otherUnread}`), { timeout: 4000 });
     await seller.waitForLoadState('networkidle');
-    await seller.getByTestId('message-input').fill('أيوه مظبوط، وهشحنه بكرة');
+    await seller.getByTestId('message-input').fill(reply);
     await seller.getByTestId('message-send').click();
     await expect(seller.getByTestId('message-status')).toContainText('تم الإرسال');
     // Order page CTA for the seller
@@ -121,13 +122,14 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
   test('buyer: sees the reply and «اتشافت»; reports the reply; another buyer gets 404', async ({ browser }) => {
     const page = await customerLogin(browser, fx.buyer);
     await page.goto(`/account/messages/${convId}`);
-    await expect(page.getByTestId('message-body').filter({ hasText: 'وهشحنه بكرة' })).toBeVisible();
-    await expect(page.getByTestId('message-read').first()).toBeVisible();
-    const reply = page.locator('[data-testid="message"][data-side="SELLER"]').last();
-    await reply.getByText('الإبلاغ عن الرسالة').click();
-    await reply.locator('select[name=reason]').selectOption('OTHER');
-    await reply.getByRole('button', { name: 'ابعت البلاغ' }).click();
-    await expect(reply.getByText('البلاغ وصلنا').first()).toBeVisible();
+    // Unique texts: on staging the same conversation persists across runs.
+    await expect(page.getByTestId('message-body').filter({ hasText: reply })).toBeVisible();
+    await expect(page.locator('[data-testid="message"]').filter({ hasText: text }).getByTestId('message-read')).toBeVisible();
+    const replyMsg = page.locator('[data-testid="message"][data-side="SELLER"]').filter({ hasText: reply });
+    await replyMsg.getByText('الإبلاغ عن الرسالة').click();
+    await replyMsg.locator('select[name=reason]').selectOption('OTHER');
+    await replyMsg.getByRole('button', { name: 'ابعت البلاغ' }).click();
+    await expect(replyMsg.getByText('البلاغ وصلنا').first()).toBeVisible();
 
     const intruderEmail = fx.buyer === 'ahmed@demo.edmn.local' ? 'mona@demo.edmn.local' : 'ahmed@demo.edmn.local';
     const intruder = await customerLogin(browser, intruderEmail);
