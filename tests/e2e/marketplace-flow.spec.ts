@@ -250,7 +250,7 @@ test('seller requests a withdrawal; admin approves and records the transfer', as
   const checker = await adminLogin(browser, 'checker@edmn.local');
   await checker.goto(`/admin/withdrawals/${w.id}`);
   await expect(checker.getByRole('button', { name: 'تأكيد الصرف' })).toHaveCount(0); // checker cannot pay
-  await checker.getByRole('button', { name: 'اعتماد للصرف' }).click();
+  await checker.getByRole('button', { name: /اعتماد وحجز/ }).click();
   await expect.poll(async () => (await q<{ status: string }>(`select status from withdrawal_requests where id = $1`, [w.id]))[0].status).toBe('APPROVED');
   expect(Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_WITHDRAWAL_RESERVED'`, [sellerId]))[0].b)).toBe(50000);
 

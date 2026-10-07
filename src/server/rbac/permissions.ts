@@ -115,6 +115,8 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.approve', 'ledger.adjust.approve',
       'commissions.manage', 'payments.destinations.manage', 'payments.view', 'orders.view', 'reports.view',
       'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage',
+      // Read-only deal view: a settlement is approved from the deal page.
+      'deals.view',
     ],
   },
   DISPUTE_OFFICER: {

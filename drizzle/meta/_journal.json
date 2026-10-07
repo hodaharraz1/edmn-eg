@@ -64,6 +64,13 @@
       "when": 1791298117806,
       "tag": "0008_production_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791371105681,
+      "tag": "0009_checker_deals_view",
+      "breakpoints": true
     }
   ]
 }

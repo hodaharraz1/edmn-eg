@@ -32,6 +32,10 @@ Additive columns/tables, backfills (receipt basis from the historic confirmation
 from existing reserve journals), triggers. Historic journals are not rewritten; the approval trigger applies to new
 entries only. Legacy DELIVERED sub-orders with released funds keep their history (`LEGACY_*` receipt bases).
 
+## Migration 0009 (additive)
+Grants read-only `deals.view` to FINANCE_CHECKER so the person who approves a protected-deal settlement can open
+the deal page (found by the E2E run: the checker was refused). One `INSERT … ON CONFLICT DO NOTHING`; nothing removed.
+
 ## Residual risks
 Restore drill not performed; malware scanning unavailable; no payment provider; fee split and policies not approved;
 staging maker/checker threshold 50,000 EGP (production must be 0). See REAL_MONEY_GO_LIVE_CHECKLIST.md.

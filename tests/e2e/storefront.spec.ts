@@ -25,8 +25,11 @@ test.describe('storefront (Arabic RTL)', () => {
     await expect(page.locator('a[href^="/product/"]').first()).toBeVisible();
   });
 
-  test('legal pages show the current v1.1 text marked as a draft under legal review', async ({ page }) => {
+  test('legal pages: owner-approved v1.0 stays final; v1.1 buyer terms are a draft under legal review', async ({ page }) => {
     await page.goto('/legal/terms');
+    await expect(page.getByRole('heading', { name: /التعريفات/ })).toBeVisible();
+    await expect(page.getByText('نص غير نهائي')).toHaveCount(0);
+    await page.goto('/legal/buyer-terms');
     await expect(page.getByRole('heading', { name: /التسليم ومهلة الـ24 ساعة/ })).toBeVisible();
     await expect(page.getByText('نص غير نهائي')).toBeVisible();
     await expect(page.getByText(/LEGAL REVIEW REQUIRED/).first()).toBeVisible();

@@ -266,7 +266,7 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   await expect(choice.getByText('لم أستلم المنتج فعليًا')).toBeVisible();
   await choice.getByRole('button', { name: 'استلمت والمنتج مطابق' }).click();
   // Buyer confirmation = entitlement only: no settlement and no payout until an Admin approves.
-  await expect.poll(status).toBe('ENTITLED_AWAITING_RELEASE');
+  await expect.poll(status).toBe('BUYER_CONFIRMED_RECEIPT'); // entitled, still held until an Admin approves
   expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
   expect(await q(`select id from deal_payouts where deal_id = $1`, [dealId])).toHaveLength(0);
   const checker = await adminLogin(browser, 'checker@edmn.local');
