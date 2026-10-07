@@ -30,9 +30,15 @@ export async function postSellerOrderPayment(tx: DbOrTx, actor: Actor, paymentId
     description: `تأكيد دفع الطلب الفرعي ${so.suffix}`,
     approvalId,
     lines: [
-      { account: { code: 'PLATFORM_CASH' }, debit: so.grossTotal, memo: 'customer payment' },
-      { account: { code: 'SELLER_PENDING', sellerId: so.sellerId }, credit: so.sellerNet, memo: 'seller payable (pending)' },
-      { account: { code: 'COMMISSION_DEFERRED' }, credit: so.commissionTotal, memo: 'EDMN fee (buyer + seller share, deferred)' },
+      { account: { code: 'PLATFORM_CASH' }, debit: so.grossTotal, memo: 'customer payment (products + shipping + buyer fee)' },
+      { account: { code: 'SELLER_PENDING', sellerId: so.sellerId }, credit: so.sellerNet, memo: 'seller payable (pending): products + shipping − seller fee' },
+      // The fee is shown as its two components (deferred until the Admin release recognizes it).
+      ...(so.buyerFeeTotal + so.sellerFeeTotal === so.commissionTotal && so.commissionTotal > 0
+        ? [
+            ...(so.buyerFeeTotal > 0 ? [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: so.buyerFeeTotal, memo: 'EDMN buyer service/protection fee (deferred)' }] : []),
+            ...(so.sellerFeeTotal > 0 ? [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: so.sellerFeeTotal, memo: 'EDMN seller service fee (deferred)' }] : []),
+          ]
+        : [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: so.commissionTotal, memo: 'EDMN fee (legacy snapshot, deferred)' }]),
     ],
   });
 }

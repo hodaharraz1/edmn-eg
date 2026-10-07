@@ -253,7 +253,7 @@ describe('protected deal communication', () => {
     const { version } = await submitSellerOffer(d.seller, d.dealId, OFFER, true);
     await respondToOffer(d.buyer, d.dealId, version, 'ACCEPT');
     const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
-    const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: '5500', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await confirmPayment(admin, p.id, submission.id);
     await markDealDelivered(d.seller, d.dealId, 'شحنت', [{ data: pdf(), name: 'w.pdf' }]);
     const otpBefore = await db.select().from(dealDeliveryOtps).where(eq(dealDeliveryOtps.dealId, d.dealId));

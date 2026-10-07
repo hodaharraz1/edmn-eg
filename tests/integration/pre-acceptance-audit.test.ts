@@ -68,7 +68,7 @@ async function agreed() {
 async function verifiedHandover() {
   const d = await agreed();
   const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
-  const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: '3000', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(d.seller, d.dealId, 'شحن');
   await verifyDeliveryOtp(d.seller, d.dealId, (await deliveryOtpForBuyer(d.buyer, d.dealId))!.testCode!);
@@ -105,7 +105,7 @@ describe('pre-acceptance audit — protected deal fixes', () => {
     const again = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
     expect(again.id).toBe(p.id);
     expect(again.dueAt.getTime()).toBeGreaterThan(Date.now());
-    await submitProof(d.buyer, p.id, { claimedAmount: '3000', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
   });
 
   it('an invitation already bound to the seller does not expire, and the bound seller can still reject', async () => {
@@ -132,7 +132,7 @@ describe('pre-acceptance audit — protected deal fixes', () => {
   it('the delivery OTP SMS body is redacted right after hand-off to any driver (including the log driver)', async () => {
     const d = await agreed();
     const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
-    const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: '3000', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await confirmPayment(admin, p.id, submission.id);
     await markDealDelivered(d.seller, d.dealId, 'شحن');
     await flushOutbound(500);

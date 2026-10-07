@@ -402,5 +402,13 @@ export async function seedReference() {
     ];
     await db.insert(cmsBlocks).values(blocks.map((b) => ({ ...b, placement: 'HOME' })));
   }
+  // Fee engine configuration (data, editable from Admin). Pricing versions are seeded as DRAFTS and are
+  // never activated by a seed on an existing database: activation goes through maker/checker in Admin.
+  const { seedOwnerApprovedDrafts } = await import('@/server/modules/pricing/service');
+  const { seedPayoutChannels } = await import('@/server/modules/pricing/payout-costs');
+  const { seedRefundPolicyDraft } = await import('@/server/modules/pricing/refund-policy');
+  await seedOwnerApprovedDrafts();
+  await seedPayoutChannels();
+  await seedRefundPolicyDraft();
   return { categories: ids.size, attributes: attrIds.size };
 }

@@ -4,12 +4,11 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { auditLogs, journalEntries, orderItems, orders, productVariants, refunds, sellerOrders, withdrawalRequests } from '@/server/db/schema';
 import { cancelSellerOrder, confirmReceipt, confirmSellerOrder, markShipped, releaseSellerOrder, saveShipment, sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
-import { createRule } from '@/server/modules/finance/commissions';
 import { accountBalance, reconcile, sellerBalances } from '@/server/modules/finance/ledger';
 import { approveWithdrawal, cancelWithdrawal, createAdjustment, decideAdjustment, markRefundPaid, markWithdrawalPaid, rejectWithdrawal, requestWithdrawal, revealPayoutDetails } from '@/server/modules/finance/withdrawals';
 import { adminActor } from '@/server/auth/actors';
 import { addPayoutMethod } from '@/server/modules/sellers/service';
-import { approveRefundsOf, checkout, categoryId, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveRefundsOf, checkout, ensurePaymentSetup, publishPricingVariant, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -91,18 +90,25 @@ describe('shipping & buyer receipt confirmation', () => {
 });
 
 describe('commissions', () => {
-  it('EDGE 13 — changing a commission later never alters historical orders', async () => {
+  it('EDGE 13 — publishing a new pricing version never alters historical orders; new orders use it', async () => {
     const { so } = await deliveredOrder(200_00);
     const before = await itemsOf(so.id);
-    await createRule(admin, { categoryId: await categoryId('electronics-accessories'), label: 'زيادة', percentBps: 2000, minFee: null, tiers: null, effectiveFrom: new Date() });
-    const after = await itemsOf(so.id);
-    expect(after[0].commissionBps).toBe(before[0].commissionBps);
-    expect(after[0].commissionAmount).toBe(before[0].commissionAmount);
-    const [soAfter] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, so.id));
-    expect(soAfter.commissionTotal).toBe(so.commissionTotal);
-    // new orders use the new rate
-    const fresh = await deliveredOrder(200_00);
-    expect((await itemsOf(fresh.so.id))[0].commissionBps).toBe(2000);
+    // STANDARD first tier raised to 20% (buyer 5% / seller 15%) in a new, maker/checker-published version.
+    const v2 = await publishPricingVariant('MARKETPLACE', (ts) => ts.map((t) => (t.economicClass === 'STANDARD' && t.lowerBound === 0 ? { ...t, buyerBps: 500, sellerBps: 1500, totalBps: 2000 } : t)));
+    try {
+      const after = await itemsOf(so.id);
+      expect(after[0].commissionAmount).toBe(before[0].commissionAmount);
+      expect(after[0].buyerFeeAmount).toBe(before[0].buyerFeeAmount);
+      const [soAfter] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, so.id));
+      expect(soAfter.commissionTotal).toBe(so.commissionTotal);
+      expect(soAfter.pricingSnapshot).toEqual(so.pricingSnapshot);
+      // new orders use the new version: 200 EGP × 20% = 40 EGP
+      const fresh = await deliveredOrder(200_00);
+      expect(fresh.so.pricingVersionId).toBe(v2);
+      expect((await itemsOf(fresh.so.id))[0].commissionAmount).toBe(40_00);
+    } finally {
+      await publishPricingVariant('MARKETPLACE'); // restore the owner-approved rates for later suites
+    }
   });
 });
 

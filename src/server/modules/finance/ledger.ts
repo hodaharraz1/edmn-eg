@@ -30,6 +30,8 @@ export const ACCOUNTS = {
   DEAL_PAYOUTS_PAYABLE: { type: 'LIABILITY', name: 'مستحقات بائعي الصفقات' },
   DEAL_FEE_REVENUE: { type: 'REVENUE', name: 'رسوم الصفقات المحمية' },
   ADJUSTMENTS_EXPENSE: { type: 'EXPENSE', name: 'مصروف التسويات' },
+  /** Payout/refund transfer costs borne by EDMN (seller-borne costs reduce the amount sent instead). */
+  TRANSFER_COST_EXPENSE: { type: 'EXPENSE', name: 'مصروف رسوم التحويل' },
   SELLER_PENDING: { type: 'LIABILITY', name: 'رصيد البائع المعلق' },
   SELLER_AVAILABLE: { type: 'LIABILITY', name: 'رصيد البائع المتاح' },
   SELLER_WITHDRAWAL_RESERVED: { type: 'LIABILITY', name: 'رصيد محجوز لطلبات السحب' },

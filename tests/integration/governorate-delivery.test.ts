@@ -129,8 +129,9 @@ describe('checkout address is authoritative (never the header governorate)', () 
     await addToCart({ userId: c.user.id }, p.variantId, 1);
     const damTotal = (await cartView({ userId: c.user.id }, DAMIETTA)).grandTotal;
     const dakTotal = (await cartView({ userId: c.user.id }, DAKAHLIA)).grandTotal;
-    expect(damTotal).toBe(EGP(520));
-    expect(dakTotal).toBe(EGP(500));
+    // 400 EGP (STANDARD) → buyer service/protection fee 3.5% = 14 EGP on top of products + shipping.
+    expect(damTotal).toBe(EGP(520) + EGP(14));
+    expect(dakTotal).toBe(EGP(500) + EGP(14));
 
     // Customer switches the checkout address to Dakahlia but submits the stale (Damietta) total: refused.
     await expect(placeOrder(c.actor, { addressId: dakAddress, paymentMethod: 'INSTAPAY', checkoutKey: randomUUID(), expectedTotal: damTotal })).rejects.toMatchObject({ code: 'CONFLICT' });
@@ -149,7 +150,7 @@ describe('checkout address is authoritative (never the header governorate)', () 
     const tampered = { addressId: c.addressId, paymentMethod: 'INSTAPAY' as const, checkoutKey: randomUUID(), expectedTotal: EGP(301), shippingFee: EGP(1), shippingTotal: EGP(1), governorateId: CAIRO };
     await expect(placeOrder(c.actor, tampered as never)).rejects.toMatchObject({ code: 'CONFLICT' });
     // Even when the total matches, injected fields never reach the order.
-    const ok = { ...tampered, checkoutKey: randomUUID(), expectedTotal: EGP(420) };
+    const ok = { ...tampered, checkoutKey: randomUUID(), expectedTotal: EGP(420) + 1050 }; // + buyer fee 3.5% of 300
     const { order } = await placeOrder(c.actor, ok as never);
     expect(order.shippingTotal).toBe(EGP(120));
     expect(order.governorateId).toBe(DAMIETTA);
@@ -175,7 +176,7 @@ describe('order destination snapshot is immutable', () => {
     const [soAfter] = await db.select().from(sellerOrders).where(eq(sellerOrders.orderId, order.id));
     expect(after.governorateId).toBe(DAMIETTA);
     expect(after.shippingTotal).toBe(EGP(120));
-    expect(after.grandTotal).toBe(EGP(370));
+    expect(after.grandTotal).toBe(EGP(370) + 875); // + buyer fee 3.5% of 250 (snapshotted)
     expect(after.shippingAddress).toEqual(order.shippingAddress);
     expect((after.shippingAddress as { governorate: string; governorateId: number })).toMatchObject({ governorate: 'دمياط', governorateId: DAMIETTA });
     expect(soAfter.shippingFee).toBe(soBefore.shippingFee);

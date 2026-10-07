@@ -76,6 +76,12 @@ export const externalDeals = pgTable(
     feePayer: text().notNull().default('SELLER'), // SELLER | BUYER
     buyerPays: money(), // total the buyer transfers
     sellerReceives: money(), // net the seller is paid on completion
+    /** Fee-engine split of feeAmount (Fb + Fs = feeAmount). Legacy deals: the whole fee is on feePayer. */
+    buyerFeeAmount: money().notNull().default(0),
+    sellerFeeAmount: money().notNull().default(0),
+    pricingSource: text().notNull().default('LEGACY_SNAPSHOT'),
+    pricingVersionId: uuid(),
+    pricingSnapshot: jsonb(),
     // Step 4 — delivery expectations
     deliveryMethod: text(),
     deliveryDeadline: ts(),

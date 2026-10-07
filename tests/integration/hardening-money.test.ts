@@ -255,38 +255,58 @@ describe('transparent shared fee (Fb + Fs = F exactly)', () => {
     expect(applyBps(599_00, 1500)).toBe(89_85);
   });
 
-  it('a 50/50 share is snapshotted per item; buyer pays merchandise + shipping + Fb; seller net = gross − F', async () => {
-    await withSetting('fees.buyerShareBps', 5000, async () => {
-      const { so, order } = await paidOrder(599_00, 3);
-      const items = await itemsOf(so.id);
-      for (const it of items) expect(it.buyerFeeAmount + it.sellerFeeAmount).toBe(it.commissionAmount);
-      const s = await soOf(so.id);
-      expect(s.buyerFeeTotal + s.sellerFeeTotal).toBe(s.commissionTotal);
-      const [o] = await db.select().from(orders).where(eq(orders.id, order.id));
-      expect(o.grandTotal).toBe(o.merchandiseTotal - o.discountTotal + o.shippingTotal + o.buyerFeeTotal);
-      expect(s.sellerNet).toBe(s.grossTotal - s.commissionTotal);
-      expect(o.economicSnapshot).toBeTruthy();
-      expect((o.economicSnapshot as { feeBuyerShareBps: number }).feeBuyerShareBps).toBe(5000);
-    });
+  it('fee engine: split snapshotted per item; buyer pays products + shipping + Fb; seller net = gross − F', async () => {
+    const { so, order } = await paidOrder(599_00, 3);
+    // 3 × 599 = 1,797 EGP (STANDARD, tier 1): F = 12% = 215.64, Fb = 3.5% = 62.895 → 62.90, Fs = 152.74.
+    const items = await itemsOf(so.id);
+    expect(items[0].commissionAmount).toBe(215_64);
+    expect(items[0].buyerFeeAmount).toBe(62_90);
+    expect(items[0].sellerFeeAmount).toBe(152_74);
+    for (const it of items) expect(it.buyerFeeAmount + it.sellerFeeAmount).toBe(it.commissionAmount);
+    const s = await soOf(so.id);
+    expect(s.buyerFeeTotal + s.sellerFeeTotal).toBe(s.commissionTotal);
+    const [o] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(o.grandTotal).toBe(o.merchandiseTotal - o.discountTotal + o.shippingTotal + o.buyerFeeTotal);
+    expect(s.sellerNet).toBe(s.grossTotal - s.commissionTotal);
+    const snap = s.pricingSnapshot as { pricingVersionId: string; shippingExcludedFromBase: boolean; feeBase: number; buyerFee: number };
+    expect(snap.pricingVersionId).toBe(s.pricingVersionId);
+    expect(snap.shippingExcludedFromBase).toBe(true);
+    expect(snap.feeBase).toBe(1797_00);
+    expect(snap.buyerFee).toBe(62_90);
   });
 
-  it('fee configuration changes are prospective only (existing orders keep their snapshot)', async () => {
+  it('committed pricing snapshots are immutable in the database', async () => {
     const { so } = await paidOrder();
-    const before = await soOf(so.id);
-    await withSetting('fees.buyerShareBps', 10000, async () => {
-      const after = await soOf(so.id);
-      expect(after.buyerFeeTotal).toBe(before.buyerFeeTotal);
-      expect(after.sellerFeeTotal).toBe(before.sellerFeeTotal);
-    });
+    await expect(db.execute(sql`update seller_orders set pricing_snapshot = '{}'::jsonb where id = ${so.id}`)).rejects.toThrow();
+    await expect(db.execute(sql`update seller_orders set pricing_source = 'LEGACY_SNAPSHOT' where id = ${so.id}`)).rejects.toThrow();
   });
 
-  it('missing fee configuration blocks checkout (no invented default)', async () => {
-    await withSetting('fees.buyerShareBps', null, async () => {
-      const s = await makeSeller(admin);
-      const p = await makeProduct(s.actor, admin, { price: 100_00 });
-      const c = await makeCustomer();
-      await expect(checkout(c, [{ variantId: p.variantId, qty: 1 }])).rejects.toThrow(/رسوم الخدمة/);
-    });
+  it('no pricing version in force → checkout fails closed (no guessed fee)', async () => {
+    const s = await makeSeller(admin);
+    const p = await makeProduct(s.actor, admin, { price: 100_00 });
+    const c = await makeCustomer();
+    const shift = async (dir: '+' | '-') =>
+      db.transaction(async (tx) => {
+        await tx.execute(sql`alter table pricing_versions disable trigger pricing_versions_guard`);
+        await tx.execute(sql.raw(`update pricing_versions set effective_from = effective_from ${dir} interval '100 years' where model = 'MARKETPLACE' and status = 'PUBLISHED'`));
+        await tx.execute(sql`alter table pricing_versions enable trigger pricing_versions_guard`);
+      });
+    await shift('+');
+    try {
+      await expect(checkout(c, [{ variantId: p.variantId, qty: 1 }])).rejects.toThrow(/لا يوجد إصدار رسوم ساري/);
+    } finally {
+      await shift('-');
+    }
+  });
+
+  it('a category without a pricing class → checkout fails closed', async () => {
+    const id = randomUUID();
+    await db.execute(sql`insert into categories (id, slug, name_ar, name_en, path) values (${id}, ${'unmapped-' + id.slice(0, 8)}, 'تصنيف بدون تسعير', 'Unmapped', array[${id}]::uuid[])`);
+    const s = await makeSeller(admin);
+    const p = await makeProduct(s.actor, admin, { price: 100_00, category: 'unmapped-' + id.slice(0, 8) });
+    const c = await makeCustomer();
+    await expect(checkout(c, [{ variantId: p.variantId, qty: 1 }])).rejects.toThrow(/لحين ضبط الرسوم/);
+    await db.execute(sql`update categories set is_active = false where id = ${id}`);
   });
 });
 
@@ -440,7 +460,7 @@ describe('go-live gate, invariants, closure, parent status', () => {
     const gate = await goLiveGate();
     expect(gate.pass).toBe(false);
     expect(gate.automaticSellerRelease).toBe(false);
-    expect(gate.blockers.map((b) => b.code)).toEqual(expect.arrayContaining(['RESTORE_DRILL', 'PAYMENT_PROVIDER', 'FEE_APPROVAL', 'LEGAL_APPROVAL']));
+    expect(gate.blockers.map((b) => b.code)).toEqual(expect.arrayContaining(['RESTORE_DRILL', 'PAYMENT_PROVIDER', 'LEGAL_APPROVAL', 'TAX_TREATMENT', 'REFUND_FEE_POLICY', 'PAYOUT_COSTS_UNVERIFIED']));
     await expect(updateSetting(admin, 'payments.realMoneyEnabled', true, 'محاولة تفعيل')).rejects.toThrow(/لا يمكن تفعيل الأموال الحقيقية/);
   });
 

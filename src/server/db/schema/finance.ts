@@ -142,6 +142,14 @@ export const withdrawalRequests = pgTable(
     destinationSnapshot: jsonb(),
     /** Snapshot: requested while real money was disabled — closing it moves no money. */
     isTest: boolean().notNull().default(true),
+    /** Transfer cost: quoted at request, frozen at approval, actual recorded at payout. Never the EDMN sale fee. */
+    payoutChannel: text(),
+    payoutChannelConfigId: uuid(),
+    transferCostPayer: text(),
+    transferCost: money().notNull().default(0),
+    netTransferAmount: money(),
+    actualTransferCost: money(),
+    transferCostSnapshot: jsonb(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

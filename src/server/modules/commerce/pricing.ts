@@ -4,9 +4,8 @@ import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
 import type { DbOrTx } from '@/server/db/client';
 import { sql } from 'drizzle-orm';
 import { productVariants, products, sellerShippingRates, sellers, stores } from '@/server/db/schema';
-import { computeLineCommission, resolveRule } from '@/server/modules/finance/commissions';
-import { splitFee } from '@/server/modules/finance/controls';
-import { getSetting } from '@/server/modules/settings';
+import { DomainError } from '@/server/core/errors';
+import { activeVersionId, loadVersion, quoteMarketplace, type LoadedVersion, type MarketQuote } from '@/server/modules/pricing/service';
 
 /**
  * Single source of truth for cart/checkout pricing. Used to DISPLAY the cart and, again,
@@ -40,8 +39,8 @@ export interface PricedLine {
   issues: LineIssue[];
   /** Seller's voluntary return policy for this listing, shown before purchase (snapshotted on the order item). */
   returnPolicy: ReturnPolicy;
-  /** Transparent EDMN fee on this line (basis: product subtotal), and its buyer / seller shares. */
-  fee: { ruleId: string; bps: number; total: number; buyer: number; seller: number } | null;
+  /** Transparent EDMN fee on this line (basis: product value; shipping excluded), and its buyer / seller shares. */
+  fee: { economicClass: string; total: number; buyer: number; seller: number } | null;
 }
 
 export interface SellerGroup {
@@ -60,6 +59,8 @@ export interface SellerGroup {
   buyerFee: number;
   sellerFee: number;
   total: number;
+  /** Fee-engine quote for this seller sub-order (null when pricing is unavailable). */
+  quote: MarketQuote | null;
 }
 
 export interface PricedCart {
@@ -70,8 +71,10 @@ export interface PricedCart {
   /** Buyer share of the EDMN fee (Fb). Seller share (Fs) is deducted from the seller's proceeds. */
   buyerFeeTotal: number;
   sellerFeeTotal: number;
-  /** Buyer share in bps of the total fee, or null when the fee is not configured (checkout blocked). */
-  buyerShareBps: number | null;
+  /** Fee-engine version used for this quote (null → no valid pricing: checkout blocked, fail closed). */
+  pricingVersionId: string | null;
+  /** User-safe reason when fees cannot be calculated (no version / unmapped category). */
+  pricingUnavailable: string | null;
   grandTotal: number;
   itemCount: number;
   hasIssues: boolean;
@@ -80,7 +83,7 @@ export interface PricedCart {
 
 export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], governorateId: number | null): Promise<PricedCart> {
   if (!inputs.length) {
-    return { groups: [], merchandiseTotal: 0, shippingTotal: 0, discountTotal: 0, buyerFeeTotal: 0, sellerFeeTotal: 0, buyerShareBps: null, grandTotal: 0, itemCount: 0, hasIssues: false, shippingResolved: true };
+    return { groups: [], merchandiseTotal: 0, shippingTotal: 0, discountTotal: 0, buyerFeeTotal: 0, sellerFeeTotal: 0, pricingVersionId: null, pricingUnavailable: null, grandTotal: 0, itemCount: 0, hasIssues: false, shippingResolved: true };
   }
   const rows = await conn
     .select({
@@ -128,6 +131,7 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
         buyerFee: 0,
         sellerFee: 0,
         total: 0,
+        quote: null,
       });
     }
     const g = groups.get(r.product.sellerId)!;
@@ -173,17 +177,27 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
     g.etaMinDays = rate.etaMinDays;
     g.etaMaxDays = rate.etaMaxDays;
   }
-  // Transparent shared fee: the same rule resolution and split used inside the order transaction.
-  const buyerShareBps = await getSetting('fees.buyerShareBps', conn);
-  const now = new Date();
+  // Fee engine: the same version and calculation used inside the order transaction (one quote per
+  // seller sub-order). No valid version or an unmapped category → fees unavailable → checkout blocked.
+  let version: LoadedVersion | null = null;
+  let pricingUnavailable: string | null = null;
+  const vid = await activeVersionId(conn, 'MARKETPLACE');
+  if (vid) version = await loadVersion(conn, vid);
+  else pricingUnavailable = 'الشراء متوقف مؤقتًا: لا يوجد إصدار رسوم ساري.';
   for (const g of groups.values()) {
-    for (const l of g.lines) {
-      const rule = await resolveRule(conn, l.categoryId, now);
-      const c = computeLineCommission(rule, l.unitPrice, l.quantity);
-      const split = splitFee(c.amount, buyerShareBps ?? 0);
-      l.fee = { ruleId: rule.id, bps: c.bps, total: c.amount, buyer: split.buyer, seller: split.seller };
-      g.buyerFee += split.buyer;
-      g.sellerFee += split.seller;
+    if (version && !pricingUnavailable) {
+      try {
+        const q = await quoteMarketplace(conn, version, g.lines.map((l) => ({ key: l.variantId, categoryId: l.categoryId, lineTotal: l.lineTotal })));
+        g.quote = q;
+        for (const l of g.lines) {
+          const lf = q.result.lines.find((x) => x.key === l.variantId)!;
+          l.fee = { economicClass: lf.economicClass, total: lf.total, buyer: lf.buyer, seller: lf.seller };
+        }
+        g.buyerFee = q.result.buyer;
+        g.sellerFee = q.result.seller;
+      } catch (e) {
+        pricingUnavailable = e instanceof DomainError ? e.message : 'تعذر حساب رسوم الخدمة';
+      }
     }
     g.total = g.merchandiseSubtotal + (g.shippingFee ?? 0) + g.buyerFee;
   }
@@ -199,7 +213,8 @@ export async function priceLines(conn: DbOrTx, inputs: PricingLineInput[], gover
     discountTotal: 0,
     buyerFeeTotal,
     sellerFeeTotal: list.reduce((a, g) => a + g.sellerFee, 0),
-    buyerShareBps,
+    pricingVersionId: pricingUnavailable ? null : (version?.id ?? null),
+    pricingUnavailable,
     grandTotal: merchandiseTotal + shippingTotal + buyerFeeTotal,
     itemCount: list.reduce((a, g) => a + g.lines.reduce((b, l) => b + l.quantity, 0), 0),
     hasIssues: list.some((g) => g.lines.some((l) => l.issues.length)),

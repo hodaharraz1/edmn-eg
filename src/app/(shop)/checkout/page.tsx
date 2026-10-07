@@ -127,6 +127,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                 <input type="hidden" name="addressId" value={chosen!.id} />
                 <input type="hidden" name="checkoutKey" value={randomUUID()} />
                 <input type="hidden" name="expectedTotal" value={cart.grandTotal} />
+                <input type="hidden" name="expectedPricingVersionId" value={cart.pricingVersionId ?? ''} />
                 <section className="card p-5">
                   <h2 className="mb-3 flex items-center gap-2 font-bold"><Wallet className="size-5 text-brand-600" /> 3. طريقة الدفع</h2>
                   {!live && <TestMoneyNotice className="mb-3" />}
@@ -147,7 +148,9 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                   <h2 className="mb-3 font-bold">4. ملاحظات للبائع (اختياري)</h2>
                   <Textarea name="note" rows={2} maxLength={500} placeholder="مثال: كلّمني قبل التوصيل" />
                 </section>
-                {problems.length > 0 ? (
+                {cart.pricingUnavailable ? (
+                  <button type="button" disabled className="h-12 w-full rounded-xl bg-slate-300 text-sm font-semibold text-slate-600" data-testid="checkout-blocked">مينفعش تكمّل: {cart.pricingUnavailable}</button>
+                ) : problems.length > 0 ? (
                   <button type="button" disabled className="h-12 w-full rounded-xl bg-slate-300 text-sm font-semibold text-slate-600" data-testid="checkout-blocked">
                     {noShipping ? 'مينفعش تكمّل: فيه بائع مش بيشحن لمحافظة عنوان التوصيل' : 'مينفعش تكمّل قبل ما تراجع المنتجات'}
                   </button>
@@ -171,8 +174,9 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
             <dl className="space-y-2">
               <div className="flex justify-between"><dt className="text-muted">المنتجات ({cart.itemCount})</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd data-testid="checkout-shipping-total">{!chosen ? '—' : cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'غير متاح'}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن (حصتك)</dt><dd data-testid="checkout-buyer-fee">{formatEGP(cart.buyerFeeTotal)}</dd></div>
-              <p className="text-[11px] text-muted">رسوم خدمة اضمن تُحسب على قيمة المنتجات وتتقسم بين المشتري والبائع حسب الإعداد المعلن{cart.buyerShareBps !== null ? ` (حصتك ${(cart.buyerShareBps / 100).toFixed(2)}% من الرسوم)` : ''}. حصة البائع ({formatEGP(cart.sellerFeeTotal)}) تُخصم من مستحقاته ولا تدفعها أنت. الشحن على المشتري.</p>
+              <div className="flex justify-between"><dt className="text-muted">رسوم خدمة وحماية اضمن</dt><dd data-testid="checkout-buyer-fee">{cart.pricingUnavailable ? '—' : formatEGP(cart.buyerFeeTotal)}</dd></div>
+              <p className="text-[11px] text-muted">رسوم خدمة وحماية اضمن تُحسب على قيمة المنتجات فقط (من غير الشحن) حسب نوع المنتج وقيمة الطلب، وتظهر لك قبل التأكيد. الشحن على المشتري. الرسوم المثبتة في طلبك لا تتغير بعد التأكيد.</p>
+              {cart.pricingUnavailable && <Alert tone="danger">{cart.pricingUnavailable}</Alert>}
               <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي المطلوب</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. الطلب بيتقسم تلقائياً على حسب كل بائع.</p>

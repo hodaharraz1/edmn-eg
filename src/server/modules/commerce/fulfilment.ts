@@ -30,6 +30,7 @@ import {
   stores,
   trackingEvents,
 } from '@/server/db/schema';
+import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
 import { restock } from '@/server/modules/catalog/inventory';
 import { releaseSellerOrderFunds, sellerOrderPosition } from '@/server/modules/finance/postings';
 import { grantApproval } from '@/server/modules/finance/approvals';
@@ -483,6 +484,15 @@ export async function setFinancialHold(actor: Actor, soId: string, hold: boolean
 
 /* ═════════════ Cancellation (strictly before SHIPPED) ═════════════ */
 
+/** Who is responsible for a pre-shipment cancellation (drives the fee refund & cost policy). */
+function cancellationAttribution(code: CancellationReasonCode): { reasonCode: RefundReasonCode; responsibleParty: ResponsibleParty } {
+  if (code === 'BUYER_REQUEST') return { reasonCode: 'BUYER_CANCELLATION', responsibleParty: 'BUYER' };
+  if (code === 'PAYMENT_FAILURE') return { reasonCode: 'PAYMENT_ERROR', responsibleParty: 'PROVIDER' };
+  if (code === 'RISK_REVIEW') return { reasonCode: 'FRAUD', responsibleParty: 'UNDETERMINED' };
+  if (code === 'SELLER_UNABLE_TO_FULFIL' || code === 'OUT_OF_STOCK') return { reasonCode: 'SELLER_FAULT', responsibleParty: 'SELLER' };
+  return { reasonCode: 'OTHER', responsibleParty: 'UNDETERMINED' };
+}
+
 async function cancelSellerOrderTx(tx: DbOrTx, actor: Actor, so: SellerOrder, code: CancellationReasonCode, note: string) {
   if (so.status === 'CANCELLED') return { alreadyCancelled: true };
   if (!SELLER_ORDER_CANCELLABLE.includes(so.status)) throw invalidState('مينفعش إلغاء الطلب بعد الشحن. استخدم الإرجاع أو بلّغ عن مشكلة');
@@ -508,6 +518,7 @@ async function cancelSellerOrderTx(tx: DbOrTx, actor: Actor, so: SellerOrder, co
       buyerFeeRefund: left.buyerFee,
       sellerFeeReversal: left.sellerFee,
       reason: `إلغاء قبل الشحن (${code}): ${note}`,
+      ...cancellationAttribution(code),
     });
   }
   await syncParentStatus(tx, actor, so.orderId);
@@ -673,6 +684,8 @@ export async function resolveShipmentException(actor: Actor, soId: string, outco
             buyerFeeRefund: left.buyerFee,
             sellerFeeReversal: left.sellerFee,
             reason: `فشل التوصيل (${to}): ${why}`,
+            reasonCode: 'NON_DELIVERY',
+            responsibleParty: 'CARRIER',
           });
         }
         await syncParentStatus(tx, actor, so.orderId);

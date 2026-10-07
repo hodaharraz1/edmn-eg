@@ -48,6 +48,7 @@ export async function placeOrderAction(_p: ActionState, fd: FormData): Promise<A
       paymentMethod: str(fd, 'paymentMethod') as 'INSTAPAY',
       checkoutKey: str(fd, 'checkoutKey'),
       expectedTotal: int(fd, 'expectedTotal') ?? -1,
+      expectedPricingVersionId: str(fd, 'expectedPricingVersionId') || undefined,
       note: str(fd, 'note'),
     });
     orderId = order.id;

@@ -225,6 +225,11 @@ export const sellerOrders = pgTable(
     deliveryExceptionCode: text(),
     deliveryExceptionAt: ts(),
     releaseApprovalId: uuid(),
+    /** ENGINE = fee engine snapshot; LEGACY_SNAPSHOT = pre-engine commission values (authoritative as stored). */
+    pricingSource: text().notNull().default('LEGACY_SNAPSHOT'),
+    pricingVersionId: uuid(),
+    /** Immutable fee-engine snapshot (version, class groups, tiers, components, minimum, rounding). */
+    pricingSnapshot: jsonb(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -283,6 +288,9 @@ export const orderItems = pgTable(
     /** Seller's voluntary return policy as shown at purchase (later policy edits never change it). */
     returnPolicySnapshot: jsonb().$type<import('@/domain/return-policy').ReturnPolicySnapshot>(),
     returnedQuantity: integer().notNull().default(0),
+    /** Fee-engine economic class used for this line (null for legacy lines). */
+    economicClass: text(),
+    pricingVersionId: uuid(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -498,6 +506,16 @@ export const refunds = pgTable(
     destinationSnapshot: jsonb(),
     destinationOverride: boolean().notNull().default(false),
     idempotencyKey: text(),
+    /** Cost attribution: why, at which stage, who is responsible, and which fee policy decided the components. */
+    reasonCode: text(),
+    responsibleParty: text(),
+    lifecycleStage: text(),
+    feePolicyVersionId: uuid(),
+    /** PUBLISHED_POLICY | UNPUBLISHED_SAFE_DEFAULT (no published policy: consumer-safe default + manual review). */
+    feePolicySource: text(),
+    /** Actual refund transfer cost (recorded at payout) and who bore it. */
+    transferCost: money().notNull().default(0),
+    transferCostBorneBy: text(),
     requestedBy: uuid().references(() => users.id),
     approvedBy: uuid().references(() => users.id),
     approvedAt: ts(),

@@ -2,6 +2,8 @@ import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { refundMachine, type RefundStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import { resolveAttribution, stageOfSellerOrder } from '@/server/modules/pricing/refund-policy';
+import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { proportion } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -72,7 +74,19 @@ export interface RefundRequestInput {
   buyerFeeRefund?: number;
   sellerFeeReversal?: number;
   reason: string;
+  /** Cost attribution (policy matrix). Defaults are derived from the source. */
+  reasonCode?: RefundReasonCode;
+  responsibleParty?: ResponsibleParty;
 }
+
+const DEFAULT_ATTRIBUTION: Record<RefundRequestInput['sourceType'], { reasonCode: RefundReasonCode; responsibleParty: ResponsibleParty }> = {
+  ORDER_CANCELLATION: { reasonCode: 'BUYER_CANCELLATION', responsibleParty: 'BUYER' },
+  RETURN: { reasonCode: 'BUYER_VOLUNTARY_RETURN', responsibleParty: 'UNDETERMINED' },
+  DISPUTE: { reasonCode: 'DISPUTE_RESOLUTION', responsibleParty: 'UNDETERMINED' },
+  DELIVERY_FAILURE: { reasonCode: 'NON_DELIVERY', responsibleParty: 'CARRIER' },
+  ADMIN: { reasonCode: 'OTHER', responsibleParty: 'UNDETERMINED' },
+};
+const applyShare = (amount: number, bps: number) => Math.floor((amount * bps + 5000) / 10000);
 
 /**
  * Create a refund REQUEST. Moves no money. The amount is reserved against the refundable ceiling so
@@ -110,7 +124,15 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   }
   if (input.buyerFeeRefund !== undefined) buyerFee = input.buyerFeeRefund;
   if (input.sellerFeeReversal !== undefined) sellerFee = input.sellerFeeReversal;
-  const shipping = input.shippingAmount ?? 0;
+  // Fee components come from the ORIGINAL immutable snapshot (per unit) — never today's rates — and
+  // the fee refund & cost attribution policy decides which share is returned / reversed.
+  const attrib = { ...DEFAULT_ATTRIBUTION[input.sourceType], ...(input.reasonCode ? { reasonCode: input.reasonCode } : {}), ...(input.responsibleParty ? { responsibleParty: input.responsibleParty } : {}) };
+  const stage = stageOfSellerOrder(so.status, !!so.fundsReleasedAt);
+  const policy = await resolveAttribution(tx, { stage, reason: attrib.reasonCode, party: attrib.responsibleParty });
+  buyerFee = applyShare(buyerFee, policy.buyerFeeRefundBps);
+  sellerFee = applyShare(sellerFee, policy.sellerFeeReversalBps);
+  // Shipping is never prorated blindly: only an explicit decision, or FULL / NONE from a published rule.
+  const shipping = policy.shippingRefund === 'NONE' ? 0 : policy.shippingRefund === 'FULL' ? (input.shippingAmount ?? left.shipping) : (input.shippingAmount ?? 0);
   for (const [v, max, label] of [
     [principal, left.principal, 'قيمة المنتجات'],
     [shipping, left.shipping, 'الشحن'],
@@ -147,6 +169,11 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
       // Authoritative destination: back through the original payment method / payer reference.
       destinationSnapshot: payment ? { method: payment.method, paymentId: payment.id, payerName: sub?.payerName ?? null, payerReference: sub?.reference ?? null } : null,
       idempotencyKey: `${input.sourceType}:${input.sourceId}`,
+      reasonCode: attrib.reasonCode,
+      responsibleParty: attrib.responsibleParty,
+      lifecycleStage: stage,
+      feePolicyVersionId: policy.versionId,
+      feePolicySource: policy.source,
       requestedBy: actor.userId,
       createdBy: actor.userId,
     })
@@ -154,7 +181,7 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   if (lines.length) await tx.insert(refundItems).values(lines.map((l) => ({ refundId: refund.id, ...l })));
   const { recordTransition } = await import('@/server/audit/audit');
   await recordTransition(tx, actor, 'refund', refund.id, null, 'REQUESTED', input.reason);
-  await audit(tx, actor, { action: 'refund.requested', entityType: 'refund', entityId: refund.id, newValues: { sellerOrderId: so.id, amount, principal, shipping, buyerFee, sellerFee, source: input.sourceType } });
+  await audit(tx, actor, { action: 'refund.requested', entityType: 'refund', entityId: refund.id, newValues: { sellerOrderId: so.id, amount, principal, shipping, buyerFee, sellerFee, source: input.sourceType, reasonCode: attrib.reasonCode, responsibleParty: attrib.responsibleParty, stage, feePolicy: policy.source, manualReview: policy.manualReview } });
   await notify(tx, { event: 'REFUND_UPDATED', userIds: [order.customerId], vars: { status: 'طلب الاسترداد اتسجل وقيد مراجعة الإدارة', amount: formatEGP(amount) }, link: `/account/orders/${order.id}`, dedupeKey: `refund:${refund.id}:requested` });
   return refund;
 }

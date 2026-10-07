@@ -54,6 +54,17 @@ export const PERMISSIONS = {
   'finance.release': 'اعتماد إتاحة أرباح البائع بعد الاستلام',
   'finance.controls': 'مفاتيح الإيقاف المالية والإقفال اليومي',
   'reconciliation.manage': 'المطابقة مع كشوف الحسابات',
+  // Pricing & fees (versioned fee engine)
+  'pricing.view': 'عرض إصدارات التسعير والرسوم',
+  'pricing.draft': 'إنشاء وتعديل مسودات التسعير',
+  'pricing.simulate': 'محاكي التسعير والربحية',
+  'pricing.submit': 'إرسال مسودة التسعير للاعتماد (المنشئ)',
+  'pricing.approve': 'اعتماد إصدار التسعير (المراجِع)',
+  'pricing.publish': 'نشر/جدولة إصدار التسعير',
+  'pricing.override_margin_guard': 'تجاوز حارس هامش المساهمة (استثناء موثق)',
+  'payout_costs.manage': 'إدارة تكاليف وحدود قنوات التحويل',
+  'refund_fee_policy.manage': 'إدارة مصفوفة استرداد الرسوم وتحميل التكاليف',
+  'profitability.view': 'عرض لوحة الربحية',
   // Ops
   'support.manage': 'إدارة الدعم الفني',
   // Buyer ↔ seller conversations (private customer communication — every staff view is audited)
@@ -106,6 +117,8 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.pay', 'refunds.pay', 'deals.payout',
       'ledger.adjust.create', 'payments.view', 'orders.view', 'settlements.manage', 'reports.view', 'reports.export',
       'reconciliation.manage',
+      // Pricing maker: drafts, simulates and submits; never approves.
+      'pricing.view', 'pricing.draft', 'pricing.simulate', 'pricing.submit', 'profitability.view',
     ],
   },
   FINANCE_CHECKER: {
@@ -117,6 +130,8 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
       'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage',
       // Read-only deal view: a settlement is approved from the deal page.
       'deals.view',
+      // Pricing checker: approves/publishes versions a different person submitted.
+      'pricing.view', 'pricing.simulate', 'pricing.approve', 'pricing.publish', 'payout_costs.manage', 'refund_fee_policy.manage', 'profitability.view',
     ],
   },
   DISPUTE_OFFICER: {

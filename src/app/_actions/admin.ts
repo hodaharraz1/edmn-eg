@@ -243,7 +243,18 @@ export async function withdrawalAdminAction(_p: ActionState, fd: FormData) {
     if (op === 'review') await reviewWithdrawal(a, id);
     else if (op === 'approve') await approveWithdrawal(a, id, str(fd, 'note'));
     else if (op === 'processing') await markWithdrawalProcessing(a, id);
-    else if (op === 'paid') await markWithdrawalPaid(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'));
+    else if (op === 'paid') {
+      const raw = str(fd, 'actualTransferCost');
+      let actual: number | null = null;
+      if (raw) {
+        try {
+          actual = parseEgp(raw);
+        } catch {
+          throw validation('رسوم التحويل الفعلية غير صحيحة');
+        }
+      }
+      await markWithdrawalPaid(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'), actual);
+    }
     else if (op === 'reject') await rejectWithdrawal(a, id, str(fd, 'reason'));
     return done();
   }, ['/admin/withdrawals', `/admin/withdrawals/${str(fd, 'withdrawalId')}`]);

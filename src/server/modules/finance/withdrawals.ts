@@ -17,6 +17,8 @@ import { requireReason, transition } from '../_shared';
 import { accountBalance, postEntry } from './ledger';
 import { assertNotSelfDealing } from './self-dealing';
 import { formatEGP } from '@/lib/format';
+import { quoteTransfer, type TransferQuote } from '@/server/modules/pricing/payout-costs';
+import { transactionCosts } from '@/server/db/schema';
 
 export type Withdrawal = typeof withdrawalRequests.$inferSelect;
 
@@ -69,6 +71,11 @@ export async function requestWithdrawal(
     if (amount > available) throw new DomainError('INSUFFICIENT_BALANCE', 'المبلغ أكبر من رصيدك المتاح');
     const pm = await activePayoutMethod(tx, sellerId);
     if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة. أضف وسيلة سحب وانتظر اعتمادها');
+    // Transfer cost quoted BEFORE the request (frozen at approval). This is never the EDMN sale fee:
+    // seller fees were assessed once on each sale and are not charged again here.
+    const quote = await quoteTransfer(tx, { payoutType: pm.type, amount, sellerId, payoutMethodId: pm.id });
+    const hard = quote.violations.filter((v) => v.startsWith('الحد الأقصى للعملية') || v.startsWith('مبلغ السحب أقل'));
+    if (hard.length) throw validation(hard.join('، '));
     const slaHours = await getSetting('withdrawals.slaBusinessHours', tx);
     const [w] = await tx
       .insert(withdrawalRequests)
@@ -85,6 +92,7 @@ export async function requestWithdrawal(
         requestedBy: actor.userId,
         slaDueAt: addBusinessHours(new Date(), slaHours),
         requiresDualControl: await needsDualControl(tx, sellerId, amount),
+        ...transferFields(quote),
       })
       .returning();
     const { recordTransition } = await import('@/server/audit/audit');
@@ -93,6 +101,35 @@ export async function requestWithdrawal(
     await notify(tx, { event: 'WITHDRAWAL_REQUESTED', userIds: [seller.ownerUserId], vars: { wd: w.number, amount: formatEGP(amount) }, link: '/seller/withdrawals', dedupeKey: `wd:${w.id}:requested` });
     return { withdrawal: w, created: true };
   });
+}
+
+function transferFields(q: TransferQuote) {
+  return {
+    payoutChannel: q.channel,
+    payoutChannelConfigId: q.config.id,
+    transferCostPayer: q.payer,
+    transferCost: q.payer === 'SELLER_PAYS' ? q.cost : 0,
+    netTransferAmount: q.net,
+    transferCostSnapshot: { ...q.snapshot, warnings: q.warnings, violations: q.violations },
+  };
+}
+
+/**
+ * Seller preview before requesting: amount, transfer cost, expected net. Read-only; moves nothing.
+ * The EDMN fees already assessed on the sales are shown elsewhere for information only.
+ */
+export async function previewWithdrawal(actor: Actor, amountInput: string | number) {
+  const sellerId = requireSeller(actor, 'finance.withdraw');
+  let amount: number;
+  try {
+    amount = typeof amountInput === 'number' ? amountInput : parseEgp(amountInput);
+  } catch {
+    throw validation('المبلغ غير صحيح');
+  }
+  const pm = await activePayoutMethod(db, sellerId);
+  if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة');
+  const q = await quoteTransfer(db, { payoutType: pm.type, amount, sellerId, payoutMethodId: pm.id });
+  return { amount, transferCost: q.payer === 'SELLER_PAYS' ? q.cost : 0, payer: q.payer, net: q.net, channel: q.channel, warnings: q.warnings, violations: q.violations };
 }
 
 /** Dual control on the seller's rolling 24-hour total (splitting a payout does not avoid a second person). */
@@ -186,6 +223,9 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     const [pm] = w.payoutMethodId ? await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId)) : [];
     if (!pm || pm.status !== 'ACTIVE') throw invalidState('وسيلة السحب المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
     const dual = w.requiresDualControl || (await needsDualControl(tx, w.sellerId, 0));
+    // Re-validate transfer cost and channel limits now (never split, never switch provider silently).
+    const tq = await quoteTransfer(tx, { payoutType: pm.type, amount: w.amount, sellerId: w.sellerId, payoutMethodId: pm.id, excludeWithdrawalId: w.id });
+    if (tq.violations.length) throw invalidState(`تجاوز حدود قناة التحويل: ${tq.violations.join('، ')}. لا يتم تقسيم السحب أو تغيير القناة تلقائيًا`);
     const destination = { payoutMethodId: pm.id, type: pm.type, masked: pm.maskedLabel, holderName: pm.holderName, verifiedAt: pm.verifiedAt?.toISOString() ?? null };
     const approval = await grantApproval(tx, actor, {
       action: 'WITHDRAWAL_RESERVATION',
@@ -213,7 +253,7 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'APPROVED', note);
     await tx
       .update(withdrawalRequests)
-      .set({ status: 'APPROVED', approvedBy: actor.userId, approvedAt: new Date(), reservedAt: new Date(), reserveApprovalId: approval.id, destinationSnapshot: destination, requiresDualControl: dual })
+      .set({ status: 'APPROVED', approvedBy: actor.userId, approvedAt: new Date(), reservedAt: new Date(), reserveApprovalId: approval.id, destinationSnapshot: destination, requiresDualControl: dual, ...transferFields(tq) })
       .where(eq(withdrawalRequests.id, w.id));
     await audit(tx, actor, { action: 'withdrawal.approved', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, approvalId: approval.id, reserved: true, dualControl: dual }, reason: note ?? null });
     await notifySeller(tx, w, 'تم الاعتماد وحجز المبلغ', 'approved');
@@ -237,7 +277,7 @@ export async function markWithdrawalProcessing(actor: Actor, id: string) {
  * with dual control the payer must be a different person from the approver (DB CHECK). Idempotent.
  * Recording a payout never proves it succeeded externally — reconciliation matches it later.
  */
-export async function markWithdrawalPaid(actor: Actor, id: string, reference: string, proof?: { data: Buffer; name: string } | null) {
+export async function markWithdrawalPaid(actor: Actor, id: string, reference: string, proof?: { data: Buffer; name: string } | null, actualTransferCostInput?: number | null) {
   requirePermission(actor, 'withdrawals.pay');
   requireStepUp(actor);
   const ref = reference?.trim();
@@ -262,12 +302,26 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
       const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, snap.payoutMethodId));
       if (!pm || pm.status !== 'ACTIVE') throw invalidState('وجهة الصرف المعتمدة لم تعد صالحة. ارفض الطلب ويُطلب سحب جديد');
     }
+    // Transfer cost: the seller never pays more than the cost quoted and frozen at approval; any excess
+    // (or the whole cost under EDMN_PAYS) is an EDMN expense. The EDMN sale fees are NOT charged here.
+    const quoted = w.transferCost;
+    const actual = actualTransferCostInput ?? quoted;
+    if (!Number.isSafeInteger(actual) || actual < 0) throw validation('رسوم التحويل الفعلية غير صحيحة');
+    const sellerPays = (w.transferCostPayer ?? 'SELLER_PAYS') === 'SELLER_PAYS' && !!w.transferCostPayer;
+    const sellerCharge = sellerPays ? Math.min(actual, quoted) : 0;
+    const edmnCost = actual - sellerCharge;
+    const net = w.amount - sellerCharge;
+    if (net <= 0) throw invalidState('صافي التحويل غير صالح');
+    if (w.payoutChannel) {
+      const tq = await quoteTransfer(tx, { payoutType: w.payoutType, amount: w.amount, sellerId: w.sellerId, payoutMethodId: w.payoutMethodId, excludeWithdrawalId: w.id });
+      if (tq.violations.length) throw invalidState(`تجاوز حدود قناة التحويل: ${tq.violations.join('، ')}`);
+    }
     const approval = await grantApproval(tx, actor, {
       action: 'WITHDRAWAL_PAYOUT',
       entityType: 'withdrawal',
       entityId: w.id,
-      amount: w.amount,
-      economicVersion: `amount:${w.amount}:reserve:${w.reserveApprovalId ?? 'legacy'}`,
+      amount: w.amount + edmnCost,
+      economicVersion: `amount:${w.amount}:reserve:${w.reserveApprovalId ?? 'legacy'}:cost:${actual}:seller:${sellerCharge}`,
       reason: `تسجيل صرف — مرجع ${ref}`,
       idempotencyKey: `wd-paid:${w.id}`,
       destinationSnapshot: (w.destinationSnapshot as Record<string, unknown>) ?? { masked: w.payoutMasked, type: w.payoutType },
@@ -277,9 +331,9 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'PAID');
     await tx
       .update(withdrawalRequests)
-      .set({ status: 'PAID', paidBy: actor.userId, paidAt: new Date(), paidReference: ref, proofFileId: file?.id ?? null, payoutApprovalId: approval.id })
+      .set({ status: 'PAID', paidBy: actor.userId, paidAt: new Date(), paidReference: ref, proofFileId: file?.id ?? null, payoutApprovalId: approval.id, actualTransferCost: actual, netTransferAmount: net })
       .where(eq(withdrawalRequests.id, w.id));
-    await postEntry(tx, actor, {
+    const posted = await postEntry(tx, actor, {
       entryType: 'WITHDRAWAL_PAID',
       sourceType: 'withdrawal',
       sourceId: w.id,
@@ -288,9 +342,21 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
       approvalId: approval.id,
       lines: [
         { account: { code: 'SELLER_WITHDRAWAL_RESERVED', sellerId: w.sellerId }, debit: w.amount },
-        { account: { code: 'PLATFORM_CASH' }, credit: w.amount },
+        { account: { code: 'PLATFORM_CASH' }, credit: net, memo: 'net transferred to the seller' },
+        ...(sellerCharge > 0 ? [{ account: { code: 'PLATFORM_CASH' as const }, credit: sellerCharge, memo: 'transfer cost paid to the provider (borne by the seller)' }] : []),
+        ...(edmnCost > 0
+          ? [
+              { account: { code: 'TRANSFER_COST_EXPENSE' as const }, debit: edmnCost, memo: 'transfer cost borne by EDMN' },
+              { account: { code: 'PLATFORM_CASH' as const }, credit: edmnCost, memo: 'transfer cost paid to the provider (borne by EDMN)' },
+            ]
+          : []),
       ],
     });
+    for (const [borneBy, amt] of [['SELLER', sellerCharge], ['EDMN', edmnCost]] as const) {
+      if (amt > 0) {
+        await tx.insert(transactionCosts).values({ entityType: 'withdrawal', entityId: w.id, costType: 'PAYOUT_TRANSFER', nature: 'ACTUAL', borneBy, amount: amt, reference: ref, journalEntryId: posted.entryId || null, idempotencyKey: `wd-cost:${w.id}:${borneBy}`, createdBy: actor.userId }).onConflictDoNothing();
+      }
+    }
     await audit(tx, actor, { action: 'withdrawal.paid', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, reference: ref, approvalId: approval.id } });
     await notifySeller(tx, w, 'تم التحويل', 'paid');
   });

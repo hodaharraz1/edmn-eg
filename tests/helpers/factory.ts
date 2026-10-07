@@ -78,7 +78,24 @@ export async function png(label = 'x', w = 400): Promise<Buffer> {
 
 export const pdf = () => Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF', 'ascii');
 
+let pricingReady = false;
+/** Activate the seeded owner-approved pricing versions through the real maker/checker workflow (idempotent). */
+export async function ensurePricingActive() {
+  if (pricingReady) return;
+  const { activeVersionId, activateVersionWorkflow } = await import('@/server/modules/pricing/service');
+  const { pricingVersions } = await import('@/server/db/schema');
+  for (const model of ['MARKETPLACE', 'PROTECTED_DEAL'] as const) {
+    if (await activeVersionId(db, model)) continue;
+    const [v] = await db.select().from(pricingVersions).where(and(eq(pricingVersions.model, model), eq(pricingVersions.versionNo, 1)));
+    const maker = await makeAdmin(['FINANCE_OPERATOR']);
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await activateVersionWorkflow(maker, checker, v.id);
+  }
+  pricingReady = true;
+}
+
 export async function ensurePaymentSetup() {
+  await ensurePricingActive();
   await db.update(paymentMethods).set({ isEnabled: true });
   const [d] = await db.select().from(paymentDestinations).limit(1);
   if (!d) {
@@ -246,4 +263,27 @@ export async function elapse(soId: string, hours: number) {
       where id = ${soId}`);
     await tx.execute(sql`alter table seller_orders enable trigger seller_orders_deadline_guard`);
   });
+}
+
+/**
+ * Publish a new MARKETPLACE (or deal) pricing version through the real maker/checker workflow, cloned
+ * from the owner-approved version 1, optionally with modified tiers. Returns the new version id.
+ * Call again without `mutate` to restore the owner-approved rates for later suites.
+ */
+type TierRow = { economicClass: string; lowerBound: number; upperBound: number | null; buyerBps: number; sellerBps: number; totalBps: number };
+export async function publishPricingVariant(model: 'MARKETPLACE' | 'PROTECTED_DEAL' = 'MARKETPLACE', mutate?: (tiers: TierRow[]) => TierRow[]) {
+  await ensurePricingActive();
+  const { createDraft, updateDraft, loadVersion, activateVersionWorkflow } = await import('@/server/modules/pricing/service');
+  const { pricingVersions } = await import('@/server/db/schema');
+  const [v1] = await db.select().from(pricingVersions).where(and(eq(pricingVersions.model, model), eq(pricingVersions.versionNo, 1)));
+  const maker = await makeAdmin(['FINANCE_OPERATOR']);
+  const checker = await makeAdmin(['FINANCE_CHECKER']);
+  const draft = await createDraft(maker, model, v1.id);
+  if (mutate) {
+    const base = await loadVersion(db, draft.id);
+    const tiers = Object.entries(base.tiersByClass).flatMap(([economicClass, ts]) => ts.map((t) => ({ economicClass, ...t })));
+    await updateDraft(maker, draft.id, { tiers: mutate(tiers) });
+  }
+  await activateVersionWorkflow(maker, checker, draft.id);
+  return draft.id;
 }

@@ -10,7 +10,7 @@ import { deliveryCodeHash, deliveryCodeMatches, deliveryOtpTestMode, generateDel
 import { formatDate } from '@/lib/format';
 import { env } from '@/server/core/env';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
-import { applyBps, parseEgp } from '@/server/core/money';
+import { parseEgp } from '@/server/core/money';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
 import { dealDeliveryOtps, dealEvidence, dealInvitations, dealPayouts, dealTermsVersions, externalDeals, governorates, legalAcceptances, paymentDestinations, paymentMethods, payments, refunds, riskFlags, users } from '@/server/db/schema';
@@ -26,6 +26,7 @@ import { parse, requireReason, transition } from '../_shared';
 import { returnPolicySchema, type ReturnPolicy, type ReturnPolicySnapshot } from '@/domain/return-policy';
 import { offeredDestinations } from '@/server/modules/payments/service';
 import { asc } from 'drizzle-orm';
+import { activeVersionId, loadVersion, lockPricingShared, quoteDeal, requireActiveVersion } from '@/server/modules/pricing/service';
 
 export type Deal = typeof externalDeals.$inferSelect;
 
@@ -108,17 +109,17 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
       if (unit <= 0) throw validation('السعر لازم يكون أكبر من صفر');
       const total = unit * deal.quantity;
       if (total > 50_000_000_00) throw validation('قيمة الصفقة أكبر من الحد المسموح');
-      const feeBps = await getSetting('deals.feeBps', tx);
-      const feePayer = await getSetting('deals.feePayer', tx);
-      const fee = applyBps(total, feeBps);
+      // Indicative quote only (the binding fee is frozen when both parties agree on the final terms).
+      const pv = await requireActiveVersion(tx, 'PROTECTED_DEAL');
+      const q = quoteDeal(pv, total);
       sets = {
         unitPrice: unit,
         totalAmount: total,
-        feeBps,
-        feeAmount: fee,
-        feePayer,
-        buyerPays: feePayer === 'BUYER' ? total + fee : total,
-        sellerReceives: feePayer === 'SELLER' ? total - fee : total,
+        feeBps: 0,
+        feeAmount: q.result.total,
+        feePayer: 'SPLIT',
+        buyerPays: total + q.result.buyer,
+        sellerReceives: total - q.result.seller,
       };
     } else if (step === 3) {
       const d = parse(step3Schema, input);
@@ -334,7 +335,9 @@ export const sellerOfferSchema = z
 export type Terms = {
   product: { title: string; description: string | null; condition: string | null; quantity: number; category: string | null };
   disclosure: { defects: string; accessories: string; warranty: string };
-  price: { unitPrice: number; goodsTotal: number; shippingFee: number; totalAmount: number; feeBps: number; feeAmount: number; feePayer: string; buyerPays: number; sellerReceives: number };
+  price: { unitPrice: number; goodsTotal: number; shippingFee: number; totalAmount: number; feeBps: number; feeAmount: number; feePayer: string; buyerPays: number; sellerReceives: number; buyerFee?: number; sellerFee?: number };
+  /** Fee-engine quote for this terms version (deal value = goods; shipping excluded). Frozen on agreement. */
+  pricing?: ReturnType<typeof quoteDeal>['snapshot'];
   /**
    * Seller-controlled delivery terms. `deadline` / `buyerRequestedMethod` are the buyer's original
    * (non-authoritative) expectations, kept for reference.
@@ -373,11 +376,25 @@ async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerO
   const goods = unit * deal.quantity;
   if (goods > 50_000_000_00) throw validation('قيمة الصفقة أكبر من الحد المسموح');
   const total = goods + shipping;
-  const fee = applyBps(total, deal.feeBps);
+  const pv = await requireActiveVersion(tx, 'PROTECTED_DEAL');
+  const q = quoteDeal(pv, goods);
   return {
     product: { title: deal.title, description: deal.description, condition: deal.condition, quantity: deal.quantity, category: deal.productCategory },
     disclosure: { defects: offer.defects, accessories: offer.accessories, warranty: offer.warranty },
-    price: { unitPrice: unit, goodsTotal: goods, shippingFee: shipping, totalAmount: total, feeBps: deal.feeBps, feeAmount: fee, feePayer: deal.feePayer, buyerPays: deal.feePayer === 'BUYER' ? total + fee : total, sellerReceives: deal.feePayer === 'SELLER' ? total - fee : total },
+    price: {
+      unitPrice: unit,
+      goodsTotal: goods,
+      shippingFee: shipping,
+      totalAmount: total,
+      feeBps: 0,
+      feeAmount: q.result.total,
+      feePayer: 'SPLIT',
+      buyerFee: q.result.buyer,
+      sellerFee: q.result.seller,
+      buyerPays: total + q.result.buyer,
+      sellerReceives: total - q.result.seller,
+    },
+    pricing: q.snapshot,
     delivery: {
       method: offer.deliveryMethod,
       processingDays: offer.processingDays,
@@ -458,6 +475,16 @@ export async function submitSellerOffer(
 async function finalizeTerms(tx: DbOrTx, actor: Actor, deal: Deal, v: typeof dealTermsVersions.$inferSelect) {
   const t = v.terms as unknown as Terms;
   const now = new Date();
+  // Stale-quote protection: the guarantee fee shown in this version must still be the one in force.
+  await lockPricingShared(tx, 'PROTECTED_DEAL');
+  const current = await activeVersionId(tx, 'PROTECTED_DEAL');
+  if (!current) throw new DomainError('INVALID_STATE', 'الصفقات المحمية متوقفة مؤقتًا: لا يوجد إصدار رسوم ساري.');
+  if (!t.pricing || t.pricing.pricingVersionId !== current) {
+    const fresh = quoteDeal(await loadVersion(tx, current), t.price.goodsTotal);
+    if (!t.pricing || fresh.result.total !== t.pricing.totalFee || fresh.result.buyer !== t.pricing.buyerFee) {
+      throw new DomainError('CONFLICT', 'رسوم خدمة الضمان اتحدثت بعد إرسال العرض. البائع لازم يرسل العرض تاني بالرسوم الحالية قبل الموافقة');
+    }
+  }
   const [buyer] = await tx.select({ fullName: users.fullName }).from(users).where(eq(users.id, deal.buyerId));
   // The agreed snapshot also freezes who agreed, where it ships from/to (encrypted locations are
   // referenced by fingerprint, never copied in clear) and when each side committed.
@@ -484,8 +511,15 @@ async function finalizeTerms(tx: DbOrTx, actor: Actor, deal: Deal, v: typeof dea
     processingDays: t.delivery.processingDays,
     totalAmount: t.price.totalAmount,
     feeAmount: t.price.feeAmount,
+    feeBps: 0,
+    feePayer: 'SPLIT',
+    buyerFeeAmount: t.price.buyerFee ?? 0,
+    sellerFeeAmount: t.price.sellerFee ?? 0,
     buyerPays: t.price.buyerPays,
     sellerReceives: t.price.sellerReceives,
+    pricingSource: 'ENGINE',
+    pricingVersionId: t.pricing!.pricingVersionId,
+    pricingSnapshot: { ...t.pricing!, agreedTermsVersion: v.version, dealValue: t.price.goodsTotal, shipping: t.price.shippingFee, frozenAt: now.toISOString() },
   });
   await moveDeal(tx, actor, { ...deal, status: 'ACCEPTED' }, 'PAYMENT_PENDING');
   await audit(tx, actor, { action: 'deal.terms_agreed', entityType: 'external_deal', entityId: deal.id, newValues: { version: v.version, returnPolicy: t.returnPolicy.type } });
@@ -927,7 +961,14 @@ async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundTo
     { account: { code: 'DEAL_FUNDS_HELD' as const }, debit: held },
     ...(refundToBuyer > 0 ? [{ account: { code: 'CUSTOMER_REFUNDS_PAYABLE' as const }, credit: refundToBuyer }] : []),
     ...(payout > 0 ? [{ account: { code: 'DEAL_PAYOUTS_PAYABLE' as const }, credit: payout }] : []),
-    ...(fee > 0 ? [{ account: { code: 'DEAL_FEE_REVENUE' as const }, credit: fee }] : []),
+    ...(fee > 0
+      ? refundToBuyer === 0 && deal.buyerFeeAmount + deal.sellerFeeAmount === fee && deal.buyerFeeAmount > 0
+        ? [
+            { account: { code: 'DEAL_FEE_REVENUE' as const }, credit: deal.buyerFeeAmount, memo: 'buyer guarantee fee' },
+            ...(deal.sellerFeeAmount > 0 ? [{ account: { code: 'DEAL_FEE_REVENUE' as const }, credit: deal.sellerFeeAmount, memo: 'seller guarantee fee' }] : []),
+          ]
+        : [{ account: { code: 'DEAL_FEE_REVENUE' as const }, credit: fee }]
+      : []),
   ];
   await postEntry(tx, actor, {
     entryType: 'DEAL_SETTLEMENT',

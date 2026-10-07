@@ -9,3 +9,4 @@ export * from './finance';
 export * from './ops';
 export * from './messaging';
 export * from './controls';
+export * from './pricing';

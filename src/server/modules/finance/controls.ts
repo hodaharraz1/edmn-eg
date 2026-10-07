@@ -364,8 +364,18 @@ export async function goLiveGate(conn: DbOrTx = db) {
   if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) blockers.push({ code: 'SESSION_SECRET', label: 'سر الجلسات غير مضبوط' });
   if (!env.PAYMENT_WEBHOOK_SECRET) blockers.push({ code: 'PROVIDER_SIGNING_SECRET', label: 'سر توقيع إشعارات مزود الدفع غير مضبوط' });
   if ((env.MAIL_DRIVER ?? 'log').startsWith('log') || (env.SMS_DRIVER ?? 'log').startsWith('log')) blockers.push({ code: 'MESSAGING_DRIVERS', label: 'مزودا البريد/الرسائل على وضع التسجيل (log)' });
-  if (!(await getSetting('fees.ownerApproved', conn))) blockers.push({ code: 'FEE_APPROVAL', label: 'إعدادات الرسوم المشتركة لم يعتمدها المالك' });
-  if ((await getSetting('fees.buyerShareBps', conn)) === null) blockers.push({ code: 'FEE_CONFIG', label: 'إعدادات الرسوم غير مضبوطة' });
+  // Fee engine: both models need a published version in force (maker/checker approved).
+  const { activeVersionId } = await import('@/server/modules/pricing/service');
+  for (const m of ['MARKETPLACE', 'PROTECTED_DEAL'] as const) {
+    if (!(await activeVersionId(conn, m))) blockers.push({ code: `PRICING_${m}`, label: `لا يوجد إصدار تسعير منشور وساري (${m === 'MARKETPLACE' ? 'السوق' : 'الضمانة'})` });
+  }
+  const taxUnresolved = await rows<{ n: string }>(conn, sql`select count(*)::text n from pricing_versions where status = 'PUBLISHED' and tax_treatment = 'UNRESOLVED'`);
+  if (Number(taxUnresolved[0].n) > 0) blockers.push({ code: 'TAX_TREATMENT', label: 'المعالجة الضريبية للرسوم غير محسومة (محاسب/قانوني)' });
+  const refundPolicy = await rows<{ n: string }>(conn, sql`select count(*)::text n from refund_fee_policy_versions where status = 'PUBLISHED'`);
+  if (Number(refundPolicy[0].n) === 0) blockers.push({ code: 'REFUND_FEE_POLICY', label: 'مصفوفة استرداد الرسوم وتحميل التكاليف غير منشورة (مراجعة قانونية مطلوبة)' });
+  const { unverifiedChannels } = await import('@/server/modules/pricing/payout-costs');
+  const unverified = await unverifiedChannels(conn);
+  if (unverified.length) blockers.push({ code: 'PAYOUT_COSTS_UNVERIFIED', label: `تكاليف/حدود قنوات التحويل غير موثقة: ${unverified.map((u) => u.channel).join(', ')}` });
   if (!(await getSetting('legal.policiesApproved', conn))) blockers.push({ code: 'LEGAL_APPROVAL', label: 'النصوص والسياسات القانونية لم تُعتمد قانونيًا' });
   if ((await getSetting('withdrawals.dualControlThreshold', conn)) !== 0) blockers.push({ code: 'MAKER_CHECKER', label: 'حد الرقابة المزدوجة على السحب ليس 0 ج.م' });
   const staffNo2fa = await rows<{ n: string }>(conn, sql`select count(*)::text n from users where is_staff and status = 'ACTIVE' and totp_enabled_at is null`);

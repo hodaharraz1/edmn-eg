@@ -71,6 +71,13 @@
       "when": 1791371105681,
       "tag": "0009_checker_deals_view",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791382364696,
+      "tag": "0010_fee_engine",
+      "breakpoints": true
     }
   ]
 }

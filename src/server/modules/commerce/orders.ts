@@ -20,10 +20,9 @@ import {
   cancellationRequests,
 } from '@/server/db/schema';
 import { enqueueJob } from '@/server/jobs/queue';
-import { resolveRule, computeLineCommission } from '@/server/modules/finance/commissions';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
-import { FEE_ROUNDING_RULE, requireFeeConfig, splitFee } from '@/server/modules/finance/controls';
+import { effectiveBps, lockPricingShared, marketplaceSnapshot, requireActiveVersion } from '@/server/modules/pricing/service';
 import { releaseReservation, reserve } from '@/server/modules/catalog/inventory';
 import { transition, parse } from '../_shared';
 import { acknowledgePrices, cartLines, clearVariants } from './cart';
@@ -38,6 +37,8 @@ export const checkoutSchema = z.object({
   paymentMethod: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'], { message: 'اختار طريقة الدفع' }),
   checkoutKey: z.string().min(8).max(100),
   expectedTotal: z.number().int().min(0),
+  /** Pricing version the buyer was quoted; a different version at commit → re-confirm (stale quote). */
+  expectedPricingVersionId: z.string().uuid().optional(),
   note: z.string().trim().max(500).optional().default(''),
 });
 
@@ -79,8 +80,9 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     if (buyer?.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'الشراء غير متاح لحالة حسابك الحالية');
     const pendingClosure = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${customerId} and status = 'PENDING' limit 1`);
     if (pendingClosure.rows.length) throw invalidState('عندك طلب إغلاق حساب قيد التنفيذ. ألغِه الأول لو عايز تشتري');
-    // Fee configuration must exist (never guessed); missing config blocks new financial checkout.
-    const feeConfig = await requireFeeConfig(tx);
+    // Fee engine: serialize against a pricing publication, then require a valid version (fail closed).
+    await lockPricingShared(tx, 'MARKETPLACE');
+    const pricing = await requireActiveVersion(tx, 'MARKETPLACE');
 
     const [address] = await tx.select().from(addresses).where(eq(addresses.id, d.addressId));
     if (!address || address.userId !== customerId || address.archivedAt) throw validation('عنوان التوصيل ده غير صالح. اختار عنوان تاني');
@@ -109,6 +111,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       }
     }
     if (problems.length) throw new DomainError('INVALID_STATE', problems.join('، '));
+    if (priced.pricingUnavailable || priced.pricingVersionId !== pricing.id) throw new DomainError('INVALID_STATE', priced.pricingUnavailable ?? 'تعذر حساب رسوم الخدمة');
+    if (d.expectedPricingVersionId && d.expectedPricingVersionId !== pricing.id) {
+      throw new DomainError('CONFLICT', 'رسوم خدمة اضمن اتحدثت من وقت ما فتحت الصفحة. راجع الإجمالي الجديد وأكّد تاني');
+    }
     // No self-purchase (wash sales / fake verified reviews), whatever path the cart was filled by.
     for (const g of priced.groups) {
       const own = await tx.execute(sql`select 1 from sellers s left join seller_members m on m.seller_id = s.id and m.user_id = ${customerId} and m.is_active
@@ -150,13 +156,11 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         buyerFeeTotal: priced.buyerFeeTotal,
         grandTotal: priced.grandTotal,
         economicSnapshot: {
-          version: 1,
+          version: 2,
           currency: 'EGP',
-          feeBasis: 'PRODUCT_SUBTOTAL',
-          feeBuyerShareBps: feeConfig.buyerShareBps,
-          feeSellerShareBps: 10000 - feeConfig.buyerShareBps,
-          feeConfigOwnerApproved: feeConfig.ownerApproved,
-          feeRounding: FEE_ROUNDING_RULE,
+          feeBasis: 'PRODUCT_VALUE_EXCL_SHIPPING',
+          feeEngine: { pricingVersionId: pricing.id, pricingVersionNo: pricing.versionNo, model: 'MARKETPLACE', feeUnit: 'SELLER_SUB_ORDER' },
+          feeRounding: 'TOTAL_HALF_UP__BUYER_HALF_UP__SELLER_REMAINDER',
           buyerFeeTotal: priced.buyerFeeTotal,
           sellerFeeTotal: priced.sellerFeeTotal,
           shippingPayer: 'BUYER',
@@ -174,7 +178,6 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       .returning();
     await transitionNew(tx, actor, 'order', order.id, 'PENDING_PAYMENT');
 
-    const now = new Date();
     for (const [i, g] of priced.groups.entries()) {
       let commissionTotal = 0;
       const itemRows: (typeof orderItems.$inferInsert)[] = [];
@@ -182,15 +185,18 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       const [store] = await tx.select().from(stores).where(eq(stores.sellerId, g.sellerId));
       const policyProducts = await tx.select().from(products).where(inArray(products.id, g.lines.map((l) => l.productId)));
       const legalNoticeVersion = await currentLegalVersion(tx, 'RETURNS_POLICY');
-      let buyerFee = 0;
-      let sellerFee = 0;
+      const q = g.quote!;
+      const buyerFee = q.result.buyer;
+      const sellerFee = q.result.seller;
+      commissionTotal = q.result.total;
+      const refundPolicyVersion = await currentLegalVersion(tx, 'RETURNS_POLICY');
+      const pricingSnapshot = marketplaceSnapshot(q, {
+        shipping: g.shippingFee ?? 0,
+        categoryByLine: Object.fromEntries(g.lines.map((l) => [l.variantId, l.categoryId])),
+        refundPolicyVersion,
+      });
       for (const l of g.lines) {
-        const rule = await resolveRule(tx, l.categoryId, now);
-        const c = computeLineCommission(rule, l.unitPrice, l.quantity);
-        const split = splitFee(c.amount, feeConfig.buyerShareBps);
-        commissionTotal += c.amount;
-        buyerFee += split.buyer;
-        sellerFee += split.seller;
+        const lf = q.result.lines.find((x) => x.key === l.variantId)!;
         itemRows.push({
           sellerOrderId: '',
           productId: l.productId,
@@ -204,11 +210,13 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           unitPrice: l.unitPrice,
           quantity: l.quantity,
           lineTotal: l.lineTotal,
-          commissionRuleId: rule.id,
-          commissionBps: c.bps,
-          commissionAmount: c.amount,
-          buyerFeeAmount: split.buyer,
-          sellerFeeAmount: split.seller,
+          commissionRuleId: null,
+          commissionBps: effectiveBps(lf.total, l.lineTotal),
+          commissionAmount: lf.total,
+          buyerFeeAmount: lf.buyer,
+          sellerFeeAmount: lf.seller,
+          economicClass: lf.economicClass,
+          pricingVersionId: pricing.id,
           returnPolicySnapshot: { ...listingReturnPolicy(policyProducts.find((x) => x.id === l.productId)!, store), legalNoticeVersion },
         });
       }
@@ -232,6 +240,9 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           shippingEtaMinDays: g.etaMinDays,
           shippingEtaMaxDays: g.etaMaxDays,
           processingDays: g.processingDays,
+          pricingSource: 'ENGINE',
+          pricingVersionId: pricing.id,
+          pricingSnapshot,
         })
         .returning();
       await transitionNew(tx, actor, 'seller_order', so.id, 'PENDING_PAYMENT');

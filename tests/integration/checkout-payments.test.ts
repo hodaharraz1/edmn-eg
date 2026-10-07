@@ -31,11 +31,21 @@ describe('multi-seller checkout', () => {
     expect(sos.map((s) => s.suffix)).toEqual(['A', 'B']);
     expect(order.merchandiseTotal).toBe(450_00);
     expect(order.shippingTotal).toBe(100_00); // 50 EGP per seller
-    expect(order.grandTotal).toBe(550_00);
-    for (const so of sos) expect(so.sellerNet).toBe(so.grossTotal - so.commissionTotal);
+    // Fee engine: each sub-order is its own fee unit; both are below the 25 EGP minimum.
+    // A (STANDARD, 200 EGP): 12% = 24 → minimum 25, buyer share 25 × 3.5/12 = 7.29.
+    // B (LOW_MARGIN mobile, 250 EGP): 8% = 20 → minimum 25, buyer share 25 × 2/8 = 6.25.
+    expect(order.buyerFeeTotal).toBe(729 + 625);
+    expect(order.grandTotal).toBe(550_00 + 729 + 625);
+    for (const so of sos) {
+      expect(so.sellerNet).toBe(so.grossTotal - so.commissionTotal);
+      expect(so.pricingSource).toBe('ENGINE');
+      expect(so.buyerFeeTotal + so.sellerFeeTotal).toBe(so.commissionTotal);
+    }
     const items = await db.select().from(orderItems).where(eq(orderItems.sellerOrderId, sos[1].id));
-    expect(items[0].commissionBps).toBe(450); // mobile-phones benchmark
-    expect(items[0].commissionAmount).toBe(1125); // 250 EGP × 4.5%
+    expect(items[0].economicClass).toBe('LOW_MARGIN');
+    expect(items[0].commissionAmount).toBe(25_00);
+    expect(items[0].buyerFeeAmount).toBe(625);
+    expect(items[0].sellerFeeAmount).toBe(1875);
     // reserved, not yet sold
     const [v] = await db.select().from(productVariants).where(eq(productVariants.id, p1.variantId));
     expect(v.reserved).toBe(2);

@@ -48,8 +48,12 @@ describe('returns', () => {
     await startInspection(s.actor, ret.id);
     await acceptReturnRefund(s.actor, ret.id, { restock: true });
     let [r] = await db.select().from(refunds).where(eq(refunds.sourceId, ret.id));
-    expect(r.amount).toBe(300_00);
+    // Principal + the buyer fee snapshotted on that unit (consumer-safe default while no fee policy is published).
+    expect(r.principalAmount).toBe(300_00);
+    expect(r.buyerFeeRefund).toBe(cheap.buyerFeeAmount);
+    expect(r.amount).toBe(300_00 + cheap.buyerFeeAmount);
     expect(r.commissionReversal).toBeGreaterThan(0);
+    expect(r.feePolicySource).toBe('UNPUBLISHED_SAFE_DEFAULT');
     expect(r.status).toBe('REQUESTED');
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(availableBefore); // nothing moved yet
     await approveRefundsOf(so.id);
@@ -59,7 +63,8 @@ describe('returns', () => {
     const other = items.find((i) => i.id !== cheap.id)!;
     expect((await db.select().from(orderItems).where(eq(orderItems.id, other.id)))[0].returnedQuantity).toBe(0);
     const availableAfter = (await sellerBalances(db, s.actor.sellerId!)).available;
-    expect(availableBefore - availableAfter).toBe(300_00 - r.commissionReversal);
+    expect(availableBefore - availableAfter).toBe(r.sellerLiability);
+    expect(r.sellerLiability).toBe(300_00 - cheap.sellerFeeAmount);
     // cannot return the same unit twice
     await expect(requestReturn(c.actor, { sellerOrderId: so.id, reason: 'OTHER', description: 'إرجاع مكرر لنفس القطعة', items: [{ orderItemId: cheap.id, quantity: 1 }] })).rejects.toThrow(/أكبر من المتاح/);
   });
@@ -161,7 +166,7 @@ describe('external protected deals', () => {
     );
     await respondToOffer(buyer, deal.id, version, 'ACCEPT');
     const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
-    const { submission } = await submitProof(buyer, p.id, { claimedAmount: '15000', clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await expect(markDealDelivered(seller, deal.id, 'تم')).rejects.toThrow(); // not active yet
     await confirmPayment(admin, p.id, submission.id);
     let [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
