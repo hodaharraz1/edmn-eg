@@ -158,6 +158,10 @@ test('buyer finds the product, checks out and submits payment proof', async ({ b
   await page.getByRole('button', { name: /ضيف للسلة/ }).first().click();
   await expect.poll(async () => (await q(`select ci.id from cart_items ci join carts c on c.id = ci.cart_id join users u on u.id = c.user_id where u.email = 'mona@demo.edmn.local'`)).length).toBeGreaterThan(0);
   await page.goto('/checkout');
+  // Fee transparency before commitment: the buyer's service/protection fee (1,000 EGP standard item → 3.5% = 35 EGP).
+  await expect(page.getByTestId('checkout-buyer-fee')).toContainText('35');
+  await expect(page.getByText('رسوم خدمة وحماية اضمن').first()).toBeVisible();
+  expect(await page.content()).not.toContain('حصة البائع');
   await page.locator('input[name=paymentMethod][value=INSTAPAY]').check();
   await page.getByRole('button', { name: /أكّد الطلب/ }).click();
   await page.waitForURL(/\/account\/orders\/[^/]+\/pay/);
@@ -172,6 +176,10 @@ test('buyer finds the product, checks out and submits payment proof', async ({ b
   const [so] = await q<{ id: string; seller_id: string }>(`select id, seller_id from seller_orders where order_id = $1`, [orderId]);
   expect(so.seller_id).toBe(sellerId);
   soId = so.id;
+  // Invoice keeps the buyer fee actually charged; the seller's private fee is never shown to the buyer.
+  await page.goto(`/account/orders/${orderId}`);
+  await expect(page.getByTestId('invoice-buyer-fee')).toContainText('35');
+  expect(await page.content()).not.toContain('حصة البائع');
 });
 
 test('admin verifies the payment', async ({ browser }) => {
@@ -204,6 +212,9 @@ test('seller confirms, processes and ships with a mandatory waybill', async ({ b
   await page.locator('input[name=markShipped]').check();
   await page.getByRole('button', { name: 'حفظ' }).first().click();
   await expect.poll(soStatus).toBe('SHIPPED');
+  // Seller economics: sale value − EDMN service fee (8.5% = 85 EGP) = net proceeds (+ shipping separately).
+  await page.goto(`/seller/orders/${soId}`);
+  await expect(page.getByTestId('seller-fee')).toContainText('85');
   const docs = await q(`select d.id from shipment_documents d join shipments s on s.id = d.shipment_id where s.seller_order_id = $1`, [soId]);
   expect(docs.length).toBe(1);
   // Shipping alone does not make the seller's money available.
@@ -239,8 +250,12 @@ test('finance checker explicitly approves the seller release → available, orde
 test('seller requests a withdrawal; admin approves and records the transfer', async ({ browser }) => {
   const seller = await customerLogin(browser, SELLER.email, SELLER.password);
   await seller.goto('/seller/withdrawals');
-  await seller.locator('input[name=amount]').fill('500');
-  await seller.getByRole('button', { name: 'تقديم طلب السحب' }).click();
+  // Transfer cost shown BEFORE requesting (InstaPay 0.1% of 500 = 0.50 EGP), separate from EDMN fees.
+  await seller.locator('input[name=preview]').fill('500');
+  await seller.getByRole('button', { name: 'احسب رسوم التحويل' }).click();
+  await expect(seller.getByTestId('transfer-cost')).toContainText('0.5');
+  await expect(seller.getByTestId('transfer-net')).toContainText('499.5');
+  await seller.getByRole('button', { name: /تأكيد طلب سحب/ }).click();
   await expect.poll(async () => (await q(`select id from withdrawal_requests where seller_id = $1 and amount = 50000 and status = 'REQUESTED'`, [sellerId])).length).toBe(1);
   const [w] = await q<{ id: string }>(`select id from withdrawal_requests where seller_id = $1`, [sellerId]);
   // A request moves no money and reserves nothing; the Admin approval reserves.

@@ -13,7 +13,10 @@ refused outright. A passing gate never enables money by itself — the owner dec
 | 6 | `EDMN_ENVIRONMENT=production` (ENVIRONMENT) | staging |
 | 7 | Encryption key / session secret configured (ENCRYPTION_KEY, SESSION_SECRET) | check at deploy |
 | 8 | Provider webhook signing secret (PROVIDER_SIGNING_SECRET) | not set (endpoint returns 503) |
-| 9 | Shared-fee split approved by owner (FEE_APPROVAL) and configured (FEE_CONFIG) | carried over 0% buyer share, **not approved** |
+| 9 | Fee engine: a published pricing version in force for both models (PRICING_MARKETPLACE / PRICING_PROTECTED_DEAL) | owner-approved v1 published on staging via maker/checker |
+| 9a | Tax treatment of fees resolved (TAX_TREATMENT) | UNRESOLVED |
+| 9b | Refund fee policy published after legal review (REFUND_FEE_POLICY) | DRAFT — LEGAL REVIEW REQUIRED |
+| 9c | Payout channel costs/limits verified (PAYOUT_COSTS_UNVERIFIED) | UNVERIFIED placeholders |
 | 10 | Policies approved by legal counsel (LEGAL_APPROVAL) | v1.1 drafts — LEGAL REVIEW REQUIRED |
 | 11 | Maker/checker threshold = 0 EGP (MAKER_CHECKER) | staging 50,000 EGP |
 | 12 | Every active staff account has 2FA (ADMIN_2FA) | check at go-live |
