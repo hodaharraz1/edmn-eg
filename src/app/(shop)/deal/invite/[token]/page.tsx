@@ -47,7 +47,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
           { label: 'المنتج', value: `${s.title} × ${s.quantity}` },
           { label: 'الحالة', value: s.condition === 'NEW' ? 'جديد' : 'مستعمل' },
           { label: 'السعر اللي طلبه المشتري', value: formatEGP(s.totalAmount) },
-          { label: 'رسوم الخدمة', value: `${formatEGP(s.feeAmount)} (${s.feePayer === 'SELLER' ? 'تُخصم من مستحقك' : 'يتحملها المشتري'})` },
+          { label: 'رسوم الضمان عليك (تقديرية — النهائية تظهر في عرضك)', value: formatEGP((s.totalAmount ?? 0) - (s.sellerReceives ?? 0)) },
           { label: 'صافي اللي هتستلمه (قبل الشحن)', value: formatEGP(s.sellerReceives) },
           { label: 'طريقة التسليم المفضلة للمشتري', value: s.deliveryMethod ?? '—' },
           { label: 'المشتري يفضّل يستلم قبل', value: formatDate(s.deliveryDeadline) },

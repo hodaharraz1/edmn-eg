@@ -50,6 +50,8 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           { label: 'اعتمده', value: w.approvedBy ? `${names[w.approvedBy]} · ${formatDate(w.approvedAt, true)}` : '—' },
           { label: 'صرفه', value: w.paidBy ? `${names[w.paidBy]} · ${formatDate(w.paidAt, true)} · مرجع ${w.paidReference}` : '—' },
           { label: 'إثبات التحويل', value: w.proofFileId ? <a className="text-brand-700 underline" target="_blank" href={`/api/files/${w.proofFileId}`}>عرض</a> : '—' },
+          { label: 'رسوم التحويل', value: w.payoutChannel ? `${w.payoutChannel} · ${formatEGP(w.transferCost)} ${w.transferCostPayer === 'SELLER_PAYS' ? '(على البائع)' : '(على اضمن)'} · صافي للبائع ${formatEGP(w.netTransferAmount ?? w.amount)}${w.actualTransferCost !== null ? ` · الفعلية ${formatEGP(w.actualTransferCost)}` : ''}` : '— (طلب قبل محرك التكاليف)' },
+          ...(((w.transferCostSnapshot as { warnings?: string[] } | null)?.warnings ?? []).length ? [{ label: 'تحذيرات الحدود', value: ((w.transferCostSnapshot as { warnings?: string[] }).warnings ?? []).join('، ') }] : []),
           { label: 'أرصدة البائع الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` },
           ...(w.rejectReason ? [{ label: 'سبب الرفض', value: w.rejectReason }] : []),
         ]} />
@@ -80,6 +82,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             <p className="text-xs text-muted">سجّل فقط بعد إتمام التحويل فعلياً. يتطلب تحققاً إضافياً (2FA حديث).</p>
             <Field label="رقم مرجع التحويل" required><Input name="reference" required minLength={3} className="ltr" /></Field>
             <FileInput name="proof" label="إثبات التحويل" accept="image/jpeg,image/png,image/webp,application/pdf" />
+            <Field label={`رسوم التحويل الفعلية (ج.م) — المسعّرة ${formatEGP(w.transferCost)}`} hint="البائع لا يتحمل أكثر من المبلغ المعلن له؛ الزيادة تُسجل مصروفًا على اضمن."><Input name="actualTransferCost" className="ltr" placeholder={(w.transferCost / 100).toFixed(2)} /></Field>
             {!sameAsApprover && <SubmitButton>تأكيد الصرف</SubmitButton>}
           </ActionForm>
         )}

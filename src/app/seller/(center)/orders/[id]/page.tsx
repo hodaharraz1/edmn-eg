@@ -76,12 +76,18 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
               </li>
             ))}
           </ul>
-          <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4">
-            <div><dt className="text-xs text-muted">المنتجات</dt><dd>{formatEGP(so.merchandiseSubtotal)}</dd></div>
-            <div><dt className="text-xs text-muted">الشحن المحصّل</dt><dd>{formatEGP(so.shippingFee)}</dd></div>
-            <div><dt className="text-xs text-muted">رسوم اضمن عليك</dt><dd>-{formatEGP(sellerFee)}{so.buyerFeeTotal > 0 && <span className="block text-[11px] text-muted">+ {formatEGP(so.buyerFeeTotal)} يدفعها المشتري</span>}</dd></div>
-            <div><dt className="text-xs text-muted">صافيك</dt><dd className="font-bold">{formatEGP(so.sellerNet)}</dd></div>
+          <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4" data-testid="seller-economics">
+            <div><dt className="text-xs text-muted">قيمة المبيعات</dt><dd>{formatEGP(so.merchandiseSubtotal - so.discountTotal)}</dd></div>
+            <div><dt className="text-xs text-muted">رسوم خدمة اضمن</dt><dd data-testid="seller-fee">−{formatEGP(sellerFee)}</dd></div>
+            <div><dt className="text-xs text-muted">صافي مستحقات البيع</dt><dd className="font-bold">{formatEGP(so.merchandiseSubtotal - so.discountTotal - sellerFee)}</dd></div>
+            <div><dt className="text-xs text-muted">الشحن (تسوية الشحن)</dt><dd>+{formatEGP(so.shippingFee)}</dd></div>
           </dl>
+          <p className="mt-2 text-sm">إجمالي المستحق لك من الطلب: <b data-testid="seller-net">{formatEGP(so.sellerNet)}</b> — معلق لحين استلام المشتري ثم موافقة الإدارة على الإتاحة. الرسوم دي محسوبة مرة واحدة على البيع ومش هتتخصم تاني عند السحب.</p>
+          {so.pricingSource === 'ENGINE' ? (
+            <p className="mt-1 text-[11px] text-muted">الرسوم حسب إصدار التسعير المثبت في الطلب وقت الشراء (رسوم تدريجية حسب نوع المنتج وقيمته، والشحن غير داخل في حسابها).</p>
+          ) : (
+            <p className="mt-1 text-[11px] text-muted">طلب بنظام الرسوم السابق — القيم كما سُجلت وقت الشراء.</p>
+          )}
           {order.customerNote && <p className="mt-3 rounded-lg bg-page p-3 text-sm">ملاحظة العميل: {order.customerNote}</p>}
         </section>
         <section className="card space-y-1 p-5 text-sm">

@@ -120,8 +120,11 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           { label: 'الحالة', value: deal.condition === 'NEW' ? 'جديد' : 'مستعمل' },
           { label: 'المشتري', value: g.buyerName },
           { label: 'البائع', value: deal.sellerFullName ?? (isBuyer && deal.sellerName ? `${deal.sellerName} (لسه مدخلش)` : 'لسه مدخلش') },
-          { label: 'السعر', value: formatEGP(deal.totalAmount) },
-          { label: isBuyer ? 'المطلوب دفعه' : 'صافي مستحقك', value: formatEGP(isBuyer ? deal.buyerPays : deal.sellerReceives) },
+          { label: 'قيمة الصفقة + الشحن', value: formatEGP(deal.totalAmount) },
+          ...(deal.pricingSource === 'ENGINE'
+            ? [isBuyer ? { label: 'رسوم خدمة الضمان من اضمن', value: formatEGP(deal.buyerFeeAmount) } : { label: 'رسوم الضمان على البائع', value: `−${formatEGP(deal.sellerFeeAmount)}` }]
+            : []),
+          { label: isBuyer ? 'الإجمالي المطلوب' : 'صافي استحقاقك', value: formatEGP(isBuyer ? deal.buyerPays : deal.sellerReceives) },
           { label: 'التسليم المتوقع', value: `${deal.deliveryMethod ?? '—'} · قبل ${formatDate(deal.deliveryDeadline)}` },
           { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
           { label: 'شروط خاصة', value: deal.customTerms ?? 'مفيش' },
@@ -485,9 +488,19 @@ function TermsTable({ t }: { t: Terms }) {
       { label: 'حالة المنتج', value: <span>{t.product.condition === 'NEW' ? 'جديد' : 'مستعمل'}{t.disclosure.defects ? ` · العيوب: ${t.disclosure.defects}` : ''}{t.disclosure.accessories ? ` · الملحقات: ${t.disclosure.accessories}` : ''}{t.disclosure.warranty ? ` · الضمان: ${t.disclosure.warranty}` : ''}</span> },
       { label: 'سياسة الإرجاع', value: <ReturnPolicyView policy={t.returnPolicy} mandatoryNotice={t.mandatoryRightsNotice} /> },
       { label: 'الشروط الخاصة', value: t.customTerms ?? 'مفيش' },
-      { label: `رسوم الخدمة (${t.price.feePayer === 'BUYER' ? 'على المشتري' : 'على البائع'})`, value: formatEGP(t.price.feeAmount) },
-      { label: 'الإجمالي المطلوب من المشتري', value: <strong>{formatEGP(t.price.buyerPays)}</strong> },
-      { label: 'صافي البائع', value: formatEGP(t.price.sellerReceives) },
+      { label: 'قيمة الصفقة', value: formatEGP(t.price.goodsTotal) },
+      ...(t.price.buyerFee !== undefined
+        ? [
+            { label: 'رسوم خدمة الضمان من اضمن (على المشتري)', value: formatEGP(t.price.buyerFee) },
+            { label: 'الإجمالي المطلوب من المشتري', value: <strong>{formatEGP(t.price.buyerPays)}</strong> },
+            { label: 'رسوم الضمان على البائع', value: `−${formatEGP(t.price.sellerFee ?? 0)}` },
+            { label: 'صافي استحقاق البائع (قيمة + شحن − رسوم)', value: formatEGP(t.price.sellerReceives) },
+          ]
+        : [
+            { label: `رسوم الخدمة (${t.price.feePayer === 'BUYER' ? 'على المشتري' : 'على البائع'})`, value: formatEGP(t.price.feeAmount) },
+            { label: 'الإجمالي المطلوب من المشتري', value: <strong>{formatEGP(t.price.buyerPays)}</strong> },
+            { label: 'صافي البائع', value: formatEGP(t.price.sellerReceives) },
+          ]),
     ]} />
   );
 }

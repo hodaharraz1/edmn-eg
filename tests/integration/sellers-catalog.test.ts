@@ -1,4 +1,4 @@
-import { LEGAL_V11_VERSION as LEGAL_VERSION } from '@/server/db/seed/legal-texts-v1_1';
+import { LEGAL_V12_VERSION as LEGAL_VERSION } from '@/server/db/seed/legal-texts-v1_2';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import { customerActor, sellerActor } from '@/server/auth/actors';

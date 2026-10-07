@@ -221,6 +221,15 @@ export async function seedDemo() {
   const A = await adminActor(admin.id, { stepUpAt: new Date() });
   const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
   const operatorActor = await adminActor(operator.id, { stepUpAt: new Date() });
+  // Fresh demo database only (an existing database is skipped above): activate the seeded owner-approved
+  // pricing versions through the real maker (finance operator) / checker (finance checker) workflow.
+  {
+    const { activateVersionWorkflow } = await import('@/server/modules/pricing/service');
+    const { pricingVersions } = await import('@/server/db/schema');
+    for (const v of await db.select().from(pricingVersions).where(eq(pricingVersions.versionNo, 1))) {
+      await activateVersionWorkflow(operatorActor, checkerActor, v.id, 'تفعيل تسعير المالك على بيانات العرض');
+    }
+  }
   // Receipt confirmation never releases funds: a finance checker approves each seller release.
   async function release(soId: string) {
     const { sellerOrderPosition } = await import('@/server/modules/finance/postings');

@@ -56,7 +56,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
           {step === 2 && (
             <>
               <Field label={`سعر الوحدة (ج.م) × الكمية ${deal?.quantity ?? 1}`} htmlFor="unitPrice" required><Input id="unitPrice" name="unitPrice" inputMode="decimal" dir="ltr" defaultValue={toInputAmount(deal?.unitPrice)} required /></Field>
-              <p className="text-xs text-muted">رسوم الخدمة هتتحسب حسب الإعدادات الحالية، وهتشوفها في صفحة المراجعة قبل الإرسال.</p>
+              <p className="text-xs text-muted">رسوم خدمة الضمان تدريجية حسب قيمة الصفقة ومقسومة بالتساوي بينك وبين البائع، وهتشوفها في صفحة المراجعة قبل الإرسال.</p>
             </>
           )}
           {step === 3 && (
@@ -101,9 +101,8 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
                 { label: 'عنوان الاستلام', value: myLoc ? `${govName(myLoc.governorateId)} · ${myLoc.city} · ${myLoc.street}${myLoc.gps ? ' · (موقع محدد)' : ''}` : '—' },
                 { label: 'البائع', value: deal.sellerName ? `${deal.sellerName} (للتذكير — البائع بيسجّل بياناته بنفسه)` : 'البائع هيسجّل بياناته من الرابط' },
                 { label: 'قيمة الصفقة', value: formatEGP(deal.totalAmount) },
-                { label: 'رسوم الخدمة', value: `${formatEGP(deal.feeAmount)} (يتحملها ${deal.feePayer === 'BUYER' ? 'المشتري' : 'البائع'})` },
-                { label: 'إجمالي اللي هتدفعه', value: formatEGP(deal.buyerPays) },
-                { label: 'صافي اللي هيستلمه البائع', value: formatEGP(deal.sellerReceives) },
+                { label: 'رسوم خدمة الضمان من اضمن (تقديرية)', value: formatEGP((deal.buyerPays ?? 0) - (deal.totalAmount ?? 0)) },
+                { label: 'الإجمالي التقريبي اللي هتدفعه', value: formatEGP(deal.buyerPays) },
                 { label: 'توقعات التسليم (غير ملزمة)', value: `${deal.deliveryMethod ?? '—'} · يُفضّل قبل ${formatDate(deal.deliveryDeadline)}` },
                 { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
                 { label: 'الشروط الخاصة', value: deal.customTerms ?? 'مفيش' },

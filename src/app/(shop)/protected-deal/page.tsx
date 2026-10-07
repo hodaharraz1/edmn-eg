@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { BadgeCheck, FileText, Handshake, PackageCheck, ShieldCheck, Wallet } from 'lucide-react';
 import { LinkButton } from '@/ui/button';
-import { getSetting } from '@/server/modules/settings';
+import { db } from '@/server/db/client';
+import { activeVersionId, loadVersion } from '@/server/modules/pricing/service';
+import { formatEGP } from '@/lib/format';
 import { bpsToPercentString } from '@/server/core/money';
 
 export const metadata: Metadata = {
@@ -11,7 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ProtectedDealLanding() {
-  const fee = await getSetting('deals.feeBps');
+  const pv = await activeVersionId(db, 'PROTECTED_DEAL');
+  const fee = pv ? await loadVersion(db, pv).then((v) => ({ firstBps: v.tiersByClass.DEAL[0].totalBps, firstUpTo: v.tiersByClass.DEAL[0].upperBound ?? 0, minFee: v.minFee })) : null;
   const steps = [
     { icon: FileText, title: 'اكتب تفاصيل الصفقة', body: 'المنتج، السعر، موعد التسليم، وأي شروط خاصة اتفقتوا عليها.' },
     { icon: Handshake, title: 'ابعت للبائع', body: 'هتاخد رابط آمن تبعته للبائع، يراجع منه الشروط ويوافق.' },
@@ -44,7 +47,7 @@ export default async function ProtectedDealLanding() {
       <section className="grid gap-4 md:grid-cols-3">
         <div className="card p-5"><BadgeCheck className="mb-2 size-6 text-brand-600" /><p className="font-bold">مفيش دفع مباشر لحد متعرفوش</p><p className="text-sm text-muted">بتدفع بس لحساب اضمن اللي ظاهر في صفحة الدفع.</p></div>
         <div className="card p-5"><ShieldCheck className="mb-2 size-6 text-brand-600" /><p className="font-bold">نزاعات بقرار محايد</p><p className="text-sm text-muted">لو المنتج مختلف أو موصلش، فريق اضمن بيراجع الأدلة ويقرر.</p></div>
-        <div className="card p-5"><Wallet className="mb-2 size-6 text-brand-600" /><p className="font-bold">رسوم واضحة</p><p className="text-sm text-muted">{fee ? `رسوم الخدمة دلوقتي ${bpsToPercentString(fee)}% من قيمة الصفقة.` : 'هتشوف الرسوم قبل ما تأكد الصفقة.'}</p></div>
+        <div className="card p-5"><Wallet className="mb-2 size-6 text-brand-600" /><p className="font-bold">رسوم واضحة</p><p className="text-sm text-muted">{fee ? `رسوم خدمة الضمان تدريجية: تبدأ من ${bpsToPercentString(fee.firstBps)}% على أول ${formatEGP(fee.firstUpTo)} وتقل كل ما القيمة تزيد، بحد أدنى ${formatEGP(fee.minFee)}، ومقسومة بالتساوي بين المشتري والبائع. بتظهر قبل ما تأكد.` : 'هتشوف الرسوم قبل ما تأكد الصفقة.'}</p></div>
       </section>
     </div>
   );

@@ -52,7 +52,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
           { label: 'عنوان البائع', value: g.sellerLocation ? `${g.sellerLocation.city}، ${g.sellerLocation.street}${g.sellerLocation.building ? ` · عمارة ${g.sellerLocation.building}` : ''}${g.sellerLocation.gps ? ` · موقع: ${g.sellerLocation.gps.lat}, ${g.sellerLocation.gps.lng}` : ''}` : '—' },
           { label: 'الكمية / الحالة', value: `${d.quantity} · ${d.condition ?? '—'}` },
           { label: 'إجمالي السعر', value: d.totalAmount != null ? formatEGP(d.totalAmount) : '—' },
-          { label: 'رسوم الحماية', value: `${formatEGP(d.feeAmount)} (${(d.feeBps / 100).toFixed(2)}%) يتحملها ${d.feePayer === 'BUYER' ? 'المشتري' : 'البائع'}` },
+          { label: 'رسوم الضمان', value: d.pricingSource === 'ENGINE' ? `${formatEGP(d.feeAmount)} = على المشتري ${formatEGP(d.buyerFeeAmount)} + على البائع ${formatEGP(d.sellerFeeAmount)} (لقطة تسعير مثبتة)` : `${formatEGP(d.feeAmount)} (${(d.feeBps / 100).toFixed(2)}%) يتحملها ${d.feePayer === 'BUYER' ? 'المشتري' : 'البائع'} — لقطة قديمة` },
           { label: 'يدفع المشتري', value: d.buyerPays != null ? formatEGP(d.buyerPays) : '—' },
           { label: 'يستلم البائع', value: d.sellerReceives != null ? formatEGP(d.sellerReceives) : '—' },
           { label: 'التسليم', value: `${d.deliveryMethod ?? '—'} · قبل ${formatDate(d.deliveryDeadline)} · فحص ${d.inspectionDays} يوم` },

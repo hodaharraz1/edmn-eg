@@ -36,6 +36,7 @@ export interface LoadedVersion extends VersionConfig {
   name: string;
   status: string;
   effectiveFrom: Date | null;
+  notes: string | null;
   /** categoryId → class (marketplace only). */
   categoryClasses: Record<string, EconomicClass>;
 }
@@ -59,6 +60,7 @@ export async function loadVersion(conn: DbOrTx, versionId: string): Promise<Load
     name: v.name,
     status: v.status,
     effectiveFrom: v.effectiveFrom,
+    notes: v.notes,
     model: v.model,
     currency: v.currency,
     minFee: v.minFee,

@@ -187,7 +187,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               <dl className="grid grid-cols-2 gap-2 border-t border-line pt-3 text-sm sm:grid-cols-4">
                 <div><dt className="text-xs text-muted">المنتجات</dt><dd>{formatEGP(so.merchandiseSubtotal)}</dd></div>
                 <div><dt className="text-xs text-muted">الشحن</dt><dd>{formatEGP(so.shippingFee)}</dd></div>
-                {so.buyerFeeTotal > 0 && <div><dt className="text-xs text-muted">رسوم خدمة اضمن</dt><dd>{formatEGP(so.buyerFeeTotal)}</dd></div>}
+                {so.buyerFeeTotal > 0 && <div><dt className="text-xs text-muted">رسوم خدمة وحماية اضمن</dt><dd>{formatEGP(so.buyerFeeTotal)}</dd></div>}
                 <div><dt className="text-xs text-muted">الإجمالي</dt><dd className="font-semibold">{formatEGP(so.grossTotal)}</dd></div>
                 {so.refundedTotal > 0 && <div><dt className="text-xs text-muted">المسترد</dt><dd className="text-emerald-700">{formatEGP(so.refundedTotal)}</dd></div>}
               </dl>
@@ -207,8 +207,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
           <dl className="space-y-1">
             <div className="flex justify-between"><dt className="text-muted">المنتجات</dt><dd>{formatEGP(order.merchandiseTotal)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">الشحن (على المشتري)</dt><dd>{formatEGP(order.shippingTotal)}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن (حصتك)</dt><dd>{formatEGP(order.buyerFeeTotal)}</dd></div>
-            <div className="flex justify-between text-xs"><dt className="text-muted">رسوم خدمة اضمن (حصة البائع — تُخصم منه)</dt><dd>{formatEGP(g.sellerOrders.reduce((a, { so }) => a + (so.buyerFeeTotal + so.sellerFeeTotal === 0 ? so.commissionTotal : so.sellerFeeTotal), 0))}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">رسوم خدمة وحماية اضمن</dt><dd data-testid="invoice-buyer-fee">{formatEGP(order.buyerFeeTotal)}</dd></div>
             <div className="flex justify-between font-bold"><dt>الإجمالي</dt><dd>{formatEGP(order.grandTotal)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">طريقة الدفع</dt><dd>{label('paymentMethod', order.paymentMethod)} · <StatusChip status={payment?.status} /></dd></div>
           </dl>
