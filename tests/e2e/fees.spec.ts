@@ -67,7 +67,7 @@ test('seller statement and withdrawal transfer-cost preview render (mobile + des
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/seller/finance');
-    await expect(page.getByRole('heading', { name: 'كشف الحساب' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'كشف الحساب', exact: true })).toBeVisible();
     await expect(page.getByText('رسوم خدمة اضمن').first()).toBeVisible();
     await noHorizontalScroll(page);
   }
