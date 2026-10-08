@@ -425,7 +425,7 @@ async function contextLabel(conn: DbOrTx, conv: Conversation): Promise<Conversat
     const items = await conn.select({ t: orderItems.titleSnapshot }).from(orderItems).where(eq(orderItems.sellerOrderId, conv.sellerOrderId!)).limit(2);
     const title = items.length ? items[0].t + (items.length > 1 ? ' + منتجات أخرى' : '') : '';
     return {
-      ref: `طلب #${r.number}-${r.so.suffix}`,
+      ref: `طلب ${ltr(`#${r.number}-${r.so.suffix}`)}`,
       title,
       status: r.so.status,
       sellerName: r.store,
@@ -438,7 +438,7 @@ async function contextLabel(conn: DbOrTx, conv: Conversation): Promise<Conversat
   const [d] = await conn.select().from(externalDeals).where(eq(externalDeals.id, conv.dealId!));
   const [b] = await conn.select({ n: users.fullName }).from(users).where(eq(users.id, d.buyerId));
   return {
-    ref: `صفقة EDMN-${String(d.number).padStart(8, '0')}`,
+    ref: `صفقة ${ltr(`EDMN-${String(d.number).padStart(8, '0')}`)}`,
     title: d.title,
     status: d.status,
     sellerName: d.sellerFullName ? firstName(d.sellerFullName) : 'البائع',
@@ -448,6 +448,9 @@ async function contextLabel(conn: DbOrTx, conv: Conversation): Promise<Conversat
     adminHref: `/admin/deals/${d.id}`,
   };
 }
+
+/** Latin/number codes inside Arabic text: wrapped in Unicode isolates (LRI…PDI) so «#100002-A» never renders reversed. */
+const ltr = (code: string) => `\u2066${code}\u2069`;
 
 const firstName = (n: string) => n.trim().split(/\s+/)[0] ?? n;
 
@@ -520,7 +523,7 @@ async function inbox(uid: string, scope: ReturnType<typeof sql>, sideExpr: Retur
   }
   const res = await db.execute<InboxRow>(sql`
     select c.id, c.context, ${sideExpr} as side,
-      case when c.context = 'SELLER_ORDER' then 'طلب #' || o.number || '-' || so.suffix else 'صفقة EDMN-' || lpad(d.number::text, 8, '0') end as ref,
+      case when c.context = 'SELLER_ORDER' then 'طلب ' || chr(8294) || '#' || o.number || '-' || so.suffix || chr(8297) else 'صفقة ' || chr(8294) || 'EDMN-' || lpad(d.number::text, 8, '0') || chr(8297) end as ref,
       case when c.context = 'SELLER_ORDER' then (select oi.title_snapshot from order_items oi where oi.seller_order_id = so.id order by oi.id limit 1) else d.title end as title,
       case when c.context = 'SELLER_ORDER' then (select count(*)::int from order_items oi where oi.seller_order_id = so.id) else 1 end as items,
       coalesce(so.status, d.status) as status,

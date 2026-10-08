@@ -108,7 +108,7 @@ export async function liveSnapshot(
       }>(sql`
         select m.id, m.conversation_id, m.created_at::text as created_at, m.body,
                (select count(*)::int from conversation_message_attachments a where a.message_id = m.id) as atts, c.context, (c.buyer_user_id = ${uid}) as viewer_is_buyer,
-               case when c.context = 'SELLER_ORDER' then 'الطلب #' || o.number || '-' || so.suffix else 'الصفقة EDMN-' || lpad(d.number::text, 8, '0') end as ref,
+               case when c.context = 'SELLER_ORDER' then 'الطلب ' || chr(8294) || '#' || o.number || '-' || so.suffix || chr(8297) else 'الصفقة ' || chr(8294) || 'EDMN-' || lpad(d.number::text, 8, '0') || chr(8297) end as ref,
                coalesce(st.name, nullif(split_part(d.seller_full_name, ' ', 1), '')) as store
           from conversation_messages m
           join conversations c on c.id = m.conversation_id

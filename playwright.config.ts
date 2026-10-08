@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import webpush from 'web-push';
 
 /**
  * End-to-end tests run against a production build (`next start`) backed by a dedicated database
@@ -9,6 +10,8 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 /** Set E2E_BASE_URL to run against a deployed environment (e.g. staging). No local server is started then. */
 const REMOTE = process.env.E2E_BASE_URL;
 const DB = process.env.E2E_DATABASE_URL ?? 'postgresql://edmn:edmn@localhost:5432/edmn_e2e';
+/** Ephemeral VAPID key pair for the local server only (generated per run, never stored). */
+const vapid = webpush.generateVAPIDKeys();
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH ?? (process.env.PLAYWRIGHT_BROWSERS_PATH === '/opt/pw-browsers' ? '/opt/pw-browsers/chromium' : undefined);
 
 export default defineConfig({
@@ -34,6 +37,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/api/health`,
     timeout: 300_000,
     reuseExistingServer: false,
-    env: { DATABASE_URL: DB, APP_URL: `https://localhost:${PORT}`, EDMN_ENVIRONMENT: 'staging', STORAGE_LOCAL_ROOT: './.e2e-storage', MAIL_DRIVER: 'log', SMS_DRIVER: 'log' },
+    env: { DATABASE_URL: DB, APP_URL: `https://localhost:${PORT}`, EDMN_ENVIRONMENT: 'staging', STORAGE_LOCAL_ROOT: './.e2e-storage', MAIL_DRIVER: 'log', SMS_DRIVER: 'log', VAPID_PUBLIC_KEY: vapid.publicKey, VAPID_PRIVATE_KEY: vapid.privateKey, VAPID_SUBJECT: 'mailto:e2e@edmn.local' },
   },
 });

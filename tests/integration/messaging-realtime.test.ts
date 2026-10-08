@@ -124,7 +124,7 @@ describe('live sync (no refresh)', () => {
     const buyerNext = await liveSnapshot(c.actor, 'account', { since: buyerStart.cursor, visible: true });
     const toBuyer = buyerNext.incoming.find((i) => i.id === m2.id)!;
     expect(toBuyer.href).toBe(`/account/messages/${conv.id}`);
-    expect(toBuyer.ref).toContain('الطلب #');
+    expect(toBuyer.ref).toMatch(/^الطلب \u2066#\d+-\w+\u2069$/);
     expect(buyerNext.unreadMessages).toBe(1);
     expect((await listForUser(c.actor)).find((x) => x.id === conv.id)?.unread).toBe(1); // 9
     expect(await unreadForSeller(s.actor)).toBe(0); // replying means the seller had the conversation open
