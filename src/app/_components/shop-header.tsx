@@ -1,5 +1,6 @@
-import { ChevronDown, Heart, LayoutGrid, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
+import { Heart, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
 import Link from 'next/link';
+import { CategoryMenu } from '@/app/_components/category-menu';
 import { DeliveryLocationPicker } from '@/app/_components/delivery-location';
 import { LiveIconLink } from '@/app/_components/live/live-provider';
 import { t } from '@/lib/i18n';
@@ -121,29 +122,10 @@ export async function ShopHeader({ q }: { q?: string }) {
 
       <nav className="hidden bg-brand-800 text-white lg:block" aria-label="التنقل الرئيسي">
         <div className="container-page flex h-11 items-center gap-1 text-sm">
-          <details className="group relative">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold hover:bg-white/10">
-              <LayoutGrid className="size-4" /> {t('nav.categories')} <ChevronDown className="size-3.5" />
-            </summary>
-            <div className="absolute top-10 start-0 z-50 grid w-[760px] grid-cols-3 gap-4 rounded-xl bg-white p-5 text-ink shadow-[var(--shadow-pop)]">
-              {cats.map((c) => (
-                <div key={c.id}>
-                  <Link href={`/category/${c.slug}`} className="font-bold hover:text-brand-700">
-                    {c.nameAr}
-                  </Link>
-                  <ul className="mt-1 space-y-0.5">
-                    {c.children.slice(0, 6).map((ch) => (
-                      <li key={ch.id}>
-                        <Link href={`/category/${ch.slug}`} className="text-sm text-muted hover:text-brand-700">
-                          {ch.nameAr}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </details>
+          <CategoryMenu
+            label={t('nav.categories')}
+            categories={cats.map((c) => ({ id: c.id, slug: c.slug, nameAr: c.nameAr, children: c.children.slice(0, 6).map((ch) => ({ id: ch.id, slug: ch.slug, nameAr: ch.nameAr })) }))}
+          />
           {[
             ['/deals', t('nav.deals')],
             ['/best-sellers', t('nav.bestSellers')],
