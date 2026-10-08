@@ -1,7 +1,8 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { CATEGORY_NAV_TAG } from '@/server/web/context';
 import { and, eq } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { hashPassword, passwordProblems, STAFF_POLICY } from '@/server/auth/password';
@@ -98,6 +99,7 @@ export async function categoryAction(_p: ActionState, fd: FormData) {
       parentId: str(fd, 'parentId') || null, nameAr: str(fd, 'nameAr'), nameEn: str(fd, 'nameEn'), slug: str(fd, 'slug'), descriptionAr: str(fd, 'descriptionAr'), icon: str(fd, 'icon'),
       isActive: bool(fd, 'isActive'), sortOrder: int(fd, 'sortOrder') ?? 0, seoTitle: str(fd, 'seoTitle'), seoDescription: str(fd, 'seoDescription'), isRestricted: bool(fd, 'isRestricted'), isProhibited: bool(fd, 'isProhibited'),
     }, await fileOf(fd, 'image'));
+    revalidateTag(CATEGORY_NAV_TAG, { expire: 0 }); // header/menus show the change on the next request
     return done('تم حفظ التصنيف');
   }, ['/admin/categories']);
 }

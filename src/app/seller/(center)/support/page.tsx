@@ -11,7 +11,7 @@ import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Badge, StatusChip } from '@/ui/feedback';
 import { Field, Input, Select, Textarea } from '@/ui/form';
-import Link from 'next/link';
+import Link from '@/ui/link';
 
 export const metadata = { title: 'الدعم' };
 

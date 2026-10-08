@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { db } from '@/server/db/client';

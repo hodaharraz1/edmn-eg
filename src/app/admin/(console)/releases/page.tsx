@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { sql } from 'drizzle-orm';
 import { HandCoins } from 'lucide-react';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

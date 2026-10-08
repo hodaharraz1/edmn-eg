@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { Package, PackagePlus } from 'lucide-react';
 import { productControlAction } from '@/app/_actions/seller';

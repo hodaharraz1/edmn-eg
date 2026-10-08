@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { ShieldCheck } from 'lucide-react';
 import { dealsForUser } from '@/server/modules/deals/service';
 import { requireUser } from '@/server/web/session';

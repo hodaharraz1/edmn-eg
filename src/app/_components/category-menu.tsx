@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, LayoutGrid } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 

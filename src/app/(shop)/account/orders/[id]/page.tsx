@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { returnPolicySummary } from '@/domain/return-policy';
 import { notFound } from 'next/navigation';
 import { and, eq, inArray } from 'drizzle-orm';

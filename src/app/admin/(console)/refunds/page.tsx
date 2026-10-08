@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, eq } from 'drizzle-orm';
 import { Banknote } from 'lucide-react';
 import { refundDecisionAction, refundPaidAction, revealPayoutAction } from '@/app/_actions/admin';

@@ -1,10 +1,11 @@
 import 'server-only';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { cookies } from 'next/headers';
+import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { db } from '@/server/db/client';
 import { addresses, governorates } from '@/server/db/schema';
-import { unreadGeneralNotifications } from '@/server/modules/messaging/live';
+import { liveUserKey, unreadGeneralNotifications } from '@/server/modules/messaging/live';
 import { unreadForUser } from '@/server/modules/messaging/service';
 import { prefsFor } from '@/server/modules/notifications/message-alerts';
 import { vapidPublicKey } from '@/server/modules/notifications/push';
@@ -35,7 +36,33 @@ export const deliveryGovernorate = cache(async () => {
   return govs[0];
 });
 
-export const navCategories = cache(async () => categoryTree(db, { activeOnly: true }));
+/** Cache tag for the shared (non-user-specific) navigation category tree; Admin category edits revalidate it. */
+export const CATEGORY_NAV_TAG = 'nav-categories';
+
+export interface NavCategory {
+  id: string;
+  slug: string;
+  nameAr: string;
+  children: { id: string; slug: string; nameAr: string }[];
+}
+
+/**
+ * Active category tree for the header/menus. Identical for every visitor, so it is kept in Next's data cache
+ * (shared, no user data) for at most 5 minutes and dropped immediately when an Admin changes categories —
+ * instead of one database query on every page render and link prefetch.
+ */
+const cachedNavCategories = unstable_cache(
+  async (): Promise<NavCategory[]> =>
+    (await categoryTree(db, { activeOnly: true })).map((c) => ({
+      id: c.id,
+      slug: c.slug,
+      nameAr: c.nameAr,
+      children: c.children.map((ch) => ({ id: ch.id, slug: ch.slug, nameAr: ch.nameAr })),
+    })),
+  ['nav-categories-v1'],
+  { tags: [CATEGORY_NAV_TAG], revalidate: 300 },
+);
+export const navCategories = cache(() => cachedNavCategories());
 
 export const headerState = cache(async () => {
   const s = await getWebSession();
@@ -53,5 +80,5 @@ export const liveBootstrap = cache(async () => {
   const s = await getWebSession();
   if (!s) return null;
   const prefs = await prefsFor(db, s.user.id);
-  return { userId: s.user.id, prefs, pushKey: vapidPublicKey() };
+  return { userId: s.user.id, userKey: liveUserKey(s.user.id), prefs, pushKey: vapidPublicKey() };
 });

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { BadgeCheck, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { marketHref } from '@/lib/market-url';
 import { Logo } from '@/ui/logo';

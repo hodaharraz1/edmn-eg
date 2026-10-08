@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { LEGAL_CODES } from '@/server/modules/cms/service';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 

@@ -1,5 +1,5 @@
 import { BadgeCheck, ShieldCheck, Star, Store, Truck } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { discountPercent, formatEGP, formatNumber } from '@/lib/format';

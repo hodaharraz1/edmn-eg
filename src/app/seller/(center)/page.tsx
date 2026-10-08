@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { redirect } from 'next/navigation';
 import { AlertTriangle, Boxes, CircleDollarSign, Clock, PackageCheck, RotateCcw, ShoppingBag, Star, Truck, Wallet } from 'lucide-react';
 import { RangeFilter } from '@/app/_components/range-filter';

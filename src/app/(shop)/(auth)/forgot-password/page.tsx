@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { forgotPasswordAction } from '@/app/_actions/auth';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Field, Input } from '@/ui/form';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, eq } from 'drizzle-orm';
 import { Wallet } from 'lucide-react';
 import { db } from '@/server/db/client';

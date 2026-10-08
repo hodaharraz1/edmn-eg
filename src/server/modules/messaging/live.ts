@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { sha256 } from '@/server/core/crypto';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { loadMessages, participantAccess, unreadForSeller, unreadForUser, type Side } from './service';
@@ -42,6 +43,7 @@ export interface LiveThread {
 }
 
 export interface LiveSnapshot {
+  userKey: string;
   now: string;
   unreadMessages: number;
   unreadNotifications: number;
@@ -75,6 +77,42 @@ export async function unreadGeneralNotifications(userId: string): Promise<number
   return Number(r.rows[0]?.n ?? 0);
 }
 
+/** UX-only presence upsert (routes push vs. in-app). Throttled; never read by financial or delivery logic. */
+function presenceUpsert(uid: string, surface: Surface, visible: boolean) {
+  return sql`
+    insert into user_presence (user_id, last_seen_at, last_visible_at, surface) values (${uid}, now(), ${visible ? sql`now()` : sql`null`}, ${surface})
+    on conflict (user_id) do update set last_seen_at = now(), surface = excluded.surface,
+      last_visible_at = case when ${visible} then now() else user_presence.last_visible_at end
+    where user_presence.last_seen_at < now() - interval '4 seconds' or (${visible} and (user_presence.last_visible_at is null or user_presence.last_visible_at < now() - interval '4 seconds'))
+    returning 1`;
+}
+
+/** Change-token keys this actor may observe (its own user key; the store key only for members who may message). */
+export function liveKeys(actor: Actor, surface: Surface): string[] {
+  const keys = [`user:${actor.userId}`];
+  if (surface === 'seller' && actor.type === 'SELLER' && actor.sellerId && actor.sellerPermissions?.has('orders.communicate')) keys.push(`seller:${actor.sellerId}`);
+  return keys;
+}
+
+/**
+ * The cheap authoritative check: ONE statement (presence touch + version lookup). If the returned token equals
+ * the client's last token, nothing the client shows can have changed (versions are bumped by DB triggers on
+ * every message, read, conversation and notification change) and the poll ends with 204.
+ */
+export async function liveToken(actor: Actor, surface: Surface, opts: { conv?: string | null; visible?: boolean }): Promise<string> {
+  const keys = liveKeys(actor, surface);
+  const r = await db.execute<{ v: string | null }>(sql`
+    with p as (${presenceUpsert(actor.userId!, surface, !!opts.visible)})
+    select coalesce(string_agg(key || '=' || version, ',' order by key), '') as v from live_versions
+     where key in (${sql.join(keys.map((k) => sql`${k}`), sql`, `)})`);
+  return `${surface}|${opts.conv ?? ''}|${r.rows[0]?.v ?? ''}`;
+}
+
+/** Opaque per-account key for the browser-side channel/lock (never the raw user id). */
+export function liveUserKey(userId: string): string {
+  return sha256(`edmn-live:${userId}`).slice(0, 24);
+}
+
 export function serializeMessage(m: Awaited<ReturnType<typeof loadMessages>>[number]) {
   return { ...m, createdAt: m.createdAt.toISOString() };
 }
@@ -82,18 +120,13 @@ export function serializeMessage(m: Awaited<ReturnType<typeof loadMessages>>[num
 export async function liveSnapshot(
   actor: Actor,
   surface: Surface,
-  opts: { since?: string | null; conv?: string | null; after?: string | null; visible?: boolean },
+  opts: { since?: string | null; conv?: string | null; after?: string | null; visible?: boolean; presence?: boolean },
 ): Promise<LiveSnapshot> {
   const uid = actor.userId!;
   const scope = incomingScope(actor, surface);
   const since = parseCursor(opts.since);
 
-  // UX-only presence (routes push vs. in-app). Throttled; never read by any financial or delivery logic.
-  await db.execute(sql`
-    insert into user_presence (user_id, last_seen_at, last_visible_at, surface) values (${uid}, now(), ${opts.visible ? sql`now()` : sql`null`}, ${surface})
-    on conflict (user_id) do update set last_seen_at = now(), surface = excluded.surface,
-      last_visible_at = case when ${!!opts.visible} then now() else user_presence.last_visible_at end
-    where user_presence.last_seen_at < now() - interval '4 seconds' or (${!!opts.visible} and (user_presence.last_visible_at is null or user_presence.last_visible_at < now() - interval '4 seconds'))`);
+  if (opts.presence !== false) await db.execute(sql`with p as (${presenceUpsert(uid, surface, !!opts.visible)}) select 1`);
 
   const [unreadMessages, unreadNotifications] = await Promise.all([surface === 'seller' ? unreadForSeller(actor) : unreadForUser(uid), unreadGeneralNotifications(uid)]);
 
@@ -161,6 +194,7 @@ export async function liveSnapshot(
   }
 
   return {
+    userKey: liveUserKey(uid),
     now: nowRow.now,
     unreadMessages,
     unreadNotifications,

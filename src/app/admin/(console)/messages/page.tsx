@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { MessagesSquare } from 'lucide-react';
 import { resolveReportAction } from '@/app/_actions/messaging';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

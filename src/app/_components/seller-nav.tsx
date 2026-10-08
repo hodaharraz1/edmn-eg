@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart3, Boxes, CircleDollarSign, Gauge, HeartPulse, LayoutDashboard, LifeBuoy, MessagesSquare, Package, PackagePlus, RotateCcw, Settings, ShoppingBag, Star, Store, Truck, Wallet, Landmark } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { CountBadge, messagesLabel, useCount } from './live/live-provider';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, eq, inArray } from 'drizzle-orm';
 import { Undo2 } from 'lucide-react';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

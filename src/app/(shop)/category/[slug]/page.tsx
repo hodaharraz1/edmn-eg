@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { categoryAncestors, categoryBySlug, categoryTree } from '@/server/modules/catalog/taxonomy';
 import { db } from '@/server/db/client';

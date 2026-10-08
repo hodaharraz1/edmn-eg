@@ -433,3 +433,52 @@ describe('chat and notifications are never financial commands', () => {
     expect(await row()).toBe(before);
   });
 });
+
+/* ───────────────────────── change tokens (resource optimisation) ───────────────────────── */
+
+describe('live change tokens (cheap «anything changed?» check)', () => {
+  it('a token only changes for the accounts concerned: message, read, notification, new conversation', async () => {
+    const { liveToken, liveUserKey } = await import('@/server/modules/messaging/live');
+    const { markRead: markNotifRead } = await import('@/server/modules/notifications/notify');
+    const { s, c, conv } = await paidOrder();
+    const stranger = await makeCustomer();
+    const tok = () => Promise.all([liveToken(c.actor, 'account', {}), liveToken(s.actor, 'seller', {}), liveToken(stranger.actor, 'account', {})]);
+    let [b0, s0, x0] = await tok();
+    // stable while nothing changes (polls end in 204)
+    expect(await tok()).toEqual([b0, s0, x0]);
+    // buyer sends → both sides change; a stranger never does
+    await send(c.actor, conv.id, 'رسالة');
+    let [b1, s1, x1] = await tok();
+    expect(b1).not.toBe(b0);
+    expect(s1).not.toBe(s0);
+    expect(x1).toBe(x0);
+    // the seller reads → seller counts and the buyer's read receipts change
+    [b0, s0, x0] = [b1, s1, x1];
+    await markRead(s.actor, conv.id);
+    [b1, s1, x1] = await tok();
+    expect(s1).not.toBe(s0);
+    expect(b1).not.toBe(b0);
+    expect(x1).toBe(x0);
+    // a notification for the buyer changes only the buyer's token; reading it changes it again
+    [b0, s0] = [b1, s1];
+    const { notify } = await import('@/server/modules/notifications/notify');
+    await notify(db, { event: 'REVIEW_RECEIVED', userIds: [c.user.id], vars: { rating: 5 } });
+    [b1, s1] = await tok();
+    expect(b1).not.toBe(b0);
+    expect(s1).toBe(s0);
+    await markNotifRead(db, c.user.id);
+    expect((await tok())[0]).not.toBe(b1);
+    // the open conversation is part of the token; keys never contain raw ids
+    expect(await liveToken(c.actor, 'account', { conv: conv.id })).not.toBe((await tok())[0]);
+    expect(liveUserKey(c.user.id)).not.toContain(c.user.id);
+    expect(liveUserKey(c.user.id)).toHaveLength(24);
+  });
+
+  it('a store member without «communicate» never observes the store key', async () => {
+    const { liveKeys } = await import('@/server/modules/messaging/live');
+    const { s } = await paidOrder();
+    const fin = await member(s.actor.sellerId!, 'FINANCE');
+    expect(liveKeys(s.actor, 'seller')).toContain(`seller:${s.actor.sellerId}`);
+    expect(liveKeys(fin.actor, 'seller')).toEqual([`user:${fin.user.id}`]);
+  });
+});

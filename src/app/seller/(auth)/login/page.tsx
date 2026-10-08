@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { redirect } from 'next/navigation';
 import { sellerLoginAction } from '@/app/_actions/seller-auth';
 import { ActionForm, SubmitButton } from '@/ui/action-form';

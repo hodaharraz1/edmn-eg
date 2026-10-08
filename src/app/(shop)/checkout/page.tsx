@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { randomUUID } from 'node:crypto';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { MapPin, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { placeOrderAction } from '@/app/_actions/checkout';
 import { AddressForm } from '@/app/_components/address-form';

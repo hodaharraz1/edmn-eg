@@ -85,6 +85,13 @@
       "when": 1791450841701,
       "tag": "0011_messaging_realtime",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791468660049,
+      "tag": "0012_live_versions",
+      "breakpoints": true
     }
   ]
 }

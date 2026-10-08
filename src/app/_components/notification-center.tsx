@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
 import { Bell, MessageSquareText, Settings } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { markNotificationReadAction } from '@/app/_actions/notifications';
 import { cn } from '@/lib/cn';
 import { formatDate, formatRelative } from '@/lib/format';

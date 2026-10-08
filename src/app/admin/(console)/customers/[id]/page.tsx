@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { customerStatusAction } from '@/app/_actions/admin';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { cn } from '@/lib/cn';
 
 const PRESETS: [string, string][] = [

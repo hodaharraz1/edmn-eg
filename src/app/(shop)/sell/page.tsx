@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import type { Metadata } from 'next';
 import { BadgeCheck, BarChart3, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { asc, eq, isNotNull } from 'drizzle-orm';

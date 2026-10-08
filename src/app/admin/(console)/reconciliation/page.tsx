@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { reconciliationAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';

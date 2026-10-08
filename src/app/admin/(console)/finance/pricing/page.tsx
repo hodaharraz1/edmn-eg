@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';
 import { activeVersionId, governanceFor, listVersions, loadVersion } from '@/server/modules/pricing/service';

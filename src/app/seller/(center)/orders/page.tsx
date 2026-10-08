@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { SellerForbidden } from '@/app/_components/seller-forbidden';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { ShoppingBag } from 'lucide-react';

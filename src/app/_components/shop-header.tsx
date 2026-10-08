@@ -1,5 +1,5 @@
 import { Heart, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { CategoryMenu } from '@/app/_components/category-menu';
 import { DeliveryLocationPicker } from '@/app/_components/delivery-location';
 import { LiveIconLink } from '@/app/_components/live/live-provider';

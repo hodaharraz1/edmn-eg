@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from 'drizzle-orm';
 import { Truck } from 'lucide-react';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

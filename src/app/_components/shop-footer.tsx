@@ -1,5 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { activeBlocks, LEGAL_CODES } from '@/server/modules/cms/service';
 import { Logo } from '@/ui/logo';
 

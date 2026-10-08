@@ -1,5 +1,5 @@
 import { ArrowRight, Info, Lock, MessagesSquare, Paperclip, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { LiveThread } from '@/app/_components/live/live-thread';
 import { formatDate, formatRelative } from '@/lib/format';
 import type { MessageDTO } from '@/lib/messaging';

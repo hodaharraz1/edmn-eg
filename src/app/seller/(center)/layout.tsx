@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { label } from '@/lib/i18n/labels';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { ExternalLink, LogOut, Menu } from 'lucide-react';
 import { logoutAction } from '@/app/_actions/shop';
 import { SellerNav } from '@/app/_components/seller-nav';
@@ -10,7 +10,7 @@ import { StatusChip } from '@/ui/feedback';
 import { requireSellerActor, requireUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 import { unreadForSeller } from '@/server/modules/messaging/service';
-import { unreadGeneralNotifications } from '@/server/modules/messaging/live';
+import { liveUserKey, unreadGeneralNotifications } from '@/server/modules/messaging/live';
 import { prefsFor } from '@/server/modules/notifications/message-alerts';
 import { vapidPublicKey } from '@/server/modules/notifications/push';
 import { LiveIconLink, LiveProvider } from '@/app/_components/live/live-provider';
@@ -29,7 +29,7 @@ export default async function SellerLayout({ children }: { children: React.React
   const canMessage = !!actor.sellerPermissions?.has('orders.communicate');
   const [unread, unreadNotifs, prefs] = await Promise.all([unreadForSeller(actor), unreadGeneralNotifications(user.id), prefsFor(db, user.id)]);
   return (
-    <LiveProvider surface="seller" initialUnreadMessages={unread} initialUnreadNotifications={unreadNotifs} inApp={prefs.messagesInApp} sound={prefs.messagesSound} pushKey={vapidPublicKey()}>
+    <LiveProvider surface="seller" initialUnreadMessages={unread} initialUnreadNotifications={unreadNotifs} inApp={prefs.messagesInApp} sound={prefs.messagesSound} pushKey={vapidPublicKey()} userKey={liveUserKey(user.id)}>
     <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="hidden bg-brand-950 p-4 lg:flex lg:flex-col lg:gap-4">
         <div className="-mx-4 -mt-4 flex flex-col items-center gap-1 bg-white px-4 py-4"><Logo href="/seller" variant="sidebar" label="مركز بائعي اضمن" /><p className="text-[11px] font-bold tracking-wide text-brand-800" dir="ltr">EDMN Seller Center</p></div>

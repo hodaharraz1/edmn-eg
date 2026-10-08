@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { SearchX } from 'lucide-react';
 import { EmptyState } from '@/ui/feedback';
 

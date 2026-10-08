@@ -8,7 +8,7 @@ import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select } from '@/ui/form';
-import Link from 'next/link';
+import Link from '@/ui/link';
 
 export const metadata = { title: 'التصنيفات' };
 

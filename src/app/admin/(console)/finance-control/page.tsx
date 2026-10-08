@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, sql } from 'drizzle-orm';
 import { closeDayAction, killSwitchAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

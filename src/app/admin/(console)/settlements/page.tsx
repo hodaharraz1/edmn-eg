@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, sql } from 'drizzle-orm';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';

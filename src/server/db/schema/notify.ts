@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, enumCheck, ts, updatedAt } from './_helpers';
 import { conversationMessages, conversations } from './messaging';
 import { users } from './identity';
@@ -118,3 +118,15 @@ export const userPresence = pgTable(
   },
   (t) => [check('user_presence_surface_chk', sql`${t.surface} is null or ${t.surface} in ('account','seller')`)],
 );
+
+/**
+ * Change tokens for the live channel. Keys: `user:<id>` (a user's own messages/reads/notifications) and
+ * `seller:<id>` (a store's buyer conversations). Maintained ONLY by database triggers (migration 0012) on
+ * conversation_messages, conversation_reads, conversations and notifications, so every code path bumps them.
+ * A poll whose token is unchanged costs one indexed lookup instead of the full snapshot.
+ */
+export const liveVersions = pgTable('live_versions', {
+  key: text().primaryKey(),
+  version: bigint({ mode: 'number' }).notNull(),
+  updatedAt: updatedAt(),
+});

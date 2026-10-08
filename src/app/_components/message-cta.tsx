@@ -1,5 +1,5 @@
 import { MessageCircle } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { cn } from '@/lib/cn';
 
 /** Primary entry point into an order/deal conversation ("تواصل مع البائع" / "تواصل مع المشتري"). */

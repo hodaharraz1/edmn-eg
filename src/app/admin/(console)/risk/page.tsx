@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { desc, eq, sql } from 'drizzle-orm';
 import { riskFlagAction } from '@/app/_actions/admin';
 import { riskFlags } from '@/server/db/schema';

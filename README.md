@@ -142,6 +142,7 @@ npm run test:e2e          # Playwright: builds, resets+seeds E2E_DATABASE_URL, r
 E2E_SKIP_BUILD=1 npm run test:e2e   # reuse an existing .next build
 npm run ledger:check      # reconcile every ledger account against its journal lines
 npm run test:all          # typecheck + lint + unit/integration + E2E
+# Staging: targeted specs only after a deploy — see docs/TESTING_POLICY.md
 ```
 
 See [docs/TESTING.md](docs/TESTING.md) for coverage, including the 20 critical edge cases.

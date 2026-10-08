@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, MessageSquareText, Paperclip, X } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { IncomingAlert, MessageDTO } from '@/lib/messaging';
@@ -58,7 +58,21 @@ const FIRST_MS = 1_200;
 const HIDDEN_MS = 30_000;
 const MAX_BACKOFF_MS = 60_000;
 const MAX_TOASTS = 3;
+/** A full snapshot at least this often even when the change token says nothing changed (safety net). */
+const FULL_EVERY_MS = 5 * 60_000;
 const TOAST_MS = 9_000;
+
+interface Snapshot {
+  userKey: string;
+  token?: string;
+  unreadMessages: number;
+  unreadNotifications: number;
+  cursor: string;
+  incoming: IncomingAlert[];
+  seen: string[];
+  inboxVersion: string;
+  thread: ThreadDelta | null;
+}
 
 interface Toast extends IncomingAlert {
   key: string;
@@ -90,9 +104,12 @@ export function LiveProvider({
   inApp,
   sound,
   pushKey,
+  userKey,
   children,
 }: {
   surface: Surface;
+  /** opaque per-user key (server-derived): scopes the cross-tab channel and the leader lock to ONE account */
+  userKey: string;
   initialUnreadMessages: number;
   initialUnreadNotifications: number;
   inApp: boolean;
@@ -121,49 +138,31 @@ export function LiveProvider({
   }, [pathname]);
   const bc = useRef<BroadcastChannel | null>(null);
   const pollRef = useRef<() => Promise<void>>(async () => undefined);
+  /** Only the leader tab polls; followers receive its snapshots. Without Web Locks every tab leads (fallback). */
+  const leader = useRef(false);
+  const coordinated = useRef(false);
+  const token = useRef<string | null>(null);
+  const lastFull = useRef(0);
+  const forceFull = useRef(true);
+  const applyRef = useRef<(snap: Snapshot, visible: boolean) => void>(() => undefined);
 
   const schedule = useCallback((ms?: number) => {
     if (timer.current) clearTimeout(timer.current);
     if (stopped.current) return;
+    // Followers rely on the leader, except while showing an open conversation (kept live by its own cheap token check).
+    if (coordinated.current && !leader.current && !thread.current) {
+      if (ms !== undefined && ms <= 300) bc.current?.postMessage({ type: 'poke' }); // ask the leader instead
+      return;
+    }
     const visible = typeof document === 'undefined' || document.visibilityState === 'visible';
     const base = visible ? VISIBLE_MS : HIDDEN_MS;
     const delay = ms ?? (failures.current ? Math.min(MAX_BACKOFF_MS, base * 2 ** failures.current) : base);
     timer.current = setTimeout(() => void pollRef.current(), delay);
   }, []);
 
-  const poll = useCallback(async () => {
-    if (stopped.current) return;
-    if (inFlight.current) {
-      again.current = true;
-      return;
-    }
-    inFlight.current = true;
-    const visible = document.visibilityState === 'visible';
-    const params = new URLSearchParams({ surface, visible: visible ? '1' : '0' });
-    if (cursor.current) params.set('since', cursor.current);
-    const reg = thread.current;
-    if (reg) {
-      params.set('conv', reg.conversationId);
-      const c = reg.cursor();
-      if (c) params.set('after', c);
-    }
-    try {
-      const res = await fetch(`/api/live?${params}`, { cache: 'no-store', credentials: 'same-origin', headers: { accept: 'application/json' } });
-      if (res.status === 401) {
-        stopped.current = true; // signed out: stop quietly
-        return;
-      }
-      if (!res.ok) throw new Error(String(res.status));
-      const snap = (await res.json()) as {
-        unreadMessages: number;
-        unreadNotifications: number;
-        cursor: string;
-        incoming: IncomingAlert[];
-        seen: string[];
-        inboxVersion: string;
-        thread: ThreadDelta | null;
-      };
-      failures.current = 0;
+  /** Apply a snapshot (own poll or the leader's broadcast): counts, inbox, open thread, toasts in a visible tab. */
+  const apply = useCallback(
+    (snap: Snapshot, visible: boolean) => {
       setUnreadMessages(snap.unreadMessages);
       setUnreadNotifications(snap.unreadNotifications);
       setInboxVersion(snap.inboxVersion);
@@ -188,9 +187,60 @@ export function LiveProvider({
           setToasts((t) => [...list.map((m) => ({ ...m, key: `${m.id}` })), ...t].slice(0, MAX_TOASTS));
           setAnnounce(list.length === 1 ? `رسالة جديدة من ${list[0].from} بخصوص ${list[0].ref}` : `${list.length} رسائل جديدة`);
           if (sound) playChime();
-          bc.current?.postMessage({ type: 'toasted', ids: show.map((m) => m.id) });
         }
       }
+    },
+    [inApp, sound],
+  );
+  useEffect(() => {
+    applyRef.current = apply;
+  }, [apply]);
+
+  const poll = useCallback(async () => {
+    if (stopped.current) return;
+    if (coordinated.current && !leader.current && !thread.current) return;
+    if (inFlight.current) {
+      again.current = true;
+      return;
+    }
+    inFlight.current = true;
+    const visible = document.visibilityState === 'visible';
+    const params = new URLSearchParams({ surface, visible: visible ? '1' : '0' });
+    if (cursor.current) params.set('since', cursor.current);
+    const reg = thread.current;
+    if (reg) {
+      params.set('conv', reg.conversationId);
+      const c = reg.cursor();
+      if (c) params.set('after', c);
+    }
+    // Cheap check: send the last change token unless a full refresh is due (focus, reconnect, takeover, 5 min).
+    const full = forceFull.current || Date.now() - lastFull.current > FULL_EVERY_MS;
+    if (token.current && !full) params.set('v', token.current);
+    try {
+      const res = await fetch(`/api/live?${params}`, { cache: 'no-store', credentials: 'same-origin', headers: { accept: 'application/json' } });
+      if (res.status === 401) {
+        stopped.current = true; // signed out: stop quietly, and stop the other tabs too
+        bc.current?.postMessage({ type: 'stop' });
+        return;
+      }
+      if (res.status === 204) {
+        failures.current = 0; // nothing changed since our token
+        return;
+      }
+      if (!res.ok) throw new Error(String(res.status));
+      const snap = (await res.json()) as Snapshot;
+      if (snap.userKey !== userKey) {
+        // The browser session now belongs to another account: never show or relay its data here.
+        stopped.current = true;
+        bc.current?.postMessage({ type: 'stop' });
+        return;
+      }
+      failures.current = 0;
+      forceFull.current = false;
+      lastFull.current = Date.now();
+      token.current = snap.token ?? null; // our own token (it includes our open conversation, if any)
+      apply(snap, visible);
+      if (leader.current || !coordinated.current) bc.current?.postMessage({ type: 'snap', snap });
     } catch {
       failures.current = Math.min(failures.current + 1, 6);
     } finally {
@@ -200,7 +250,7 @@ export function LiveProvider({
         schedule(50);
       } else schedule();
     }
-  }, [surface, inApp, sound, schedule]);
+  }, [surface, userKey, apply, schedule]);
   useEffect(() => {
     pollRef.current = poll;
   }, [poll]);
@@ -213,13 +263,68 @@ export function LiveProvider({
 
   useEffect(() => {
     stopped.current = false;
-    schedule(FIRST_MS);
+    const name = `edmn-live:${surface}:${userKey}`;
+    const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+    let release: (() => void) | null = null;
+    let disposed = false;
+
+    try {
+      bc.current = new BroadcastChannel(name);
+      bc.current.onmessage = (e: MessageEvent<{ type: string; snap?: Snapshot }>) => {
+        const msg = e.data;
+        if (msg?.type === 'poke' && leader.current) schedule(300); // a follower read/sent something: reconcile now
+        if (msg?.type === 'snap' && msg.snap && !leader.current && msg.snap.userKey === userKey) applyRef.current(msg.snap, document.visibilityState === 'visible');
+        if (msg?.type === 'stop') stopped.current = true;
+      };
+    } catch {
+      bc.current = null;
+    }
+
+    const becomeLeader = () => {
+      leader.current = true;
+      forceFull.current = true; // takeover: resync everything after our own cursor
+      failures.current = 0;
+      schedule(0);
+    };
+    /** Queue for (or, when visible, take over) the per-account leader lock; the browser frees it if a tab closes or crashes. */
+    const acquire = (steal: boolean) => {
+      if (!locks || disposed) return;
+      void locks
+        .request(name, steal ? { steal: true } : {}, () => {
+          becomeLeader();
+          return new Promise<void>((r) => {
+            release = r;
+          });
+        })
+        .catch(() => {
+          // Our lock was taken over by a visible tab: follow, and queue again for the next takeover.
+          leader.current = false;
+          release = null;
+          if (!disposed) acquire(false);
+        });
+    };
+
+    if (locks && bc.current) {
+      coordinated.current = true;
+      // A visible tab leads (so an active user keeps ~6 s latency); hidden tabs queue up as stand-ins.
+      if (document.visibilityState === 'visible') setTimeout(() => acquire(true), FIRST_MS);
+      else acquire(false);
+    } else {
+      coordinated.current = false; // no Web Locks / BroadcastChannel: every tab polls on its own (safe fallback)
+      schedule(FIRST_MS);
+    }
+
     const onVis = () => {
-      if (document.visibilityState === 'visible') schedule(0);
+      if (document.visibilityState !== 'visible') return;
+      forceFull.current = true;
+      if (coordinated.current && !leader.current) acquire(true);
+      else schedule(0);
     };
     const onNow = () => {
       failures.current = 0;
-      schedule(0);
+      forceFull.current = true;
+      if (coordinated.current && !leader.current) bc.current?.postMessage({ type: 'poke' });
+      else schedule(0);
     };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onNow);
@@ -227,24 +332,18 @@ export function LiveProvider({
     const unlock = () => unlockAudio();
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
-    try {
-      bc.current = new BroadcastChannel('edmn-live');
-      bc.current.onmessage = (e: MessageEvent<{ type: string; ids?: string[] }>) => {
-        if (e.data?.type === 'poke') schedule(300); // another tab read/sent something: reconcile soon
-        if (e.data?.type === 'toasted') for (const id of e.data.ids ?? []) seen.current.add(id);
-      };
-    } catch {
-      bc.current = null;
-    }
     return () => {
+      disposed = true;
       stopped.current = true;
+      leader.current = false;
       if (timer.current) clearTimeout(timer.current);
+      (release as (() => void) | null)?.();
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', onNow);
       window.removeEventListener('online', onNow);
       bc.current?.close();
     };
-  }, [schedule]);
+  }, [schedule, surface, userKey]);
 
   // Keep an existing push subscription fresh (never prompts; opt-in happens only on an explicit click).
   useEffect(() => {
@@ -255,7 +354,10 @@ export function LiveProvider({
   const registerThread = useCallback(
     (reg: ThreadReg | null) => {
       thread.current = reg;
-      if (reg) schedule(0);
+      if (reg) {
+        forceFull.current = true;
+        schedule(0);
+      }
     },
     [schedule],
   );

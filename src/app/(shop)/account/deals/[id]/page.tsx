@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { and, asc, eq, inArray } from 'drizzle-orm';

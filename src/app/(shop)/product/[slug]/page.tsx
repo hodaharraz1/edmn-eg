@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
 import { ReturnPolicyView } from '@/app/_components/return-policy-view';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 import { BadgeCheck, CircleAlert, PackageCheck, RotateCcw, ShieldCheck, Store, Truck } from 'lucide-react';

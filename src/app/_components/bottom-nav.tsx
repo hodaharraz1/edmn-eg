@@ -1,7 +1,7 @@
 'use client';
 
 import { Home, MessageSquareText, Package, ShieldCheck, User } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { messagesLabel, useCount } from './live/live-provider';

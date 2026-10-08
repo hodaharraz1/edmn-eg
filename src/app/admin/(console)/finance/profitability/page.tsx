@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { profitabilityCostAction } from '@/app/_actions/pricing';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { BadgeCheck, ShieldCheck, ShoppingCart, Trash2 } from 'lucide-react';
 import { updateCartAction } from '@/app/_actions/shop';
 import { QtySelect } from '@/app/_components/qty-select';

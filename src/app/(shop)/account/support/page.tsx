@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { LifeBuoy } from 'lucide-react';
 import { myTickets } from '@/server/modules/support/service';
 import { requireUser } from '@/server/web/session';

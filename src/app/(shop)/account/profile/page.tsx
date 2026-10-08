@@ -3,7 +3,7 @@ import { requireUser } from '@/server/web/session';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Field, Input } from '@/ui/form';
-import Link from 'next/link';
+import Link from '@/ui/link';
 
 export const metadata = { title: 'الملف الشخصي' };
 

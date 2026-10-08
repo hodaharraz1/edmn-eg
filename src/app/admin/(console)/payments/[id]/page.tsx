@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { eq, sql } from 'drizzle-orm';
 import { paymentDecisionAction } from '@/app/_actions/admin';

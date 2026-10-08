@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { ShieldCheck } from 'lucide-react';
 import { claimInviteAction, rejectInviteAction } from '@/app/_actions/deals';
 import { invitationByToken } from '@/server/modules/deals/service';

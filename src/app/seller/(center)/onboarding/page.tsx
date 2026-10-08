@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, eq, isNull } from 'drizzle-orm';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { onboardingStepAction } from '@/app/_actions/seller-onboarding';

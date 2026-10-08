@@ -1,6 +1,6 @@
 import { ArrowLeft, BadgeCheck, Camera, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { categories, files, products, sellers, stores } from '@/server/db/schema';

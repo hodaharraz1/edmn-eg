@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { Clock, Package, ShieldCheck, Truck, Wallet } from 'lucide-react';
 import { db } from '@/server/db/client';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { pricingVersionAction } from '@/app/_actions/pricing';
 import { hasPermission, type Actor } from '@/server/core/actor';

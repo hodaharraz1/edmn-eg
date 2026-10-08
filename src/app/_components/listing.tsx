@@ -1,5 +1,5 @@
 import { SlidersHorizontal, SearchX } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { brandFacets, filterableAttributes, searchProducts, SORTS, type SearchQuery, type Sort } from '@/server/modules/catalog/search';
 import { parseEgp } from '@/server/core/money';
 import { Drawer } from '@/ui/client';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';

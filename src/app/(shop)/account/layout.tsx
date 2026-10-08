@@ -1,5 +1,5 @@
 import { LogOut, Store } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { logoutAction } from '@/app/_actions/shop';
 import { AccountNav } from '@/app/_components/account-nav';
 import { requireCustomer, requireUser } from '@/server/web/session';

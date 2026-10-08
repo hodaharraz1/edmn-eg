@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { registerAction } from '@/app/_actions/auth';
 import { ActionForm, FieldError, SubmitButton } from '@/ui/action-form';
 import { Checkbox, Field, Input } from '@/ui/form';

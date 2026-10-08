@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { moderateProductAction, moderateRevisionAction } from '@/app/_actions/admin';

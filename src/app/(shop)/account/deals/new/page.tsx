@@ -14,7 +14,7 @@ import { Stepper } from '@/ui/commerce';
 import { DefinitionList, PageHeader } from '@/ui/data';
 import { Alert } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
-import Link from 'next/link';
+import Link from '@/ui/link';
 
 export const metadata = { title: 'صفقة محمية جديدة' };
 const STEPS = ['المنتج', 'السعر المطلوب', 'توقعات التسليم', 'شروط خاصة', 'عنوان الاستلام', 'المراجعة'];

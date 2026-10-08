@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { RETURN_CONDITION_KEYS, RETURN_CONDITION_LABELS, RETURN_SHIPPING_LABELS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { notFound } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';

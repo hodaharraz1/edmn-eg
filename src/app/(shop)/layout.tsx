@@ -19,7 +19,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   if (!boot) return page;
   // Signed-in: live badges, incoming-message toasts and conversation updates on every marketplace page.
   return (
-    <LiveProvider surface="account" initialUnreadMessages={hs.unreadMessages} initialUnreadNotifications={hs.unread} inApp={boot.prefs.messagesInApp} sound={boot.prefs.messagesSound} pushKey={boot.pushKey}>
+    <LiveProvider surface="account" initialUnreadMessages={hs.unreadMessages} initialUnreadNotifications={hs.unread} inApp={boot.prefs.messagesInApp} sound={boot.prefs.messagesSound} pushKey={boot.pushKey} userKey={boot.userKey}>
       {page}
     </LiveProvider>
   );

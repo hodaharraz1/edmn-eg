@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { RotateCcw } from 'lucide-react';
 import { returnsForCustomer } from '@/server/modules/postpurchase/returns';
 import { requireUser } from '@/server/web/session';

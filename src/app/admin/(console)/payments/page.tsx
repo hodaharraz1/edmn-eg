@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/ui/link';
 import { CreditCard } from 'lucide-react';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { paymentQueue } from '@/server/modules/payments/service';
