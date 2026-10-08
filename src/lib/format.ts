@@ -35,3 +35,29 @@ export function toInputAmount(minor: number | null | undefined): string {
   if (minor === null || minor === undefined) return '';
   return (minor / 100).toFixed(2).replace(/\.00$/, '');
 }
+
+const cairoDay = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(d);
+const plural = (n: number, one: string, two: string, few: string, many: string) => (n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${few}` : `${n} ${many}`);
+
+/** Human-friendly relative time (الآن، منذ 5 دقائق، أمس …). Callers keep the exact time in a title/dateTime attribute. */
+export function formatRelative(d: Date | string | null | undefined, now: Date = new Date()): string {
+  if (!d) return '—';
+  const date = typeof d === 'string' ? new Date(d) : d;
+  const s = Math.max(0, Math.round((now.getTime() - date.getTime()) / 1000));
+  if (s < 45) return 'الآن';
+  const m = Math.round(s / 60);
+  if (m < 60) return `منذ ${plural(Math.max(1, m), 'دقيقة', 'دقيقتين', 'دقائق', 'دقيقة')}`;
+  const h = Math.round(m / 60);
+  if (h < 24 && cairoDay(date) === cairoDay(now)) return `منذ ${plural(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة')}`;
+  const y = new Date(now.getTime() - 86_400_000);
+  const time = new Intl.DateTimeFormat('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Cairo' }).format(date);
+  if (cairoDay(date) === cairoDay(y)) return `أمس ${time}`;
+  if (h < 24) return `منذ ${plural(h, 'ساعة', 'ساعتين', 'ساعات', 'ساعة')}`;
+  return formatDate(date, true);
+}
+
+/** Clock time only (message bubbles; the full timestamp stays in the title). */
+export function formatTime(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  return new Intl.DateTimeFormat('ar-EG-u-nu-latn', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Cairo' }).format(date);
+}

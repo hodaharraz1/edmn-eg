@@ -8,6 +8,7 @@ import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { db } from '@/server/db/client';
 import { notificationTemplates, outboundMessages } from '@/server/db/schema';
 import { EVENT_TEMPLATES, type EventName } from '@/server/modules/notifications/events';
+import { deliveryHealth } from '@/server/modules/notifications/message-alerts';
 import { env } from '@/server/core/env';
 import { formatDate } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -23,13 +24,15 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
   const tab = String((await props.searchParams).tab ?? 'templates');
   const overrides = await db.select().from(notificationTemplates);
   const outbox = tab === 'outbox' ? await db.select().from(outboundMessages).orderBy(desc(outboundMessages.createdAt)).limit(150) : [];
+  const health = tab === 'health' ? await deliveryHealth(24) : null;
   const E = env();
   const ov = (e: string, ch: string) => overrides.find((o) => o.event === e && o.channel === ch);
   return (
     <div className="space-y-4">
       <PageHeader title="الإشعارات" description="قوالب الرسائل داخل المنصة والبريد والرسائل النصية، وسجل الرسائل الصادرة." />
       <Alert tone={E.MAIL_DRIVER === 'smtp' && E.SMS_DRIVER === 'http' ? 'success' : 'warning'}>البريد: {E.MAIL_DRIVER === 'smtp' ? `SMTP (${E.SMTP_HOST})` : 'وضع السجل فقط — لم يُعد مزود SMTP'} · SMS: {E.SMS_DRIVER === 'http' ? 'HTTP مُعد' : 'وضع السجل فقط — لم يُعد مزود رسائل'}</Alert>
-      <Tabs active={tab} tabs={[{ key: 'templates', label: 'القوالب', href: '/admin/notifications' }, { key: 'outbox', label: 'الرسائل الصادرة', href: '/admin/notifications?tab=outbox' }]} />
+      <Tabs active={tab} tabs={[{ key: 'templates', label: 'القوالب', href: '/admin/notifications' }, { key: 'outbox', label: 'الرسائل الصادرة', href: '/admin/notifications?tab=outbox' }, { key: 'health', label: 'صحة التوصيل', href: '/admin/notifications?tab=health' }]} />
+      {health && <DeliveryHealth h={health} />}
       {tab === 'templates' && (
         <ul className="space-y-2">
           {(Object.keys(EVENT_TEMPLATES) as EventName[]).map((e) => {
@@ -65,6 +68,85 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
           { key: 'st', header: 'الحالة', cell: (m) => <StatusChip status={m.status} /> },
         ]} />
       )}
+    </div>
+  );
+}
+
+const STATUS_AR: Record<string, string> = { QUEUED: 'في الطابور', SENT: 'اتبعت', FAILED: 'فشل', SUPPRESSED: 'اتمنع', OPENED: 'اتفتح' };
+
+/**
+ * Operational view of message-notification delivery (last 24 h). Read-only: no message content, no push
+ * endpoints, and no way to send anything to a participant from here.
+ */
+function DeliveryHealth({ h }: { h: Awaited<ReturnType<typeof deliveryHealth>> }) {
+  const channels = ['IN_APP', 'PUSH', 'EMAIL'];
+  const statuses = ['QUEUED', 'SENT', 'OPENED', 'SUPPRESSED', 'FAILED'];
+  const cell = (c: string, s: string) => h.byStatus.find((r) => r.channel === c && r.status === s)?.n ?? 0;
+  return (
+    <div className="space-y-4" data-testid="notification-health">
+      <div className="grid gap-3 md:grid-cols-3">
+        {Object.entries(h.providers).map(([ch, v]) => (
+          <div key={ch} className="card p-3 text-sm">
+            <p className="ltr text-xs text-muted">{ch}</p>
+            <p className="font-semibold">{v}</p>
+          </div>
+        ))}
+      </div>
+      <div className="card overflow-x-auto p-3">
+        <table className="w-full text-sm">
+          <caption className="mb-2 text-start font-bold">رسائل اضمن — آخر 24 ساعة</caption>
+          <thead>
+            <tr className="text-muted">
+              <th className="p-2 text-start">القناة</th>
+              {statuses.map((s) => (
+                <th key={s} className="p-2 text-start">
+                  {STATUS_AR[s]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {channels.map((c) => (
+              <tr key={c} className="border-t border-line">
+                <td className="ltr p-2 font-semibold">{c}</td>
+                {statuses.map((s) => (
+                  <td key={s} className="p-2" data-testid={`health-${c}-${s}`}>
+                    {cell(c, s)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="card p-3 text-sm">
+          <p className="mb-2 font-bold">أسباب المنع والفشل</p>
+          {h.reasons.length === 0 ? <p className="text-muted">لا يوجد</p> : (
+            <ul className="space-y-1">
+              {h.reasons.map((r, i) => (
+                <li key={i} className="flex justify-between gap-2"><span className="ltr">{r.channel} · {r.reason}</span><span>{STATUS_AR[r.status]}: {r.n}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="card space-y-1 p-3 text-sm">
+          <p className="mb-2 font-bold">الطابور واشتراكات الإشعارات</p>
+          {h.queue.length === 0 ? <p className="text-muted">لا يوجد شيء في الطابور</p> : h.queue.map((q) => <p key={q.channel}><span className="ltr">{q.channel}</span>: {q.n} (أقدم موعد: {formatDate(q.oldest, true)})</p>)}
+          <p>أجهزة Push نشطة: {h.subscriptions?.active ?? 0} · ملغاة: {h.subscriptions?.revoked ?? 0} (منتهية {h.subscriptions?.expired ?? 0}، متعثرة {h.subscriptions?.failing ?? 0})</p>
+        </div>
+      </div>
+      <div className="card p-3 text-sm">
+        <p className="mb-2 font-bold">آخر حالات الفشل</p>
+        {h.failures.length === 0 ? <p className="text-muted">لا يوجد</p> : (
+          <ul className="space-y-1">
+            {h.failures.map((f) => (
+              <li key={f.id} className="ltr text-xs">{f.created_at.slice(0, 19)} · {f.channel} · {f.event} · {f.reason ?? '-'} · attempts {f.attempts}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <Alert tone="info">هذه البيانات تشغيلية فقط: وصول الإشعار أو فتحه ليس دليل تسليم أو استلام ولا يغيّر أي حالة مالية.</Alert>
     </div>
   );
 }

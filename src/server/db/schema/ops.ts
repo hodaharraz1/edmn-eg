@@ -1,9 +1,10 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { TICKET_PRIORITIES, TICKET_STATUSES, TICKET_TYPES } from '@/domain/machines';
 import { createdAt, enumCheck, ts, updatedAt } from './_helpers';
 import { files } from './files';
 import { users } from './identity';
+import { conversationMessages, conversations } from './messaging';
 import { sellers } from './sellers';
 
 /* ───────── Notifications ───────── */
@@ -21,10 +22,19 @@ export const notifications = pgTable(
     readAt: ts(),
     /** Business-event identity: a retried event never creates a second identical notification. */
     dedupeKey: text(),
+    /**
+     * MESSAGE = a buyer↔seller message alert (counted by the Messages badge through conversation reads, never by
+     * the bell); GENERAL = everything else (orders, payments, deals …), counted by the notification bell.
+     */
+    category: text().notNull().default('GENERAL'),
+    conversationId: uuid().references(() => conversations.id),
+    messageId: uuid().references(() => conversationMessages.id),
     createdAt: createdAt(),
   },
   (t) => [
     index('notifications_user_idx').on(t.userId, t.readAt, t.createdAt),
+    index('notifications_conversation_idx').on(t.userId, t.conversationId).where(sql`${t.conversationId} is not null and ${t.readAt} is null`),
+    check('notifications_category_chk', sql`${t.category} in ('GENERAL','MESSAGE')`),
     uniqueIndex('notifications_dedupe_uq').on(t.userId, t.dedupeKey).where(sql`${t.dedupeKey} is not null`),
   ],
 );

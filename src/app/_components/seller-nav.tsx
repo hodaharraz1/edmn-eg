@@ -4,6 +4,7 @@ import { BarChart3, Boxes, CircleDollarSign, Gauge, HeartPulse, LayoutDashboard,
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { CountBadge, messagesLabel, useCount } from './live/live-provider';
 
 export const SELLER_NAV = [
   { href: '/seller', label: 'لوحة التحكم', icon: LayoutDashboard },
@@ -27,21 +28,23 @@ export const SELLER_NAV = [
 
 export function SellerNav({ compact, unreadMessages = 0, canMessage = true }: { compact?: boolean; unreadMessages?: number; canMessage?: boolean }) {
   const path = usePathname();
+  const unread = useCount('messages', unreadMessages);
   return (
     <nav aria-label="قائمة مركز البائع" className="space-y-0.5">
       {SELLER_NAV.filter((it) => canMessage || it.href !== '/seller/messages').map((it) => {
         const active = it.href === '/seller' ? path === '/seller' : it.href === '/seller/products' ? path.startsWith('/seller/products') && path !== '/seller/products/new' : path.startsWith(it.href);
         const Icon = it.icon;
         return (
-          <Link key={it.href} href={it.href} aria-current={active ? 'page' : undefined} className={cn('flex items-center gap-3 rounded-lg px-3 py-2 text-sm', active ? 'bg-white/15 font-semibold text-white' : 'text-white/75 hover:bg-white/10 hover:text-white', compact && 'text-ink/80 hover:text-ink')}>
+          <Link
+            key={it.href}
+            href={it.href}
+            aria-current={active ? 'page' : undefined}
+            aria-label={it.href === '/seller/messages' ? messagesLabel(unread) : undefined}
+            className={cn('flex items-center gap-3 rounded-lg border-s-2 px-3 py-2 text-sm', active ? 'border-white bg-white/15 font-semibold text-white' : 'border-transparent text-white/75 hover:bg-white/10 hover:text-white', compact && 'text-ink/80 hover:text-ink')}
+          >
             <Icon className="size-4 shrink-0" aria-hidden />
             {it.label}
-            {it.href === '/seller/messages' && unreadMessages > 0 && (
-              <span className="ms-auto inline-grid min-w-5 place-items-center rounded-full bg-accent-600 px-1.5 text-[11px] font-bold text-white" data-testid="unread-badge">
-                {unreadMessages > 99 ? '99+' : unreadMessages}
-                <span className="sr-only"> رسائل جديدة</span>
-              </span>
-            )}
+            {it.href === '/seller/messages' && <CountBadge kind="messages" fallback={unreadMessages} className="ms-auto inline-grid min-w-5 place-items-center rounded-full bg-accent-600 px-1.5 text-[11px] font-bold text-white" />}
           </Link>
         );
       })}

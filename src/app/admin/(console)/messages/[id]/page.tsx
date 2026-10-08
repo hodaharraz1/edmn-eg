@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { hideMessageAction, lockConversationAction } from '@/app/_actions/messaging';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
-import { ConversationContextCard, MessageBubble } from '@/app/_components/conversation';
+import { ConversationContextCard, toDTO } from '@/app/_components/conversation';
+import { MessageBubble } from '@/app/_components/live/message-bubble';
 import { formatDate } from '@/lib/format';
 import { hasPermission } from '@/server/core/actor';
 import { isDomainError } from '@/server/core/errors';
@@ -46,7 +47,7 @@ export default async function AdminConversation(props: PageProps<'/admin/message
           <ol className="space-y-3">
             {t.messages.map((m) => (
               <div key={m.id} className="space-y-1">
-                <MessageBubble m={m} viewerSide="STAFF" surface="admin" partyName={names} staff />
+                <MessageBubble m={toDTO(m)} surface="admin" partyName={names} staff />
                 {canModerate && !m.hidden && (
                   <details className={m.side === 'BUYER' ? 'text-start' : 'text-end'}>
                     <summary className="cursor-pointer text-xs text-muted">إخفاء الرسالة عن الطرفين</summary>

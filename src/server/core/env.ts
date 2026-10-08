@@ -38,6 +38,10 @@ const schema = z.object({
   SMTP_PORT: z.coerce.number().int().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
+  /** Web Push (VAPID). Push is reported as NOT CONFIGURED (never faked) while these are absent. */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
   SMS_DRIVER: z.enum(['log', 'http']).default('log'),
   SMS_HTTP_URL: z.string().optional(),
   SMS_HTTP_TOKEN: z.string().optional(),

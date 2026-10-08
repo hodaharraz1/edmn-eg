@@ -1,13 +1,14 @@
-import { Bell, ChevronDown, Heart, LayoutGrid, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
+import { ChevronDown, Heart, LayoutGrid, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
 import Link from 'next/link';
 import { DeliveryLocationPicker } from '@/app/_components/delivery-location';
+import { LiveIconLink } from '@/app/_components/live/live-provider';
 import { t } from '@/lib/i18n';
 import { Logo } from '@/ui/logo';
 import { Drawer } from '@/ui/client';
 import { allGovernorates, deliveryGovernorate, headerState, navCategories } from '@/server/web/context';
 
 export async function ShopHeader({ q }: { q?: string }) {
-  const [{ user, cartCount, unread }, cats, gov, govs] = await Promise.all([headerState(), navCategories(), deliveryGovernorate(), allGovernorates()]);
+  const [{ user, cartCount, unread, unreadMessages }, cats, gov, govs] = await Promise.all([headerState(), navCategories(), deliveryGovernorate(), allGovernorates()]);
   return (
     <header className="sticky top-0 z-40 shadow-md">
       {/* Light brand bar: the official logo is transparent and must sit on a light surface. */}
@@ -91,10 +92,23 @@ export async function ShopHeader({ q }: { q?: string }) {
             <Package className="size-5" aria-hidden /> {t('nav.orders')}
           </Link>
           {user && (
-            <Link href="/account/notifications" className="relative hidden rounded-lg p-2 hover:bg-page sm:block" aria-label={`الإشعارات${unread ? ` (${unread} غير مقروءة)` : ''}`}>
-              <Bell className="size-5" />
-              {unread > 0 && <span className="absolute top-1 end-1 grid min-w-4 place-items-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white">{unread}</span>}
-            </Link>
+            <LiveIconLink
+              href="/account/messages"
+              kind="messages"
+              fallback={unreadMessages}
+              showLabel
+              testId="header-messages"
+              className="hidden items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:font-semibold aria-[current=page]:text-brand-800 md:flex"
+            />
+          )}
+          {user && (
+            <LiveIconLink
+              href="/account/notifications"
+              kind="notifications"
+              fallback={unread}
+              testId="header-notifications"
+              className="grid size-10 place-items-center rounded-lg hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-800"
+            />
           )}
           <Link href="/cart" className="relative flex items-center gap-1 rounded-lg p-2 hover:bg-page" aria-label={`السلة (${cartCount})`}>
             <ShoppingCart className="size-6" />

@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
+import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
 import { hideMessage, reportMessage, resolveReport, sendMessage, setConversationLock } from '@/server/modules/messaging/service';
 import { runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin, requireCustomer, requireSellerActor } from '@/server/web/session';
@@ -32,8 +34,13 @@ export async function sendMessageAction(_p: ActionState | null, fd: FormData): P
     if (entries.filter((v) => typeof v !== 'string' && v.size > 0).length > MAX_FILES) {
       return { ok: false, error: `تقدر ترفق ${MAX_FILES} ملفات بالكتير في الرسالة` };
     }
-    await sendMessage(actor, conversationId, { body: String(fd.get('body') ?? ''), clientKey: str(fd, 'clientKey') }, files);
-    return { message: 'تم الإرسال' };
+    const msg = await sendMessage(actor, conversationId, { body: String(fd.get('body') ?? ''), clientKey: str(fd, 'clientKey') }, files, {
+      // Push is sent after the response (the message is already committed); failures are retried by the worker.
+      onCommitted: (ids) => {
+        if (ids.length) after(() => dispatchDeliveries({ ids }).catch(() => undefined));
+      },
+    });
+    return { message: 'تم الإرسال', data: { id: msg.id } };
   });
   if (res.ok) revalidatePath(surface === 'seller' ? `/seller/messages/${conversationId}` : `/account/messages/${conversationId}`);
   return res;

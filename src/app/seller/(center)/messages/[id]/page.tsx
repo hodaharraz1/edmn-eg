@@ -26,6 +26,7 @@ export default async function SellerConversationPage(props: PageProps<'/seller/m
         side={t.side}
         surface="seller"
         messages={t.messages}
+      cursor={t.cursor}
         write={t.write}
         backHref="/seller/messages"
       />

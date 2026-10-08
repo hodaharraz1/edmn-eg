@@ -51,6 +51,9 @@ export const EVENT_TEMPLATES = {
   /** Buyer ↔ seller messages: never include the message text (it may be private). */
   MESSAGE_FROM_SELLER: { title: 'رسالة جديدة من البائع', body: 'عندك رسالة جديدة من {{party}} على {{ref}}. افتح اضمن عشان تشوفها.', sms: false },
   MESSAGE_FROM_BUYER: { title: 'رسالة جديدة من المشتري', body: 'عندك رسالة جديدة من المشتري على {{ref}}. افتح اضمن عشان ترد.', sms: false },
+  /** Current message events (the two above are kept only to render historical rows). Never include message text. */
+  MESSAGE_RECEIVED: { title: 'رسالة جديدة من {{party}}', body: 'بخصوص {{ref}}', sms: false },
+  MESSAGE_ATTACHMENT_RECEIVED: { title: 'مرفق جديد من {{party}}', body: 'بخصوص {{ref}}', sms: false },
   EXTERNAL_DEAL_COMPLETED: { title: 'الصفقة اكتملت', body: 'الصفقة #{{deal}} اكتملت. شكرًا إنك استخدمت اضمن.', sms: false },
   SUPPORT_REPLY: { title: 'رد جديد على تذكرة الدعم', body: 'فيه رد جديد على التذكرة #{{ticket}}.', sms: false },
   REVIEW_RECEIVED: { title: 'تقييم جديد', body: 'حصلت على تقييم جديد ({{rating}}/5).', sms: false },

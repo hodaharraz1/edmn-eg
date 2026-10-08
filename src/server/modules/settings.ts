@@ -63,6 +63,16 @@ export const SETTINGS_SCHEMA = {
    */
   'messaging.postCloseWriteDays': z.number().int().min(0).max(365).default(30),
   /**
+   * Message notification routing (UX only — never connected to money, delivery evidence or disputes).
+   * Email fallback waits this long and is skipped if the recipient has read the message by then; at most one
+   * message email per conversation and recipient per cooldown window; push is rate-limited per conversation.
+   */
+  'messaging.emailFallbackDelayMinutes': z.number().int().min(0).max(1440).default(15),
+  'messaging.emailCooldownMinutes': z.number().int().min(0).max(10080).default(60),
+  'messaging.pushCooldownSeconds': z.number().int().min(0).max(3600).default(60),
+  /** A user seen with a visible EDMN tab within this window is "active": live badge + toast instead of push. */
+  'messaging.presenceActiveSeconds': z.number().int().min(5).max(600).default(30),
+  /**
    * Transparent shared EDMN fee: share (bps of the total fee F) paid by the BUYER; the seller pays F − Fb.
    * No default: null = not configured → new checkouts are blocked. Existing deployments carry over the
    * historical configuration (buyer 0%, seller 100%) recorded as NOT owner-approved (migration 0008).

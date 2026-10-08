@@ -8,6 +8,7 @@ import { flagMissingDeliveryEvents, flagMissingDeliveryEvidence, flagSellerSlaBr
 import { expireDealInvitations, expireDeliveryOtps, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { providerFor } from '@/server/modules/notifications/providers';
+import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
 
 type Handler = (payload: Record<string, unknown>) => Promise<unknown>;
 
@@ -56,6 +57,7 @@ export async function flushOutbound(limit = 50) {
 export const HANDLERS: Record<string, Handler> = {
   'outbound.flush': () => flushOutbound(),
   'orders.expire': (p) => expireOrder(String(p.orderId)),
+  'notify.dispatch': () => dispatchDeliveries(),
 };
 
 /** Periodic maintenance tasks run by the worker (cron-like). */
@@ -71,6 +73,8 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   { name: 'deals.expire_delivery_otps', everyMs: 15 * 60_000, run: () => expireDeliveryOtps() },
   { name: 'settlement.scheduled', everyMs: 60 * 60_000, run: () => runScheduledSettlement() },
   { name: 'outbound.flush', everyMs: 60_000, run: () => flushOutbound() },
+  // Message push retries + delayed email fallback (re-checks read state, preferences and cooldown first).
+  { name: 'notify.dispatch', everyMs: 60_000, run: () => dispatchDeliveries() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },
   { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },
 ];

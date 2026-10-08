@@ -15,6 +15,8 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob:",
       "connect-src 'self'",
+      "worker-src 'self'",
+      "manifest-src 'self'",
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
@@ -25,10 +27,14 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ['sharp', 'pg', 'nodemailer'],
+  serverExternalPackages: ['sharp', 'pg', 'nodemailer', 'web-push'],
   experimental: { serverActions: { bodySizeLimit: '12mb' } },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      // Push-only service worker: always revalidated so a deploy replaces it at once (it caches nothing itself).
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }, { key: 'Service-Worker-Allowed', value: '/' }] },
+    ];
   },
 };
 

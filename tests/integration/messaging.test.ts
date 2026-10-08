@@ -27,6 +27,7 @@ import {
   hideMessage,
   listForSeller,
   listForUser,
+  markRead,
   openDealConversation,
   openSellerOrderConversation,
   participantAccess,
@@ -374,7 +375,7 @@ describe('security', () => {
 /* ───────────────────────── MESSAGING ───────────────────────── */
 
 describe('messaging behaviour', () => {
-  it('30-31 — unread counts per side/member; opening the conversation marks it read and shows «seen»', async () => {
+  it('30-31 — unread counts per side/member; viewing the conversation (not merely fetching it) marks it read and shows «seen»', async () => {
     const { s, c, so } = await paidOrder();
     const om = await member(s.actor.sellerId!, 'ORDER_MANAGER');
     const conv = await openSellerOrderConversation(c.actor, so.id);
@@ -384,6 +385,9 @@ describe('messaging behaviour', () => {
     expect(await unreadForSeller(om.actor)).toBe(2);
     expect(await unreadForUser(c.user.id)).toBe(0); // own messages never count
     const view = await participantThread(s.actor, conv.id);
+    // Fetching/rendering the thread is NOT reading it: only the visible-view report (markRead) is.
+    expect(await unreadForSeller(s.actor)).toBe(2);
+    await markRead(s.actor, conv.id);
     expect(await unreadForSeller(s.actor)).toBe(0);
     expect(await unreadForSeller(om.actor)).toBe(2); // each member has their own read position
     expect(view.messages.every((m) => !m.mine)).toBe(true);
@@ -401,18 +405,22 @@ describe('messaging behaviour', () => {
     const n = async (userId: string, event: string) => (await db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.event, event))));
     await send(c.actor, conv.id, 'سر: رقم الشقة 12');
     await send(c.actor, conv.id, 'رسالة تانية');
-    expect(await n(s.user.id, 'MESSAGE_FROM_BUYER')).toHaveLength(1);
-    expect(await n(om.user.id, 'MESSAGE_FROM_BUYER')).toHaveLength(1);
-    expect(await n(fin.user.id, 'MESSAGE_FROM_BUYER')).toHaveLength(0);
-    const [note] = await n(s.user.id, 'MESSAGE_FROM_BUYER');
+    expect(await n(s.user.id, 'MESSAGE_RECEIVED')).toHaveLength(1);
+    expect(await n(om.user.id, 'MESSAGE_RECEIVED')).toHaveLength(1);
+    expect(await n(fin.user.id, 'MESSAGE_RECEIVED')).toHaveLength(0);
+    const [note] = await n(s.user.id, 'MESSAGE_RECEIVED');
     expect(note.body).not.toContain('سر');
+    expect(note.title).not.toContain('سر');
+    expect(note.category).toBe('MESSAGE');
+    expect(note.conversationId).toBe(conv.id);
     expect(note.link).toBe(`/seller/messages/${conv.id}`);
-    await participantThread(s.actor, conv.id); // owner reads
+    await markRead(s.actor, conv.id); // owner reads (visible view)
+    expect((await n(s.user.id, 'MESSAGE_RECEIVED'))[0].readAt).not.toBeNull(); // its alert is cleared too
     await send(c.actor, conv.id, 'تالت رسالة');
-    expect(await n(s.user.id, 'MESSAGE_FROM_BUYER')).toHaveLength(2);
-    expect(await n(om.user.id, 'MESSAGE_FROM_BUYER')).toHaveLength(1); // still has unread → no new ping
+    expect(await n(s.user.id, 'MESSAGE_RECEIVED')).toHaveLength(2);
+    expect(await n(om.user.id, 'MESSAGE_RECEIVED')).toHaveLength(1); // still has unread → no new ping
     await send(s.actor, conv.id, 'رد');
-    const [toBuyer] = await n(c.user.id, 'MESSAGE_FROM_SELLER');
+    const [toBuyer] = await n(c.user.id, 'MESSAGE_RECEIVED');
     expect(toBuyer.link).toBe(`/account/messages/${conv.id}`);
   });
 

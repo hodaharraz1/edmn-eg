@@ -25,6 +25,7 @@ export default async function AccountConversationPage(props: PageProps<'/account
       side={t.side}
       surface="account"
       messages={t.messages}
+      cursor={t.cursor}
       write={t.write}
       backHref="/account/messages"
     />

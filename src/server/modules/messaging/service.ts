@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { enforce } from '@/server/auth/rate-limit';
 import { hasPermission, requirePermission, requireUser, type Actor } from '@/server/core/actor';
@@ -25,7 +25,7 @@ import {
   type MessageSenderRole,
 } from '@/server/db/schema';
 import { SELLER_ROLE_PERMISSIONS } from '@/server/rbac/permissions';
-import { notify } from '@/server/modules/notifications/notify';
+import { fanOutMessage } from '@/server/modules/notifications/message-alerts';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 
@@ -214,6 +214,7 @@ export async function sendMessage(
   conversationId: string,
   input: { body: string; clientKey: string },
   attachments: { data: Buffer; name: string }[] = [],
+  opts: { onCommitted?: (pushDeliveryIds: string[]) => void } = {},
 ) {
   const access = await participantAccess(actor, conversationId);
   const body = cleanBody(String(input.body ?? ''));
@@ -240,7 +241,8 @@ export async function sendMessage(
   await enforce(`msg:conv:${access.conv.id}:${access.userId}`, LIMITS.perHourPerConversation, 3600);
   for (let i = 0; i < attachments.length; i++) await enforce(`msg:att:${access.userId}`, LIMITS.attachmentsPerHour, 3600);
 
-  return db.transaction(async (tx) => {
+  let pushIds: string[] = [];
+  const msg = await db.transaction(async (tx) => {
     const fileIds: string[] = [];
     for (const a of attachments) {
       const stored = await storeUpload(tx, actor, { purpose: 'MESSAGE_ATTACHMENT', data: a.data, originalName: a.name });
@@ -253,9 +255,13 @@ export async function sendMessage(
     if (fileIds.length) await tx.insert(conversationMessageAttachments).values(fileIds.map((fileId) => ({ messageId: msg.id, fileId })));
     await tx.update(conversations).set({ lastMessageAt: msg.createdAt }).where(eq(conversations.id, access.conv.id));
     await markReadTx(tx, access.conv.id, access.userId);
-    await notifyRecipients(tx, access.conv, access.side, msg.id);
+    // Notification fan-out is recorded in the same transaction (so it exists iff the message exists), but no
+    // provider is contacted here: a push/email outage can never lose, delay or roll back a message.
+    pushIds = await notifyRecipients(tx, access.conv, access.side, msg.id, fileIds.length > 0);
     return msg;
   });
+  opts.onCommitted?.(pushIds);
+  return msg;
 }
 
 /** Users on the other side who should be told about a new message. */
@@ -278,31 +284,25 @@ export async function storeCommunicators(conn: DbOrTx, sellerId: string): Promis
 }
 
 /**
- * One notification per "burst": a recipient is notified only if this is their first unread message in the
- * conversation, so a conversation never floods them. Notifications never contain the message text.
+ * Route the new message to the other side: one in-app notification per unread "burst", Web Push for
+ * opted-in devices of users who are away, delayed email fallback (see notifications/message-alerts.ts).
+ * Alerts never contain the message text by default, never attachment links.
  */
-async function notifyRecipients(tx: DbOrTx, conv: Conversation, senderSide: Side, messageId: string) {
+async function notifyRecipients(tx: DbOrTx, conv: Conversation, senderSide: Side, messageId: string, hasAttachments: boolean): Promise<string[]> {
   const recipients = await recipientsFor(tx, conv, senderSide);
+  if (!recipients.length) return [];
   const ctx = await contextLabel(tx, conv);
-  for (const userId of recipients) {
-    // Any earlier message from this side that the recipient has not read yet? Then they were already notified.
-    const res = await tx.execute(sql`
-      select 1 from conversation_messages m
-      left join conversation_reads r on r.conversation_id = m.conversation_id and r.user_id = ${userId}
-      where m.conversation_id = ${conv.id} and m.sender_role = ${senderSide} and m.id <> ${messageId}
-        and m.created_at <= (select created_at from conversation_messages where id = ${messageId})
-        and (r.last_read_at is null or m.created_at > r.last_read_at)
-      limit 1`);
-    if (res.rows.length) continue;
-    const toBuyer = senderSide === 'SELLER';
-    const link = toBuyer || conv.context === 'DEAL' ? `/account/messages/${conv.id}` : `/seller/messages/${conv.id}`;
-    await notify(tx, {
-      event: toBuyer ? 'MESSAGE_FROM_SELLER' : 'MESSAGE_FROM_BUYER',
-      userIds: [userId],
-      vars: { ref: ctx.ref, party: toBuyer ? ctx.sellerName : 'المشتري' },
-      link,
-    });
-  }
+  const toBuyer = senderSide === 'SELLER';
+  return fanOutMessage(tx, {
+    conversationId: conv.id,
+    messageId,
+    recipients,
+    senderSide,
+    hasAttachments,
+    ref: ctx.ref,
+    party: toBuyer ? ctx.sellerName : 'المشتري',
+    linkFor: () => (toBuyer || conv.context === 'DEAL' ? `/account/messages/${conv.id}` : `/seller/messages/${conv.id}`),
+  });
 }
 
 /* ───────────────────────── Reading ───────────────────────── */
@@ -311,18 +311,30 @@ async function notifyRecipients(tx: DbOrTx, conv: Conversation, senderSide: Side
  * Move the user's read position to the newest message. Computed inside PostgreSQL: timestamps there have
  * microsecond precision, JS Dates only milliseconds — a JS-side value would leave the last message "unread".
  */
-async function markReadTx(conn: DbOrTx, conversationId: string, userId: string) {
+async function markReadTx(conn: DbOrTx, conversationId: string, userId: string, upToMessageId?: string) {
+  // upTo = the newest message the participant actually had on screen; never beyond what exists.
+  const upTo = upToMessageId && isUuid(upToMessageId) ? sql`and (created_at, id) <= (select created_at, id from conversation_messages where id = ${upToMessageId} and conversation_id = ${conversationId})` : sql``;
   await conn.execute(sql`
     insert into conversation_reads (conversation_id, user_id, last_read_at)
-    select ${conversationId}, ${userId}, max(created_at) from conversation_messages where conversation_id = ${conversationId}
+    select ${conversationId}, ${userId}, max(created_at) from conversation_messages where conversation_id = ${conversationId} ${upTo}
     having max(created_at) is not null
     on conflict (conversation_id, user_id) do update set last_read_at = greatest(conversation_reads.last_read_at, excluded.last_read_at)`);
 }
 
-/** Called when the participant actually opens the conversation view. */
-export async function markRead(actor: Actor, conversationId: string) {
+/**
+ * Read rule (server-authoritative): a message becomes read only when the participant's client reports that
+ * the conversation was on screen in a visible tab, up to the newest message rendered. Fetching messages
+ * (page render, polling, push, toast, email, a notification being opened) never marks anything read, and
+ * staff views never touch participants' read positions. Once nothing in the conversation is unread for
+ * this user, its message notifications are cleared from the bell/notification center too.
+ */
+export async function markRead(actor: Actor, conversationId: string, upToMessageId?: string) {
   const access = await participantAccess(actor, conversationId);
-  await markReadTx(db, access.conv.id, access.userId);
+  await markReadTx(db, access.conv.id, access.userId, upToMessageId);
+  if ((await unreadIn(access.conv.id, access.userId, access.side)) === 0) {
+    await db.execute(sql`update notifications set read_at = now() where user_id = ${access.userId} and conversation_id = ${access.conv.id} and read_at is null`);
+  }
+  return access;
 }
 
 export interface ThreadMessage {
@@ -340,8 +352,14 @@ export interface ThreadMessage {
   reportCount?: number;
 }
 
-async function loadMessages(conn: DbOrTx, conv: Conversation, viewer: { userId: string | null; side: Side | 'STAFF' }): Promise<ThreadMessage[]> {
-  const msgs = await conn.select().from(conversationMessages).where(eq(conversationMessages.conversationId, conv.id)).orderBy(asc(conversationMessages.createdAt));
+export async function loadMessages(conn: DbOrTx, conv: Conversation, viewer: { userId: string | null; side: Side | 'STAFF' }, afterTs?: string): Promise<ThreadMessage[]> {
+  // Authoritative order: server timestamp, then id (deterministic for concurrent messages).
+  // afterTs (a PostgreSQL timestamp text) selects a small overlapping window; the client de-duplicates by id.
+  const msgs = await conn
+    .select()
+    .from(conversationMessages)
+    .where(and(eq(conversationMessages.conversationId, conv.id), afterTs ? sql`${conversationMessages.createdAt} > ${afterTs}::timestamptz - interval '15 seconds'` : undefined))
+    .orderBy(asc(conversationMessages.createdAt), asc(conversationMessages.id));
   const atts = msgs.length
     ? await conn
         .select({ messageId: conversationMessageAttachments.messageId, fileId: files.id, mimeType: files.mimeType, name: files.originalName })
@@ -433,16 +451,16 @@ async function contextLabel(conn: DbOrTx, conv: Conversation): Promise<Conversat
 
 const firstName = (n: string) => n.trim().split(/\s+/)[0] ?? n;
 
-/** Full thread for a participant; opening it marks it read. */
+/** Full thread for a participant. Rendering it does NOT mark it read (see markRead). */
 export async function participantThread(actor: Actor, conversationId: string) {
   const access = await participantAccess(actor, conversationId);
-  await markRead(actor, conversationId);
   const [ctx, messages, ws] = await Promise.all([
     contextLabel(db, access.conv),
     loadMessages(db, access.conv, { userId: access.userId, side: access.side }),
     writeState(access.conv, access.side),
   ]);
-  return { conv: access.conv, side: access.side, context: ctx, messages, write: ws };
+  const [cur] = (await db.execute<{ c: string | null }>(sql`select max(created_at)::text c from conversation_messages where conversation_id = ${access.conv.id}`)).rows;
+  return { conv: access.conv, side: access.side, context: ctx, messages, write: ws, cursor: cur?.c ?? null };
 }
 
 /* ───────────────────────── Lists & unread counters ───────────────────────── */
@@ -460,57 +478,104 @@ export interface ConversationListItem {
   unread: number;
 }
 
+export type InboxFilter = 'all' | 'unread' | 'orders' | 'deals';
+export interface InboxQuery {
+  filter?: InboxFilter;
+  q?: string;
+}
+
+type InboxRow = {
+  id: string;
+  context: Conversation['context'];
+  side: Side;
+  ref: string;
+  title: string | null;
+  items: number;
+  status: string;
+  seller_name: string;
+  buyer_name: string;
+  last_message_at: Date | string | null;
+  body: string | null;
+  hidden: boolean | null;
+  atts: number | null;
+  unread: number;
+};
+
+/**
+ * One query for the whole inbox (no N+1): context labels, latest message preview and the per-conversation
+ * unread count for this user. Sorted by latest activity.
+ */
+async function inbox(uid: string, scope: ReturnType<typeof sql>, sideExpr: ReturnType<typeof sql>, opts: InboxQuery): Promise<ConversationListItem[]> {
+  const conds = [scope];
+  if (opts.filter === 'orders') conds.push(sql`c.context = 'SELLER_ORDER'`);
+  if (opts.filter === 'deals') conds.push(sql`c.context = 'DEAL'`);
+  if (opts.filter === 'unread') conds.push(sql`un.n > 0`);
+  const q = (opts.q ?? '').trim().slice(0, 60);
+  if (q) {
+    const like = `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+    const digits = q.replace(/\D/g, '');
+    conds.push(sql`(st.name ilike ${like} or bu.full_name ilike ${like} or d.title ilike ${like} or d.seller_full_name ilike ${like}
+      or exists (select 1 from order_items oi where oi.seller_order_id = so.id and oi.title_snapshot ilike ${like})
+      ${digits ? sql`or o.number::text like ${`%${digits}%`} or d.number::text like ${`%${digits}%`}` : sql``})`);
+  }
+  const res = await db.execute<InboxRow>(sql`
+    select c.id, c.context, ${sideExpr} as side,
+      case when c.context = 'SELLER_ORDER' then 'طلب #' || o.number || '-' || so.suffix else 'صفقة EDMN-' || lpad(d.number::text, 8, '0') end as ref,
+      case when c.context = 'SELLER_ORDER' then (select oi.title_snapshot from order_items oi where oi.seller_order_id = so.id order by oi.id limit 1) else d.title end as title,
+      case when c.context = 'SELLER_ORDER' then (select count(*)::int from order_items oi where oi.seller_order_id = so.id) else 1 end as items,
+      coalesce(so.status, d.status) as status,
+      coalesce(st.name, nullif(split_part(d.seller_full_name, ' ', 1), ''), 'البائع') as seller_name,
+      coalesce(nullif(split_part(bu.full_name, ' ', 1), ''), 'المشتري') as buyer_name,
+      c.last_message_at, lm.body, lm.hidden, lm.atts, un.n as unread
+    from conversations c
+    join users bu on bu.id = c.buyer_user_id
+    left join seller_orders so on so.id = c.seller_order_id
+    left join orders o on o.id = c.order_id
+    left join stores st on st.seller_id = c.seller_id
+    left join external_deals d on d.id = c.deal_id
+    left join conversation_reads r on r.conversation_id = c.id and r.user_id = ${uid}
+    left join lateral (
+      select m.body, (m.hidden_at is not null) as hidden, (select count(*)::int from conversation_message_attachments a where a.message_id = m.id) as atts
+        from conversation_messages m where m.conversation_id = c.id order by m.created_at desc, m.id desc limit 1) lm on true
+    cross join lateral (
+      select count(*)::int as n from conversation_messages m
+       where m.conversation_id = c.id and m.hidden_at is null and m.sender_role <> ${sideExpr}
+         and (r.last_read_at is null or m.created_at > r.last_read_at)) un
+    where ${sql.join(conds, sql` and `)}
+    order by coalesce(c.last_message_at, c.created_at) desc, c.id
+    limit 200`);
+  return res.rows.map((x) => {
+    let preview = '';
+    if (x.hidden) preview = 'رسالة اتخفت بواسطة فريق اضمن';
+    else if (x.body) preview = x.body.replace(/\s+/g, ' ').slice(0, 90);
+    else if ((x.atts ?? 0) > 0) preview = 'مرفق';
+    const title = x.title ? x.title + (x.items > 1 ? ' + منتجات أخرى' : '') : '';
+    return {
+      id: x.id,
+      context: x.context,
+      ref: x.ref,
+      title,
+      status: x.status,
+      otherParty: x.side === 'BUYER' ? x.seller_name : x.buyer_name,
+      side: x.side,
+      lastMessageAt: x.last_message_at ? new Date(x.last_message_at) : null,
+      preview,
+      unread: Number(x.unread),
+    };
+  });
+}
+
 /** Conversations where the user is the buyer, or the bound seller of a protected deal. */
-export async function listForUser(actor: Actor): Promise<ConversationListItem[]> {
+export async function listForUser(actor: Actor, opts: InboxQuery = {}): Promise<ConversationListItem[]> {
   const uid = requireUser(actor);
-  const rows = await db
-    .select()
-    .from(conversations)
-    .where(or(eq(conversations.buyerUserId, uid), eq(conversations.sellerUserId, uid)))
-    .orderBy(sql`${conversations.lastMessageAt} desc nulls last`, desc(conversations.createdAt))
-    .limit(200);
-  return Promise.all(rows.map((c) => listItem(c, uid, c.buyerUserId === uid ? 'BUYER' : 'SELLER')));
+  return inbox(uid, sql`(c.buyer_user_id = ${uid} or c.seller_user_id = ${uid})`, sql`(case when c.buyer_user_id = ${uid} then 'BUYER' else 'SELLER' end)`, opts);
 }
 
 /** Marketplace conversations of the actor's store (requires `orders.communicate`). */
-export async function listForSeller(actor: Actor): Promise<ConversationListItem[]> {
+export async function listForSeller(actor: Actor, opts: InboxQuery = {}): Promise<ConversationListItem[]> {
   const uid = requireUser(actor);
   if (actor.type !== 'SELLER' || !actor.sellerId || !actor.sellerPermissions?.has('orders.communicate')) throw forbidden();
-  const rows = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.sellerId, actor.sellerId))
-    .orderBy(sql`${conversations.lastMessageAt} desc nulls last`, desc(conversations.createdAt))
-    .limit(200);
-  return Promise.all(rows.map((c) => listItem(c, uid, 'SELLER')));
-}
-
-async function listItem(c: Conversation, uid: string, side: Side): Promise<ConversationListItem> {
-  const ctx = await contextLabel(db, c);
-  const [last] = await db
-    .select({ body: conversationMessages.body, hiddenAt: conversationMessages.hiddenAt, id: conversationMessages.id })
-    .from(conversationMessages)
-    .where(eq(conversationMessages.conversationId, c.id))
-    .orderBy(desc(conversationMessages.createdAt))
-    .limit(1);
-  let preview = '';
-  if (last) {
-    if (last.hiddenAt) preview = 'رسالة اتخفت بواسطة فريق اضمن';
-    else if (last.body) preview = last.body.replace(/\s+/g, ' ').slice(0, 90);
-    else preview = 'مرفق';
-  }
-  return {
-    id: c.id,
-    context: c.context,
-    ref: ctx.ref,
-    title: ctx.title,
-    status: ctx.status,
-    otherParty: side === 'BUYER' ? ctx.sellerName : ctx.buyerName,
-    side,
-    lastMessageAt: c.lastMessageAt,
-    preview,
-    unread: await unreadIn(c.id, uid, side),
-  };
+  return inbox(uid, sql`c.seller_id = ${actor.sellerId}`, sql`'SELLER'`, { ...opts, filter: opts.filter === 'deals' ? 'all' : opts.filter });
 }
 
 async function unreadIn(conversationId: string, userId: string, side: Side): Promise<number> {
@@ -568,12 +633,7 @@ export async function unreadForContext(actor: Actor, by: { sellerOrderId?: strin
 
 /* ───────────────────────── Reports ───────────────────────── */
 
-export const REPORT_REASON_LABELS: Record<MessageReportReason, string> = {
-  INAPPROPRIATE: 'محتوى غير مناسب',
-  FRAUD_ATTEMPT: 'محاولة احتيال',
-  UNNEEDED_DATA_REQUEST: 'طلب بيانات مش مطلوبة',
-  OTHER: 'مشكلة تانية',
-};
+export { REPORT_REASON_LABELS } from '@/lib/messaging';
 
 /**
  * A participant reports one message of the OTHER party. This only creates a reviewable record for staff;
