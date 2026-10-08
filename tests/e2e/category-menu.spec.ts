@@ -68,6 +68,9 @@ test('desktop: closes on outside / page content / search / header actions / othe
     ['logo', async (p) => p.locator('header a[href="/"]').first().click()],
     ['wishlist', async (p) => p.getByRole('link', { name: 'المفضلة' }).first().click()],
     ['other nav item (العروض)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).getByRole('link', { name: 'العروض' }).click()],
+    ['other nav item (الأكثر مبيعًا)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/best-sellers"]').click()],
+    ['other nav item (المستعمل)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/search?condition=USED"]').click()],
+    ['other nav item (المتاجر)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/stores"]').click()],
     ['other nav item (اضمن صفقة)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/protected-deal"]').click()],
     ['other nav item (بيع على اضمن)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/sell"]').click()],
   ];
@@ -76,6 +79,7 @@ test('desktop: closes on outside / page content / search / header actions / othe
     await openMenu(page);
     await act(page);
     await expect(panel(page), `closes after: ${name}`).toBeHidden();
+    if (name.startsWith('other nav item')) await expect.poll(() => new URL(page.url()).pathname, { message: `navigates after: ${name}` }).not.toBe('/');
     await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
   }
   await page.context().close();
