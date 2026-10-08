@@ -102,15 +102,18 @@ export function LiveThread({
       const stick = nearBottom();
       setMsgs((cur) => merge(cur, d.messages, new Set(d.readIds)));
       if (arrived.length) {
-        if (stick) requestAnimationFrame(() => {
-          toBottom(true);
-          markVisibleRead();
-        });
+        // Reading is reported by the effect below once these messages are actually rendered.
+        if (stick) requestAnimationFrame(() => toBottom(true));
         else setNewCount((n) => n + arrived.length);
       }
     },
-    [markVisibleRead, nearBottom, toBottom],
+    [nearBottom, toBottom],
   );
+
+  // After every render of new messages: a reader following the conversation has now seen them.
+  useEffect(() => {
+    if (nearBottom()) markVisibleRead();
+  }, [msgs, nearBottom, markVisibleRead]);
 
   useEffect(() => {
     live?.registerThread({ conversationId, cursor: () => cursor.current, onDelta });
