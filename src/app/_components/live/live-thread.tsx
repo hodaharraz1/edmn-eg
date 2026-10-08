@@ -57,12 +57,18 @@ export function LiveThread({
     msgsRef.current = msgs;
   }, [msgs]);
 
-  const nearBottom = () => {
+  const atBottom = useCallback(() => {
     const el = endRef.current;
     if (!el) return true;
     return el.getBoundingClientRect().top < window.innerHeight + 160;
-  };
-  const toBottom = (smooth = false) => endRef.current?.scrollIntoView({ block: 'end', behavior: smooth ? 'smooth' : 'auto' });
+  }, []);
+  /**
+   * "Pinned" = the reader is following the conversation. Only the reader's own scrolling changes it, so a
+   * layout shift (fonts, images loading) never makes us think they scrolled away.
+   */
+  const pinned = useRef(true);
+  const nearBottom = useCallback(() => pinned.current || atBottom(), [atBottom]);
+  const toBottom = useCallback((smooth = false) => endRef.current?.scrollIntoView({ block: 'end', behavior: smooth ? 'smooth' : 'auto' }), []);
 
   /** Report "read up to the newest message on screen" — only for a visible tab scrolled to the end. */
   const markVisibleRead = useCallback(() => {
@@ -86,7 +92,7 @@ export function LiveThread({
       .catch(() => {
         lastMarked.current = null;
       });
-  }, [conversationId, surface, live]);
+  }, [conversationId, surface, live, nearBottom]);
 
   const onDelta = useCallback(
     (d: ThreadDelta) => {
@@ -103,7 +109,7 @@ export function LiveThread({
         else setNewCount((n) => n + arrived.length);
       }
     },
-    [markVisibleRead],
+    [markVisibleRead, nearBottom, toBottom],
   );
 
   useEffect(() => {
@@ -114,20 +120,32 @@ export function LiveThread({
   useEffect(() => {
     toBottom();
     const t = setTimeout(markVisibleRead, 150);
+    let lastY = window.scrollY;
     const onScroll = () => {
+      const y = window.scrollY;
+      if (atBottom()) pinned.current = true;
+      else if (y < lastY) pinned.current = false; // the reader scrolled up
+      lastY = y;
       if (nearBottom()) markVisibleRead();
     };
+    // Keep a following reader at the newest message while content grows (images, fonts, new bubbles).
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      if (pinned.current && !atBottom()) toBottom();
+    }) : null;
+    const list = endRef.current?.parentElement;
+    if (ro && list) ro.observe(list);
     const onVis = () => markVisibleRead();
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
     return () => {
       clearTimeout(t);
+      ro?.disconnect();
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('focus', onVis);
     };
-  }, [markVisibleRead]);
+  }, [markVisibleRead, atBottom, nearBottom, toBottom]);
 
   /* ───── composer (idempotent, optimistic, never loses the draft) ───── */
   const formRef = useRef<HTMLFormElement>(null);
@@ -151,6 +169,7 @@ export function LiveThread({
     const tmpId = `tmp-${key}`;
     const optimistic: MessageDTO = { id: tmpId, side, mine: true, body, createdAt: new Date().toISOString(), hidden: false, hiddenReason: null, attachments: [], readByOther: false, pending: 'sending' };
     setMsgs((cur) => [...cur.filter((m) => m.id !== tmpId), optimistic]);
+    pinned.current = true;
     requestAnimationFrame(() => toBottom(true));
     setBusy(true);
     setStatus({ kind: 'idle' });
@@ -196,6 +215,7 @@ export function LiveThread({
           <button
             type="button"
             onClick={() => {
+              pinned.current = true;
               toBottom(true);
               setNewCount(0);
               setTimeout(markVisibleRead, 400);

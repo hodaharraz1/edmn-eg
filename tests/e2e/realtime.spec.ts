@@ -146,6 +146,14 @@ test('C — both have the conversation open: messages and «seen» appear live; 
   const seller = await customerLogin(browser, fx.seller);
   await seller.goto(`/seller/messages/${convId}`);
   await instrument(seller);
+  // Late layout shift above the thread (fonts/images loading on a long conversation): the reader did not scroll
+  // away, so new messages must still follow and be marked read (regression: staging run on 7f92d80).
+  await buyer.waitForTimeout(500);
+  await buyer.evaluate(() => {
+    const d = document.createElement('div');
+    d.style.height = '900px';
+    document.querySelector('section[aria-label="الرسائل"]')?.before(d);
+  });
 
   const text = `أهلاً، ده تحديث مباشر ${stamp()}`;
   await sendFrom(seller, text);
