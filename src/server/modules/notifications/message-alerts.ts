@@ -65,12 +65,11 @@ export async function fanOutMessage(tx: DbOrTx, input: FanOutInput): Promise<str
   const event: MessageEvent = input.hasAttachments ? 'MESSAGE_ATTACHMENT_RECEIVED' : 'MESSAGE_RECEIVED';
   const tpl = EVENT_TEMPLATES[event];
   const vars = { ref: input.ref, party: input.party };
-  const [pushCooldown, emailCooldown, emailDelay, activeSecs] = await Promise.all([
-    getSetting('messaging.pushCooldownSeconds', tx),
-    getSetting('messaging.emailCooldownMinutes', tx),
-    getSetting('messaging.emailFallbackDelayMinutes', tx),
-    getSetting('messaging.presenceActiveSeconds', tx),
-  ]);
+  // Sequential: one transaction = one connection (no concurrent queries on the same client).
+  const pushCooldown = await getSetting('messaging.pushCooldownSeconds', tx);
+  const emailCooldown = await getSetting('messaging.emailCooldownMinutes', tx);
+  const emailDelay = await getSetting('messaging.emailFallbackDelayMinutes', tx);
+  const activeSecs = await getSetting('messaging.presenceActiveSeconds', tx);
   const pushNow: string[] = [];
   for (const userId of [...new Set(input.recipients)]) {
     const prefs = await prefsFor(tx, userId);
