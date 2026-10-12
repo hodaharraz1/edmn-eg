@@ -352,8 +352,8 @@ function captureProvider(sent: { body: string; reference?: string }[], fail = fa
 
 describe('B2-E outbox', () => {
   beforeAll(async () => {
-    // Isolate from rows other suites left behind.
-    await db.execute(sql`update outbound_messages set status = 'SENT' where status in ('PENDING','SENDING')`);
+    // Isolate from rows other suites left behind: defer them (never fake a SENT status, never skip redaction).
+    await db.execute(sql`update outbound_messages set next_attempt_at = now() + interval '1 day' where status = 'PENDING'`);
   });
 
   it('E1: two concurrent flushers never send the same message twice; provider ids are kept', async () => {
