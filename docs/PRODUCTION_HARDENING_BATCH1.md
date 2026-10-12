@@ -78,3 +78,27 @@ Entity-aware status labels (`StatusChip kind=…`): refund APPROVED «تم اع�
 FAILED «تعذّر تحويل الاسترداد», withdrawal PROCESSING «جارٍ التحويل — لم يُصرف بعد», seller-order DELIVERED names
 its basis (buyer confirmed / buyer timeout / dispute decision / delivery recorded); return REFUND_PENDING no
 longer says the money was accepted/sent.
+
+## Final verified evidence (closure)
+- Commits: `ac7e86a` (C1–C8 + wording), `b189a03` (E2E expectation aligned with C3 + targeted staging spec `tests/e2e/batch1.spec.ts`).
+- Changed E2E expectation (only one): `marketplace-flow.spec.ts` «admin approves the seller (and the submitted payout method)»
+  asserted the obsolete behaviour that seller approval activates the payout method — exactly what C3 removes. It now asserts
+  `PENDING_VERIFICATION` after approval, then an explicit verification by the payout verifier, `ACTIVE`, and a 64-hex fingerprint.
+- Changed integration expectations (all encode the old unsafe behaviour): SEC-WD-4 (PROCESSING could be rejected → now refused;
+  failed-before-transfer by a second person with evidence), two dispute tests (receipt while a dispute is open → now refused),
+  state-machine terminal test (PAID → RETURNED only), pilot-safety (real money needs threshold 0 + owner fee approval).
+- Local: lint PASS · tsc PASS · unit+integration 381/381 (Batch 1 suite 32/32) · full E2E 99/99 (94 existing + 5 Batch 1).
+- Staging deployment `dpl_CBLXscDcZiv8sb3k6QhJijArsJDb` (b189a03), READY, migrations 14 (0013 applied), DB marked `STAGING`,
+  3 guard triggers present, withdrawal status constraint extended, 29/29 ACTIVE payout methods verified, real money OFF.
+- Targeted staging: `batch1.spec.ts` 5/5; `marketplace-flow.spec.ts` 11/11 (positive path: seller approval → separate payout
+  verification with fingerprint → order → payment → receipt → release → withdrawal approve/reserve → paid). One earlier attempt
+  hit the runner's outbound proxy («upstream request failed», no Vercel response) and was re-checked once, per TESTING_POLICY.
+- Ledger after deploy: debits 97,939,400 = credits 97,939,400, difference 0, drift 0; 0 unbalanced, 0 unapproved,
+  0 duplicate events, 0 reservation mismatch. The +319,000 vs. the pre-deploy baseline (97,620,400) is exactly the one new
+  isolated E2E order (ORDER_PAYMENT, SELLER_RELEASE, WITHDRAWAL_RESERVE, WITHDRAWAL_PAID).
+- Pricing: versions, tiers and classes unchanged; historical snapshots 0 changed (1 added by the new E2E order).
+- A-100016: order, payment, journals, positions, balances and conversation IDENTICAL to the original baseline.
+- Positive paths of C1 (formal resolution), C2 (legitimate SUPER_ADMIN creation), C4 (approve → exceptional change →
+  re-approval → payout), C5 (uncertain / failed-before-transfer / paid / returned), C6 (valid config passes), C7 and C8 are
+  verified locally (integration + E2E). They are deliberately NOT exercised on staging: creating a SUPER_ADMIN, resolving the
+  existing E2E disputes, or marking a database PRODUCTION on staging would contaminate the shared environment.
