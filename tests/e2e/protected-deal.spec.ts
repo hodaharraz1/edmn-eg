@@ -29,6 +29,10 @@ async function next(page: Page) {
 
 test('buyer creates a request without seller details, shares a secure link (GPS granted)', async ({ browser }) => {
   const page = await customerLogin(browser, 'ahmed@demo.edmn.local');
+  // Batch 1.5: a deal invitation needs an APPROVED identity. On a database where this demo buyer was never verified
+  // (staging), verify it through the REAL flow (upload + independent reviewer). Locally the seed already did.
+  const [idn] = await q<{ status: string | null }>(`select v.status from users u left join user_identity_verifications v on v.user_id = u.id where u.email = 'ahmed@demo.edmn.local'`);
+  if (idn?.status !== 'APPROVED') await verifyIdentityViaUi(browser, page, 'ahmed@demo.edmn.local', '29101011234565', 'أحمد علي محمد');
   await page.context().grantPermissions(['geolocation']);
   await page.context().setGeolocation({ latitude: 30.0444, longitude: 31.2357, accuracy: 20 });
   await page.goto('/account/deals/new');
