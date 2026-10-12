@@ -1,3 +1,5 @@
+> **Superseded by Batch 2:** see `docs/runbooks/DATABASE_BACKUP.md`, `docs/runbooks/DATABASE_RESTORE.md` and `docs/runbooks/STORAGE_OUTAGE.md` (scripted isolated drill `scripts/restore-drill.ts`, storage verifier `scripts/storage-verify.ts`). The production/provider drill is still NOT performed.
+
 # Backup and Restore Runbook
 
 ## Current state

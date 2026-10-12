@@ -35,3 +35,8 @@ Rule applied: **any real secret that has ever been committed is treated as compr
 3. Use a **new** `DATA_ENCRYPTION_KEY` for production; never reuse the staging key. Staging data is never copied to production. Re-encryption tooling with a key id is tracked as FP-F5.
 4. Create production admin accounts fresh, with in-person TOTP enrollment (AUTH-03).
 5. Re-run the history scan before making the repository or a fork public.
+
+## 4. Batch 2 re-scan
+- `scripts/secret-scan.ts` (tracked tree) and `--history` (every commit): **0 findings** (the only pattern hit was a deliberately fake `example.com` URL inside a redaction test, now excluded by rule).
+- The exact values of S7–S10, the staging database URL and the staging CRON_SECRET were checked against the full Git history: **0 occurrences** (checked without printing them).
+- S7–S10 still need revocation by the owner (OWNER ACTION). Key versioning (`DATA_ENCRYPTION_KEY_ID`, `DATA_ENCRYPTION_KEYS_PREVIOUS`, `scripts/reencrypt.ts`) closes FP-F5. Procedure: `docs/runbooks/SECRET_ROTATION.md`.

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { keyCheckValue, primaryKeyId } from '@/server/core/crypto';
+import { env } from '@/server/core/env';
 import { logger } from '@/server/core/logger';
 import { databaseCompatible, runtimeEnvironment, type DatabaseMarker, type RuntimeEnvironment } from '@/server/core/runtime-env';
 import { db, type DbOrTx } from './client';
@@ -34,7 +35,8 @@ async function databaseMarker(conn: DbOrTx): Promise<DatabaseMarker> {
 async function storageFingerprint(runtime: RuntimeEnvironment, raw: Record<string, string | undefined>): Promise<{ storage: string; reason?: string }> {
   const driver = raw.STORAGE_DRIVER || 'local';
   if (driver === 'database') return { storage: 'database (same fingerprint as the database)' };
-  const root = path.resolve(raw.STORAGE_LOCAL_ROOT || './storage');
+  // No literal path here: a literal fallback makes the bundler trace the whole project into the function.
+  const root = path.resolve(raw.STORAGE_LOCAL_ROOT || env().STORAGE_LOCAL_ROOT);
   const file = path.join(root, STORAGE_MARKER);
   let current: string | null = null;
   try {
@@ -42,16 +44,19 @@ async function storageFingerprint(runtime: RuntimeEnvironment, raw: Record<strin
   } catch {
     /* absent */
   }
+  // Only a hosted runtime (STAGING / PRODUCTION) claims an unmarked storage root. Local tooling (seeds, tests,
+  // scripts) may use a root but never claims it — and is refused by a root a hosted environment already claimed.
   if (!current) {
+    if (runtime !== 'STAGING' && runtime !== 'PRODUCTION') return { storage: 'local:UNCLAIMED' };
     try {
       await mkdir(root, { recursive: true });
       await writeFile(file, runtime, { flag: 'wx' });
     } catch {
-      /* concurrent writer or read-only root: re-read below */
+      /* concurrent writer or read-only root */
     }
-    current = runtime;
+    current = (await readFile(file, 'utf8').catch(() => runtime)).trim();
   }
-  const ok = current === runtime || (current === 'LOCAL' && runtime === 'TEST') || (current === 'TEST' && runtime === 'LOCAL');
+  const ok = current === runtime;
   return ok ? { storage: `local:${current}` } : { storage: `local:${current}`, reason: `storage root is marked ${current}, runtime is ${runtime}` };
 }
 

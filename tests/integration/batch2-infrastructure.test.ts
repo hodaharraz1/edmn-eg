@@ -88,14 +88,17 @@ describe('B2-A environment model and policy', () => {
     try {
       await clearMarker();
       const base = { ...process.env, STORAGE_DRIVER: 'local', STORAGE_LOCAL_ROOT: root };
-      // Unmarked DB, TEST runtime: OK; storage root gets its marker.
+      // Unmarked DB, TEST runtime: OK; local tooling never claims the storage root.
       const ok = await verifyRuntimeFingerprint(db, { ...base, NODE_ENV: 'test', EDMN_ENVIRONMENT: '' });
-      expect(ok.status).toBe('OK');
-      expect((await readFile(path.join(root, '.edmn-environment'), 'utf8')).trim()).toBe('TEST');
-      // The same storage root used by a STAGING runtime is refused.
-      const st = await verifyRuntimeFingerprint(db, { ...base, EDMN_ENVIRONMENT: 'staging' });
+      expect(ok).toMatchObject({ status: 'OK', storage: 'local:UNCLAIMED' });
+      await expect(readFile(path.join(root, '.edmn-environment'), 'utf8')).rejects.toThrow();
+      // A hosted runtime claims it; afterwards a TEST runtime on that root is refused.
+      expect((await verifyRuntimeFingerprint(db, { ...base, EDMN_ENVIRONMENT: 'staging' })).status).toBe('OK');
+      expect((await readFile(path.join(root, '.edmn-environment'), 'utf8')).trim()).toBe('STAGING');
+      const st = await verifyRuntimeFingerprint(db, { ...base, NODE_ENV: 'test', EDMN_ENVIRONMENT: '' });
       expect(st.status).toBe('VIOLATION');
-      expect(st.reasons.join()).toMatch(/storage root is marked TEST/);
+      expect(st.reasons.join()).toMatch(/storage root is marked STAGING, runtime is TEST/);
+      await db.execute(sql`delete from secret_fingerprints`);
       // A DB marked STAGING is refused by a LOCAL/TEST runtime.
       await db.execute(sql`insert into deployment_environment (id, environment) values (true, 'STAGING')`);
       const lc = await verifyRuntimeFingerprint(db, { ...base, NODE_ENV: 'test' });
