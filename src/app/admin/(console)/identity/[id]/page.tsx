@@ -66,8 +66,8 @@ export default async function IdentityCasePage(props: PageProps<'/admin/identity
         <ActionForm action={identityReviewAction} className="card space-y-3 p-4" data-testid="identity-decision">
           <input type="hidden" name="id" value={v.id} /><input type="hidden" name="expectedVersion" value={v.submissionVersion} /><input type="hidden" name="back" value={back} />
           <h2 className="font-bold">القرار</h2>
-          <Field label="القرار" required>
-            <Select name="decision" required defaultValue="">
+          <Field label="القرار" htmlFor="id-decision" required>
+            <Select id="id-decision" name="decision" required defaultValue="">
               <option value="" disabled>اختار</option>
               {v.status === 'PENDING_REVIEW' && <option value="APPROVE">تم التحقق (الهوية فقط — ليس اعتمادًا للمتجر)</option>}
               {v.status === 'PENDING_REVIEW' && <option value="MORE_INFO_REQUIRED">مطلوب استكمال</option>}
@@ -75,8 +75,8 @@ export default async function IdentityCasePage(props: PageProps<'/admin/identity
               {v.status === 'APPROVED' && <option value="REVERIFICATION_REQUIRED">طلب إعادة التحقق</option>}
             </Select>
           </Field>
-          <Field label="السبب (يظهر للعميل — مطلوب لغير الموافقة)"><Textarea name="reason" rows={2} /></Field>
-          <Field label="ملاحظة داخلية (لا تظهر للعميل)"><Textarea name="internalNote" rows={2} /></Field>
+          <Field label="السبب (يظهر للعميل — مطلوب لغير الموافقة)" htmlFor="id-reason"><Textarea id="id-reason" name="reason" rows={2} /></Field>
+          <Field label="ملاحظة داخلية (لا تظهر للعميل)" htmlFor="id-note"><Textarea id="id-note" name="internalNote" rows={2} /></Field>
           <p className="text-xs text-muted">القرار يحتاج تحققًا ثنائيًا حديثًا ويُسجل باسمك. لا يمكنك مراجعة هويتك بنفسك.</p>
           <SubmitButton>تسجيل القرار</SubmitButton>
         </ActionForm>

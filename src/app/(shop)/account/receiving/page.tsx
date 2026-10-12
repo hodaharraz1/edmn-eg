@@ -45,18 +45,18 @@ export default async function ReceivingPage(props: PageProps<'/account/receiving
         <ActionForm action={submitReceivingDestinationAction} className="card space-y-3 p-5" resetOnSuccess data-testid="receiving-wallet-form">
           <h2 className="font-bold">{replacing ? 'نسخة جديدة — ' : ''}محفظة موبايل</h2>
           <input type="hidden" name="type" value="MOBILE_WALLET" />{replacing && <input type="hidden" name="replacesId" value={replacing.id} />}
-          <Field label="اسم صاحب المحفظة (زي البطاقة)" required><Input name="holderName" required minLength={6} /></Field>
-          <Field label="مزود المحفظة" required><Select name="walletProvider" required defaultValue="فودافون كاش"><option>فودافون كاش</option><option>اتصالات كاش</option><option>أورنج كاش</option><option>وي باي</option></Select></Field>
-          <Field label="رقم المحفظة" required><Input name="walletNumber" required inputMode="tel" className="ltr" /></Field>
+          <Field label="اسم صاحب المحفظة (زي البطاقة)" htmlFor="w-holder" required><Input id="w-holder" name="holderName" required minLength={6} /></Field>
+          <Field label="مزود المحفظة" htmlFor="w-provider" required><Select id="w-provider" name="walletProvider" required defaultValue="فودافون كاش"><option>فودافون كاش</option><option>اتصالات كاش</option><option>أورنج كاش</option><option>وي باي</option></Select></Field>
+          <Field label="رقم المحفظة" htmlFor="w-number" required><Input id="w-number" name="walletNumber" required inputMode="tel" className="ltr" /></Field>
           <SubmitButton>حفظ للمراجعة</SubmitButton>
         </ActionForm>
         <ActionForm action={submitReceivingDestinationAction} className="card space-y-3 p-5" resetOnSuccess data-testid="receiving-bank-form">
           <h2 className="font-bold">{replacing ? 'نسخة جديدة — ' : ''}حساب بنكي</h2>
           <input type="hidden" name="type" value="BANK_ACCOUNT" />{replacing && <input type="hidden" name="replacesId" value={replacing.id} />}
-          <Field label="اسم صاحب الحساب (زي البطاقة)" required><Input name="holderName" required minLength={6} /></Field>
-          <Field label="البنك" required><Input name="bankName" required /></Field>
-          <Field label="IBAN" hint="EG + 27 رقم"><Input name="iban" className="ltr" /></Field>
-          <Field label="أو رقم الحساب"><Input name="accountNumber" inputMode="numeric" className="ltr" /></Field>
+          <Field label="اسم صاحب الحساب (زي البطاقة)" htmlFor="b-holder" required><Input id="b-holder" name="holderName" required minLength={6} /></Field>
+          <Field label="البنك" htmlFor="b-bank" required><Input id="b-bank" name="bankName" required /></Field>
+          <Field label="IBAN" htmlFor="b-iban" hint="EG + 27 رقم"><Input id="b-iban" name="iban" className="ltr" /></Field>
+          <Field label="أو رقم الحساب" htmlFor="b-account"><Input id="b-account" name="accountNumber" inputMode="numeric" className="ltr" /></Field>
           <SubmitButton>حفظ للمراجعة</SubmitButton>
         </ActionForm>
       </section>

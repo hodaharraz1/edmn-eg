@@ -24,7 +24,7 @@ export default async function AlertsInventory() {
     <div className="space-y-4">
       <PageHeader title="التنبيهات الاستباقية" description="تنبيهات قبل المواعيد وعند حلولها وبعد التأخر، مع منع التكرار وفترات تهدئة، وتنتهي تلقائيًا لما الحالة تتحل. التنبيهات تُعلم الناس فقط ولا تحرك أي مبلغ ولا تغير أي حالة." />
       <Alert tone="info">القنوات: داخل التطبيق + البريد الإلكتروني (لو مضبوط) + إشعارات المتصفح حسب تفضيلات المستخدم. لا توجد رسائل SMS. نص التنبيه يحتوي مرجع فقط — بدون بيانات هوية أو حسابات أو رموز.</Alert>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="جدول قواعد التنبيهات">
         <table className="w-full min-w-[720px] text-sm" data-testid="alert-inventory">
           <thead><tr className="text-start text-xs text-muted"><th className="p-2 text-start">القاعدة</th><th className="p-2 text-start">الفئة</th><th className="p-2 text-start">المستلمون</th><th className="p-2 text-start">قبل الموعد / تهدئة / تقادم (ساعات)</th><th className="p-2 text-start">مفتوحة الآن</th></tr></thead>
           <tbody>

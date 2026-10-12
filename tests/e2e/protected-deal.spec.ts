@@ -232,6 +232,9 @@ test('seller ships → buyer gets the handover code → seller verifies it; fund
   await seller.goto(`/account/deals/${dealId}`);
   await seller.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
   await expect(seller.getByTestId('deal-locations')).toContainText('شارع عباس العقاد');
+  // Batch 1.5: server-time delivery countdown with context actions — display only, never money.
+  await expect(seller.getByTestId('deal-delivery-timer')).toContainText(/الوقت المتبقي للتسليم|متأخر عن الموعد/);
+  await expect(seller.getByTestId('deal-delivery-timer')).toContainText('لا يحوّل أي مبلغ');
   await seller.locator('textarea[name=note]').fill('تم الشحن عبر شركة الشحن، بوليصة 12345.');
   await seller.getByRole('button', { name: 'تسجيل الشحن' }).click();
   await expect.poll(status).toBe('DELIVERED');
