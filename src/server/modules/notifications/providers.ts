@@ -63,7 +63,14 @@ const httpSms = (): OutboundProvider => ({
   },
 });
 
+let override: ((channel: string) => OutboundProvider) | null = null;
+/** Tests only: replace the delivery adapters (failure injection, capture). */
+export function setProviderOverride(fn: ((channel: string) => OutboundProvider) | null) {
+  override = fn;
+}
+
 export async function providerFor(channel: string): Promise<OutboundProvider> {
+  if (override) return override(channel);
   const e = env();
   if (channel === 'EMAIL') return e.MAIL_DRIVER === 'smtp' ? smtpProvider() : logProvider('EMAIL');
   if (channel === 'SMS') return e.SMS_DRIVER === 'http' ? httpSms() : logProvider('SMS');

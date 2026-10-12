@@ -97,10 +97,12 @@ export async function setKillSwitch(actor: Actor, key: KillSwitch, paused: boole
 }
 
 async function writeSetting(tx: DbOrTx, actor: Actor, key: SettingKey, value: unknown) {
+  // A JSON null (e.g. "no pending release request") must be stored as jsonb 'null', not SQL NULL.
+  const v = (value === null ? sql`'null'::jsonb` : value) as object;
   await tx
     .insert(systemSettings)
-    .values({ key, value: value as object, updatedBy: actor.userId })
-    .onConflictDoUpdate({ target: systemSettings.key, set: { value: value as object, updatedBy: actor.userId, updatedAt: new Date() } });
+    .values({ key, value: v, updatedBy: actor.userId })
+    .onConflictDoUpdate({ target: systemSettings.key, set: { value: v, updatedBy: actor.userId, updatedAt: new Date() } });
 }
 
 async function setGlobalKillSwitch(actor: Actor, paused: boolean, reason: string): Promise<'ENGAGED' | 'RELEASED' | 'RELEASE_REQUESTED'> {
@@ -536,7 +538,8 @@ export async function goLiveGate(conn: DbOrTx = db) {
   if (await getSetting('killswitch.global', conn)) blockers.push({ code: 'GLOBAL_KILL_SWITCH', label: 'إيقاف الطوارئ المالي مفعّل' });
   const lh = await rows<{ status: string; fresh: boolean }>(conn, sql`select status, checked_at > now() - interval '2 hours' fresh from ledger_health_checks order by checked_at desc limit 1`);
   if (!lh.length || !lh[0].fresh || lh[0].status === 'CRITICAL') blockers.push({ code: 'LEDGER_HEALTH', label: 'لا يوجد فحص سلامة دفتر حديث (خلال ساعتين) بنتيجة غير حرجة' });
-  const sched = await rows<{ ok: boolean }>(conn, sql`select coalesce(bool_and(last_succeeded_at > now() - interval '2 hours'), false) ok from job_leases where job_name in ('ledger.health','outbound.flush','alerts.sweep')`);
+  // Every critical schedule must exist AND have succeeded recently (a job that never ran is not healthy).
+  const sched = await rows<{ ok: boolean }>(conn, sql`select count(*) filter (where last_succeeded_at > now() - interval '2 hours') = 3 ok from job_leases where job_name in ('ledger.health','outbound.flush','alerts.sweep')`);
   if (!sched[0]?.ok) blockers.push({ code: 'SCHEDULER', label: 'المهام المجدولة الحرجة (سلامة الدفتر/الرسائل/التنبيهات) مش شغالة بانتظام' });
   if (!env.ERROR_TRACKING_DSN) blockers.push({ code: 'ERROR_TRACKING', label: 'تتبع الأخطاء الخارجي غير مضبوط' });
   if (!env.MALWARE_SCANNER_URL) blockers.push({ code: 'MALWARE_SCANNER_INACTIVE', label: 'MALWARE SCANNER ACTIVE: NO' });
