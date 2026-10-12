@@ -347,7 +347,8 @@ export async function settingAction(_p: ActionState, fd: FormData) {
     let value: unknown = raw;
     if (raw === 'true' || raw === 'false') value = raw === 'true';
     else if (/^-?\d+$/.test(raw)) value = Number(raw);
-    else if (raw.startsWith('[')) {
+    else if (raw === 'null') value = null;
+    else if (raw.startsWith('[') || raw.startsWith('{')) {
       try {
         value = JSON.parse(raw);
       } catch {
