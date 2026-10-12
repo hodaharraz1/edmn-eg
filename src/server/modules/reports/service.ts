@@ -39,8 +39,8 @@ export async function adminDashboard(actor: Actor, range: DateRange) {
       (select count(*) from products where status in ('SUBMITTED','UNDER_REVIEW')) +
         (select count(*) from product_revisions where status = 'SUBMITTED') as pending_products,
       (select count(*) from payments where status in ('PAYMENT_SUBMITTED','UNDER_REVIEW')) as pending_payments,
-      (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING')) as pending_withdrawals,
-      (select coalesce(sum(amount),0) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING')) as pending_withdrawals_amount,
+      (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) as pending_withdrawals,
+      (select coalesce(sum(amount),0) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) as pending_withdrawals_amount,
       (select count(*) from refunds where status = 'PENDING') as pending_refunds,
       (select count(*) from disputes where status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION')) as open_disputes,
       (select count(*) from support_tickets where status not in ('RESOLVED','CLOSED')) as open_tickets,
@@ -126,7 +126,7 @@ export async function sellerDashboard(sellerId: string, range: DateRange) {
       (select count(*) from product_variants v join products p on p.id = v.product_id where p.seller_id = ${sellerId} and p.status in ('LIVE','APPROVED') and v.is_active and v.stock_on_hand - v.reserved > 0 and v.stock_on_hand - v.reserved <= v.low_stock_threshold) as low_stock,
       (select rating_avg from sellers where id = ${sellerId}) as rating,
       (select rating_count from sellers where id = ${sellerId}) as rating_count,
-      (select count(*) from withdrawal_requests where seller_id = ${sellerId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING')) as withdrawals_open,
+      (select count(*) from withdrawal_requests where seller_id = ${sellerId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) as withdrawals_open,
       (select coalesce(sum(amount),0) from withdrawal_requests where seller_id = ${sellerId} and status = 'PAID') as paid_out
   `);
   const k = r.rows[0];

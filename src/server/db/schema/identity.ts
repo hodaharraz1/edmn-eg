@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, bigserial, boolean, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, check, index, integer, jsonb, pgTable, primaryKey, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, enumCheck, ts, updatedAt } from './_helpers';
 
 /** CLOSED = account closed on request after all obligations were settled (history kept, PII pseudonymised). */
@@ -222,6 +222,22 @@ export const systemSettings = pgTable('system_settings', {
   updatedBy: uuid().references(() => users.id),
   updatedAt: updatedAt(),
 });
+
+/**
+ * One-row environment marker, written by the migration runner from EDMN_ENVIRONMENT. Once a database is
+ * marked PRODUCTION it can never be re-marked, and DB triggers refuse demo/test fixtures in it
+ * (accounts on `.local` domains, TEST payment destinations) whatever the application believes.
+ */
+export const DEPLOYMENT_ENVIRONMENTS = ['DEVELOPMENT', 'TEST', 'STAGING', 'PRODUCTION'] as const;
+export const deploymentEnvironment = pgTable(
+  'deployment_environment',
+  {
+    id: boolean().primaryKey().default(true),
+    environment: text({ enum: DEPLOYMENT_ENVIRONMENTS }).notNull(),
+    markedAt: updatedAt(),
+  },
+  (t) => [check('deployment_environment_singleton_chk', sql`${t.id}`), enumCheck('deployment_environment_chk', t.environment, DEPLOYMENT_ENVIRONMENTS)],
+);
 
 /* ───────── Client idempotency keys (forms embed a key; retries return the original result) ───────── */
 export const idempotencyKeys = pgTable(

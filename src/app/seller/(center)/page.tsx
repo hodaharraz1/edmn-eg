@@ -37,7 +37,7 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
         <StatCard label="مبيعات اليوم" value={formatEGP(d.todaySales)} icon={<CircleDollarSign className="size-5" />} />
         <StatCard label="الطلبات (الفترة)" value={formatNumber(d.orders)} hint={`متوسط الطلب ${formatEGP(d.aov)}`} icon={<ShoppingBag className="size-5" />} />
         {canSeeFinance && <StatCard label="الرصيد المتاح" value={formatEGP(d.balances.available)} icon={<Wallet className="size-5" />} tone="success" href="/seller/balance" />}
-        {canSeeFinance && <StatCard label="الرصيد المعلق" value={formatEGP(d.balances.pending)} hint="بانتظار تأكيد العملاء الاستلام" icon={<Clock className="size-5" />} tone="warning" href="/seller/balance" />}
+        {canSeeFinance && <StatCard label="الرصيد المعلق" value={formatEGP(d.balances.pending)} hint="لم يُتح بعد: قبل الاستلام أو بانتظار إتاحة الإدارة" icon={<Clock className="size-5" />} tone="warning" href="/seller/balance" />}
       </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label="بانتظار تأكيدك" value={d.pendingConfirmation} tone={d.pendingConfirmation ? 'danger' : 'neutral'} icon={<AlertTriangle className="size-5" />} href="/seller/orders?tab=new" />

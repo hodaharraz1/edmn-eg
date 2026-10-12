@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import { isProductionDeployment, PUBLIC_FIXTURE_PASSWORDS, PUBLIC_FIXTURE_TOTP_SECRETS } from './public-fixtures';
 import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { audit } from '@/server/audit/audit';
@@ -117,6 +118,8 @@ export async function login(identifier: string, password: string, scope: Scope, 
   }
   if (user.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'الحساب ده مش مفعّل. تواصل مع الدعم');
   if (scope === 'ADMIN' && !user.isStaff) throw generic; // one hash already ran: equal timing
+  // Production never accepts a credential that is public in this repository (demo / test fixtures).
+  if (isProductionDeployment() && PUBLIC_FIXTURE_PASSWORDS.includes(password)) throw generic;
   return db.transaction(async (tx) => {
     await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
     const token = await createSession(tx, user.id, scope, meta);
@@ -173,7 +176,9 @@ export async function verifyTotpForUser(userId: string, code: string, meta: Requ
   await enforce(`totp:${userId}`, 8, 300);
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   if (!user?.totpSecretEnc) return false;
-  const step = matchTotpStep(decrypt(user.totpSecretEnc), code);
+  const secret = decrypt(user.totpSecretEnc);
+  if (isProductionDeployment() && PUBLIC_FIXTURE_TOTP_SECRETS.includes(secret.toUpperCase())) return false;
+  const step = matchTotpStep(secret, code);
   let ok = step !== null;
   await db.transaction(async (tx) => {
     if (ok) {

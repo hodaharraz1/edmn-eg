@@ -32,7 +32,7 @@ export default async function Balances() {
     <div className="space-y-4">
       <PageHeader title="أرصدة البائعين" description="الأرصدة مشتقة من دفتر القيود المزدوجة (لا تُعدّل يدوياً — استخدم التسويات المعتمدة)." />
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="إجمالي المعلق" value={formatEGP(sum('pending'))} hint="بانتظار تأكيد الاستلام" />
+        <StatCard label="إجمالي المعلق" value={formatEGP(sum('pending'))} hint="مدفوع ولم يُتح بعد (قبل الاستلام، أو مستحق بانتظار إتاحة الإدارة، أو عليه نزاع/تجميد)" />
         <StatCard label="إجمالي المتاح للسحب" value={formatEGP(sum('available'))} tone="success" />
         <StatCard label="محجوز لطلبات السحب" value={formatEGP(sum('reserved'))} tone="warning" />
       </div>

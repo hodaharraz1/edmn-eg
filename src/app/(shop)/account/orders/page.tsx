@@ -44,7 +44,7 @@ export default async function OrdersPage(props: PageProps<'/account/orders'>) {
               <ul className="mt-3 flex flex-wrap gap-2 text-xs">
                 {subs.filter((s) => s.so.orderId === o.id).map((s) => (
                   <li key={s.so.id} className="flex items-center gap-1.5 rounded-full bg-page px-2.5 py-1">
-                    {o.number}-{s.so.suffix} · {s.store} · <StatusChip status={s.so.status} />
+                    {o.number}-{s.so.suffix} · {s.store} · <StatusChip status={s.so.status} kind="sellerOrder" receiptBasis={s.so.receiptBasis} />
                   </li>
                 ))}
               </ul>

@@ -1,10 +1,10 @@
-import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { RETURN_CONDITION_KEYS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
-import { decryptJson, encrypt, encryptJson, mask } from '@/server/core/crypto';
+import { decryptJson, encrypt, encryptJson, mask, sha256 } from '@/server/core/crypto';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { isValidEgyptNationalId, normalizeEgyptMobile, slugify } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -251,7 +251,9 @@ export async function addPayoutMethod(actor: Actor, input: PayoutInput) {
     else sellerId = (await loadEditable(tx, actor)).id;
     const [s] = await tx.select().from(sellers).where(eq(sellers.id, sellerId)).for('update');
     const onboarding = s.status === 'DRAFT' || s.status === 'MORE_INFO_REQUIRED';
-    const requiresReview = !onboarding && (await getSetting('payout.changeRequiresReview', tx));
+    // Safe policy: a new destination is NEVER active before a payout verifier checks it (whatever the
+    // legacy `payout.changeRequiresReview` setting says). The previously verified method stays in use.
+    const requiresReview = true;
     const holdHours = onboarding ? 0 : await getSetting('payout.changeHoldHours', tx);
     const details = p.type === 'MOBILE_WALLET' ? { ...p, walletNumber: normalizeEgyptMobile(p.walletNumber)! } : p;
     const maskedLabel = payoutMask(details);
@@ -289,6 +291,14 @@ export async function addPayoutMethod(actor: Actor, input: PayoutInput) {
   });
 }
 
+/** Fingerprint of the exact destination details (type + holder + decrypted details), never the details themselves. */
+export function payoutFingerprint(pm: { type: string; holderName: string; detailsEnc: string }) {
+  const d = decryptJson<Record<string, unknown>>(pm.detailsEnc);
+  const canonical = JSON.stringify(Object.keys(d).sort().map((k) => [k, d[k]]));
+  return sha256(`payout:${pm.type}:${pm.holderName}:${canonical}`);
+}
+
+/** The ONLY way a seller payout destination becomes ACTIVE (C3): dedicated permission, fresh 2FA, audited. */
 export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, approve: boolean, reason?: string) {
   requirePermission(actor, 'sellers.payout.verify');
   requireStepUp(actor); // decides where seller money is sent
@@ -300,20 +310,35 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
     if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد وسيلة سحب خاصة بمتجرك');
     await assertNotSelfDealing(tx, actor, pm.sellerId);
     if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة وسيلة السحب بالفعل');
+    const [seller] = await tx.select({ status: sellers.status }).from(sellers).where(eq(sellers.id, pm.sellerId));
+    if (approve && !['APPROVED', 'RESTRICTED'].includes(seller?.status ?? '')) throw invalidState('اعتماد وسيلة السحب يتم بعد اعتماد البائع');
+    const fingerprint = payoutFingerprint(pm);
     if (approve) {
       await tx.update(sellerPayoutMethods).set({ isDefault: false }).where(eq(sellerPayoutMethods.sellerId, pm.sellerId));
-      await tx.update(sellerPayoutMethods).set({ status: 'ACTIVE', isDefault: true, verifiedBy: actor.userId, verifiedAt: new Date() }).where(eq(sellerPayoutMethods.id, pm.id));
+      await tx
+        .update(sellerPayoutMethods)
+        .set({ status: 'ACTIVE', isDefault: true, verifiedBy: actor.userId, verifiedAt: new Date(), verifiedFingerprint: fingerprint, verificationReason: reason?.trim() || null })
+        .where(eq(sellerPayoutMethods.id, pm.id));
     } else {
-      await tx.update(sellerPayoutMethods).set({ status: 'REJECTED' }).where(eq(sellerPayoutMethods.id, pm.id));
+      await tx.update(sellerPayoutMethods).set({ status: 'REJECTED', verificationReason: reason?.trim() || null }).where(eq(sellerPayoutMethods.id, pm.id));
     }
     await audit(tx, actor, {
       action: approve ? 'seller.payout_method_verified' : 'seller.payout_method_rejected',
       entityType: 'seller',
       entityId: pm.sellerId,
-      newValues: { payoutMethodId: pm.id },
+      newValues: { payoutMethodId: pm.id, type: pm.type, masked: pm.maskedLabel, fingerprint },
       reason: reason ?? null,
     });
   });
+}
+
+/**
+ * A destination money may be sent to: ACTIVE, verified by a payout verifier, and (when recorded) still exactly
+ * the details that were verified. Fail closed for anything else.
+ */
+export function assertVerifiedDestination(pm: typeof sellerPayoutMethods.$inferSelect | null | undefined): asserts pm is typeof sellerPayoutMethods.$inferSelect {
+  if (!pm || pm.status !== 'ACTIVE' || !pm.verifiedAt || !pm.verifiedBy) throw invalidState('وسيلة السحب غير معتمدة من مراجع بيانات السحب');
+  if (pm.verifiedFingerprint && pm.verifiedFingerprint !== payoutFingerprint(pm)) throw invalidState('بيانات وسيلة السحب لا تطابق ما تم اعتماده — يلزم اعتماد جديد');
 }
 
 export async function activePayoutMethod(conn: DbOrTx, sellerId: string) {
@@ -416,16 +441,8 @@ export async function decideSeller(actor: Actor, sellerId: string, decision: Sel
       sets.approvedAt = new Date();
       sets.approvedBy = actor.userId;
       await tx.update(stores).set({ isVerified: true }).where(eq(stores.sellerId, s.id));
-      // Onboarding payout destination is verified as part of the application review.
-      const [pm] = await tx
-        .select()
-        .from(sellerPayoutMethods)
-        .where(and(eq(sellerPayoutMethods.sellerId, s.id), eq(sellerPayoutMethods.status, 'PENDING_VERIFICATION')))
-        .orderBy(desc(sellerPayoutMethods.createdAt))
-        .limit(1);
-      if (pm) {
-        await tx.update(sellerPayoutMethods).set({ status: 'ACTIVE', isDefault: true, verifiedBy: actor.userId, verifiedAt: new Date() }).where(eq(sellerPayoutMethods.id, pm.id));
-      }
+      // SELLER APPROVED ≠ PAYOUT DESTINATION VERIFIED: the onboarding payout method stays PENDING_VERIFICATION
+      // until a holder of `sellers.payout.verify` verifies it (fresh 2FA) through verifyPayoutMethod.
       await tx.update(sellerDocuments).set({ status: 'ACCEPTED' }).where(and(eq(sellerDocuments.sellerId, s.id), isNull(sellerDocuments.supersededAt)));
       await ensureDefaultShippingRows(tx, s.id);
     }

@@ -4,7 +4,7 @@ import { requireUser, type Actor } from '@/server/core/actor';
 import { sha256 } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { validation } from '@/server/core/errors';
-import { logger } from '@/server/core/logger';
+import { logger, safeErrorMessage } from '@/server/core/logger';
 import type { DbOrTx } from '@/server/db/client';
 import { files, type FilePurpose } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
@@ -105,7 +105,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
       mime = 'image/webp';
     } catch (e) {
       if (e instanceof Error && e.name === 'DomainError') throw e;
-      logger.warn('upload.image_decode_failed', { purpose: input.purpose, error: (e as Error).message });
+      logger.warn('upload.image_decode_failed', { purpose: input.purpose, error: safeErrorMessage(e) });
       throw validation('تعذّر قراءة الصورة. تأكد من أن الملف صورة سليمة');
     }
   }

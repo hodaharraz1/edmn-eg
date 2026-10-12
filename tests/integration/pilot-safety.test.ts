@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { paymentDestinations, systemSettings } from '@/server/db/schema';
 import { realMoneyEnabled, updateSetting } from '@/server/modules/settings';
@@ -57,6 +57,11 @@ describe('pilot safety — real money is off unless explicitly enabled', () => {
     await expect(updateSetting(admin, 'payments.realMoneyEnabled', true, 'go-live approved')).rejects.toThrow(/لا يمكن تفعيل الأموال الحقيقية/);
     // Simulate a clean production database where an authorized admin enabled real money.
     await db.insert(systemSettings).values({ key: 'payments.realMoneyEnabled', value: true }).onConflictDoUpdate({ target: systemSettings.key, set: { value: true } });
+    // Batch 1 C6: the stored switch alone is not enough — the go-live settings must still hold (fail closed).
+    expect(await realMoneyEnabled()).toBe(false);
+    for (const [key, value] of [['withdrawals.dualControlThreshold', 0], ['fees.ownerApproved', true]] as const) {
+      await db.insert(systemSettings).values({ key, value }).onConflictDoUpdate({ target: systemSettings.key, set: { value } });
+    }
     expect(await realMoneyEnabled()).toBe(true);
     const s = await makeSeller(admin);
     const p = await makeProduct(s.actor, admin, { stock: 3 });
@@ -72,6 +77,7 @@ describe('pilot safety — real money is off unless explicitly enabled', () => {
     expect(await realMoneyEnabled()).toBe(false);
     process.env.EDMN_ENVIRONMENT = prevEnv;
     await updateSetting(admin, 'payments.realMoneyEnabled', false, 'back to pilot');
+    await db.delete(systemSettings).where(inArray(systemSettings.key, ['withdrawals.dualControlThreshold', 'fees.ownerApproved']));
     // In test mode only TEST destinations are offered (a "test" payment can never reach a real account).
     const c2 = await makeCustomer();
     const p2 = await makeProduct(s.actor, admin, { stock: 3 });

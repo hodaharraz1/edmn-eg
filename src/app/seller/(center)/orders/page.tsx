@@ -47,7 +47,7 @@ export default async function SellerOrders(props: PageProps<'/seller/orders'>) {
           { key: 'g', header: 'المحافظة', cell: (r) => (r.address as { governorate?: string }).governorate ?? '—' },
           { key: 't', header: 'الإجمالي', cell: (r) => formatEGP(r.so.grossTotal) },
           { key: 'net', header: 'صافيك', cell: (r) => formatEGP(r.so.sellerNet) },
-          { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.so.status} /> },
+          { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.so.status} kind="sellerOrder" receiptBasis={r.so.receiptBasis} /> },
         ]}
       />
     </div>

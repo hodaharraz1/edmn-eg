@@ -60,7 +60,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
           { label: 'شروط إضافية', value: d.customTerms ?? '—' },
           { label: 'رابط المصدر', value: d.sourceUrl ? <span className="ltr break-all">{d.sourceUrl}</span> : '—' },
           { label: 'الدفع', value: g.payment ? <Link className="text-brand-700" href={`/admin/payments/${g.payment.id}`}><StatusChip status={g.payment.status} /></Link> : '—' },
-          { label: 'المستحق للبائع', value: g.payout ? <span>{formatEGP(g.payout.amount)} <StatusChip status={g.payout.status} /> {g.payout.paidReference && `· ${g.payout.paidReference}`} {g.payout.status === 'PENDING' && <Link className="text-brand-700" href="/admin/refunds?tab=deals">صرف</Link>}</span> : '—' },
+          { label: 'المستحق للبائع', value: g.payout ? <span>{formatEGP(g.payout.amount)} <StatusChip status={g.payout.status} kind="payout" /> {g.payout.paidReference && `· ${g.payout.paidReference}`} {g.payout.status === 'PENDING' && <Link className="text-brand-700" href="/admin/refunds?tab=deals">صرف</Link>}</span> : '—' },
         ]} />
         {d.deliveryNote && <p className="mt-3 rounded bg-page p-3 text-sm">ملاحظة التسليم: {d.deliveryNote}</p>}
         {g.evidence.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{g.evidence.map((e) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="size-20 overflow-hidden rounded-lg border border-line" title={e.kind}><img src={`/api/files/${e.fileId}`} alt={e.kind} className="size-full object-cover" /></a>)}</div>}

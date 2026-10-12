@@ -315,7 +315,10 @@ export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
 export const DISPUTE_STATUSES = ['OPEN', 'UNDER_REVIEW', 'AWAITING_INFORMATION', 'RESOLVED', 'CLOSED'] as const;
 export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
 export const disputeMachine = defineMachine<DisputeStatus>('dispute', DISPUTE_STATUSES, {
-  OPEN: ['UNDER_REVIEW', 'AWAITING_INFORMATION', 'RESOLVED', 'CLOSED'],
+  // RESOLVED = a formal decision (resolveDispute: permission, fresh 2FA, outcome, reason, conflict check) — the
+  // ONLY exit from the open (hold) states. CLOSED = administrative archival of an already RESOLVED dispute;
+  // it has no financial meaning and can never lift a hold.
+  OPEN: ['UNDER_REVIEW', 'AWAITING_INFORMATION', 'RESOLVED'],
   UNDER_REVIEW: ['AWAITING_INFORMATION', 'RESOLVED'],
   AWAITING_INFORMATION: ['UNDER_REVIEW', 'RESOLVED'],
   RESOLVED: ['CLOSED'],
@@ -340,6 +343,12 @@ export const WITHDRAWAL_STATUSES = [
   'PAID',
   'REJECTED',
   'CANCELLED',
+  /** The external transfer result is unknown: the money stays RESERVED until the outcome is established. */
+  'TRANSFER_UNCERTAIN',
+  /** Established (second person, fresh 2FA, evidence) that NO money left EDMN: the reservation is released. */
+  'FAILED_BEFORE_TRANSFER',
+  /** Recorded PAID, then the transfer came back: a compensating, approved entry re-credits the seller. */
+  'RETURNED',
 ] as const;
 export type WithdrawalStatus = (typeof WITHDRAWAL_STATUSES)[number];
 /**
@@ -349,12 +358,20 @@ export type WithdrawalStatus = (typeof WITHDRAWAL_STATUSES)[number];
 export const withdrawalMachine = defineMachine<WithdrawalStatus>('withdrawal', WITHDRAWAL_STATUSES, {
   REQUESTED: ['UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'],
   UNDER_REVIEW: ['APPROVED', 'REJECTED'],
+  // REJECTED is possible only before the transfer started (APPROVED, nothing executed yet). Once PROCESSING,
+  // EDMN may have sent the money: the outcome must be established (PAID / FAILED_BEFORE_TRANSFER) or kept
+  // reserved (TRANSFER_UNCERTAIN) — never assumed.
   APPROVED: ['PROCESSING', 'PAID', 'REJECTED'],
-  PROCESSING: ['PAID', 'REJECTED'],
-  PAID: [],
+  PROCESSING: ['PAID', 'TRANSFER_UNCERTAIN', 'FAILED_BEFORE_TRANSFER'],
+  TRANSFER_UNCERTAIN: ['PAID', 'FAILED_BEFORE_TRANSFER'],
+  PAID: ['RETURNED'],
   REJECTED: [],
   CANCELLED: [],
+  FAILED_BEFORE_TRANSFER: [],
+  RETURNED: [],
 });
+/** Withdrawals that still hold a reservation or are awaiting a decision (open work). */
+export const OPEN_WITHDRAWAL_STATUSES = ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'TRANSFER_UNCERTAIN'] as const;
 
 /* ───────────────────────── Ledger adjustment (maker/checker) ───────────────────────── */
 export const ADJUSTMENT_STATUSES = ['PENDING_APPROVAL', 'POSTED', 'REJECTED'] as const;

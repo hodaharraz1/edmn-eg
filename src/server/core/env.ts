@@ -54,6 +54,28 @@ export type Env = z.infer<typeof schema>;
 
 let cached: Env | null = null;
 
+/** Every reason a production build must refuse to boot (empty = safe). Pure: also used by tests. */
+export function unsafeProductionConfig(e: Env, raw: Record<string, string | undefined> = process.env): string[] {
+  const problems: string[] = [];
+  if (e.NODE_ENV !== 'production') return problems;
+  if (e.SESSION_SECRET.startsWith('replace-with')) problems.push('SESSION_SECRET is a placeholder');
+  if (e.DATA_ENCRYPTION_KEY.startsWith('replace-with')) problems.push('DATA_ENCRYPTION_KEY is a placeholder');
+  if (!e.APP_URL.startsWith('https://')) problems.push('APP_URL must be https in production');
+  if (e.MAIL_DRIVER === 'smtp' && !e.SMTP_HOST) problems.push('SMTP_HOST required for smtp mail driver');
+  if (e.SMS_DRIVER === 'http' && !e.SMS_HTTP_URL) problems.push('SMS_HTTP_URL required for http sms driver');
+  if (!e.EDMN_ENVIRONMENT) problems.push('EDMN_ENVIRONMENT must be set to "staging" or "production" for a production build');
+  if (e.EDMN_ENVIRONMENT === 'development') problems.push('EDMN_ENVIRONMENT=development is not allowed for a production build (use "staging" or "production")');
+  if (e.EDMN_ENVIRONMENT === 'production') {
+    // Demo/E2E fixtures and their credentials never belong to production (fail closed at boot).
+    for (const k of ['STAGING_DEMO_PASSWORD', 'STAGING_ADMIN_PASSWORD', 'STAGING_TOTP_SECRET']) if (raw[k]) problems.push(`${k} must not be set in production`);
+    if (/^(true|1)$/i.test(raw.SEED_DEMO ?? '')) problems.push('SEED_DEMO must not be enabled in production');
+    // Real customers must receive verification codes and delivery OTPs.
+    if (e.SMS_DRIVER !== 'http') problems.push('SMS_DRIVER=http is required in production (delivery OTP and phone verification)');
+    if (e.MAIL_DRIVER !== 'smtp') problems.push('MAIL_DRIVER=smtp is required in production');
+  }
+  return problems;
+}
+
 export function env(): Env {
   if (cached) return cached;
   const parsed = schema.safeParse(process.env);
@@ -62,21 +84,8 @@ export function env(): Env {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   const e = parsed.data;
-  if (e.NODE_ENV === 'production') {
-    const problems: string[] = [];
-    if (e.SESSION_SECRET.startsWith('replace-with')) problems.push('SESSION_SECRET is a placeholder');
-    if (e.DATA_ENCRYPTION_KEY.startsWith('replace-with')) problems.push('DATA_ENCRYPTION_KEY is a placeholder');
-    if (!e.APP_URL.startsWith('https://')) problems.push('APP_URL must be https in production');
-    if (e.MAIL_DRIVER === 'smtp' && !e.SMTP_HOST) problems.push('SMTP_HOST required for smtp mail driver');
-    if (e.SMS_DRIVER === 'http' && !e.SMS_HTTP_URL) problems.push('SMS_HTTP_URL required for http sms driver');
-    if (!e.EDMN_ENVIRONMENT) problems.push('EDMN_ENVIRONMENT must be set to "staging" or "production" for a production build');
-    if (e.EDMN_ENVIRONMENT === 'production') {
-      // Real customers must receive verification codes and delivery OTPs.
-      if (e.SMS_DRIVER !== 'http') problems.push('SMS_DRIVER=http is required in production (delivery OTP and phone verification)');
-      if (e.MAIL_DRIVER !== 'smtp') problems.push('MAIL_DRIVER=smtp is required in production');
-    }
-    if (problems.length) throw new Error(`Unsafe production configuration:\n${problems.join('\n')}`);
-  }
+  const problems = unsafeProductionConfig(e);
+  if (problems.length) throw new Error(`Unsafe production configuration:\n${problems.join('\n')}`);
   cached = e;
   return e;
 }

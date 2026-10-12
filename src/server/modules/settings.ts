@@ -122,6 +122,9 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'legal.policiesApproved',
 ];
 
+/** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */
+export const REAL_MONEY_DUAL_CONTROL_THRESHOLD = 0;
+
 /** Keys that can never be changed through the generic settings screen (dedicated, separately-authorized flows). */
 export const RESTRICTED_SETTINGS: readonly SettingKey[] = [
   'killswitch.paymentConfirmation',
@@ -178,7 +181,7 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
     // withdrawal, refund or deal still open, and no balance left in any seller or deal account).
     const r = await db.execute<{ open_payments: string; open_withdrawals: string; open_refunds: string; open_deal_payouts: string; balances: string }>(sql`select
       (select count(*) from payments where is_test and status in ('AWAITING_PAYMENT','PAYMENT_SUBMITTED','UNDER_REVIEW'))::text open_payments,
-      (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING'))::text open_withdrawals,
+      (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN'))::text open_withdrawals,
       (select count(*) from refunds where status = 'PENDING')::text open_refunds,
       (select count(*) from deal_payouts where status = 'PENDING')::text open_deal_payouts,
       (select count(*) from ledger_accounts where balance <> 0 and (seller_id is not null or code = 'DEAL_FUNDS_HELD'))::text balances`);
@@ -188,6 +191,12 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   }
   await db.transaction(async (tx) => {
     const old = await getSetting(key, tx);
+    // C6: weakening maker/checker re-closes the real-money gate in the same transaction (re-enabling it
+    // re-runs the full go-live gate, which requires the approved production threshold).
+    if (key === 'withdrawals.dualControlThreshold' && parsed.data !== REAL_MONEY_DUAL_CONTROL_THRESHOLD && (await getSetting('payments.realMoneyEnabled', tx))) {
+      await tx.update(systemSettings).set({ value: false, updatedBy: actor.userId, updatedAt: new Date() }).where(eq(systemSettings.key, 'payments.realMoneyEnabled'));
+      await audit(tx, actor, { action: 'settings.real_money_gate_reclosed', entityType: 'system_setting', entityId: 'payments.realMoneyEnabled', oldValues: { value: true }, newValues: { value: false, cause: key, threshold: parsed.data }, reason });
+    }
     await tx
       .insert(systemSettings)
       .values({ key, value: parsed.data as object, updatedBy: actor.userId })
@@ -203,8 +212,19 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   });
 }
 
+/**
+ * Maker/checker threshold actually enforced (C6). With real money enabled it is ALWAYS 0 (every payout needs
+ * a second person), whatever the stored setting says: configuration drift can never weaken dual control.
+ */
+export async function effectiveDualControlThreshold(conn: DbOrTx = db): Promise<number> {
+  if (await realMoneyEnabled(conn)) return 0;
+  return getSetting('withdrawals.dualControlThreshold', conn);
+}
+
 /** True only when an authorized admin has explicitly enabled real money on a non-staging deployment. */
 export async function realMoneyEnabled(conn: DbOrTx = db): Promise<boolean> {
   if (process.env.EDMN_ENVIRONMENT === 'staging') return false;
-  return getSetting('payments.realMoneyEnabled', conn);
+  if (!(await getSetting('payments.realMoneyEnabled', conn))) return false;
+  // Fail closed on configuration drift (C6): the go-live conditions that live in settings must still hold.
+  return (await getSetting('withdrawals.dualControlThreshold', conn)) === REAL_MONEY_DUAL_CONTROL_THRESHOLD && (await getSetting('fees.ownerApproved', conn)) === true;
 }

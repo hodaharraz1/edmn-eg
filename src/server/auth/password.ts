@@ -1,3 +1,4 @@
+import { isProductionDeployment, PUBLIC_FIXTURE_PASSWORDS } from './public-fixtures';
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
@@ -47,5 +48,6 @@ export function passwordProblems(pw: string, policy: PasswordPolicy): string | n
   if (pw.length > 200) return 'كلمة المرور طويلة جداً';
   if (!/[A-Za-z؀-ۿ]/.test(pw) || !/\d/.test(pw)) return 'كلمة المرور لازم يكون فيها حروف وأرقام';
   if (policy.minLength >= 12 && !/[^A-Za-z0-9؀-ۿ]/.test(pw)) return 'كلمة مرور الإدارة يجب أن تحتوي على رمز خاص';
+  if (isProductionDeployment() && PUBLIC_FIXTURE_PASSWORDS.includes(pw)) return 'كلمة المرور دي معروفة ومش مسموح بيها';
   return null;
 }

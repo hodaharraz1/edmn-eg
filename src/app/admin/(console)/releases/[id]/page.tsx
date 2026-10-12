@@ -36,7 +36,7 @@ export default async function ReleaseReview(props: PageProps<'/admin/releases/[i
   const ref = `${order.number}-${so.suffix}`;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'إتاحة الأرباح', href: '/admin/releases' }, { label: ref }]} />} title={`اعتماد إتاحة أرباح ${ref}`} description={store?.name} actions={<StatusChip status={so.status} />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'إتاحة الأرباح', href: '/admin/releases' }, { label: ref }]} />} title={`اعتماد إتاحة أرباح ${ref}`} description={store?.name} actions={<StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />} />
       <section className="card p-4">
         <h2 className="mb-2 font-bold">أساس الاستحقاق والمهل</h2>
         <DefinitionList

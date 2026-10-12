@@ -1,5 +1,5 @@
 import { and, eq, lte, sql } from 'drizzle-orm';
-import { logger } from '@/server/core/logger';
+import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db } from '@/server/db/client';
 import { jobs, outboundMessages } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
@@ -46,11 +46,14 @@ export async function flushOutbound(limit = 50) {
       const attempts = m.attempts + 1;
       await db
         .update(outboundMessages)
-        .set({ attempts, lastError: (e as Error).message.slice(0, 500), status: attempts >= 5 ? 'FAILED' : 'PENDING' })
+        // A secret (code / reset link) that will never be delivered is redacted immediately.
+        .set({ attempts, lastError: safeErrorMessage(e), status: attempts >= 5 ? 'FAILED' : 'PENDING', ...(attempts >= 5 && SECRET_EVENTS.includes(m.event ?? '') ? { body: REDACTED_BODY } : {}) })
         .where(eq(outboundMessages.id, m.id));
-      logger.warn('outbound.send_failed', { id: m.id, channel: m.channel, attempts, error: (e as Error).message });
+      logger.warn('outbound.send_failed', { id: m.id, channel: m.channel, attempts, error: safeErrorMessage(e) });
     }
   }
+  // Expiry redaction also runs with every flush (the scheduled job alone depends on traffic on Vercel Hobby).
+  await redactExpiredSecrets();
   return sent;
 }
 
@@ -104,11 +107,11 @@ export async function runOneJob(): Promise<boolean> {
       .update(jobs)
       .set({
         status: failed ? 'FAILED' : 'PENDING',
-        lastError: (e as Error).message.slice(0, 1000),
+        lastError: safeErrorMessage(e),
         runAt: new Date(Date.now() + Math.min(3600_000, 2 ** claimed.attempts * 30_000)),
       })
       .where(eq(jobs.id, claimed.id));
-    logger.error('job.failed', { id: claimed.id, type: claimed.type, attempts: claimed.attempts, final: failed, error: (e as Error).message });
+    logger.error('job.failed', { id: claimed.id, type: claimed.type, attempts: claimed.attempts, final: failed, error: safeErrorMessage(e) });
   }
   return true;
 }

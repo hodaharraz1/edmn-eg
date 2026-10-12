@@ -150,7 +150,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">{prodStats.map((p) => <Link key={p.status} href={`/admin/products?seller=${s.id}&status=${p.status}`} className="card px-3 py-2 text-sm"><StatusChip status={p.status} /> {p.n}</Link>)}</div>
         <h3 className="font-bold">أحدث الطلبات</h3>
-        <DataTable rows={orderStats} rowKey={(r) => r.so.id} columns={[{ key: 'o', header: 'الطلب', cell: (r) => <Link href={`/admin/orders/${r.so.orderId}`} className="text-brand-700 hover:underline">{r.so.suffix} · {formatDate(r.so.createdAt)}</Link> }, { key: 'g', header: 'الإجمالي', cell: (r) => formatEGP(r.so.grossTotal) }, { key: 'c', header: 'العمولة', cell: (r) => formatEGP(r.so.commissionTotal) }, { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.so.status} /> }]} />
+        <DataTable rows={orderStats} rowKey={(r) => r.so.id} columns={[{ key: 'o', header: 'الطلب', cell: (r) => <Link href={`/admin/orders/${r.so.orderId}`} className="text-brand-700 hover:underline">{r.so.suffix} · {formatDate(r.so.createdAt)}</Link> }, { key: 'g', header: 'الإجمالي', cell: (r) => formatEGP(r.so.grossTotal) }, { key: 'c', header: 'العمولة', cell: (r) => formatEGP(r.so.commissionTotal) }, { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.so.status} kind="sellerOrder" receiptBasis={r.so.receiptBasis} /> }]} />
         <div className="grid gap-4 md:grid-cols-2">
           <section className="card p-4 text-sm"><h3 className="mb-2 font-bold">المرتجعات</h3>{rets.map((r) => <p key={r.id}>#{r.number} {label('returnReason', r.reason)} <StatusChip status={r.status} /></p>)}{!rets.length && <p className="text-muted">لا يوجد</p>}</section>
           <section className="card p-4 text-sm"><h3 className="mb-2 font-bold">النزاعات</h3>{disp.map((d) => <Link key={d.id} href={`/admin/disputes/${d.id}`} className="block text-brand-700">#{d.number} <StatusChip status={d.status} /></Link>)}{!disp.length && <p className="text-muted">لا يوجد</p>}</section>
@@ -164,7 +164,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
     const wds = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.sellerId, s.id)).orderBy(desc(withdrawalRequests.createdAt)).limit(30);
     return (
       <div className="space-y-4">
-        <DataTable rows={wds} rowKey={(r) => r.id} columns={[{ key: 'n', header: 'رقم', cell: (r) => <Link href={`/admin/withdrawals/${r.id}`} className="text-brand-700">#{r.number}</Link> }, { key: 'a', header: 'المبلغ', cell: (r) => formatEGP(r.amount) }, { key: 'd', header: 'التاريخ', cell: (r) => formatDate(r.createdAt) }, { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.status} /> }]} />
+        <DataTable rows={wds} rowKey={(r) => r.id} columns={[{ key: 'n', header: 'رقم', cell: (r) => <Link href={`/admin/withdrawals/${r.id}`} className="text-brand-700">#{r.number}</Link> }, { key: 'a', header: 'المبلغ', cell: (r) => formatEGP(r.amount) }, { key: 'd', header: 'التاريخ', cell: (r) => formatDate(r.createdAt) }, { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.status} kind="withdrawal" /> }]} />
         <p className="text-sm"><Link href={`/admin/ledger?seller=${s.id}`} className="text-brand-700 underline">كشف القيود الكامل والتسويات</Link></p>
       </div>
     );

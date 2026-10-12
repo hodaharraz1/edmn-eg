@@ -123,6 +123,9 @@ export const sellerPayoutMethods = pgTable(
     isDefault: boolean().notNull().default(false),
     verifiedBy: uuid().references(() => users.id),
     verifiedAt: ts(),
+    /** sha256 of the exact destination details that were verified (a different destination is never "verified"). */
+    verifiedFingerprint: text(),
+    verificationReason: text(),
     createdBy: uuid().references(() => users.id),
     createdAt: createdAt(),
   },

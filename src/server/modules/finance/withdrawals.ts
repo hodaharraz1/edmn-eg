@@ -10,8 +10,8 @@ import { grantApproval } from './approvals';
 import { assertNotPaused } from './controls';
 import { decryptJson } from '@/server/core/crypto';
 import { notify } from '@/server/modules/notifications/notify';
-import { activePayoutMethod } from '@/server/modules/sellers/service';
-import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
+import { activePayoutMethod, assertVerifiedDestination } from '@/server/modules/sellers/service';
+import { effectiveDualControlThreshold, getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { requireReason, transition } from '../_shared';
 import { accountBalance, postEntry } from './ledger';
@@ -134,7 +134,7 @@ export async function previewWithdrawal(actor: Actor, amountInput: string | numb
 
 /** Dual control on the seller's rolling 24-hour total (splitting a payout does not avoid a second person). */
 async function needsDualControl(tx: DbOrTx, sellerId: string, amount: number) {
-  const threshold = await getSetting('withdrawals.dualControlThreshold', tx);
+  const threshold = await effectiveDualControlThreshold(tx);
   const recent = await tx.execute<{ total: string }>(sql`select coalesce(sum(amount), 0)::text total from withdrawal_requests
     where seller_id = ${sellerId} and created_at > now() - interval '24 hours' and status not in ('REJECTED','CANCELLED')`);
   return Number(recent.rows[0]?.total ?? 0) + amount >= threshold;
@@ -222,6 +222,7 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     if (await sellerLedgerDrift(tx, w.sellerId)) throw invalidState('أرصدة البائع المخزنة لا تطابق دفتر الأستاذ — تم إيقاف الاعتماد');
     const [pm] = w.payoutMethodId ? await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId)) : [];
     if (!pm || pm.status !== 'ACTIVE') throw invalidState('وسيلة السحب المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
+    assertVerifiedDestination(pm);
     const dual = w.requiresDualControl || (await needsDualControl(tx, w.sellerId, 0));
     // Re-validate transfer cost and channel limits now (never split, never switch provider silently).
     const tq = await quoteTransfer(tx, { payoutType: pm.type, amount: w.amount, sellerId: w.sellerId, payoutMethodId: pm.id, excludeWithdrawalId: w.id });
@@ -262,6 +263,7 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
 
 export async function markWithdrawalProcessing(actor: Actor, id: string) {
   requirePermission(actor, 'withdrawals.pay');
+  requireStepUp(actor); // from here on the money may leave EDMN: the request can no longer be "rejected"
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'PROCESSING') return;
@@ -284,8 +286,8 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
   if (!ref || ref.length < 3) throw validation('رقم مرجع التحويل مطلوب');
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
-    if (w.status === 'PAID') return;
-    if (w.status !== 'APPROVED' && w.status !== 'PROCESSING') throw invalidState('يجب اعتماد طلب السحب قبل تسجيل الصرف');
+    if (w.status === 'PAID' || w.status === 'RETURNED') return;
+    if (w.status !== 'APPROVED' && w.status !== 'PROCESSING' && w.status !== 'TRANSFER_UNCERTAIN') throw invalidState('يجب اعتماد طلب السحب قبل تسجيل الصرف');
     if (!w.reservedAt) throw invalidState('المبلغ لم يُحجز بعد. يجب اعتماده أولاً');
     await assertNotPaused(tx, 'killswitch.payouts');
     if (w.requiresDualControl && w.approvedBy === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن المعتمد');
@@ -301,6 +303,7 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     if (snap?.payoutMethodId) {
       const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, snap.payoutMethodId));
       if (!pm || pm.status !== 'ACTIVE') throw invalidState('وجهة الصرف المعتمدة لم تعد صالحة. ارفض الطلب ويُطلب سحب جديد');
+      assertVerifiedDestination(pm);
     }
     // Transfer cost: the seller never pays more than the cost quoted and frozen at approval; any excess
     // (or the whole cost under EDMN_PAYS) is an EDMN expense. The EDMN sale fees are NOT charged here.
@@ -362,24 +365,133 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
   });
 }
 
+/**
+ * Reject a request BEFORE any transfer started (REQUESTED / UNDER_REVIEW / APPROVED). A reserved amount
+ * returns to AVAILABLE through an approved reversal. Once PROCESSING, EDMN may already have sent the money:
+ * a rejection is refused — use the transfer-outcome workflow (uncertain / failed before transfer / paid).
+ */
 export async function rejectWithdrawal(actor: Actor, id: string, reason: string) {
   requirePermission(actor, 'withdrawals.approve');
   const why = requireReason(reason);
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'REJECTED') return;
-    if (w.status === 'PROCESSING') {
-      // A transfer may already be on its way: only a different staff member, freshly re-authenticated,
-      // may state that it did not happen and return the money to the seller's available balance.
-      requireStepUp(actor);
-      if (w.processingBy === actor.userId) throw forbidden('رفض طلب جارٍ تحويله يجب أن يتم بواسطة شخص غير منفذ التحويل');
+    if (!['REQUESTED', 'UNDER_REVIEW', 'APPROVED'].includes(w.status)) {
+      throw invalidState(
+        w.status === 'PROCESSING' || w.status === 'TRANSFER_UNCERTAIN'
+          ? 'بدأ التحويل بالفعل: لا يمكن الرفض. سجّل نتيجة التحويل (تم الصرف / فشل قبل التحويل / نتيجة غير مؤكدة)'
+          : 'لا يمكن رفض طلب سحب في حالته الحالية',
+      );
     }
     if (w.reservedAt) requireStepUp(actor);
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'REJECTED', why);
     await tx.update(withdrawalRequests).set({ status: 'REJECTED', rejectReason: why }).where(eq(withdrawalRequests.id, w.id));
     await reverseReservation(tx, actor, w, why);
-    await audit(tx, actor, { action: 'withdrawal.rejected', entityType: 'withdrawal', entityId: w.id, reason: why, newValues: { reservationReturned: !!w.reservedAt } });
+    await audit(tx, actor, { action: 'withdrawal.rejected', entityType: 'withdrawal', entityId: w.id, reason: why, oldValues: { status: w.status }, newValues: { status: 'REJECTED', reservationReturned: !!w.reservedAt } });
     await notifySeller(tx, w, `مرفوض: ${why}`, 'rejected');
+  });
+}
+
+/**
+ * The executor cannot tell whether the transfer went out (provider timeout, unclear statement…). Moves NO
+ * money: the amount stays RESERVED until the outcome is established. Idempotent.
+ */
+export async function markWithdrawalTransferUncertain(actor: Actor, id: string, reason: string) {
+  requirePermission(actor, 'withdrawals.pay');
+  requireStepUp(actor);
+  const why = requireReason(reason);
+  await db.transaction(async (tx) => {
+    const w = await lockWithdrawal(tx, id);
+    if (w.status === 'TRANSFER_UNCERTAIN') return;
+    if (w.status !== 'PROCESSING') throw invalidState('نتيجة التحويل غير المؤكدة تُسجل لطلب جارٍ تحويله فقط');
+    await transition(tx, actor, withdrawalMachine, w.id, w.status, 'TRANSFER_UNCERTAIN', why);
+    await tx.update(withdrawalRequests).set({ status: 'TRANSFER_UNCERTAIN', transferUncertainAt: new Date(), transferUncertainBy: actor.userId }).where(eq(withdrawalRequests.id, w.id));
+    await audit(tx, actor, { action: 'withdrawal.transfer_uncertain', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'TRANSFER_UNCERTAIN', reserved: true }, reason: why });
+  });
+}
+
+/**
+ * Established that NO money left EDMN for this request (e.g. the provider rejected it before execution).
+ * Needs evidence, fresh 2FA and a SECOND person (not the executor who started/flagged the transfer); only
+ * then is the reservation released (approved reversal). Idempotent: a retry never credits twice.
+ */
+export async function markWithdrawalFailedBeforeTransfer(actor: Actor, id: string, input: { reason: string; evidence: string }) {
+  requirePermission(actor, 'withdrawals.approve');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  const evidence = input.evidence?.trim();
+  if (!evidence || evidence.length < 3) throw validation('مرجع/دليل عدم خروج التحويل مطلوب (كشف الحساب أو رد مزود الدفع)');
+  await db.transaction(async (tx) => {
+    const w = await lockWithdrawal(tx, id);
+    if (w.status === 'FAILED_BEFORE_TRANSFER') return;
+    if (w.status !== 'PROCESSING' && w.status !== 'TRANSFER_UNCERTAIN') throw invalidState('هذا الإجراء لطلب جارٍ تحويله أو نتيجته غير مؤكدة فقط');
+    if (w.processingBy === actor.userId || w.transferUncertainBy === actor.userId) throw forbidden('إثبات عدم خروج التحويل يجب أن يتم بواسطة شخص غير منفذ التحويل');
+    await assertNotSelfDealing(tx, actor, w.sellerId);
+    await transition(tx, actor, withdrawalMachine, w.id, w.status, 'FAILED_BEFORE_TRANSFER', why);
+    await tx
+      .update(withdrawalRequests)
+      .set({ status: 'FAILED_BEFORE_TRANSFER', transferFailedAt: new Date(), transferFailedBy: actor.userId, transferFailureReason: why, transferFailureEvidence: evidence })
+      .where(eq(withdrawalRequests.id, w.id));
+    await reverseReservation(tx, actor, w, `فشل قبل التحويل: ${why}`);
+    await audit(tx, actor, { action: 'withdrawal.failed_before_transfer', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'FAILED_BEFORE_TRANSFER', reservationReturned: !!w.reservedAt, evidence }, reason: why });
+    await notifySeller(tx, w, 'لم يتم التحويل — أُعيد المبلغ لرصيدك المتاح', 'failed-before-transfer');
+  });
+}
+
+/**
+ * A payout recorded PAID came back (wrong/closed account…). Compensating, approved entry — the original
+ * WITHDRAWAL_PAID journal is never touched: PLATFORM_CASH (received back) → SELLER_AVAILABLE. Admin approval,
+ * fresh 2FA, reason, external reference; a different person than the payer; idempotent (one return per
+ * withdrawal). The destination that bounced must be re-verified before any further payout.
+ */
+export async function recordWithdrawalReturned(actor: Actor, id: string, input: { amount: number; reference: string; reason: string }) {
+  requirePermission(actor, 'withdrawals.approve');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  const ref = input.reference?.trim();
+  if (!ref || ref.length < 3) throw validation('مرجع الارتداد من البنك/المزود مطلوب');
+  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) throw validation('المبلغ المرتد غير صحيح');
+  await db.transaction(async (tx) => {
+    const w = await lockWithdrawal(tx, id);
+    if (w.status === 'RETURNED') return;
+    if (w.status !== 'PAID') throw invalidState('تسجيل الارتداد متاح لسحب تم صرفه فقط');
+    if (w.paidBy === actor.userId) throw forbidden('تسجيل ارتداد التحويل يجب أن يتم بواسطة شخص غير منفذ الصرف');
+    await assertNotSelfDealing(tx, actor, w.sellerId);
+    const transferred = w.netTransferAmount ?? w.amount;
+    if (input.amount > transferred) throw validation(`المبلغ المرتد أكبر من المبلغ المحوّل (${formatEGP(transferred)})`);
+    const approval = await grantApproval(tx, actor, {
+      action: 'WITHDRAWAL_PAYOUT_RETURN',
+      entityType: 'withdrawal',
+      entityId: w.id,
+      amount: input.amount,
+      economicVersion: `paid:${w.payoutApprovalId ?? 'legacy'}:returned:${input.amount}`,
+      reason: `ارتداد تحويل — مرجع ${ref}: ${why}`,
+      idempotencyKey: `wd-returned:${w.id}`,
+      destinationSnapshot: (w.destinationSnapshot as Record<string, unknown>) ?? { masked: w.payoutMasked, type: w.payoutType },
+    });
+    await postEntry(tx, actor, {
+      entryType: 'WITHDRAWAL_RETURNED',
+      sourceType: 'withdrawal',
+      sourceId: w.id,
+      idempotencyKey: `wd-returned:${w.id}`,
+      description: `ارتداد تحويل السحب #${w.number} — مرجع ${ref}`,
+      approvalId: approval.id,
+      lines: [
+        { account: { code: 'PLATFORM_CASH' }, debit: input.amount, memo: 'payout returned by the bank/provider' },
+        { account: { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, credit: input.amount, memo: 'returned payout re-credited to the seller' },
+      ],
+    });
+    await transition(tx, actor, withdrawalMachine, w.id, w.status, 'RETURNED', why);
+    await tx
+      .update(withdrawalRequests)
+      .set({ status: 'RETURNED', returnedAmount: input.amount, returnedAt: new Date(), returnedBy: actor.userId, returnedReference: ref, returnReason: why, returnApprovalId: approval.id })
+      .where(eq(withdrawalRequests.id, w.id));
+    // The destination that bounced is no longer trusted: it must be verified again before any payout.
+    if (w.payoutMethodId) {
+      await tx.update(sellerPayoutMethods).set({ status: 'PENDING_VERIFICATION', isDefault: false }).where(and(eq(sellerPayoutMethods.id, w.payoutMethodId), eq(sellerPayoutMethods.status, 'ACTIVE')));
+    }
+    await audit(tx, actor, { action: 'withdrawal.payout_returned', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'RETURNED', amount: input.amount, reference: ref, approvalId: approval.id, destinationReverification: !!w.payoutMethodId }, reason: why });
+    await notifySeller(tx, w, 'ارتد التحويل — أُعيد المبلغ لرصيدك المتاح ويلزم إعادة اعتماد وسيلة السحب', 'returned');
   });
 }
 
@@ -528,7 +640,7 @@ export async function markDealPayoutPaid(actor: Actor, payoutId: string, referen
     if (p.payeeUserId === actor.userId) throw forbidden('لا يمكنك صرف مستحق لنفسك');
     await assertNotPaused(tx, 'killswitch.payouts');
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId));
-    const threshold = await getSetting('withdrawals.dualControlThreshold', tx);
+    const threshold = await effectiveDualControlThreshold(tx);
     const releaser = deal.releaseApprovalId ? (await tx.select({ by: financialApprovals.approvedBy }).from(financialApprovals).where(eq(financialApprovals.id, deal.releaseApprovalId)))[0]?.by : null;
     const dual = p.amount >= threshold && !!releaser;
     if (dual && releaser === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن معتمد التسوية');

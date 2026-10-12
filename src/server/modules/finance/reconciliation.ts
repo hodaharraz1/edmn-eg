@@ -1,10 +1,11 @@
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, type Actor } from '@/server/core/actor';
-import { conflict, invalidState, notFound, validation } from '@/server/core/errors';
+import { conflict, DomainError, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
 import { externalTransactions, reconImports, riskFlags, type ReconState } from '@/server/db/schema';
+import { safeErrorMessage } from '@/server/core/logger';
 
 type Channel = 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH' | 'PSP';
 type MatchType = 'payment' | 'withdrawal' | 'refund' | 'deal_payout';
@@ -79,7 +80,7 @@ export async function importStatement(actor: Actor, channel: Channel, csv: strin
   try {
     rows = parseStatementCsv(csv);
   } catch (e) {
-    await db.insert(reconImports).values({ channel, fileName: fileName ?? null, status: 'FAILED', error: (e as Error).message.slice(0, 500), importedBy: actor.userId });
+    await db.insert(reconImports).values({ channel, fileName: fileName ?? null, status: 'FAILED', error: e instanceof DomainError ? e.message : safeErrorMessage(e), importedBy: actor.userId });
     throw e;
   }
   return db.transaction(async (tx) => {

@@ -22,6 +22,7 @@ export const ACTION_ENTRY_TYPES: Record<FinancialAction, string[]> = {
   DEAL_RELEASE: ['DEAL_SETTLEMENT'],
   DEAL_REFUND: ['DEAL_REFUND'],
   DEAL_PAYOUT: ['DEAL_PAYOUT_PAID'],
+  WITHDRAWAL_PAYOUT_RETURN: ['WITHDRAWAL_RETURNED'],
 };
 
 export interface ApprovalRequest {

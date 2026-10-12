@@ -47,7 +47,7 @@ export async function closureBlockers(conn: DbOrTx, userId: string): Promise<{ c
       where s.owner_user_id = ${userId} and so.status not in ('COMPLETED','CANCELLED','DELIVERY_FAILED','PENDING_PAYMENT')
     union all select 'SELLER_OPEN_RETURNS', count(*)::text from returns r join sellers s on s.id = r.seller_id where s.owner_user_id = ${userId} and r.status not in ('REFUNDED','REJECTED')
     union all select 'OPEN_WITHDRAWALS', count(*)::text from withdrawal_requests w join sellers s on s.id = w.seller_id
-      where s.owner_user_id = ${userId} and w.status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING')
+      where s.owner_user_id = ${userId} and w.status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')
     union all select 'NON_ZERO_BALANCE', count(*)::text from ledger_accounts a join sellers s on s.id = a.seller_id where s.owner_user_id = ${userId} and a.balance <> 0
     union all select 'FINANCIAL_HOLD', count(*)::text from seller_orders so join sellers s on s.id = so.seller_id where s.owner_user_id = ${userId} and so.financial_hold and so.funds_released_at is null
     union all select 'ACTIVE_STORE', count(*)::text from sellers where owner_user_id = ${userId} and status in ('APPROVED','RESTRICTED','PENDING_REVIEW','MORE_INFO_REQUIRED')`);

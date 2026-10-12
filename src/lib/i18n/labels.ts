@@ -26,8 +26,9 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   PROCESSING: { ar: 'قيد التجهيز', tone: 'info' },
   READY_TO_SHIP: { ar: 'جاهز للشحن', tone: 'info' },
   SHIPPED: { ar: 'تم الشحن', tone: 'info' },
-  AWAITING_BUYER_RESPONSE: { ar: 'اتسلّم — مهلة رد المشتري', tone: 'info' },
-  DELIVERED: { ar: 'تم الاستلام', tone: 'success' },
+  AWAITING_BUYER_RESPONSE: { ar: 'تم تسجيل التسليم — مهلة رد المشتري', tone: 'info' },
+  // Seller order DELIVERED = an entitlement basis exists (see sellerOrderStatusLabel for the exact basis).
+  DELIVERED: { ar: 'تم تسجيل التسليم', tone: 'success' },
   COMPLETED: { ar: 'مكتمل', tone: 'success' },
   PARTIALLY_COMPLETED: { ar: 'مكتمل جزئيًا', tone: 'warning' },
   CLOSED_UNFULFILLED: { ar: 'مغلق بدون تسليم', tone: 'neutral' },
@@ -51,9 +52,9 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   // Returns
   REQUESTED: { ar: 'تم الطلب', tone: 'warning' },
   RETURN_IN_TRANSIT: { ar: 'المرتجع في الطريق', tone: 'info' },
-  RECEIVED: { ar: 'تم الاستلام', tone: 'info' },
+  RECEIVED: { ar: 'استلم البائع المرتجع', tone: 'info' },
   INSPECTION: { ar: 'قيد الفحص', tone: 'info' },
-  REFUND_PENDING: { ar: 'بانتظار الاسترداد', tone: 'warning' },
+  REFUND_PENDING: { ar: 'الاسترداد قيد الاعتماد والتحويل', tone: 'warning' },
   REFUNDED: { ar: 'تم الاسترداد', tone: 'success' },
   DISPUTED: { ar: 'نزاع', tone: 'danger' },
   // Deals
@@ -99,12 +100,54 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   REMOVED: { ar: 'محذوف', tone: 'danger' },
 };
 
-export function statusLabel(code: string | null | undefined): string {
+/**
+ * Entity-specific wording where the shared label would be financially ambiguous (operator safety):
+ * an APPROVED refund/withdrawal is NOT paid, PROCESSING is NOT paid, a FAILED refund is a failed transfer.
+ */
+export type StatusKind = 'refund' | 'withdrawal' | 'payout';
+const STATUS_BY_KIND: Record<StatusKind, Record<string, { ar: string; tone: Tone }>> = {
+  refund: {
+    REQUESTED: { ar: 'طلب استرداد — قيد المراجعة', tone: 'warning' },
+    APPROVED: { ar: 'تم اعتماد الاسترداد — لم يُحوَّل بعد', tone: 'warning' },
+    PROCESSING: { ar: 'جارٍ تحويل الاسترداد — لم يكتمل', tone: 'info' },
+    FAILED: { ar: 'تعذّر تحويل الاسترداد — المبلغ ما زال مستحقًا', tone: 'danger' },
+    COMPLETED: { ar: 'تم تحويل الاسترداد', tone: 'success' },
+    PAID: { ar: 'تم تحويل الاسترداد', tone: 'success' },
+    PENDING: { ar: 'استرداد معلق — لم يُحوَّل بعد', tone: 'warning' },
+    REJECTED: { ar: 'رُفض الاسترداد', tone: 'danger' },
+  },
+  withdrawal: {
+    REQUESTED: { ar: 'طلب سحب — لم يُحجز مبلغ', tone: 'warning' },
+    APPROVED: { ar: 'معتمد ومحجوز — لم يُحوَّل بعد', tone: 'warning' },
+    PROCESSING: { ar: 'جارٍ التحويل — لم يُصرف بعد', tone: 'info' },
+    TRANSFER_UNCERTAIN: { ar: 'نتيجة التحويل غير مؤكدة — المبلغ محجوز', tone: 'danger' },
+    PAID: { ar: 'تم التحويل', tone: 'success' },
+    FAILED_BEFORE_TRANSFER: { ar: 'فشل قبل التحويل — أُعيد للرصيد', tone: 'neutral' },
+    RETURNED: { ar: 'ارتد التحويل — أُعيد للرصيد', tone: 'danger' },
+  },
+  payout: {
+    PENDING: { ar: 'مستحق — لم يُصرف بعد', tone: 'warning' },
+    PAID: { ar: 'تم الصرف', tone: 'success' },
+  },
+};
+
+export function statusLabel(code: string | null | undefined, kind?: StatusKind): string {
   if (!code) return '—';
-  return STATUS[code]?.ar ?? code;
+  return (kind && STATUS_BY_KIND[kind][code]?.ar) || STATUS[code]?.ar || code;
 }
-export function statusTone(code: string | null | undefined): Tone {
-  return (code && STATUS[code]?.tone) || 'neutral';
+export function statusTone(code: string | null | undefined, kind?: StatusKind): Tone {
+  return (code && ((kind && STATUS_BY_KIND[kind][code]?.tone) || STATUS[code]?.tone)) || 'neutral';
+}
+
+/** Seller-order status that names the actual basis: delivery recorded ≠ buyer confirmed ≠ timeout ≠ dispute decision. */
+export function sellerOrderStatusLabel(status: string | null | undefined, receiptBasis?: string | null): string {
+  if (status === 'DELIVERED') {
+    if (receiptBasis === 'BUYER_CONFIRMED') return 'أكّد المشتري الاستلام — بانتظار إتاحة الإدارة';
+    if (receiptBasis === 'TIMEOUT_ENTITLEMENT') return 'مستحق بانتهاء مهلة المشتري — بانتظار إتاحة الإدارة';
+    if (receiptBasis === 'DISPUTE_DECISION') return 'مستحق بقرار نزاع — بانتظار إتاحة الإدارة';
+    return 'تم تسجيل التسليم';
+  }
+  return statusLabel(status);
 }
 
 export const LABELS = {
@@ -181,6 +224,7 @@ export const LABELS = {
     DEAL_RELEASE: 'تسوية صفقة',
     DEAL_REFUND: 'استرداد صفقة',
     DEAL_PAYOUT: 'صرف مستحق صفقة',
+    WITHDRAWAL_PAYOUT_RETURN: 'ارتداد تحويل سحب',
   } as Record<string, string>,
   sellerRole: { STORE_OWNER: 'مالك المتجر', STORE_MANAGER: 'مدير المتجر', CATALOG_MANAGER: 'مسؤول المنتجات', ORDER_MANAGER: 'مسؤول الطلبات', FINANCE: 'المالية', SUPPORT: 'الدعم' } as Record<string, string>,
 };

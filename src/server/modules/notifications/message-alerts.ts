@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { env } from '@/server/core/env';
-import { logger } from '@/server/core/logger';
+import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db, type DbOrTx } from '@/server/db/client';
 import { notificationDeliveries, notificationPreferences, notifications, users, type MessageEvent, type NotifyChannel } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
@@ -200,7 +200,7 @@ export async function dispatchDeliveries(opts: { ids?: string[]; limit?: number 
       const res = await dispatchOne(d);
       out[res]++;
     } catch (e) {
-      logger.error('notify.dispatch_failed', { delivery: d.id, channel: d.channel, error: (e as Error).message });
+      logger.error('notify.dispatch_failed', { delivery: d.id, channel: d.channel, error: safeErrorMessage(e) });
       await fail(d, 'ERROR');
       out.failed++;
     }

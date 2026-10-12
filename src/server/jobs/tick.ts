@@ -1,4 +1,4 @@
-import { logger } from '@/server/core/logger';
+import { logger, safeErrorMessage } from '@/server/core/logger';
 import { recoverStuckJobs, runOneJob, SCHEDULE } from './worker';
 
 /**
@@ -18,7 +18,7 @@ export async function runTick(opts: { force?: boolean; budgetMs?: number; isStop
         const res = await s.run();
         logger.debug('schedule.ran', { name: s.name, res: typeof res === 'object' ? res : { value: res } });
       } catch (e) {
-        logger.error('schedule.failed', { name: s.name, error: (e as Error).message });
+        logger.error('schedule.failed', { name: s.name, error: safeErrorMessage(e) });
       }
     }
   }
@@ -39,7 +39,7 @@ export async function maybeRunInlineTick(): Promise<void> {
     await recoverStuckJobs();
     await runTick({ budgetMs: 20_000 });
   } catch (e) {
-    logger.error('inline_tick.failed', { error: (e as Error).message });
+    logger.error('inline_tick.failed', { error: safeErrorMessage(e) });
   } finally {
     inlineBusy = false;
   }

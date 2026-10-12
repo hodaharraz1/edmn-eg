@@ -56,7 +56,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
           <section key={so.id} className="card space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-bold">{o.number}-{so.suffix} · <Link href={`/admin/sellers/${so.sellerId}`} className="text-brand-700">{storeName}</Link></h2>
-              <span className="flex items-center gap-2"><StatusChip status={so.status} />{so.financialHold && <Badge tone="danger">تجميد</Badge>}{so.fundsReleasedAt && <Badge tone="success">أُتيحت الأموال</Badge>}{convBySo.get(so.id) && <Link href={`/admin/messages/${convBySo.get(so.id)}?via=order`} className="text-xs font-semibold text-brand-700 underline" data-testid="admin-conversation-link">محادثة المشتري والبائع</Link>}</span>
+              <span className="flex items-center gap-2"><StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />{so.financialHold && <Badge tone="danger">تجميد</Badge>}{so.fundsReleasedAt && <Badge tone="success">أُتيحت الأموال</Badge>}{convBySo.get(so.id) && <Link href={`/admin/messages/${convBySo.get(so.id)}?via=order`} className="text-xs font-semibold text-brand-700 underline" data-testid="admin-conversation-link">محادثة المشتري والبائع</Link>}</span>
             </div>
             <ul className="text-sm">{items.map((it) => <li key={it.id}>{it.titleSnapshot} × {it.quantity} — {formatEGP(it.lineTotal)} · عمولة {(it.commissionBps / 100).toFixed(2)}% = {formatEGP(it.commissionAmount)}<span className="block text-xs text-muted">الاسترجاع (لقطة وقت الشراء): {it.returnPolicySnapshot ? `${returnPolicySummary(it.returnPolicySnapshot)}${it.returnPolicySnapshot.legalNoticeVersion ? ` · إشعار ${it.returnPolicySnapshot.legalNoticeVersion}` : ''}` : 'غير مسجلة (طلب قديم)'}</span></li>)}</ul>
             <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-6">
@@ -103,7 +103,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
               <p className="text-xs">أدلة التسليم من البائع (دليل مساعد — لا يثبت التسليم وحده): {(soEvidence.get(so.id) ?? []).map((e, j) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="me-2 text-brand-700 underline">ملف {j + 1}{e.carrierReference ? ` (${e.carrierReference})` : ''}</a>)}</p>
             )}
             {(soRefunds.get(so.id) ?? []).length > 0 && (
-              <ul className="text-xs">{(soRefunds.get(so.id) ?? []).map((r) => <li key={r.id}>استرداد #{r.number} · {label('refundSource', r.sourceType)} · {formatEGP(r.amount)} <StatusChip status={r.status} /> <Link href="/admin/refunds" className="text-brand-700">قائمة الاستردادات</Link></li>)}</ul>
+              <ul className="text-xs">{(soRefunds.get(so.id) ?? []).map((r) => <li key={r.id}>استرداد #{r.number} · {label('refundSource', r.sourceType)} · {formatEGP(r.amount)} <StatusChip status={r.status} kind="refund" /> <Link href="/admin/refunds" className="text-brand-700">قائمة الاستردادات</Link></li>)}</ul>
             )}
             {so.status === 'DELIVERED' && !so.fundsReleasedAt && (
               <p className="text-sm"><Link href={`/admin/releases/${so.id}`} className="font-semibold text-brand-700 underline" data-testid="release-link">مراجعة واعتماد إتاحة أرباح البائع</Link></p>

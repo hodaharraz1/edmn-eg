@@ -5,7 +5,7 @@ import { DomainError, conflict, validation } from '@/server/core/errors';
 import { applyBps } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
 import { financialCloses, systemSettings } from '@/server/db/schema';
-import { getSetting, type SettingKey } from '@/server/modules/settings';
+import { getSetting, REAL_MONEY_DUAL_CONTROL_THRESHOLD, type SettingKey } from '@/server/modules/settings';
 import { reconcile } from './ledger';
 
 /* ═══════════════ Kill switches ═══════════════ */
@@ -122,7 +122,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select entry_type, source_id, count(*) n from journal_entries
-        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','DEAL_PAYOUT_PAID')
+        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID')
         group by entry_type, source_id having count(*) > 1`,
     ),
   );
@@ -156,7 +156,9 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
       conn,
       sql`select w.id, w.status from withdrawal_requests w where
         (w.reserved_at is not null and not exists (select 1 from journal_entries e where e.entry_type = 'WITHDRAWAL_RESERVE' and e.source_id = w.id::text))
-        or (w.status = 'PAID' and not exists (select 1 from journal_entries e where e.entry_type = 'WITHDRAWAL_PAID' and e.source_id = w.id::text))`,
+        or (w.status in ('PAID','RETURNED') and not exists (select 1 from journal_entries e where e.entry_type = 'WITHDRAWAL_PAID' and e.source_id = w.id::text))
+        or (w.status = 'RETURNED' and not exists (select 1 from journal_entries e where e.entry_type = 'WITHDRAWAL_RETURNED' and e.source_id = w.id::text))
+        or (w.status in ('REJECTED','FAILED_BEFORE_TRANSFER') and w.reserved_at is not null and not exists (select 1 from journal_entries e where e.entry_type = 'WITHDRAWAL_REVERSAL' and e.source_id = w.id::text))`,
     ),
   );
   add(
@@ -230,7 +232,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select a.seller_id, a.balance, coalesce(w.q, 0) open_reserved from ledger_accounts a
-        left join (select seller_id, sum(amount) q from withdrawal_requests where reserved_at is not null and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING') group by seller_id) w on w.seller_id = a.seller_id
+        left join (select seller_id, sum(amount) q from withdrawal_requests where reserved_at is not null and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN') group by seller_id) w on w.seller_id = a.seller_id
         where a.code = 'SELLER_WITHDRAWAL_RESERVED' and (a.balance < 0 or a.balance <> coalesce(w.q, 0))`,
     ),
   );
@@ -377,7 +379,9 @@ export async function goLiveGate(conn: DbOrTx = db) {
   const unverified = await unverifiedChannels(conn);
   if (unverified.length) blockers.push({ code: 'PAYOUT_COSTS_UNVERIFIED', label: `تكاليف/حدود قنوات التحويل غير موثقة: ${unverified.map((u) => u.channel).join(', ')}` });
   if (!(await getSetting('legal.policiesApproved', conn))) blockers.push({ code: 'LEGAL_APPROVAL', label: 'النصوص والسياسات القانونية لم تُعتمد قانونيًا' });
-  if ((await getSetting('withdrawals.dualControlThreshold', conn)) !== 0) blockers.push({ code: 'MAKER_CHECKER', label: 'حد الرقابة المزدوجة على السحب ليس 0 ج.م' });
+  if ((await getSetting('withdrawals.dualControlThreshold', conn)) !== REAL_MONEY_DUAL_CONTROL_THRESHOLD) blockers.push({ code: 'MAKER_CHECKER', label: 'حد الرقابة المزدوجة على السحب ليس 0 ج.م' });
+  // Fee configuration: an explicit, owner-approved fee split is part of the accepted financial policy.
+  if (!(await getSetting('fees.ownerApproved', conn)) || (await getSetting('fees.buyerShareBps', conn)) === null) blockers.push({ code: 'FEES_OWNER_APPROVAL', label: 'إعداد الرسوم لم يعتمده المالك (fees.ownerApproved)' });
   const staffNo2fa = await rows<{ n: string }>(conn, sql`select count(*)::text n from users where is_staff and status = 'ACTIVE' and totp_enabled_at is null`);
   if (Number(staffNo2fa[0].n) > 0) blockers.push({ code: 'ADMIN_2FA', label: `${staffNo2fa[0].n} حساب إدارة بدون تحقق بخطوتين` });
   const realDest = await rows<{ n: string }>(conn, sql`select count(*)::text n from payment_destinations where is_enabled and not is_test`);

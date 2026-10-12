@@ -90,7 +90,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                 <p className="text-xs text-muted">من <Link href={`/store/${storeSlug}`} className="text-brand-700 hover:underline">{storeName}</Link></p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusChip status={so.status} />
+                <StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />
                 {sellerOrderMessagingAvailable(so) ? (
                   <MessageCtaLink href={`/account/messages/open?so=${so.id}`} label="تواصل مع البائع" unread={unreadBySo.get(so.id) ?? 0} />
                 ) : (
@@ -116,7 +116,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               )}
               {pendingCancel && <Alert tone="warning">طلب الإلغاء بتاعك مستني رد البائع أو فريق اضمن، والشحن موقوف.</Alert>}
               {soRefunds.map((r) => (
-                <p key={r.id} className="rounded-lg bg-page p-2 text-sm" data-testid="refund-status">استرداد {formatEGP(r.amount)}: <StatusChip status={r.status} /> {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) ? '— قيد مراجعة الإدارة' : ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) ? '— معتمد وجاري التحويل' : ['COMPLETED', 'PAID'].includes(r.status) ? `— اتحول${r.paidReference ? ` (مرجع ${r.paidReference})` : ''}` : ''}</p>
+                <p key={r.id} className="rounded-lg bg-page p-2 text-sm" data-testid="refund-status">استرداد {formatEGP(r.amount)}: <StatusChip status={r.status} kind="refund" /> {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) ? '— قيد مراجعة الإدارة' : ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) ? '— تم اعتماده وهو بانتظار التحويل (لم يصلك بعد)' : ['COMPLETED', 'PAID'].includes(r.status) ? `— اتحول${r.paidReference ? ` (مرجع ${r.paidReference})` : ''}` : ''}</p>
               ))}
               <ul className="divide-y divide-line">
                 {items.map((it) => (

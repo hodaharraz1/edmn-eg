@@ -13,7 +13,7 @@ import { realMoneyEnabled } from '@/server/modules/settings';
 import { Badge, EmptyState, StatusChip } from '@/ui/feedback';
 
 export const metadata = { title: 'طلبات السحب' };
-const GROUPS: Record<string, string[]> = { open: ['REQUESTED', 'UNDER_REVIEW'], approved: ['APPROVED', 'PROCESSING'], paid: ['PAID'], closed: ['REJECTED', 'CANCELLED'] };
+const GROUPS: Record<string, string[]> = { open: ['REQUESTED', 'UNDER_REVIEW'], approved: ['APPROVED', 'PROCESSING', 'TRANSFER_UNCERTAIN'], paid: ['PAID', 'RETURNED'], closed: ['REJECTED', 'CANCELLED', 'FAILED_BEFORE_TRANSFER'] };
 
 export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>) {
   const { actor, allowed } = await adminWith('withdrawals.view');
@@ -37,7 +37,7 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
         { key: 'src', header: 'المصدر', cell: (r) => (r.w.source === 'SCHEDULED' ? <Badge tone="info">تسوية دورية</Badge> : 'طلب البائع') },
         { key: 'sla', header: 'موعد SLA', cell: (r) => <span className={['PAID', 'REJECTED', 'CANCELLED'].includes(r.w.status) ? '' : r.w.slaDueAt < now ? 'font-bold text-danger-700' : ''}>{formatDate(r.w.slaDueAt, true)}</span> },
         { key: 'f', header: '', cell: (r) => <span className="flex gap-1">{r.w.requiresDualControl && <Badge tone="warning">رقابة مزدوجة</Badge>}{r.seller.payoutHoldUntil && r.seller.payoutHoldUntil > now && <Badge tone="danger">تجميد</Badge>}</span> },
-        { key: 'st', header: 'الحالة', cell: (r) => <span className="inline-flex items-center gap-1"><StatusChip status={r.w.status} />{r.w.isTest && <TestBadge />}</span> },
+        { key: 'st', header: 'الحالة', cell: (r) => <span className="inline-flex items-center gap-1"><StatusChip status={r.w.status} kind="withdrawal" />{r.w.isTest && <TestBadge />}</span> },
       ]} />
     </div>
   );

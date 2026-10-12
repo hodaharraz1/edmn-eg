@@ -42,7 +42,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
   const unreadMsgs = canMessage ? await unreadForContext(actor, { sellerOrderId: so.id }) : 0;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الطلبات', href: '/seller/orders' }, { label: `#${order.number}-${so.suffix}` }]} />} title={`طلب #${order.number}-${so.suffix}`} description={`مدفوع في ${formatDate(so.paidAt, true)}`} actions={<><StatusChip status={so.status} />{canMessage && <MessageCtaLink href={`/seller/messages/open?so=${so.id}`} label="تواصل مع المشتري" unread={unreadMsgs} />}</>} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'الطلبات', href: '/seller/orders' }, { label: `#${order.number}-${so.suffix}` }]} />} title={`طلب #${order.number}-${so.suffix}`} description={`مدفوع في ${formatDate(so.paidAt, true)}`} actions={<><StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />{canMessage && <MessageCtaLink href={`/seller/messages/open?so=${so.id}`} label="تواصل مع المشتري" unread={unreadMsgs} />}</>} />
       {so.status === 'PAID' && <Alert tone="warning" title="طلب جديد بانتظار تأكيدك">أكّد الطلب ثم جهّزه للشحن خلال {so.processingDays ?? 2} يوم عمل.</Alert>}
       {so.financialHold && <Alert tone="danger">يوجد تجميد إداري على مستحقات هذا الطلب: {so.holdReason}</Alert>}
       {so.sellerResponseOverdueAt && so.status === 'PAID' && <Alert tone="danger">تأخرت في تأكيد الطلب (الموعد كان {formatDate(so.sellerResponseDueAt, true)}). فريق اضمن بيتابع.</Alert>}

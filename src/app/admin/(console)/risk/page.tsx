@@ -29,7 +29,7 @@ export default async function RiskFlags() {
     db.execute<{ id: string; store: string | null; amount: string; at: string; method_at: string }>(sql`
       select w.id::text, st.name store, w.amount::text, w.created_at::text at, pm.created_at::text method_at
       from withdrawal_requests w join seller_payout_methods pm on pm.id = w.payout_method_id left join stores st on st.seller_id = w.seller_id
-      where w.status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING') and w.created_at - pm.created_at < interval '72 hours'`),
+      where w.status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN') and w.created_at - pm.created_at < interval '72 hours'`),
     db.execute<{ key: string; count: number; at: string }>(sql`
       select key, max(count) count, max(window_start)::text at from rate_limits
       where window_start > now() - interval '24 hours' and ((key like 'login-id:%' and count >= 10) or (key like 'totp:%' and count >= 8))

@@ -29,7 +29,7 @@ export default async function Settlements() {
         <StatCard label="وضع التسوية" value={mode === 'ON_REQUEST' ? 'عند الطلب' : 'مجدولة'} tone="neutral" />
         <StatCard label="أيام التسوية في الشهر" value={mode === 'ON_REQUEST' ? '—' : days.join('، ')} tone="neutral" />
         <StatCard label="أرصدة متاحة للبائعين" value={formatEGP(Number(r.rows[0]?.available ?? 0))} hint={`الحد الأدنى للتسوية ${formatEGP(min)}`} tone="success" />
-        <StatCard label="أرصدة معلّقة (قبل تأكيد الاستلام)" value={formatEGP(Number(r.rows[0]?.pending ?? 0))} tone="warning" />
+        <StatCard label="أرصدة معلّقة (لم تُتح بعد)" value={formatEGP(Number(r.rows[0]?.pending ?? 0))} tone="warning" />
       </div>
       <DataTable
         rows={rows}

@@ -47,6 +47,9 @@ describe('state machines', () => {
       for (const t of m.terminal) expect(m.next(t)).toHaveLength(0);
     }
     expect(paymentMachine.terminal).toContain('CONFIRMED');
-    expect(withdrawalMachine.terminal).toContain('PAID');
+    // Batch 1 C5: PAID only moves to RETURNED (a compensating, approved entry — never a reversal of history).
+    expect(withdrawalMachine.next('PAID')).toEqual(['RETURNED']);
+    expect(withdrawalMachine.terminal).toEqual(expect.arrayContaining(['RETURNED', 'FAILED_BEFORE_TRANSFER', 'REJECTED']));
+    expect(withdrawalMachine.next('PROCESSING')).not.toContain('REJECTED');
   });
 });

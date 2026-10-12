@@ -6,7 +6,8 @@ import { hashPassword } from '@/server/auth/password';
 import type { Actor } from '@/server/core/actor';
 import { encrypt } from '@/server/core/crypto';
 import { db } from '@/server/db/client';
-import { addresses, brands, categories, cmsBlocks, governorates, paymentDestinations, paymentMethods, sellerShippingRates, stores, userRoles, users } from '@/server/db/schema';
+import { assertNotProductionDatabase } from '@/server/db/environment';
+import { addresses, brands, categories, cmsBlocks, governorates, paymentDestinations, paymentMethods, sellerPayoutMethods, sellerShippingRates, stores, userRoles, users } from '@/server/db/schema';
 import { saveBrand } from '@/server/modules/catalog/taxonomy';
 import { addImages, createDraft, moderateProduct, saveVariants, submitForReview, updateDetails, updateLogistics } from '@/server/modules/catalog/products';
 import { addToCart } from '@/server/modules/commerce/cart';
@@ -20,7 +21,7 @@ import { createProductReview, createSellerReview } from '@/server/modules/review
 import { requestReturn } from '@/server/modules/postpurchase/returns';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { openTicket } from '@/server/modules/support/service';
-import { addPayoutMethod, decideSeller, saveBusiness, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
+import { addPayoutMethod, decideSeller, verifyPayoutMethod, saveBusiness, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 import { createDeal, inviteSeller, saveDealStep, claimInvitation, submitSellerOffer, respondToOffer, startDealPayment } from '@/server/modules/deals/service';
 import { orderItems, sellerOrders, payments, paymentSubmissions, productVariants } from '@/server/db/schema';
 import { demoDocument, demoImage } from './demo-images';
@@ -169,7 +170,13 @@ async function onboardSeller(
   }
   await addPayoutMethod(a, { type: 'INSTAPAY', holderName: u.fullName, instapayAddress: `${u.email!.split('@')[0]}@instapay` });
   await submitApplication(a, true);
-  if (approve) await decideSeller(admin, (await sellerActor(u.id))!.sellerId!, 'APPROVE');
+  if (approve) {
+    const sellerId = (await sellerActor(u.id))!.sellerId!;
+    await decideSeller(admin, sellerId, 'APPROVE');
+    // Seller approval never verifies the payout destination: the payout verifier does it separately.
+    const [pm] = await db.select().from(sellerPayoutMethods).where(and(eq(sellerPayoutMethods.sellerId, sellerId), eq(sellerPayoutMethods.status, 'PENDING_VERIFICATION')));
+    if (pm) await verifyPayoutMethod(admin, pm.id, true, 'تحقق بيانات الديمو');
+  }
   const sa = (await sellerActor(u.id))!;
   if (approve) {
     const govs = await db.select().from(governorates);
@@ -193,7 +200,10 @@ async function onboardSeller(
 export function assertDemoSeedAllowed(env: Record<string, string | undefined> = process.env) {
   const kind = env.EDMN_ENVIRONMENT;
   if (kind === 'production') throw new Error('Refusing to seed demo data: EDMN_ENVIRONMENT=production');
-  if (kind === 'staging' || kind === 'development') return;
+  if (env.NODE_ENV === 'production' && kind !== 'staging') throw new Error('Refusing to seed demo data with NODE_ENV=production outside an explicitly-marked staging deployment');
+  // Staging supplies its own secrets (demoCredentials). The public repository credentials (development)
+  // may only ever be written to a database on this machine.
+  if (kind === 'staging') return;
   let host = '';
   try {
     host = new URL(env.DATABASE_URL ?? '').hostname;
@@ -207,6 +217,7 @@ export function assertDemoSeedAllowed(env: Record<string, string | undefined> = 
 
 export async function seedDemo() {
   assertDemoSeedAllowed();
+  await assertNotProductionDatabase(db, 'seed demo data');
   const [already] = await db.select().from(users).where(eq(users.email, 'admin@edmn.local'));
   if (already) return { skipped: true };
 

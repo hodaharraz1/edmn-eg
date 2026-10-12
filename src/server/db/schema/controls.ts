@@ -21,6 +21,7 @@ export const FINANCIAL_ACTIONS = [
   'DEAL_RELEASE',
   'DEAL_REFUND',
   'DEAL_PAYOUT',
+  'WITHDRAWAL_PAYOUT_RETURN',
 ] as const;
 export type FinancialAction = (typeof FINANCIAL_ACTIONS)[number];
 export const APPROVAL_STATUSES = ['PENDING_CHECKER', 'APPROVED', 'CONSUMED', 'REVOKED', 'REJECTED'] as const;

@@ -9,7 +9,7 @@ import { proportion } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
 import { orderItems, orders, paymentSubmissions, payments, refundItems, refunds, sellerOrders, users } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
-import { getSetting } from '@/server/modules/settings';
+import { effectiveDualControlThreshold } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { formatEGP } from '@/lib/format';
 import { transition } from '../_shared';
@@ -146,9 +146,7 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   if (amount > left.total) throw invalidState(`المبلغ القابل للاسترداد لهذا الطلب ${formatEGP(left.total)}`);
   const sellerLiability = principal + shipping - sellerFee;
   const [payment] = await tx.select().from(payments).where(eq(payments.orderId, so.orderId));
-  const [sub] = payment
-    ? await tx.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, payment.id), eq(paymentSubmissions.status, 'ACCEPTED')))
-    : [];
+  const destination = await originalPaymentDestination(tx, payment);
   const [refund] = await tx
     .insert(refunds)
     .values({
@@ -167,7 +165,7 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
       reason: input.reason,
       originalPaymentId: payment?.id ?? null,
       // Authoritative destination: back through the original payment method / payer reference.
-      destinationSnapshot: payment ? { method: payment.method, paymentId: payment.id, payerName: sub?.payerName ?? null, payerReference: sub?.reference ?? null } : null,
+      destinationSnapshot: destination,
       idempotencyKey: `${input.sourceType}:${input.sourceId}`,
       reasonCode: attrib.reasonCode,
       responsibleParty: attrib.responsibleParty,
@@ -184,6 +182,19 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   await audit(tx, actor, { action: 'refund.requested', entityType: 'refund', entityId: refund.id, newValues: { sellerOrderId: so.id, amount, principal, shipping, buyerFee, sellerFee, source: input.sourceType, reasonCode: attrib.reasonCode, responsibleParty: attrib.responsibleParty, stage, feePolicy: policy.source, manualReview: policy.manualReview } });
   await notify(tx, { event: 'REFUND_UPDATED', userIds: [order.customerId], vars: { status: 'طلب الاسترداد اتسجل وقيد مراجعة الإدارة', amount: formatEGP(amount) }, link: `/account/orders/${order.id}`, dedupeKey: `refund:${refund.id}:requested` });
   return refund;
+}
+
+/** Authoritative refund destination: back through the ORIGINAL payment method / payer reference. */
+export async function originalPaymentDestination(tx: DbOrTx, payment: typeof payments.$inferSelect | undefined | null) {
+  if (!payment) return null;
+  const [sub] = await tx.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, payment.id), eq(paymentSubmissions.status, 'ACCEPTED')));
+  return { method: payment.method, paymentId: payment.id, payerName: sub?.payerName ?? null, payerReference: sub?.reference ?? null };
+}
+
+/** Stable comparison of two destination snapshots (key order independent). */
+export function sameDestination(a: unknown, b: unknown) {
+  const canon = (v: unknown): unknown => (v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v as object).sort().map((k) => [k, canon((v as Record<string, unknown>)[k])]) : v);
+  return JSON.stringify(canon(a ?? null)) === JSON.stringify(canon(b ?? null));
 }
 
 export function refundVersion(r: Refund) {
@@ -206,6 +217,8 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
     if (r.amount !== input.expectedAmount) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ الجديد واعتمد تاني');
     await assertNotPaused(tx, 'killswitch.refunds');
     if (r.customerId === actor.userId) throw forbidden('لا يمكنك اعتماد استرداد لنفسك');
+    if (r.destinationChangedBy && r.destinationChangedBy === actor.userId) throw forbidden('من غيّر وجهة الاسترداد لا يمكنه اعتماده');
+    if (!r.destinationSnapshot) throw invalidState('لا توجد وجهة استرداد أصلية مسجلة لهذا الاسترداد');
     if (!r.sellerOrderId) {
       if (!r.dealId) throw invalidState('استرداد بدون مصدر');
       const { approveDealRefundTx } = await import('@/server/modules/deals/service');
@@ -217,10 +230,14 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
         economicVersion: refundVersion(r),
         reason: input.reason,
         idempotencyKey: `refund-approval:${r.id}`,
+        destinationSnapshot: r.destinationSnapshot as Record<string, unknown>,
       });
       await approveDealRefundTx(tx, actor, r, approval.id);
       await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', input.reason);
-      await tx.update(refunds).set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date() }).where(eq(refunds.id, r.id));
+      await tx
+        .update(refunds)
+        .set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
+        .where(eq(refunds.id, r.id));
       await audit(tx, actor, { action: 'refund.approved', entityType: 'refund', entityId: r.id, newValues: { approvalId: approval.id, amount: r.amount, dealId: r.dealId }, reason: input.reason });
       return { alreadyApproved: false, approvalId: approval.id };
     }
@@ -255,7 +272,11 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
       ],
     });
     await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', input.reason);
-    await tx.update(refunds).set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date() }).where(eq(refunds.id, r.id));
+    // The destination is frozen with the approval: the payout goes exactly there or not at all.
+    await tx
+      .update(refunds)
+      .set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
+      .where(eq(refunds.id, r.id));
     await tx.update(sellerOrders).set({ refundedTotal: so.refundedTotal + r.amount }).where(eq(sellerOrders.id, so.id));
     const lines = await tx.select().from(refundItems).where(eq(refundItems.refundId, r.id));
     for (const l of lines) {
@@ -263,21 +284,24 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
       await tx.update(orderItems).set({ refundedQuantity: it.refundedQuantity + l.quantity }).where(eq(orderItems.id, it.id));
     }
     await audit(tx, actor, { action: 'refund.approved', entityType: 'refund', entityId: r.id, newValues: { approvalId: approval.id, amount: r.amount, sellerLiability: liability, feeReversal: commission, released }, reason: input.reason });
-    await notify(tx, { event: 'REFUND_UPDATED', userIds: [r.customerId], vars: { status: 'الاسترداد اتعتمد وجاري التحويل', amount: formatEGP(r.amount) }, link: '/account', dedupeKey: `refund:${r.id}:approved` });
+    await notify(tx, { event: 'REFUND_UPDATED', userIds: [r.customerId], vars: { status: 'تم اعتماد الاسترداد وهو بانتظار التحويل', amount: formatEGP(r.amount) }, link: '/account', dedupeKey: `refund:${r.id}:approved` });
     return { alreadyApproved: false, approvalId: approval.id };
   });
 }
 
+/** Rejecting a refund is a financial decision (the customer is not paid): permission, fresh 2FA, reason, audited. */
 export async function rejectRefund(actor: Actor, refundId: string, reason: string) {
   requirePermission(actor, 'refunds.approve');
-  if (!reason || reason.trim().length < 3) throw validation('اكتب سبب الرفض');
+  requireStepUp(actor);
+  if (!reason || reason.trim().length < 5) throw validation('اكتب سبب الرفض');
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
     if (r.status === 'REJECTED') return;
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك البت في استرداد لنفسك');
     await transition(tx, actor, refundMachine, r.id, r.status, 'REJECTED', reason);
     await tx.update(refunds).set({ status: 'REJECTED', rejectReason: reason }).where(eq(refunds.id, r.id));
-    await audit(tx, actor, { action: 'refund.rejected', entityType: 'refund', entityId: r.id, reason });
+    await audit(tx, actor, { action: 'refund.rejected', entityType: 'refund', entityId: r.id, oldValues: { status: r.status }, newValues: { status: 'REJECTED', amount: r.amount }, reason });
     await notify(tx, { event: 'REFUND_UPDATED', userIds: [r.customerId], vars: { status: `طلب الاسترداد اترفض: ${reason}`, amount: formatEGP(r.amount) }, link: '/account', dedupeKey: `refund:${r.id}:rejected` });
   });
 }
@@ -296,21 +320,55 @@ export async function markRefundFailed(actor: Actor, refundId: string, reason: s
 }
 
 /**
- * Manual destination exception (e.g. the original wallet was closed). Fresh 2FA, reason, audited; never
- * applied silently from the buyer's current profile, and impossible once the refund was paid out.
+ * EXCEPTIONAL destination change (e.g. the original wallet was closed). Dedicated permission, fresh 2FA and a
+ * reason; never applied from the buyer's free text or profile. After approval it suspends execution: a
+ * DIFFERENT person must re-approve the new destination (reapproveRefundDestination), and the person who
+ * changed it can neither re-approve nor execute the payout.
  */
 export async function overrideRefundDestination(actor: Actor, refundId: string, destination: { method: string; details: string }, reason: string) {
-  requirePermission(actor, 'refunds.approve');
+  requirePermission(actor, 'refunds.destination.override');
   requireStepUp(actor);
-  if (!reason || reason.trim().length < 5) throw validation('اكتب سبب تغيير وجهة الاسترداد');
-  if (!destination.details?.trim()) throw validation('بيانات الوجهة مطلوبة');
+  if (!reason || reason.trim().length < 10) throw validation('اكتب سبب تغيير وجهة الاسترداد (10 أحرف على الأقل)');
+  if (!destination.method?.trim() || !destination.details?.trim()) throw validation('بيانات الوجهة مطلوبة');
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
     if (['COMPLETED', 'PAID', 'REJECTED', 'CANCELLED'].includes(r.status)) throw invalidState('لا يمكن تغيير وجهة استرداد منتهي');
-    const next = { method: destination.method, details: destination.details.trim(), overriddenBy: actor.userId, previous: r.destinationSnapshot };
-    await tx.update(refunds).set({ destinationSnapshot: next, destinationOverride: true }).where(eq(refunds.id, r.id));
-    await audit(tx, actor, { action: 'refund.destination_overridden', entityType: 'refund', entityId: r.id, oldValues: { destination: r.destinationSnapshot }, newValues: { destination: next }, reason });
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك تغيير وجهة استرداد لنفسك');
+    const next = { method: destination.method.trim(), details: destination.details.trim(), exception: true, previous: r.destinationSnapshot };
+    const approved = !!r.approvalId;
+    await tx
+      .update(refunds)
+      .set({ destinationSnapshot: next, destinationOverride: true, destinationChangedBy: actor.userId, destinationChangedAt: new Date(), destinationReapprovalRequired: approved })
+      .where(eq(refunds.id, r.id));
+    await audit(tx, actor, {
+      action: 'refund.destination_overridden',
+      entityType: 'refund',
+      entityId: r.id,
+      oldValues: { destination: r.destinationSnapshot, approvedDestination: r.approvedDestination },
+      newValues: { destination: next, reapprovalRequired: approved },
+      reason,
+    });
+  });
+}
+
+/** Second person re-approves an exceptional destination before any payout (fresh 2FA, reason, audited). */
+export async function reapproveRefundDestination(actor: Actor, refundId: string, reason: string) {
+  requirePermission(actor, 'refunds.approve');
+  requireStepUp(actor);
+  if (!reason || reason.trim().length < 5) throw validation('اكتب سبب اعتماد الوجهة الجديدة');
+  await db.transaction(async (tx) => {
+    const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
+    if (!r) throw notFound('الاسترداد');
+    if (!r.destinationReapprovalRequired) throw invalidState('لا توجد وجهة جديدة بانتظار الاعتماد');
+    if (r.destinationChangedBy === actor.userId) throw forbidden('من غيّر وجهة الاسترداد لا يمكنه اعتمادها');
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك اعتماد استرداد لنفسك');
+    if (r.sellerOrderId) {
+      const [so] = await tx.select({ sellerId: sellerOrders.sellerId }).from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId));
+      await assertNotSelfDealing(tx, actor, so.sellerId);
+    }
+    await tx.update(refunds).set({ approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false }).where(eq(refunds.id, r.id));
+    await audit(tx, actor, { action: 'refund.destination_reapproved', entityType: 'refund', entityId: r.id, oldValues: { approvedDestination: r.approvedDestination }, newValues: { approvedDestination: r.destinationSnapshot }, reason });
   });
 }
 
@@ -330,7 +388,13 @@ export async function recordRefundPayout(actor: Actor, refundId: string, referen
     if (!['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status)) throw invalidState('يجب اعتماد الاسترداد قبل تسجيل صرفه');
     await assertNotPaused(tx, 'killswitch.payouts');
     if (r.customerId === actor.userId) throw forbidden('لا يمكنك صرف استرداد لنفسك');
-    const threshold = await getSetting('withdrawals.dualControlThreshold', tx);
+    // Destination integrity (C4): only to the destination frozen by the approval, never one changed after it.
+    if (!r.approvedDestination) throw invalidState('لا توجد وجهة استرداد معتمدة. يجب اعتماد الوجهة قبل الصرف');
+    if (r.destinationReapprovalRequired || !sameDestination(r.approvedDestination, r.destinationSnapshot)) {
+      throw invalidState('تم تغيير وجهة الاسترداد بعد الاعتماد. يلزم اعتماد الوجهة الجديدة من شخص آخر قبل الصرف');
+    }
+    if (r.destinationChangedBy && r.destinationChangedBy === actor.userId) throw forbidden('من غيّر وجهة الاسترداد لا يمكنه تنفيذ صرفه');
+    const threshold = await effectiveDualControlThreshold(tx);
     const maker = r.approvedBy ?? r.createdBy;
     const dual = r.amount >= threshold && !!maker;
     if (dual && maker === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن معتمد الاسترداد');
@@ -342,7 +406,7 @@ export async function recordRefundPayout(actor: Actor, refundId: string, referen
       economicVersion: refundVersion(r),
       reason: `صرف الاسترداد — مرجع ${ref}`,
       idempotencyKey: `refund-payout:${r.id}`,
-      destinationSnapshot: (r.destinationSnapshot as Record<string, unknown>) ?? null,
+      destinationSnapshot: r.approvedDestination as Record<string, unknown>,
       dualControl: dual ? { requestedBy: maker! } : null,
     });
     const to: RefundStatus = r.status === 'PENDING' ? 'PAID' : 'COMPLETED';

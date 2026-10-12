@@ -21,7 +21,7 @@ export const STATUS_LABEL_FOR_NOTIFY: Partial<Record<ReturnStatus, string>> = {
   REJECTED: 'مرفوض',
   RECEIVED: 'البائع استلم المنتج',
   INSPECTION: 'قيد الفحص',
-  REFUND_PENDING: 'الاسترداد اتقبل وجاري التحويل',
+  REFUND_PENDING: 'الاسترداد قيد الاعتماد والتحويل — لم يصلك المبلغ بعد',
   REFUNDED: 'المبلغ اترد',
   DISPUTED: 'اتحوّل لفريق اضمن',
 };

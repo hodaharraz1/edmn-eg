@@ -947,6 +947,9 @@ export async function setDealFinancialHold(actor: Actor, dealId: string, hold: b
   await db.transaction(async (tx) => {
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
+    // Conflict of interest: a party to the deal can neither place nor lift its hold.
+    if (deal.buyerId === actor.userId || deal.sellerUserId === actor.userId) throw forbidden('لا يمكنك تعديل تجميد صفقة أنت طرف فيها');
+    if (deal.financialHold === hold) return;
     await tx.update(externalDeals).set({ financialHold: hold }).where(eq(externalDeals.id, deal.id));
     await audit(tx, actor, { action: hold ? 'deal.hold_set' : 'deal.hold_released', entityType: 'external_deal', entityId: deal.id, reason: why });
   });
@@ -983,7 +986,10 @@ async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundTo
     await tx.insert(dealPayouts).values({ dealId: deal.id, payeeUserId: deal.sellerUserId, amount: payout }).onConflictDoNothing();
   }
   if (refundToBuyer > 0) {
-    // Approved together with the release (one approval, enumerated balanced legs).
+    // Approved together with the release (one approval, enumerated balanced legs). The destination is the
+    // ORIGINAL deal payment, frozen now: the payout can only go there.
+    const destination = await dealPaymentDestination(tx, deal.id);
+    if (!destination) throw invalidState('لا توجد دفعة أصلية للصفقة لتحديد وجهة الاسترداد');
     await tx
       .insert(refunds)
       .values({
@@ -999,6 +1005,9 @@ async function postDealCompletion(tx: DbOrTx, actor: Actor, deal: Deal, refundTo
         approvedAt: new Date(),
         reason: 'قرار نزاع صفقة محمية (استرداد جزئي)',
         idempotencyKey: `DEAL:${deal.id}`,
+        destinationSnapshot: destination,
+        approvedDestination: destination,
+        destinationApprovedBy: actor.userId,
         createdBy: actor.userId,
       })
       .onConflictDoNothing();
@@ -1112,6 +1121,7 @@ export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string
         status: 'REQUESTED',
         reason: `قرار نزاع ${disputeId}: ${note}`.slice(0, 1000),
         idempotencyKey: `DEAL:${deal.id}`,
+        destinationSnapshot: await dealPaymentDestination(tx, deal.id),
         requestedBy: actor.userId,
         createdBy: actor.userId,
       })
@@ -1126,6 +1136,13 @@ export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string
     await tx.update(dealDeliveryOtps).set({ invalidatedAt: new Date(), invalidReason: 'CLOSED' }).where(ACTIVE_OTP(deal.id));
     await moveDeal(tx, actor, deal, 'ACTIVE', { handoverVerifiedAt: null, handoverOtpId: null, deliveryConflictAt: null, buyerResponseDueAt: null }, note);
   }
+}
+
+/** Authoritative refund destination of a deal: its original (confirmed) payment. */
+async function dealPaymentDestination(tx: DbOrTx, dealId: string) {
+  const { originalPaymentDestination } = await import('@/server/modules/finance/refunds');
+  const [pay] = await tx.select().from(payments).where(eq(payments.dealId, dealId));
+  return originalPaymentDestination(tx, pay);
 }
 
 /** Admin approval of a deal refund (FULL_REFUND decision): posts DEAL_REFUND and closes the deal REFUNDED. */

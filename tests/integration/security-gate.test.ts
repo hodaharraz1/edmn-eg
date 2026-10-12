@@ -12,7 +12,7 @@ import { placeOrder } from '@/server/modules/commerce/orders';
 import { addToCart, mergeGuestCart } from '@/server/modules/commerce/cart';
 import { setListingActive, moderateProduct } from '@/server/modules/catalog/products';
 import { accountBalance, postEntry, reconcile } from '@/server/modules/finance/ledger';
-import { approveWithdrawal, markWithdrawalPaid, markWithdrawalProcessing, rejectWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
+import { approveWithdrawal, markWithdrawalFailedBeforeTransfer, markWithdrawalPaid, markWithdrawalProcessing, rejectWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { blockDataSchemas } from '@/server/modules/cms/service';
@@ -181,16 +181,18 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     }));
   });
 
-  it('SEC-WD-4: a withdrawal in transfer can only be rejected by a different, re-authenticated person', async () => {
+  it('SEC-WD-4 (Batch 1 C5): a withdrawal in transfer cannot be rejected; only a different person with evidence establishes "failed before transfer"', async () => {
     const { s } = await releasedOrder(1000_00);
     const w = await requestWithdrawal(s.actor, { amount: '300', clientKey: randomUUID() });
     await approveWithdrawal(admin, w.withdrawal.id);
     await markWithdrawalProcessing(admin, w.withdrawal.id);
-    await expect(rejectWithdrawal(admin, w.withdrawal.id, 'لم يتم التحويل')).rejects.toThrow(/غير منفذ التحويل/);
+    await expect(rejectWithdrawal(admin, w.withdrawal.id, 'لم يتم التحويل')).rejects.toThrow(/بدأ التحويل بالفعل/);
     const other = await makeAdmin();
-    await rejectWithdrawal(other, w.withdrawal.id, 'تعذر التحويل — تم التحقق مع البنك');
+    await expect(rejectWithdrawal(other, w.withdrawal.id, 'تعذر التحويل — تم التحقق مع البنك')).rejects.toThrow(/بدأ التحويل بالفعل/);
+    await expect(markWithdrawalFailedBeforeTransfer(admin, w.withdrawal.id, { reason: 'لم يتم التحويل', evidence: 'BANK-STMT-1' })).rejects.toThrow(/غير منفذ التحويل/);
+    await markWithdrawalFailedBeforeTransfer(other, w.withdrawal.id, { reason: 'تعذر التحويل — تم التحقق مع البنك', evidence: 'BANK-STMT-1' });
     const [row] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, w.withdrawal.id));
-    expect(row.status).toBe('REJECTED');
+    expect(row.status).toBe('FAILED_BEFORE_TRANSFER');
   });
 
   it('SEC-WD-5: suspended sellers are not paid out even after approval', async () => {

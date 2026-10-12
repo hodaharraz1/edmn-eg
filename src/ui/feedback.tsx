@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { statusLabel, statusTone, type Tone } from '@/lib/i18n/labels';
+import { sellerOrderStatusLabel, statusLabel, statusTone, type StatusKind, type Tone } from '@/lib/i18n/labels';
 
 const toneClasses: Record<Tone, string> = {
   neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
@@ -17,10 +17,10 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: Tone; 
   return <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset', toneClasses[tone], className)}>{children}</span>;
 }
 
-export function StatusChip({ status, className }: { status: string | null | undefined; className?: string }) {
+export function StatusChip({ status, className, kind, receiptBasis }: { status: string | null | undefined; className?: string; kind?: StatusKind | 'sellerOrder'; receiptBasis?: string | null }) {
   return (
-    <Badge tone={statusTone(status)} className={className}>
-      {statusLabel(status)}
+    <Badge tone={statusTone(status, kind === 'sellerOrder' ? undefined : kind)} className={className}>
+      {kind === 'sellerOrder' ? sellerOrderStatusLabel(status, receiptBasis) : statusLabel(status, kind)}
     </Badge>
   );
 }

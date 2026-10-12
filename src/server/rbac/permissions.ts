@@ -36,6 +36,8 @@ export const PERMISSIONS = {
   'returns.manage': 'إدارة المرتجعات',
   'refunds.approve': 'اعتماد الاسترداد (قيد عكسي)',
   'refunds.pay': 'تسجيل صرف المبالغ المستردة',
+  /** Exceptional change of a refund destination (requires re-approval by a different person before payout). */
+  'refunds.destination.override': 'تغيير استثنائي لوجهة الاسترداد',
   'disputes.manage': 'إدارة النزاعات',
   'deals.view': 'عرض الصفقات الخارجية',
   'deals.manage': 'إدارة الصفقات الخارجية',

@@ -302,6 +302,8 @@ export async function saveDestination(actor: Actor, id: string | null, input: z.
     VODAFONE_CASH: ['walletNumber'],
   };
   if (!d.isTest) for (const k of required[d.methodCode]) if (!d.details[k]) throw validation(`الحقل ${k} مطلوب`);
+  // Fail closed (C8): production never holds TEST destinations (the database refuses them as well).
+  if (d.isTest && process.env.EDMN_ENVIRONMENT === 'production') throw validation('وجهات الدفع التجريبية (TEST) غير مسموحة في بيئة الإنتاج');
   return db.transaction(async (tx) => {
     if (id) {
       const [old] = await tx.select().from(paymentDestinations).where(eq(paymentDestinations.id, id)).for('update');

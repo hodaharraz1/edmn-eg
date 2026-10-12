@@ -505,6 +505,13 @@ export const refunds = pgTable(
     /** Authoritative destination: the original payment method/reference unless an audited exception. */
     destinationSnapshot: jsonb(),
     destinationOverride: boolean().notNull().default(false),
+    /** Destination frozen by the refund approval; a payout is executed only to exactly this destination. */
+    approvedDestination: jsonb(),
+    /** Exceptional destination change (dedicated permission): requires a re-approval by a different person. */
+    destinationChangedBy: uuid().references(() => users.id),
+    destinationChangedAt: ts(),
+    destinationReapprovalRequired: boolean().notNull().default(false),
+    destinationApprovedBy: uuid().references(() => users.id),
     idempotencyKey: text(),
     /** Cost attribution: why, at which stage, who is responsible, and which fee policy decided the components. */
     reasonCode: text(),

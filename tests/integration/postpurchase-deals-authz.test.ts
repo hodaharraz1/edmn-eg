@@ -86,8 +86,8 @@ describe('disputes', () => {
     const [so] = await sellerOrdersOf(order.id);
     await shipIt(s.actor, so.id);
     const d = await openDispute(c.actor, { sellerOrderId: so.id, reasonCode: 'NOT_AS_DESCRIBED', description: 'المنتج المستلم مختلف تماماً عن الصور المعروضة في الإعلان' });
-    const res = await confirmReceipt(c.actor, so.id);
-    expect(res.released).toBe(false);
+    // Batch 1 (fail closed): while the buyer's dispute is open, receipt is decided by the dispute, not by a click.
+    await expect(confirmReceipt(c.actor, so.id)).rejects.toThrow(/نزاع مفتوح/);
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(0);
     await expect(resolveDispute(c.actor, d.id, { decision: 'FULL_REFUND', reasonCode: 'X', note: 'قرار من العميل نفسه' })).rejects.toThrow(/صلاحية/);
     const officer = await makeAdmin(['DISPUTE_OFFICER']);
@@ -110,7 +110,7 @@ describe('disputes', () => {
     const [so] = await sellerOrdersOf(order.id);
     await shipIt(s.actor, so.id);
     const d = await openDispute(c.actor, { sellerOrderId: so.id, reasonCode: 'OTHER', description: 'شكوى للاختبار بدون أدلة كافية من العميل' });
-    await confirmReceipt(c.actor, so.id);
+    await expect(confirmReceipt(c.actor, so.id)).rejects.toThrow(/نزاع مفتوح/);
     await resolveDispute(admin, d.id, { decision: 'REJECT_CLAIM', reasonCode: 'NO_EVIDENCE', note: 'لم تقدم أدلة تدعم الشكوى' });
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(0); // the decision lifts the hold, it does not pay
     await releaseSellerOrder(await makeAdmin(['FINANCE_CHECKER']), so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد رفض الشكوى' });

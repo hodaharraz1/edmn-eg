@@ -5,13 +5,11 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { CATEGORY_NAV_TAG } from '@/server/web/context';
 import { and, eq } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { hashPassword, passwordProblems, STAFF_POLICY } from '@/server/auth/password';
 import { requirePermission, requireStepUp } from '@/server/core/actor';
 import { parseEgp, parsePercentToBps } from '@/server/core/money';
 import { validation } from '@/server/core/errors';
-import { normalizeEgyptMobile } from '@/server/core/text';
 import { db } from '@/server/db/client';
-import { riskFlags, rolePermissions, roles, userRoles, users, notificationTemplates } from '@/server/db/schema';
+import { riskFlags, users, notificationTemplates } from '@/server/db/schema';
 import { addPolicyRule, saveAttribute, saveBrand, saveCategory, setCategoryAttribute, togglePolicyRule } from '@/server/modules/catalog/taxonomy';
 import { moderateProduct, moderateRevision, type ModerationDecision } from '@/server/modules/catalog/products';
 import {
@@ -26,7 +24,7 @@ import {
 } from '@/server/modules/commerce/fulfilment';
 import type { CancellationReasonCode, ShipmentExceptionCode } from '@/domain/machines';
 import { createRule, setRuleEnabled } from '@/server/modules/finance/commissions';
-import { approveWithdrawal, createAdjustment, decideAdjustment, markDealPayoutPaid, markRefundPaid, markWithdrawalPaid, markWithdrawalProcessing, revealPayoutDetails, rejectWithdrawal, reviewWithdrawal, runScheduledSettlement } from '@/server/modules/finance/withdrawals';
+import { approveWithdrawal, createAdjustment, decideAdjustment, markDealPayoutPaid, markRefundPaid, markWithdrawalFailedBeforeTransfer, markWithdrawalPaid, markWithdrawalProcessing, markWithdrawalTransferUncertain, recordWithdrawalReturned, revealPayoutDetails, rejectWithdrawal, reviewWithdrawal, runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { confirmPayment, rejectPayment, saveDestination, startReview, updatePaymentMethod } from '@/server/modules/payments/service';
 import { addDisputeMessage, assignDispute, closeDispute, resolveDispute, setDisputeStatus } from '@/server/modules/postpurchase/disputes';
 import { acceptReturnRefund, approveReturn, rejectReturn } from '@/server/modules/postpurchase/returns';
@@ -35,7 +33,7 @@ import { decideSeller, revealNationalId, verifyPayoutMethod, type SellerDecision
 import { replyToTicket, updateTicket } from '@/server/modules/support/service';
 import { deleteBlock, publishLegal, saveBlock, saveLegalDraft, savePage, type BlockType, type LegalCode } from '@/server/modules/cms/service';
 import { SETTINGS_SCHEMA, updateSetting, type SettingKey } from '@/server/modules/settings';
-import { ALL_PERMISSIONS, type Permission } from '@/server/rbac/permissions';
+import { createStaffUser, setRolePermissions, setStaffRole, setStaffStatus } from '@/server/rbac/staff';
 import { bool, fileOf, int, runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin } from '@/server/web/session';
 
@@ -258,6 +256,17 @@ export async function withdrawalAdminAction(_p: ActionState, fd: FormData) {
       await markWithdrawalPaid(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'), actual);
     }
     else if (op === 'reject') await rejectWithdrawal(a, id, str(fd, 'reason'));
+    else if (op === 'uncertain') await markWithdrawalTransferUncertain(a, id, str(fd, 'reason'));
+    else if (op === 'failed_before_transfer') await markWithdrawalFailedBeforeTransfer(a, id, { reason: str(fd, 'reason'), evidence: str(fd, 'evidence') });
+    else if (op === 'returned') {
+      let amount: number;
+      try {
+        amount = parseEgp(str(fd, 'amount'));
+      } catch {
+        throw validation('المبلغ المرتد غير صحيح');
+      }
+      await recordWithdrawalReturned(a, id, { amount, reference: str(fd, 'reference'), reason: str(fd, 'reason') });
+    } else throw validation('إجراء غير معروف');
     return done();
   }, ['/admin/withdrawals', `/admin/withdrawals/${str(fd, 'withdrawalId')}`]);
 }
@@ -351,62 +360,18 @@ export async function settingAction(_p: ActionState, fd: FormData) {
 }
 export async function rolePermissionAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
-    requirePermission(a, 'roles.manage');
-    requireStepUp(a);
-    const role = str(fd, 'role');
-    if (role === 'SUPER_ADMIN') throw validation('لا يمكن تعديل صلاحيات المدير العام');
-    const perms = fd.getAll('perm').map(String).filter((p): p is Permission => (ALL_PERMISSIONS as string[]).includes(p));
-    // No self-escalation: you cannot change a role you hold, and only a super admin can hand out role management.
-    const mine = await db.select({ code: userRoles.roleCode }).from(userRoles).where(eq(userRoles.userId, a.userId!));
-    if (mine.some((m) => m.code === role)) throw validation('لا يمكنك تعديل صلاحيات دور تحمله أنت');
-    if (perms.includes('roles.manage' as Permission) && !mine.some((m) => m.code === 'SUPER_ADMIN')) throw validation('منح صلاحية إدارة الأدوار متاح للمدير العام فقط');
-    const old = await db.select().from(rolePermissions).where(eq(rolePermissions.roleCode, role));
-    await db.transaction(async (tx) => {
-      await tx.delete(rolePermissions).where(eq(rolePermissions.roleCode, role));
-      if (perms.length) await tx.insert(rolePermissions).values(perms.map((p) => ({ roleCode: role, permission: p })));
-      await audit(tx, a, { action: 'rbac.role_permissions_changed', entityType: 'role', entityId: role, oldValues: { permissions: old.map((o) => o.permission) }, newValues: { permissions: perms }, reason: str(fd, 'reason') || null });
-    });
+    await setRolePermissions(a, { role: str(fd, 'role'), permissions: fd.getAll('perm').map(String), reason: str(fd, 'reason'), confirmPrivileged: bool(fd, 'confirmPrivileged') });
     return done('تم تحديث الصلاحيات');
   }, ['/admin/roles']);
 }
 export async function staffUserAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
-    requirePermission(a, 'roles.manage');
-    requireStepUp(a);
     const op = str(fd, 'op');
-    if (op === 'create') {
-      const email = str(fd, 'email').toLowerCase();
-      const phone = normalizeEgyptMobile(str(fd, 'phone'));
-      const pw = str(fd, 'password');
-      const problem = passwordProblems(pw, STAFF_POLICY);
-      if (problem) throw validation(problem);
-      if (!phone) throw validation('رقم الموبايل غير صحيح');
-      const [u] = await db.insert(users).values({ email, phone, fullName: str(fd, 'fullName'), passwordHash: await hashPassword(pw), isStaff: true, passwordChangedAt: new Date() }).returning();
-      const role = str(fd, 'role');
-      const [r] = await db.select().from(roles).where(eq(roles.code, role));
-      if (!r) throw validation('دور غير صالح');
-      await db.insert(userRoles).values({ userId: u.id, roleCode: role, grantedBy: a.userId });
-      await audit(db, a, { action: 'rbac.staff_created', entityType: 'user', entityId: u.id, newValues: { email, role } });
-    } else if (op === 'grant' || op === 'revoke') {
-      const uid = str(fd, 'userId');
-      const role = str(fd, 'role');
-      if (uid === a.userId) throw validation('لا يمكنك تعديل أدوارك بنفسك');
-      const [target] = await db.select({ isStaff: users.isStaff }).from(users).where(eq(users.id, uid));
-      if (!target?.isStaff) throw validation('الأدوار الإدارية لحسابات فريق العمل فقط');
-      const mine = await db.select({ code: userRoles.roleCode }).from(userRoles).where(eq(userRoles.userId, a.userId!));
-      const roleGrantsRbac = (await db.select().from(rolePermissions).where(and(eq(rolePermissions.roleCode, role), eq(rolePermissions.permission, 'roles.manage')))).length > 0;
-      if ((role === 'SUPER_ADMIN' || roleGrantsRbac) && !mine.some((m) => m.code === 'SUPER_ADMIN')) throw validation('منح أو سحب هذا الدور متاح للمدير العام فقط');
-      if (op === 'grant') await db.insert(userRoles).values({ userId: uid, roleCode: role, grantedBy: a.userId }).onConflictDoNothing();
-      else await db.delete(userRoles).where(and(eq(userRoles.userId, uid), eq(userRoles.roleCode, role)));
-      await audit(db, a, { action: `rbac.role_${op}`, entityType: 'user', entityId: uid, newValues: { role } });
-    } else if (op === 'disable') {
-      const uid = str(fd, 'userId');
-      if (uid === a.userId) throw validation('لا يمكنك تعطيل حسابك');
-      const [target] = await db.select({ isStaff: users.isStaff }).from(users).where(eq(users.id, uid));
-      if (!target?.isStaff) throw validation('تعطيل حسابات العملاء يتم من صفحة العملاء');
-      await db.update(users).set({ status: str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED' }).where(eq(users.id, uid));
-      await audit(db, a, { action: 'rbac.staff_status', entityType: 'user', entityId: uid, newValues: { status: str(fd, 'status') } });
-    }
+    const privileged = { reason: str(fd, 'reason') || null, confirmPrivileged: bool(fd, 'confirmPrivileged') };
+    if (op === 'create') await createStaffUser(a, { email: str(fd, 'email'), phone: str(fd, 'phone'), fullName: str(fd, 'fullName'), password: str(fd, 'password'), role: str(fd, 'role'), ...privileged });
+    else if (op === 'grant' || op === 'revoke') await setStaffRole(a, op, { userId: str(fd, 'userId'), role: str(fd, 'role'), ...privileged });
+    else if (op === 'disable') await setStaffStatus(a, { userId: str(fd, 'userId'), status: str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED', ...privileged });
+    else throw validation('إجراء غير معروف');
     return done();
   }, ['/admin/roles']);
 }
@@ -440,12 +405,13 @@ export async function refundDecisionAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const op = str(fd, 'op');
     const id = str(fd, 'refundId');
-    const { approveRefund, markRefundFailed, overrideRefundDestination, rejectRefund, recordRefundPayout } = await import('@/server/modules/finance/refunds');
+    const { approveRefund, markRefundFailed, overrideRefundDestination, reapproveRefundDestination, rejectRefund, recordRefundPayout } = await import('@/server/modules/finance/refunds');
     if (op === 'approve') await approveRefund(a, id, { expectedAmount: Number(str(fd, 'expectedAmount')), reason: str(fd, 'reason') });
     else if (op === 'reject') await rejectRefund(a, id, str(fd, 'reason'));
     else if (op === 'pay') await recordRefundPayout(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'));
     else if (op === 'failed') await markRefundFailed(a, id, str(fd, 'reason'));
     else if (op === 'destination') await overrideRefundDestination(a, id, { method: str(fd, 'method'), details: str(fd, 'details') }, str(fd, 'reason'));
+    else if (op === 'destination_reapprove') await reapproveRefundDestination(a, id, str(fd, 'reason'));
     else throw validation('إجراء غير معروف');
     return done();
   }, ['/admin/refunds', str(fd, 'back')]);

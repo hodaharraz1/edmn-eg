@@ -35,7 +35,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   const hidden = <><input type="hidden" name="withdrawalId" value={w.id} /><input type="hidden" name="back" value={`/admin/withdrawals/${w.id}`} /></>;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s.store} actions={<StatusChip status={w.status} />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s.store} actions={<StatusChip status={w.status} kind="withdrawal" />} />
       {w.isTest && <TestMoneyNotice kind="payout" />}
       {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
       {s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {s.seller.status}</Alert>}
@@ -54,8 +54,11 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           ...(((w.transferCostSnapshot as { warnings?: string[] } | null)?.warnings ?? []).length ? [{ label: 'تحذيرات الحدود', value: ((w.transferCostSnapshot as { warnings?: string[] }).warnings ?? []).join('، ') }] : []),
           { label: 'أرصدة البائع الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` },
           ...(w.rejectReason ? [{ label: 'سبب الرفض', value: w.rejectReason }] : []),
+          ...(w.transferUncertainAt ? [{ label: 'نتيجة غير مؤكدة منذ', value: formatDate(w.transferUncertainAt, true) }] : []),
+          ...(w.transferFailedAt ? [{ label: 'فشل قبل التحويل', value: `${formatDate(w.transferFailedAt, true)} · ${w.transferFailureReason ?? ''} · دليل ${w.transferFailureEvidence ?? ''}` }] : []),
+          ...(w.returnedAt ? [{ label: 'ارتداد التحويل', value: `${formatEGP(w.returnedAmount ?? 0)} · ${formatDate(w.returnedAt, true)} · مرجع ${w.returnedReference ?? ''} · ${w.returnReason ?? ''}` }] : []),
         ]} />
-        {canPay && ['APPROVED', 'PROCESSING'].includes(w.status) && (
+        {canPay && ['APPROVED', 'PROCESSING', 'TRANSFER_UNCERTAIN'].includes(w.status) && (
           <div className="mt-3 border-t border-line pt-3">
             <RevealPayout action={revealPayoutAction} kind="withdrawal" id={w.id} back={`/admin/withdrawals/${w.id}`} />
             <p className="mt-1 text-xs text-muted">يتطلب تحققاً إضافياً حديثاً (2FA) وكل عملية عرض مسجّلة في سجل التدقيق.</p>
@@ -74,7 +77,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           </ActionForm>
         )}
         {canPay && w.status === 'APPROVED' && <ActionForm action={withdrawalAdminAction} className="card p-5">{hidden}<input type="hidden" name="op" value="processing" /><SubmitButton variant="outline">بدء التحويل (قيد التنفيذ)</SubmitButton></ActionForm>}
-        {canPay && ['APPROVED', 'PROCESSING'].includes(w.status) && (
+        {canPay && ['APPROVED', 'PROCESSING', 'TRANSFER_UNCERTAIN'].includes(w.status) && (
           <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5">
             {hidden}<input type="hidden" name="op" value="paid" />
             <h2 className="font-bold">تسجيل الصرف (المنفّذ)</h2>
@@ -86,7 +89,37 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             {!sameAsApprover && <SubmitButton>تأكيد الصرف</SubmitButton>}
           </ActionForm>
         )}
-        {canApprove && ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING'].includes(w.status) && (
+        {canPay && w.status === 'PROCESSING' && (
+          <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5" data-testid="wd-uncertain">
+            {hidden}<input type="hidden" name="op" value="uncertain" />
+            <h2 className="font-bold">نتيجة التحويل غير مؤكدة</h2>
+            <p className="text-xs text-muted">لا يتحرك أي مبلغ: يبقى {formatEGP(w.amount)} محجوزًا حتى تُثبت النتيجة (تم الصرف أو فشل قبل التحويل).</p>
+            <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
+            <SubmitButton variant="outline">تسجيل نتيجة غير مؤكدة (2FA)</SubmitButton>
+          </ActionForm>
+        )}
+        {canApprove && ['PROCESSING', 'TRANSFER_UNCERTAIN'].includes(w.status) && w.processingBy !== actor.userId && w.transferUncertainBy !== actor.userId && (
+          <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5" data-testid="wd-failed-before-transfer">
+            {hidden}<input type="hidden" name="op" value="failed_before_transfer" />
+            <h2 className="font-bold">فشل قبل التحويل (لم يخرج أي مبلغ)</h2>
+            <p className="text-xs text-muted">استخدمه فقط بدليل أن التحويل لم يخرج من اضمن. يُعاد المبلغ المحجوز لرصيد البائع المتاح بقيد عكسي بموافقتك. يجب أن يكون شخصًا غير منفذ التحويل.</p>
+            <Field label="دليل عدم خروج التحويل (مرجع كشف الحساب / رد المزود)" required><Input name="evidence" required minLength={3} className="ltr" /></Field>
+            <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
+            <SubmitButton variant="danger">تأكيد الفشل قبل التحويل (2FA)</SubmitButton>
+          </ActionForm>
+        )}
+        {canApprove && w.status === 'PAID' && w.paidBy !== actor.userId && (
+          <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5" data-testid="wd-returned">
+            {hidden}<input type="hidden" name="op" value="returned" />
+            <h2 className="font-bold">تسجيل ارتداد التحويل</h2>
+            <p className="text-xs text-muted">للتحويل الذي سُجّل صرفه ثم رجع من البنك/المزود. يُسجل قيد تعويضي بموافقتك (لا يُعدّل قيد الصرف الأصلي) ويُعاد المبلغ لرصيد البائع المتاح، ويلزم إعادة اعتماد وسيلة السحب.</p>
+            <Field label="المبلغ المرتد (ج.م)" required><Input name="amount" required className="ltr" placeholder={((w.netTransferAmount ?? w.amount) / 100).toFixed(2)} /></Field>
+            <Field label="مرجع الارتداد" required><Input name="reference" required minLength={3} className="ltr" /></Field>
+            <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
+            <SubmitButton variant="danger">تسجيل الارتداد (2FA)</SubmitButton>
+          </ActionForm>
+        )}
+        {canApprove && ['REQUESTED', 'UNDER_REVIEW', 'APPROVED'].includes(w.status) && (
           <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5">
             {hidden}<input type="hidden" name="op" value="reject" />
             <h2 className="font-bold">رفض الطلب</h2>

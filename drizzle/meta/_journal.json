@@ -92,6 +92,13 @@
       "when": 1791468660049,
       "tag": "0012_live_versions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791473243477,
+      "tag": "0013_batch1_hardening",
+      "breakpoints": true
     }
   ]
 }

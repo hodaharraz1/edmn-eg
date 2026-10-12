@@ -143,11 +143,17 @@ export async function addDisputeMessage(actor: Actor, disputeId: string, body: s
   });
 }
 
-export async function setDisputeStatus(actor: Actor, disputeId: string, to: 'UNDER_REVIEW' | 'AWAITING_INFORMATION', note?: string) {
+/** Workflow-only states a generic status edit may set. A financial outcome is never a "status": see resolveDispute. */
+export const DISPUTE_WORKFLOW_STATUSES = ['UNDER_REVIEW', 'AWAITING_INFORMATION'] as const;
+
+export async function setDisputeStatus(actor: Actor, disputeId: string, to: (typeof DISPUTE_WORKFLOW_STATUSES)[number], note?: string) {
   requirePermission(actor, 'disputes.manage');
+  // Runtime guard (the value comes from a form): RESOLVED/CLOSED can never be reached through this path.
+  if (!(DISPUTE_WORKFLOW_STATUSES as readonly string[]).includes(to)) throw validation('حسم النزاع يتم بإصدار قرار رسمي فقط');
   await db.transaction(async (tx) => {
     const [d] = await tx.select().from(disputes).where(eq(disputes.id, disputeId)).for('update');
     if (!d) throw notFound('النزاع');
+    if (!OPEN.includes(d.status)) throw invalidState('تم حسم هذا النزاع بالفعل');
     await transition(tx, actor, disputeMachine, d.id, d.status, to, note);
     await tx.update(disputes).set({ status: to, assignedTo: d.assignedTo ?? actor.userId }).where(eq(disputes.id, d.id));
     await audit(tx, actor, { action: 'dispute.status_changed', entityType: 'dispute', entityId: d.id, newValues: { status: to }, reason: note ?? null });
@@ -287,13 +293,20 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
   }
 }
 
+/**
+ * Administrative archival of a dispute that already has a formal decision (RESOLVED → CLOSED). No financial
+ * effect; an open dispute (a hold) cannot be closed — it must be decided through resolveDispute.
+ */
 export async function closeDispute(actor: Actor, disputeId: string) {
   requirePermission(actor, 'disputes.manage');
   await db.transaction(async (tx) => {
     const [d] = await tx.select().from(disputes).where(eq(disputes.id, disputeId)).for('update');
     if (!d) throw notFound('النزاع');
+    if (d.status === 'CLOSED') return;
+    if (d.status !== 'RESOLVED' || !d.decision || !d.decidedAt) throw invalidState('لا يمكن إغلاق نزاع بدون قرار رسمي. أصدر القرار أولاً');
     await transition(tx, actor, disputeMachine, d.id, d.status, 'CLOSED');
     await tx.update(disputes).set({ status: 'CLOSED' }).where(eq(disputes.id, d.id));
+    await audit(tx, actor, { action: 'dispute.closed', entityType: 'dispute', entityId: d.id, oldValues: { status: d.status }, newValues: { status: 'CLOSED', financialEffect: false } });
   });
 }
 

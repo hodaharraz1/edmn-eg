@@ -218,6 +218,10 @@ export async function confirmReceipt(actor: Actor, soId: string) {
     if (order.customerId !== userId) throw forbidden();
     if (so.status === 'DELIVERED' || so.status === 'COMPLETED') return { alreadyConfirmed: true, released: false };
     if (so.status !== 'SHIPPED' && so.status !== 'AWAITING_BUYER_RESPONSE') throw invalidState('تأكيد الاستلام بيبقى متاح بعد ما الطلب يتشحن بس');
+    // Fail closed: while the buyer's own dispute is open, the outcome is decided by the formal dispute
+    // decision — a receipt confirmation must not create entitlement around it.
+    const openDispute = await tx.execute(sql`select 1 from disputes where seller_order_id = ${so.id} and status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION') limit 1`);
+    if (openDispute.rows.length) throw invalidState('فيه نزاع مفتوح على الطلب ده. الاستلام هيتحسم بقرار النزاع');
     const now = new Date();
     await move(tx, actor, so, 'DELIVERED', {
       deliveredAt: now,

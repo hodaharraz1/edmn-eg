@@ -15,6 +15,7 @@ import {
   productVariants,
   roles,
   sellerOrders,
+  sellerPayoutMethods,
   sellerShippingRates,
   userRoles,
   users,
@@ -26,7 +27,7 @@ import { placeOrder } from '@/server/modules/commerce/orders';
 import { priceLines } from '@/server/modules/commerce/pricing';
 import { confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
-import { addPayoutMethod, decideSeller, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
+import { addPayoutMethod, decideSeller, verifyPayoutMethod, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 
 let seq = 0;
 const uniq = () => `${Date.now().toString(36)}${(seq++).toString(36)}${Math.floor(Math.random() * 1e4)}`;
@@ -120,6 +121,9 @@ export async function makeSeller(admin: Actor, opts: { type?: 'INDIVIDUAL' | 'BU
   await submitApplication(a, true);
   const pre = (await sellerActor(u.id))!;
   await decideSeller(admin, pre.sellerId!, 'APPROVE');
+  // Approval never verifies the payout destination (C3): the payout verifier does it explicitly.
+  const [pm] = await db.select().from(sellerPayoutMethods).where(and(eq(sellerPayoutMethods.sellerId, pre.sellerId!), eq(sellerPayoutMethods.status, 'PENDING_VERIFICATION')));
+  await verifyPayoutMethod(admin, pm.id, true, 'تحقق في الاختبار');
   await db.update(sellerShippingRates).set({ enabled: true, fee: 5000, etaMinDays: 1, etaMaxDays: 3 }).where(eq(sellerShippingRates.sellerId, pre.sellerId!));
   return { user: u, actor: (await sellerActor(u.id))! };
 }
