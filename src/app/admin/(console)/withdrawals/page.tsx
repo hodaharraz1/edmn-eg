@@ -31,12 +31,12 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
       <Tabs active={tab} tabs={[{ key: 'open', label: 'بانتظار الاعتماد', href: '/admin/withdrawals' }, { key: 'approved', label: 'معتمدة للصرف', href: '/admin/withdrawals?tab=approved' }, { key: 'paid', label: 'مصروفة', href: '/admin/withdrawals?tab=paid' }, { key: 'closed', label: 'مرفوضة/ملغاة', href: '/admin/withdrawals?tab=closed' }]} />
       <DataTable rows={rows} rowKey={(r) => r.w.id} empty={<EmptyState icon={Wallet} title="لا توجد طلبات" />} columns={[
         { key: 'n', header: 'الرقم', cell: (r) => <Link className="font-semibold text-brand-700" href={`/admin/withdrawals/${r.w.id}`}>#{r.w.number}</Link> },
-        { key: 's', header: 'البائع', cell: (r) => <Link href={`/admin/sellers/${r.seller.id}`}>{r.seller.legalName ?? '—'}</Link> },
+        { key: 's', header: 'البائع', cell: (r) => (r.seller ? <Link href={`/admin/sellers/${r.seller.id}`}>{r.seller.legalName ?? '—'}</Link> : <span>{r.requester ?? '—'} <Badge tone="info">صفقات محمية</Badge></span>) },
         { key: 'a', header: 'المبلغ', cell: (r) => <b>{formatEGP(r.w.amount)}</b> },
         { key: 'p', header: 'الحساب', cell: (r) => <span className="text-xs">{label('payoutType', r.w.payoutType)} <span className="ltr">{r.w.payoutMasked}</span></span> },
-        { key: 'src', header: 'المصدر', cell: (r) => (r.w.source === 'SCHEDULED' ? <Badge tone="info">تسوية دورية</Badge> : 'طلب البائع') },
+        { key: 'src', header: 'المصدر', cell: (r) => (r.w.source === 'SCHEDULED' ? <Badge tone="info">تسوية دورية</Badge> : r.w.sourceType === 'MIXED' ? <Badge tone="warning">متعدد المصادر</Badge> : r.w.sourceType === 'PROTECTED_DEAL' ? 'صفقات محمية' : 'طلب البائع') },
         { key: 'sla', header: 'موعد SLA', cell: (r) => <span className={['PAID', 'REJECTED', 'CANCELLED'].includes(r.w.status) ? '' : r.w.slaDueAt < now ? 'font-bold text-danger-700' : ''}>{formatDate(r.w.slaDueAt, true)}</span> },
-        { key: 'f', header: '', cell: (r) => <span className="flex gap-1">{r.w.requiresDualControl && <Badge tone="warning">رقابة مزدوجة</Badge>}{r.seller.payoutHoldUntil && r.seller.payoutHoldUntil > now && <Badge tone="danger">تجميد</Badge>}</span> },
+        { key: 'f', header: '', cell: (r) => <span className="flex gap-1">{r.w.requiresDualControl && <Badge tone="warning">رقابة مزدوجة</Badge>}{r.seller?.payoutHoldUntil && r.seller.payoutHoldUntil > now && <Badge tone="danger">تجميد</Badge>}</span> },
         { key: 'st', header: 'الحالة', cell: (r) => <span className="inline-flex items-center gap-1"><StatusChip status={r.w.status} kind="withdrawal" />{r.w.isTest && <TestBadge />}</span> },
       ]} />
     </div>

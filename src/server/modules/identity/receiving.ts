@@ -12,8 +12,9 @@ import { parse } from '../_shared';
 import { identityOf } from './service';
 
 /**
- * «بيانات استلام الأموال» — where EDMN can SEND money legitimately owed to a customer (refunds), when the
- * original payment destination cannot safely be used. This is NOT a wallet: no balance, no deposit, no
+ * «بيانات استلام الأموال» — the user-level VERIFIED destination where EDMN can SEND money legitimately owed to the
+ * user: refunds (when the original payment destination cannot safely be used) and Protected Deal seller payouts
+ * (a Protected Deal seller needs no store, so this — not the store payout method — is their payout destination). This is NOT a wallet: no balance, no deposit, no
  * withdrawal, no ledger account. A destination is usable only after a destination reviewer APPROVED that exact
  * version; any material change creates a NEW version (the previous one is archived, never edited).
  */
@@ -38,6 +39,11 @@ export const receivingDestinationSchema = z.discriminatedUnion('type', [
     iban: z.string().trim().max(40).optional().default(''),
   }),
   z.object({
+    type: z.literal('INSTAPAY'),
+    holderName: z.string().trim().min(6, 'اكتب اسم صاحب الحساب كاملًا').max(120),
+    instapayAddress: z.string().trim().min(5, 'عنوان إنستاباي غير صحيح').max(80),
+  }),
+  z.object({
     type: z.literal('MOBILE_WALLET'),
     holderName: z.string().trim().min(6, 'اكتب اسم صاحب المحفظة كاملًا').max(120),
     walletProvider: z.string().trim().min(2, 'اختار مزود المحفظة').max(40),
@@ -55,6 +61,11 @@ function normalize(d: z.infer<typeof receivingDestinationSchema>) {
     if (accountNumber && !/^\d{6,30}$/.test(accountNumber)) throw validation('رقم الحساب غير صحيح');
     return { type: d.type, holderName: d.holderName, bankName: d.bankName, accountNumber, iban };
   }
+  if (d.type === 'INSTAPAY') {
+    const instapayAddress = d.instapayAddress.toLowerCase();
+    if (!/^[a-z0-9._-]+@[a-z0-9.-]+$/.test(instapayAddress) && !/^(\+20|0)?1[0125]\d{8}$/.test(instapayAddress)) throw validation('عنوان إنستاباي غير صحيح (مثال: name@instapay)');
+    return { type: d.type, holderName: d.holderName, instapayAddress };
+  }
   const walletNumber = normalizeEgyptMobile(d.walletNumber);
   if (!walletNumber) throw validation('رقم المحفظة غير صحيح');
   return { type: d.type, holderName: d.holderName, walletProvider: d.walletProvider, walletNumber };
@@ -64,6 +75,7 @@ function fingerprintOf(details: Record<string, string>) {
   return sha256(`receiving:${JSON.stringify(Object.keys(details).sort().map((k) => [k, details[k]]))}`);
 }
 function maskedOf(details: Record<string, string>) {
+  if (details.type === 'INSTAPAY') return `إنستاباي ${mask(details.instapayAddress)}`;
   return details.type === 'BANK_ACCOUNT' ? `${details.bankName} ${mask(details.iban || details.accountNumber)}` : `${details.walletProvider} ${mask(details.walletNumber)}`;
 }
 

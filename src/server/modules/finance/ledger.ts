@@ -15,6 +15,7 @@ import { journalEntries, journalLines, ledgerAccounts } from '@/server/db/schema
  *  CUSTOMER_REFUNDS_PAYABLE   LIABILITY  refunds owed to customers, until paid out manually
  *  DEAL_FUNDS_HELD            LIABILITY  external-deal payments held pending completion
  *  DEAL_PAYOUTS_PAYABLE       LIABILITY  amounts owed to external-deal sellers
+ *  DEAL_PAYOUTS_RESERVED      LIABILITY  deal payouts locked by an approved withdrawal (attributed per allocation)
  *  DEAL_FEE_REVENUE           REVENUE    protected-deal fees
  *  ADJUSTMENTS_EXPENSE        EXPENSE    platform-funded manual adjustments (goodwill etc.)
  *  SELLER_PENDING             LIABILITY  seller net on paid orders awaiting buyer receipt confirmation
@@ -28,6 +29,7 @@ export const ACCOUNTS = {
   CUSTOMER_REFUNDS_PAYABLE: { type: 'LIABILITY', name: 'مستردات مستحقة للعملاء' },
   DEAL_FUNDS_HELD: { type: 'LIABILITY', name: 'مبالغ الصفقات المحمية' },
   DEAL_PAYOUTS_PAYABLE: { type: 'LIABILITY', name: 'مستحقات بائعي الصفقات' },
+  DEAL_PAYOUTS_RESERVED: { type: 'LIABILITY', name: 'مستحقات صفقات محجوزة لطلبات سحب' },
   DEAL_FEE_REVENUE: { type: 'REVENUE', name: 'رسوم الصفقات المحمية' },
   ADJUSTMENTS_EXPENSE: { type: 'EXPENSE', name: 'مصروف التسويات' },
   /** Payout/refund transfer costs borne by EDMN (seller-borne costs reduce the amount sent instead). */

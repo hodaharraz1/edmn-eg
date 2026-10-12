@@ -65,8 +65,8 @@ export async function quoteTransfer(conn: DbOrTx, input: { payoutType: string; a
       select
         coalesce(sum(amount) filter (where (coalesce(paid_at, approved_at) at time zone 'Africa/Cairo')::date = (now() at time zone 'Africa/Cairo')::date), 0)::text d_total,
         coalesce(sum(amount) filter (where date_trunc('month', coalesce(paid_at, approved_at) at time zone 'Africa/Cairo') = date_trunc('month', now() at time zone 'Africa/Cairo')), 0)::text m_total,
-        coalesce(sum(amount) filter (where payout_method_id = ${input.payoutMethodId} and (coalesce(paid_at, approved_at) at time zone 'Africa/Cairo')::date = (now() at time zone 'Africa/Cairo')::date), 0)::text rd_total,
-        coalesce(sum(amount) filter (where payout_method_id = ${input.payoutMethodId} and date_trunc('month', coalesce(paid_at, approved_at) at time zone 'Africa/Cairo') = date_trunc('month', now() at time zone 'Africa/Cairo')), 0)::text rm_total
+        coalesce(sum(amount) filter (where coalesce(payout_method_id, receiving_destination_id) = ${input.payoutMethodId} and (coalesce(paid_at, approved_at) at time zone 'Africa/Cairo')::date = (now() at time zone 'Africa/Cairo')::date), 0)::text rd_total,
+        coalesce(sum(amount) filter (where coalesce(payout_method_id, receiving_destination_id) = ${input.payoutMethodId} and date_trunc('month', coalesce(paid_at, approved_at) at time zone 'Africa/Cairo') = date_trunc('month', now() at time zone 'Africa/Cairo')), 0)::text rm_total
       from withdrawal_requests
       where payout_channel = ${channel} and reserved_at is not null and status in ('APPROVED','PROCESSING','PAID') and id <> ${excl}`)
   ).rows[0];

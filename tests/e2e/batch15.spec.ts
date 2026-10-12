@@ -11,12 +11,13 @@ test.describe.configure({ mode: 'serial' });
 const RUN = Date.now().toString().slice(-7);
 const USER = { name: 'عميل التحقق التجريبي', email: `b15-${RUN}@e2e.local`, phone: `0128${RUN}`, password: 'E2e@Batch15-2026' };
 
-test('schema: migration 0014 is applied with the two-person and immutability guards', async () => {
+test('schema: migrations 0014 + 0015 are applied with the two-person and immutability guards', async () => {
   const [m] = await q<{ n: number }>(`select count(*)::int n from drizzle.__drizzle_migrations`);
-  expect(m.n).toBeGreaterThanOrEqual(15);
+  expect(m.n).toBeGreaterThanOrEqual(16);
   const [t] = await q<{ n: number }>(`select count(*)::int n from pg_trigger where tgname in
-    ('financial_approvals_two_person','financial_movement_requests_guard','receiving_destinations_guard','review_events_append_only','privileged_message_access_append_only')`);
-  expect(t.n).toBe(5);
+    ('financial_approvals_two_person','financial_movement_requests_guard','receiving_destinations_guard','review_events_append_only','privileged_message_access_append_only',
+     'withdrawal_allocations_guard','withdrawal_allocations_no_delete')`);
+  expect(t.n).toBe(7);
   // legacy seller identities are linked for review, never auto-approved
   const [legacy] = await q<{ approved: number }>(`select count(*)::int approved from user_identity_verifications where source = 'LEGACY_SELLER_APPLICATION' and status = 'APPROVED' and reviewed_by is null`);
   expect(legacy.approved).toBe(0);
@@ -134,4 +135,39 @@ test('Protected Deal: the delivery / inspection countdown is shown from server t
   await expect(timer).toContainText('لا يحوّل أي مبلغ');
   expect(await q<{ n: number }>(`select count(*)::int n from journal_entries where source_id = $1`, [d.id])).toEqual(before);
   await page.context().close();
+});
+
+test('cross-source withdrawal from the account page: preview shows the source split; approval stores the allocation; two people', async ({ browser }) => {
+  const [t] = await q<{ status: string | null }>(`select v.status from users u left join user_identity_verifications v on v.user_id = u.id where u.email = 'techzone@demo.edmn.local'`);
+  test.skip(t?.status !== 'APPROVED', 'techzone identity is not approved on this database (legacy case pending review) — the request is correctly refused there');
+  const seller = await customerLogin(browser, 'techzone@demo.edmn.local');
+  await seller.goto('/account/earnings');
+  const wf = seller.getByTestId('account-withdrawal');
+  const previewForm = wf.locator('form').filter({ has: seller.getByRole('button', { name: 'احسب التوزيع' }) });
+  await previewForm.locator('input[name=amount]').fill('120');
+  await previewForm.locator('select[name=destination]').selectOption('store');
+  await previewForm.getByRole('button', { name: 'احسب التوزيع' }).click();
+  await expect(seller.getByTestId('allocation-preview')).toContainText(/رصيد مبيعات المتجر|رصيد الصفقات المحمية/);
+  const requestForm = wf.locator('form').filter({ has: seller.getByRole('button', { name: 'طلب سحب' }) });
+  await requestForm.locator('input[name=amount]').fill('120');
+  await requestForm.locator('select[name=destination]').selectOption('store');
+  await requestForm.getByRole('button', { name: 'طلب سحب' }).click();
+  const wOf = async () => (await q<{ id: string; status: string; amount: string }>(`select w.id, w.status, w.amount from withdrawal_requests w join users u on u.id = w.user_id where u.email = 'techzone@demo.edmn.local' and w.source = 'ACCOUNT' order by w.created_at desc limit 1`))[0];
+  await expect.poll(async () => (await wOf())?.status).toBe('REQUESTED');
+  const w = await wOf();
+  const checker = await adminLogin(browser, 'checker@edmn.local');
+  await checker.goto(`/admin/withdrawals/${w.id}`);
+  await checker.getByRole('button', { name: /اعتماد وحجز/ }).click();
+  await expect.poll(async () => (await wOf()).status).toBe('APPROVED');
+  const [sum] = await q<{ n: string }>(`select coalesce(sum(amount), 0)::text n from withdrawal_allocations where withdrawal_id = $1`, [w.id]);
+  expect(sum.n).toBe(w.amount); // SUM(source allocations) == withdrawal amount
+  await expect(checker.getByRole('button', { name: 'تأكيد الصرف' })).toHaveCount(0); // the approver never pays
+  const operator = await adminLogin(browser, 'finance@edmn.local');
+  await operator.goto(`/admin/withdrawals/${w.id}`);
+  await operator.locator('input[name=reference]').fill(`B15-X-${RUN}`);
+  await operator.getByRole('button', { name: 'تأكيد الصرف' }).click();
+  await expect.poll(async () => (await wOf()).status).toBe('PAID');
+  const statuses = await q<{ status: string }>(`select status from withdrawal_allocations where withdrawal_id = $1`, [w.id]);
+  expect(statuses.every((x) => x.status === 'PAID')).toBe(true);
+  await seller.context().close();
 });

@@ -22,13 +22,13 @@ export default async function ReceivingPage(props: PageProps<'/account/receiving
   const visible = list.filter((d) => d.status !== 'ARCHIVED');
   return (
     <div className="space-y-5">
-      <PageHeader title="بيانات استلام الأموال" description="الحساب البنكي أو المحفظة اللي نرجّعلك عليها أي مبلغ مستحق لك (زي الاسترداد) لما يتعذر الرجوع لنفس وسيلة الدفع الأصلية. دي مش محفظة على اضمن: مفيش رصيد ولا إيداع ولا سحب." />
+      <PageHeader title="بيانات استلام الأموال" description="الحساب اللي نحوّلك عليه أي مبلغ مستحق لك: الاسترداد لما يتعذر الرجوع لنفس وسيلة الدفع الأصلية، ومستحقاتك كبائع في الصفقات المحمية (من غير ما تحتاج متجر). دي مش محفظة على اضمن: مفيش رصيد ولا إيداع ولا سحب منها." />
       {idStatus !== 'APPROVED' && <Alert tone="warning" action={<Link className="text-brand-700 underline" href="/account/identity">التحقق من الهوية</Link>}>البيانات تتراجع وتتعتمد بعد التحقق من هويتك، وصاحب الحساب لازم يكون أنت.</Alert>}
       {visible.length === 0 ? <EmptyState icon={Landmark} title="مفيش بيانات استلام محفوظة" description="مش لازم تضيف حاجة إلا لو احتجنا نرجّعلك مبلغ ووسيلة الدفع الأصلية مش متاحة." /> : (
         <ul className="grid gap-3 sm:grid-cols-2" data-testid="receiving-list">
           {visible.map((d) => (
             <li key={d.id} className="card space-y-1 p-4 text-sm">
-              <p className="flex items-center justify-between gap-2 font-semibold">{d.type === 'BANK_ACCOUNT' ? 'حساب بنكي' : 'محفظة موبايل'} <Badge tone={d.status === 'APPROVED' ? 'success' : d.status === 'REJECTED' ? 'danger' : 'warning'}>{DESTINATION_STATUS_LABELS[d.status]}</Badge></p>
+              <p className="flex items-center justify-between gap-2 font-semibold">{d.type === 'BANK_ACCOUNT' ? 'حساب بنكي' : d.type === 'INSTAPAY' ? 'إنستاباي' : 'محفظة موبايل'} <Badge tone={d.status === 'APPROVED' ? 'success' : d.status === 'REJECTED' ? 'danger' : 'warning'}>{DESTINATION_STATUS_LABELS[d.status]}</Badge></p>
               <p className="ltr text-muted">{d.maskedLabel}</p>
               <p>باسم: {d.holderName}</p>
               {d.reviewReason && d.status !== 'APPROVED' && <p className="text-amber-800">ملاحظة المراجعة: {d.reviewReason}</p>}
@@ -41,7 +41,14 @@ export default async function ReceivingPage(props: PageProps<'/account/receiving
           ))}
         </ul>
       )}
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="grid gap-4 lg:grid-cols-3">
+        <ActionForm action={submitReceivingDestinationAction} className="card space-y-3 p-5" resetOnSuccess data-testid="receiving-instapay-form">
+          <h2 className="font-bold">{replacing ? 'نسخة جديدة — ' : ''}إنستاباي</h2>
+          <input type="hidden" name="type" value="INSTAPAY" />{replacing && <input type="hidden" name="replacesId" value={replacing.id} />}
+          <Field label="اسم صاحب الحساب (زي البطاقة)" htmlFor="i-holder" required><Input id="i-holder" name="holderName" required minLength={6} /></Field>
+          <Field label="عنوان إنستاباي" htmlFor="i-address" required hint="مثال: name@instapay"><Input id="i-address" name="instapayAddress" required className="ltr" /></Field>
+          <SubmitButton>حفظ للمراجعة</SubmitButton>
+        </ActionForm>
         <ActionForm action={submitReceivingDestinationAction} className="card space-y-3 p-5" resetOnSuccess data-testid="receiving-wallet-form">
           <h2 className="font-bold">{replacing ? 'نسخة جديدة — ' : ''}محفظة موبايل</h2>
           <input type="hidden" name="type" value="MOBILE_WALLET" />{replacing && <input type="hidden" name="replacesId" value={replacing.id} />}

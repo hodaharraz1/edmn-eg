@@ -123,6 +123,12 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         where s.id = ${g.sellerId} and (s.owner_user_id = ${customerId} or m.user_id is not null) limit 1`);
       if (own.rows.length) throw new DomainError('INVALID_STATE', `مينفعش تشتري منتجات من متجرك "${g.storeName}"`);
     }
+    // Batch 1.5: a NEW sale is new transactional risk for the seller too — the store owner's identity must be
+    // APPROVED (legacy sellers under review keep fulfilling their EXISTING orders, but take no new ones).
+    for (const g of priced.groups) {
+      const ok = await tx.execute(sql`select 1 from sellers s join user_identity_verifications v on v.user_id = s.owner_user_id and v.status = 'APPROVED' where s.id = ${g.sellerId}`);
+      if (!ok.rows.length) throw new DomainError('INVALID_STATE', `المتجر "${g.storeName}" مش بيستقبل طلبات جديدة حاليًا. شيل منتجاته من السلة وكمّل`);
+    }
     const changedPrices = priced.groups.flatMap((g) => g.lines.filter((l) => l.issues.includes('PRICE_CHANGED')).map((l) => l.title));
     if (changedPrices.length) throw new DomainError('CONFLICT', `السعر اتغير: ${changedPrices.join('، ')}. راجع الإجمالي الجديد وأكّد تاني`);
     if (priced.grandTotal !== d.expectedTotal) {

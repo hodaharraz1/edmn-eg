@@ -307,11 +307,54 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   await expect(admin.getByTestId('admin-handover')).toContainText('deal.delivery_otp_verified');
   await expect(admin.getByTestId('admin-handover')).toContainText('deal.delivery_otp_failed');
   expect(await admin.content()).not.toContain('codeHash');
+  // Batch 1.5 closure: no direct payout to the destination typed into the offer — only a withdrawal by the seller
+  // to a VERIFIED destination, approved and paid by two different people, attributed to this deal.
   await admin.goto('/admin/refunds?tab=deals');
-  await admin.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  const card = admin.locator('li', { hasText: `صفقة #` }).filter({ has: admin.locator(`input[name=id][value="${po.id}"]`) });
-  await card.locator('input[name=reference]').fill('PAYOUT-E2E-1');
-  await card.getByRole('button', { name: 'تسجيل الصرف' }).click();
+  await expect(admin.getByText(/يُصرف هذا المستحق فقط عبر طلب سحب/).first()).toBeVisible();
+  await expect(admin.getByRole('button', { name: 'تسجيل الصرف' })).toHaveCount(0);
+  const seller = await sellerPage(browser);
+  await seller.goto('/account/earnings');
+  await expect(seller.getByTestId('balance-protected-deal')).toContainText('رصيد الصفقات المحمية');
+  await expect(seller.getByText(/مفيش وجهة صرف متحقق منها/)).toBeVisible(); // unverified → no withdrawal possible
+  await seller.goto('/account/receiving');
+  const f = seller.getByTestId('receiving-instapay-form');
+  await f.locator('input[name=holderName]').fill('كريم البائع الخارجي محمد');
+  await f.locator('input[name=instapayAddress]').fill(`ext${RUN}@instapay`);
+  await f.getByRole('button', { name: 'حفظ للمراجعة' }).click();
+  await expect(seller.getByTestId('receiving-list')).toContainText('قيد المراجعة');
+  const [rd] = await q<{ id: string }>(`select d.id from receiving_destinations d join users u on u.id = d.user_id where u.email = $1`, [NEW_SELLER.email]);
+  await checker.goto('/admin/receiving-destinations'); // the finance checker from the settlement step
+  const row = checker.getByTestId('destination-queue').locator('li').filter({ has: checker.locator(`input[name=id][value="${rd.id}"]`) });
+  await row.locator('select[name=decision]').selectOption('APPROVE');
+  await row.locator('input[name=holderMatchesIdentity]').check();
+  await row.getByRole('button', { name: /تسجيل/ }).click();
+  await expect.poll(async () => (await q<{ status: string }>(`select status from receiving_destinations where id = $1`, [rd.id]))[0].status).toBe('APPROVED');
+  await seller.goto('/account/earnings');
+  const wf = seller.getByTestId('account-withdrawal');
+  const amountEgp = String(Number(po.amount) / 100);
+  const previewForm = wf.locator('form').filter({ has: seller.getByRole('button', { name: 'احسب التوزيع' }) });
+  await previewForm.locator('input[name=amount]').fill(amountEgp);
+  await previewForm.locator('select[name=destination]').selectOption(`rd:${rd.id}`);
+  await previewForm.getByRole('button', { name: 'احسب التوزيع' }).click();
+  await expect(seller.getByTestId('allocation-preview')).toContainText('رصيد الصفقات المحمية');
+  const requestForm = wf.locator('form').filter({ has: seller.getByRole('button', { name: 'طلب سحب' }) });
+  await requestForm.locator('input[name=amount]').fill(amountEgp);
+  await requestForm.locator('select[name=destination]').selectOption(`rd:${rd.id}`);
+  await requestForm.getByRole('button', { name: 'طلب سحب' }).click();
+  const wOf = async () => (await q<{ id: string; status: string }>(`select w.id, w.status from withdrawal_requests w join users u on u.id = w.user_id where u.email = $1`, [NEW_SELLER.email]))[0];
+  await expect.poll(async () => (await wOf())?.status).toBe('REQUESTED');
+  const w = await wOf();
+  expect(await q(`select id from journal_entries where source_id = $1`, [w.id])).toHaveLength(0); // a request moves nothing
+  await checker.goto(`/admin/withdrawals/${w.id}`);
+  await checker.getByRole('button', { name: /اعتماد وحجز/ }).click();
+  await expect.poll(async () => (await wOf()).status).toBe('APPROVED');
+  const al = await q<{ source_type: string; source_entity_id: string; amount: string }>(`select source_type, source_entity_id, amount from withdrawal_allocations where withdrawal_id = $1`, [w.id]);
+  expect(al).toEqual([{ source_type: 'PROTECTED_DEAL', source_entity_id: po.id, amount: po.amount }]);
+  await expect(checker.getByTestId('withdrawal-allocations')).toContainText('صفقة محمية');
+  await operator.goto(`/admin/withdrawals/${w.id}`); // the finance operator from the settlement step (≠ approver)
+  await operator.locator('input[name=reference]').fill('PAYOUT-E2E-1');
+  await operator.getByRole('button', { name: 'تأكيد الصرف' }).click();
+  await expect.poll(async () => (await wOf()).status).toBe('PAID');
   await expect.poll(async () => (await q<{ status: string }>(`select status from deal_payouts where id = $1`, [po.id]))[0].status).toBe('PAID');
 });
 

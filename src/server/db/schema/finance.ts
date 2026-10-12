@@ -1,11 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { bigint, bigserial, boolean, check, index, jsonb, pgTable, text, uniqueIndex, uuid, date } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, check, date, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { ADJUSTMENT_STATUSES, PAYOUT_TYPES, WITHDRAWAL_STATUSES } from '@/domain/machines';
 import { createdAt, enumCheck, money, ts, updatedAt } from './_helpers';
 import { files } from './files';
 import { users } from './identity';
 import { sellerPayoutMethods, sellers } from './sellers';
 import { sellerOrders } from './commerce';
+
+export const WITHDRAWAL_SOURCE_SCOPES = ['MARKETPLACE', 'PROTECTED_DEAL', 'MIXED'] as const;
+export const ALLOCATION_SOURCES = ['MARKETPLACE', 'PROTECTED_DEAL'] as const;
+export const ALLOCATION_STATUSES = ['RESERVED', 'PAID', 'RELEASED', 'RETURNED'] as const;
 
 /**
  * Double-entry ledger. Balances are a transactional projection of journal lines
@@ -111,9 +115,12 @@ export const withdrawalRequests = pgTable(
     number: bigint({ mode: 'number' })
       .notNull()
       .default(sql`nextval('doc_number_seq')`),
-    sellerId: uuid()
-      .notNull()
-      .references(() => sellers.id),
+    /** Marketplace store whose funds/payout method are used. NULL for a Protected-Deal-only seller (no store). */
+    sellerId: uuid().references(() => sellers.id),
+    /** Beneficiary user (Batch 1.5 closure). NULL only on legacy Marketplace rows (owner = seller.owner_user_id). */
+    userId: uuid().references(() => users.id),
+    /** Verified user-level destination («بيانات استلام الأموال») when not paid to a store payout method. */
+    receivingDestinationId: uuid(),
     amount: money().notNull(),
     status: text({ enum: WITHDRAWAL_STATUSES }).notNull().default('REQUESTED'),
     source: text().notNull().default('ON_DEMAND'), // ON_DEMAND | SCHEDULED
@@ -163,18 +170,64 @@ export const withdrawalRequests = pgTable(
     returnedReference: text(),
     returnReason: text(),
     returnApprovalId: uuid(),
-    /** Funding source of the withdrawal (MARKETPLACE sub-ledger). Protected Deal earnings are paid per deal. */
-    sourceType: text().notNull().default('MARKETPLACE'),
+    /** Funding scope: MARKETPLACE (store funds only), PROTECTED_DEAL or MIXED — the exact split is in withdrawal_allocations. */
+    sourceType: text({ enum: WITHDRAWAL_SOURCE_SCOPES }).notNull().default('MARKETPLACE'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     uniqueIndex('withdrawals_number_uq').on(t.number),
     uniqueIndex('withdrawals_client_key_uq').on(t.sellerId, t.clientKey),
+    uniqueIndex('withdrawals_user_client_key_uq').on(t.userId, t.clientKey).where(sql`${t.sellerId} is null`),
+    index('withdrawals_user_idx').on(t.userId, t.createdAt),
+    enumCheck('withdrawals_source_type_chk', t.sourceType, WITHDRAWAL_SOURCE_SCOPES),
+    check('withdrawals_owner_chk', sql`${t.sellerId} is not null or ${t.userId} is not null`),
     index('withdrawals_seller_idx').on(t.sellerId, t.createdAt),
     index('withdrawals_status_idx').on(t.status, t.slaDueAt),
     enumCheck('withdrawals_status_chk', t.status, WITHDRAWAL_STATUSES),
     check('withdrawals_amount_chk', sql`${t.amount} > 0`),
+  ],
+);
+
+
+/**
+ * Source attribution of a withdrawal (Batch 1.5 closure). Written at approval, atomically with the reservation
+ * journal; the sum of allocations equals the withdrawal amount exactly (DB-checked by an invariant). Each row
+ * follows the money: RESERVED → PAID (payout) / RELEASED (failed before transfer, reject) → RETURNED (bounce).
+ * `restored_amount` = how much of this allocation went back to its source (released / returned).
+ */
+export const withdrawalAllocations = pgTable(
+  'withdrawal_allocations',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    withdrawalId: uuid()
+      .notNull()
+      .references(() => withdrawalRequests.id),
+    seq: integer().notNull(),
+    userId: uuid().references(() => users.id),
+    sellerId: uuid().references(() => sellers.id),
+    sourceType: text({ enum: ALLOCATION_SOURCES }).notNull(),
+    /** seller_account (Marketplace sub-ledger of `seller_id`) or deal_payout (one payable deal). */
+    sourceEntityType: text().notNull(),
+    sourceEntityId: uuid().notNull(),
+    dealId: uuid(),
+    amount: money().notNull(),
+    status: text({ enum: ALLOCATION_STATUSES }).notNull().default('RESERVED'),
+    restoredAmount: money().notNull().default(0),
+    reservationJournalId: uuid(),
+    payoutJournalId: uuid(),
+    releaseJournalId: uuid(),
+    returnJournalId: uuid(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('withdrawal_allocations_seq_uq').on(t.withdrawalId, t.seq),
+    index('withdrawal_allocations_source_idx').on(t.sourceEntityType, t.sourceEntityId, t.status),
+    enumCheck('withdrawal_allocations_source_chk', t.sourceType, ALLOCATION_SOURCES),
+    enumCheck('withdrawal_allocations_status_chk', t.status, ALLOCATION_STATUSES),
+    check('withdrawal_allocations_amount_chk', sql`${t.amount} > 0`),
+    check('withdrawal_allocations_restored_chk', sql`${t.restoredAmount} >= 0 and ${t.restoredAmount} <= ${t.amount}`),
   ],
 );
 

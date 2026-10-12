@@ -1,8 +1,7 @@
 import Link from '@/ui/link';
 import { desc, eq } from 'drizzle-orm';
 import { Banknote } from 'lucide-react';
-import { refundDecisionAction, refundPaidAction, revealPayoutAction } from '@/app/_actions/admin';
-import { RevealPayout } from '@/app/_components/reveal-id';
+import { refundDecisionAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { checkerMayExecute, MovementPanel } from '@/app/_components/movement-panel';
 import { openMovementRequests } from '@/server/modules/finance/movements';
@@ -29,16 +28,6 @@ const TABS: { key: string; label: string; statuses: RefundStatus[] }[] = [
   { key: 'closed', label: 'مرفوضة/ملغاة', statuses: ['REJECTED', 'CANCELLED'] },
 ];
 
-function DealPayForm({ id }: { id: string }) {
-  return (
-    <ActionForm action={refundPaidAction} className="mt-3 grid gap-2 border-t border-line pt-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-      <input type="hidden" name="kind" value="deal" /><input type="hidden" name="id" value={id} /><input type="hidden" name="back" value="/admin/refunds?tab=deals" />
-      <Input name="reference" required minLength={3} placeholder="مرجع التحويل" className="ltr" aria-label="مرجع التحويل" />
-      <FileInput name="proof" label="إثبات (اختياري)" accept="image/jpeg,image/png,image/webp,application/pdf" />
-      <SubmitButton size="sm">تسجيل الصرف</SubmitButton>
-    </ActionForm>
-  );
-}
 
 export default async function Refunds(props: PageProps<'/admin/refunds'>) {
   const { actor, allowed } = await adminWith(['refunds.pay', 'refunds.approve', 'deals.payout', 'finance.view']);
@@ -53,7 +42,6 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
   const canApprove = hasPermission(actor, 'refunds.approve');
   const canPay = hasPermission(actor, 'refunds.pay');
   const canOverride = hasPermission(actor, 'refunds.destination.override');
-  const canPayout = hasPermission(actor, 'deals.payout');
   const back = `/admin/refunds?tab=${tab}`;
   const openReqs = refundRows.length ? await openMovementRequests(refundRows.map((x) => x.r.id)) : [];
   const openFor = (kind: 'REFUND_APPROVAL' | 'REFUND_REVOCATION', id: string) => openReqs.find((o) => o.r.kind === kind && o.r.entityId === id) ?? null;
@@ -160,8 +148,7 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
                   <span className="flex items-center gap-2"><b>{formatEGP(p.amount)}</b><StatusChip status={p.status} kind="payout" /></span>
                 </div>
                 {p.paidReference && <p className="mt-1 text-xs text-muted">مرجع {p.paidReference} · {formatDate(p.paidAt, true)}</p>}
-                {p.status === 'PENDING' && canPayout && <div className="mt-2"><RevealPayout action={revealPayoutAction} kind="deal_payout" id={p.id} back="/admin/refunds?tab=deals" /></div>}
-                {p.status === 'PENDING' && canPayout && <DealPayForm id={p.id} />}
+                {p.status === 'PENDING' && <p className="mt-2 text-xs text-muted">يُصرف هذا المستحق فقط عبر طلب سحب من البائع إلى وجهة صرف متحقق منها (قائمة السحوبات). لا يوجد صرف مباشر لبيانات مكتوبة في العرض.</p>}
               </li>
             ))}</ul>
           )}

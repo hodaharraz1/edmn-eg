@@ -5,6 +5,7 @@ import { revealPayoutAction, withdrawalAdminAction } from '@/app/_actions/admin'
 import { RevealPayout } from '@/app/_components/reveal-id';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { checkerMayExecute, MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
+import { withdrawalAllocationsOf } from '@/server/modules/finance/withdrawals';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { sellers, statusHistory, stores, users, withdrawalRequests } from '@/server/db/schema';
@@ -24,14 +25,16 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   const { id } = await props.params;
   const [w] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, id));
   if (!w) notFound();
-  const [s] = await db.select({ seller: sellers, store: stores.name }).from(sellers).innerJoin(stores, eq(stores.sellerId, sellers.id)).where(eq(sellers.id, w.sellerId));
-  const bal = await sellerBalances(db, w.sellerId);
+  const [s] = w.sellerId ? await db.select({ seller: sellers, store: stores.name }).from(sellers).innerJoin(stores, eq(stores.sellerId, sellers.id)).where(eq(sellers.id, w.sellerId)) : [null];
+  const bal = w.sellerId ? await sellerBalances(db, w.sellerId) : null;
+  const allocations = await withdrawalAllocationsOf(w.id);
+  const [beneficiary] = w.userId ? await db.select({ n: users.fullName }).from(users).where(eq(users.id, w.userId)) : [];
   const people = [w.requestedBy, w.reviewedBy, w.approvedBy, w.paidBy].filter((x): x is string => !!x);
   const names = people.length ? Object.fromEntries((await db.select({ id: users.id, n: users.fullName }).from(users).where(inArray(users.id, people))).map((u) => [u.id, u.n])) : {};
   const history = await db.select().from(statusHistory).where(eq(statusHistory.entityId, w.id)).orderBy(asc(statusHistory.createdAt));
   const canApprove = hasPermission(actor, 'withdrawals.approve');
   const canPay = hasPermission(actor, 'withdrawals.pay');
-  const hold = s.seller.payoutHoldUntil && s.seller.payoutHoldUntil > new Date();
+  const hold = !!s?.seller.payoutHoldUntil && s.seller.payoutHoldUntil > new Date();
   // Universal two-person rule (Batch 1.5): the payer is never the approver, whatever the amount.
   const sameAsApprover = w.approvedBy === actor.userId;
   const openReversal = await openMovementFor('WITHDRAWAL_REVERSAL', w.id);
@@ -41,15 +44,16 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   const hidden = <><input type="hidden" name="withdrawalId" value={w.id} /><input type="hidden" name="back" value={`/admin/withdrawals/${w.id}`} /></>;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s.store} actions={<StatusChip status={w.status} kind="withdrawal" />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s?.store ?? `بائع صفقات محمية — ${beneficiary?.n ?? ''}`} actions={<StatusChip status={w.status} kind="withdrawal" />} />
       {w.isTest && <TestMoneyNotice kind="payout" />}
-      {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
-      {s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {s.seller.status}</Alert>}
+      {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s?.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
+      {s && s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {s.seller.status}</Alert>}
       <section className="card p-5">
         <DefinitionList items={[
-          { label: 'البائع', value: <Link className="text-brand-700" href={`/admin/sellers/${w.sellerId}`}>{s.store} · {s.seller.legalName}</Link> },
+          { label: 'البائع', value: s ? <Link className="text-brand-700" href={`/admin/sellers/${w.sellerId}`}>{s.store} · {s.seller.legalName}</Link> : `${beneficiary?.n ?? '—'} (بدون متجر — صفقات محمية)` },
+          { label: 'وجهة الصرف', value: w.receivingDestinationId ? 'بيانات استلام أموال متحقق منها (مستوى المستخدم)' : 'وسيلة سحب المتجر المتحقق منها' },
           { label: 'الحساب (مقنّع)', value: <span>{label('payoutType', w.payoutType)} <span className="ltr">{w.payoutMasked}</span></span> },
-          { label: 'المصدر', value: w.source === 'SCHEDULED' ? 'تسوية دورية' : 'طلب البائع' },
+          { label: 'المصدر', value: w.source === 'SCHEDULED' ? 'تسوية دورية' : w.source === 'ACCOUNT' ? 'طلب من حساب المستخدم' : 'طلب البائع' },
           { label: 'موعد SLA', value: formatDate(w.slaDueAt, true) },
           { label: 'رقابة مزدوجة', value: w.requiresDualControl ? <Badge tone="warning">مطلوبة: المنفّذ ≠ المعتمد</Badge> : 'لا' },
           { label: 'طلبه', value: `${w.requestedBy ? names[w.requestedBy] : 'النظام'} · ${formatDate(w.createdAt, true)}` },
@@ -58,7 +62,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           { label: 'إثبات التحويل', value: w.proofFileId ? <a className="text-brand-700 underline" target="_blank" href={`/api/files/${w.proofFileId}`}>عرض</a> : '—' },
           { label: 'رسوم التحويل', value: w.payoutChannel ? `${w.payoutChannel} · ${formatEGP(w.transferCost)} ${w.transferCostPayer === 'SELLER_PAYS' ? '(على البائع)' : '(على اضمن)'} · صافي للبائع ${formatEGP(w.netTransferAmount ?? w.amount)}${w.actualTransferCost !== null ? ` · الفعلية ${formatEGP(w.actualTransferCost)}` : ''}` : '— (طلب قبل محرك التكاليف)' },
           ...(((w.transferCostSnapshot as { warnings?: string[] } | null)?.warnings ?? []).length ? [{ label: 'تحذيرات الحدود', value: ((w.transferCostSnapshot as { warnings?: string[] }).warnings ?? []).join('، ') }] : []),
-          { label: 'أرصدة البائع الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` },
+          ...(bal ? [{ label: 'أرصدة المتجر الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` }] : []),
           ...(w.rejectReason ? [{ label: 'سبب الرفض', value: w.rejectReason }] : []),
           ...(w.transferUncertainAt ? [{ label: 'نتيجة غير مؤكدة منذ', value: formatDate(w.transferUncertainAt, true) }] : []),
           ...(w.transferFailedAt ? [{ label: 'فشل قبل التحويل', value: `${formatDate(w.transferFailedAt, true)} · ${w.transferFailureReason ?? ''} · دليل ${w.transferFailureEvidence ?? ''}` }] : []),
@@ -69,6 +73,21 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             <RevealPayout action={revealPayoutAction} kind="withdrawal" id={w.id} back={`/admin/withdrawals/${w.id}`} />
             <p className="mt-1 text-xs text-muted">يتطلب تحققاً إضافياً حديثاً (2FA) وكل عملية عرض مسجّلة في سجل التدقيق.</p>
           </div>
+        )}
+      </section>
+      <section className="card p-5" data-testid="withdrawal-allocations">
+        <h2 className="mb-2 font-bold">توزيع مصادر السحب</h2>
+        {allocations.length === 0 ? (
+          <p className="text-sm text-muted">{w.reservedAt ? 'سحب سابق لنظام التوزيع: مصدره بالكامل رصيد مبيعات المتجر.' : 'يتحدد التوزيع عند الاعتماد: الصفقات المحمية المستحقة الأقدم أولاً، ثم رصيد مبيعات المتجر.'}</p>
+        ) : (
+          <ul className="divide-y divide-line text-sm">
+            {allocations.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>{a.seq}. {a.sourceType === 'MARKETPLACE' ? 'رصيد مبيعات المتجر' : <>صفقة محمية {a.dealId && <Link className="text-brand-700" href={`/admin/deals/${a.dealId}`}>(الصفقة)</Link>}</>} · <Badge>{({ RESERVED: 'محجوز', PAID: 'تم التحويل', RELEASED: 'أُعيد للمصدر', RETURNED: 'ارتد وأُعيد للمصدر' } as const)[a.status]}</Badge>{a.restoredAmount > 0 && ` · أُعيد ${formatEGP(a.restoredAmount)}`}</span>
+                <b className="tabular-nums">{formatEGP(a.amount)}</b>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
       <div className="grid gap-4 md:grid-cols-2">

@@ -231,8 +231,17 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'الرصيد المحجوز للسحب لا يطابق طلبات السحب المحجوزة',
     await rows(
       conn,
+      // Allocation-aware (Batch 1.5 closure): the store's reserved balance = its MARKETPLACE allocations still
+      // RESERVED + legacy reserved withdrawals (before allocations, Marketplace-only by construction).
       sql`select a.seller_id, a.balance, coalesce(w.q, 0) open_reserved from ledger_accounts a
-        left join (select seller_id, sum(amount) q from withdrawal_requests where reserved_at is not null and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN') group by seller_id) w on w.seller_id = a.seller_id
+        left join (
+          select seller_id, sum(q) q from (
+            select x.seller_id, x.amount q from withdrawal_allocations x where x.source_type = 'MARKETPLACE' and x.status = 'RESERVED'
+            union all
+            select r.seller_id, r.amount from withdrawal_requests r where r.reserved_at is not null and r.status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')
+              and not exists (select 1 from withdrawal_allocations x where x.withdrawal_id = r.id)
+          ) t group by seller_id
+        ) w on w.seller_id = a.seller_id
         where a.code = 'SELLER_WITHDRAWAL_RESERVED' and (a.balance < 0 or a.balance <> coalesce(w.q, 0))`,
     ),
   );
@@ -265,10 +274,41 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'مستحقات بائعي الصفقات في الدفتر لا تطابق مستحقات الصفقات غير المصروفة',
     await rows(
       conn,
-      sql`select coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0) ledger,
-            coalesce((select sum(amount) from deal_payouts where status = 'PENDING'), 0) payouts
-          where coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0)
-             <> coalesce((select sum(amount) from deal_payouts where status = 'PENDING'), 0)`,
+      sql`with due as (
+            select coalesce(sum(p.amount - coalesce((select sum(a.amount - a.restored_amount) from withdrawal_allocations a
+              where a.source_entity_type = 'deal_payout' and a.source_entity_id = p.id), 0)), 0) n
+            from deal_payouts p where p.status = 'PENDING')
+          select coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0) ledger, (select n from due) payouts
+          where coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0) <> (select n from due)`,
+    ),
+  );
+  add(
+    'DEAL_RESERVED_ATTRIBUTION',
+    'مستحقات الصفقات المحجوزة في الدفتر لا تطابق تخصيصات السحب المحجوزة',
+    await rows(
+      conn,
+      sql`select coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_RESERVED' and seller_id is null), 0) ledger,
+            coalesce((select sum(amount) from withdrawal_allocations where source_type = 'PROTECTED_DEAL' and status = 'RESERVED'), 0) allocations
+          where coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_RESERVED' and seller_id is null), 0)
+             <> coalesce((select sum(amount) from withdrawal_allocations where source_type = 'PROTECTED_DEAL' and status = 'RESERVED'), 0)`,
+    ),
+  );
+  add(
+    'WITHDRAWAL_ALLOCATION_SUM',
+    'مجموع توزيع مصادر السحب لا يساوي مبلغ السحب',
+    await rows(
+      conn,
+      sql`select w.id, w.amount, sum(a.amount) allocated from withdrawal_requests w join withdrawal_allocations a on a.withdrawal_id = w.id
+          group by w.id, w.amount having sum(a.amount) <> w.amount`,
+    ),
+  );
+  add(
+    'WITHDRAWAL_ALLOCATION_MISSING',
+    'سحب محجوز بعد نظام التوزيع بدون توزيع مصادر',
+    await rows(
+      conn,
+      sql`select w.id from withdrawal_requests w where w.source = 'ACCOUNT' and w.reserved_at is not null
+          and not exists (select 1 from withdrawal_allocations a where a.withdrawal_id = w.id)`,
     ),
   );
   const ok = checks.every((c) => c.count === 0);

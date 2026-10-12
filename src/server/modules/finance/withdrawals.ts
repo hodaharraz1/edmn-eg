@@ -5,7 +5,8 @@ import { requirePermission, requireSeller, requireStepUp, SYSTEM_ACTOR, type Act
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import { financialApprovals, ledgerAdjustments, sellerPayoutMethods, sellers, settlements, withdrawalRequests, users, dealPayouts, externalDeals } from '@/server/db/schema';
+import { ledgerAdjustments, receivingDestinations, sellerPayoutMethods, sellers, settlements, withdrawalAllocations, withdrawalRequests, users, dealPayouts, externalDeals } from '@/server/db/schema';
+import { allocationsOf, beneficiaryOf, lockBeneficiary, markAllocations, planAllocation, reservedAccount, sourceAccount, sourceCandidates, syncDealPayouts, type Allocation, type Scope } from './withdrawal-allocation';
 import { grantApproval } from './approvals';
 import { assertNotPaused } from './controls';
 import { decryptJson } from '@/server/core/crypto';
@@ -85,6 +86,8 @@ export async function requestWithdrawal(
       .insert(withdrawalRequests)
       .values({
         sellerId,
+        userId: seller.ownerUserId,
+        sourceType: 'MARKETPLACE',
         isTest: !(await realMoneyEnabled(tx)),
         amount,
         source: opts.source ?? 'ON_DEMAND',
@@ -118,6 +121,117 @@ function transferFields(q: TransferQuote) {
   };
 }
 
+export type AccountDestination = { kind: 'STORE_PAYOUT_METHOD' } | { kind: 'RECEIVING_DESTINATION'; id: string };
+
+/** The store a user owns (Marketplace source + store payout method), if any. */
+async function ownedStore(tx: DbOrTx, userId: string) {
+  const [s] = await tx.select().from(sellers).where(eq(sellers.ownerUserId, userId)).limit(1);
+  return s ?? null;
+}
+
+/** A store in debt (negative available after a post-release refund) blocks EVERY withdrawal of its owner. */
+async function assertNoLiability(tx: DbOrTx, userId: string, lock = false) {
+  const store = await ownedStore(tx, userId);
+  if (store && (await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: store.id }, lock)) < 0) {
+    throw invalidState('على حسابك مديونية (رصيد متاح سالب بعد استرداد). لا يمكن صرف أي سحب قبل تسويتها');
+  }
+}
+
+/** Resolve and verify the destination of an account-level withdrawal (owner + verification + fingerprint). */
+async function resolveAccountDestination(tx: DbOrTx, userId: string, dest: AccountDestination) {
+  if (dest.kind === 'STORE_PAYOUT_METHOD') {
+    const store = await ownedStore(tx, userId);
+    if (!store || !['APPROVED', 'RESTRICTED'].includes(store.status)) throw invalidState('لا يوجد متجر معتمد مرتبط بحسابك');
+    if (store.payoutHoldUntil && store.payoutHoldUntil > new Date()) throw invalidState('تم تغيير بيانات السحب مؤخراً. السحب متاح بعد انتهاء فترة التجميد');
+    const pm = await activePayoutMethod(tx, store.id);
+    if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة للمتجر');
+    assertVerifiedDestination(pm);
+    return { sellerId: store.id, scope: 'ALL_FOR_STORE_DESTINATION' as Scope, payoutMethodId: pm.id, receivingDestinationId: null, type: pm.type, masked: pm.maskedLabel, recipientKey: pm.id };
+  }
+  const { approvedDestinationOf, destinationIntact } = await import('@/server/modules/identity/receiving');
+  const d = await approvedDestinationOf(tx, userId, dest.id);
+  if (!d) throw invalidState('وجهة الصرف غير متحقق منها أو لا تخصك. أضف «بيانات استلام الأموال» وانتظر التحقق منها');
+  if (!destinationIntact(d)) throw invalidState('بيانات وجهة الصرف لا تطابق النسخة المتحقق منها');
+  // Marketplace funds only leave through the store's verified payout method → Protected Deal funds only here.
+  return { sellerId: null, scope: 'PROTECTED_DEAL' as Scope, payoutMethodId: null, receivingDestinationId: d.id, type: d.type, masked: d.maskedLabel, recipientKey: d.id };
+}
+
+/**
+ * Account-level (cross-source) withdrawal by the beneficiary user — a Protected-Deal-only seller (no store) or a
+ * store owner withdrawing Marketplace + Protected Deal funds together. A REQUEST only: nothing moves and nothing is
+ * reserved until an Admin approves; the source split is computed and stored at approval (allocation policy in
+ * withdrawal-allocation.ts). Idempotent on (user, clientKey).
+ */
+export async function requestAccountWithdrawal(actor: Actor, input: { amount: string | number; clientKey: string; destination: AccountDestination }) {
+  const userId = actor.userId;
+  if (!userId || actor.type !== 'CUSTOMER') throw forbidden();
+  let amount: number;
+  try {
+    amount = typeof input.amount === 'number' ? input.amount : parseEgp(input.amount);
+  } catch {
+    throw validation('المبلغ غير صحيح');
+  }
+  if (!input.clientKey || input.clientKey.length < 8) throw validation('طلب غير صالح');
+  return db.transaction(async (tx) => {
+    const [dupe] = await tx.select().from(withdrawalRequests).where(and(eq(withdrawalRequests.userId, userId), eq(withdrawalRequests.clientKey, input.clientKey)));
+    if (dupe) return { withdrawal: dupe, created: false };
+    const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+    await requireApprovedIdentity(tx, actor, 'WITHDRAWAL_REQUEST', userId);
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'account:' + userId}))`);
+    const closing = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${userId} and status = 'PENDING' limit 1`);
+    if (closing.rows.length) throw invalidState('فيه طلب إغلاق حساب قيد التنفيذ');
+    const min = await getSetting('withdrawals.minimumAmount', tx);
+    if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
+    await assertNoLiability(tx, userId);
+    const dest = await resolveAccountDestination(tx, userId, input.destination);
+    const { candidates } = await sourceCandidates(tx, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
+    const plan = planAllocation(candidates, amount);
+    // Early, friendly check only — the authoritative allocation runs at approval under locks.
+    if (!plan) throw new DomainError('INSUFFICIENT_BALANCE', 'المبلغ أكبر من رصيدك المتاح للسحب لهذه الوجهة');
+    const quote = await quoteTransfer(tx, { payoutType: dest.type, amount, sellerId: dest.sellerId ?? '', payoutMethodId: dest.recipientKey });
+    const hard = quote.violations.filter((v) => v.startsWith('الحد الأقصى للعملية') || v.startsWith('مبلغ السحب أقل'));
+    if (hard.length) throw validation(hard.join('، '));
+    const kinds = new Set(plan.map((x) => x.sourceType));
+    const slaHours = await getSetting('withdrawals.slaBusinessHours', tx);
+    const [w] = await tx
+      .insert(withdrawalRequests)
+      .values({
+        sellerId: dest.sellerId,
+        userId,
+        receivingDestinationId: dest.receivingDestinationId,
+        sourceType: kinds.size > 1 ? 'MIXED' : kinds.has('PROTECTED_DEAL') ? 'PROTECTED_DEAL' : 'MARKETPLACE',
+        isTest: !(await realMoneyEnabled(tx)),
+        amount,
+        source: 'ACCOUNT',
+        payoutMethodId: dest.payoutMethodId,
+        payoutType: dest.type,
+        payoutMasked: dest.masked,
+        clientKey: input.clientKey,
+        requestedBy: userId,
+        slaDueAt: addBusinessHours(new Date(), slaHours),
+        requiresDualControl: true,
+        ...transferFields(quote),
+      })
+      .returning();
+    const { recordTransition } = await import('@/server/audit/audit');
+    await recordTransition(tx, actor, 'withdrawal', w.id, null, 'REQUESTED');
+    await audit(tx, actor, { action: 'withdrawal.requested', entityType: 'withdrawal', entityId: w.id, newValues: { amount, payout: dest.masked, scope: dest.scope, plannedSources: plan.map((x) => ({ source: x.sourceType, amount: x.amount })), reserved: false } });
+    await notify(tx, { event: 'WITHDRAWAL_REQUESTED', userIds: [userId], vars: { wd: w.number, amount: formatEGP(amount) }, link: '/account/earnings', dedupeKey: `wd:${w.id}:requested` });
+    return { withdrawal: w, created: true };
+  });
+}
+
+/** Read-only preview of the source split an account-level withdrawal would use now (allocation policy). */
+export async function previewAccountWithdrawal(actor: Actor, amountInput: string | number, destination: AccountDestination) {
+  const userId = actor.userId;
+  if (!userId) throw forbidden();
+  const amount = typeof amountInput === 'number' ? amountInput : parseEgp(amountInput);
+  const dest = await resolveAccountDestination(db, userId, destination);
+  const { candidates } = await sourceCandidates(db, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
+  const total = candidates.reduce((n, c) => n + c.available, 0);
+  return { amount, available: total, plan: planAllocation(candidates, amount), masked: dest.masked };
+}
+
 /**
  * Seller preview before requesting: amount, transfer cost, expected net. Read-only; moves nothing.
  * The EDMN fees already assessed on the sales are shown elsewhere for information only.
@@ -148,43 +262,76 @@ async function lockWithdrawal(tx: DbOrTx, id: string) {
 }
 
 async function notifySeller(tx: DbOrTx, w: Withdrawal, status: string, key: string) {
-  const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, w.sellerId));
-  await notify(tx, { event: 'WITHDRAWAL_UPDATED', userIds: [s.ownerUserId], vars: { wd: w.number, status }, link: '/seller/withdrawals', dedupeKey: `wd:${w.id}:${key}` });
+  const owner = await beneficiaryOf(tx, w);
+  await notify(tx, { event: 'WITHDRAWAL_UPDATED', userIds: [owner], vars: { wd: w.number, status }, link: w.sellerId ? '/seller/withdrawals' : '/account/earnings', dedupeKey: `wd:${w.id}:${key}` });
 }
 
-/** Return reserved funds to AVAILABLE — an approved, two-person reclassification (Maker = `makerId`). */
+/** Separation of duties: staff never act on a withdrawal of a store they belong to, nor on their own money. */
+async function assertNotOwnWithdrawal(tx: DbOrTx, actor: Actor, w: Withdrawal) {
+  if (w.sellerId) await assertNotSelfDealing(tx, actor, w.sellerId);
+  if (actor.userId && actor.userId === (await beneficiaryOf(tx, w))) throw forbidden('لا يمكنك تنفيذ إجراء على سحب يخصك');
+}
+
+/** Destination still verified, owned by the beneficiary and identical to the snapshot frozen at approval. */
+async function assertDestinationStillValid(tx: DbOrTx, w: Withdrawal) {
+  const snap = (w.destinationSnapshot ?? null) as { payoutMethodId?: string; receivingDestinationId?: string; fingerprint?: string } | null;
+  if (snap?.payoutMethodId) {
+    const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, snap.payoutMethodId));
+    if (!pm || pm.status !== 'ACTIVE') throw invalidState('وجهة الصرف المعتمدة لم تعد صالحة. ارفض الطلب ويُطلب سحب جديد');
+    assertVerifiedDestination(pm);
+  } else if (snap?.receivingDestinationId) {
+    const { destinationIntact } = await import('@/server/modules/identity/receiving');
+    const [d] = await tx.select().from(receivingDestinations).where(eq(receivingDestinations.id, snap.receivingDestinationId));
+    const owner = await beneficiaryOf(tx, w);
+    if (!d || d.userId !== owner || d.status !== 'APPROVED') throw invalidState('وجهة الصرف لم تعد متحققًا منها (اتغيرت أو اتأرشفت أو مطلوب إعادة التحقق). ارفض الطلب ويُطلب سحب جديد');
+    if (d.fingerprint !== snap.fingerprint || !destinationIntact(d)) throw invalidState('بيانات وجهة الصرف لا تطابق النسخة المتحقق منها وقت الاعتماد. لا يمكن الصرف');
+  }
+}
+
+/**
+ * Return reserved funds to their SOURCES — per allocation, exactly once (approved, two-person reclassification,
+ * Maker = `makerId`): Marketplace → SELLER_AVAILABLE of that store, Protected Deal → DEAL_PAYOUTS_PAYABLE (the
+ * deal payout becomes payable again).
+ */
 async function reverseReservation(tx: DbOrTx, actor: Actor, w: Withdrawal, reason: string, makerId: string) {
   if (!w.reservedAt) return;
+  const { rows } = await allocationsOf(tx, w);
+  const live = rows.filter((a) => a.status === 'RESERVED');
+  if (!live.length) return;
+  const total = live.reduce((n, a) => n + a.amount, 0);
   const approval = await grantApproval(tx, actor, {
     dualControl: { requestedBy: makerId },
     action: 'WITHDRAWAL_RELEASE_RESERVATION',
     entityType: 'withdrawal',
     entityId: w.id,
-    amount: w.amount,
-    economicVersion: `amount:${w.amount}:status:${w.status}`,
+    amount: total,
+    economicVersion: `amount:${w.amount}:status:${w.status}:alloc:${live.map((a) => `${a.sourceType}:${a.amount}`).join(',')}`,
     reason,
     idempotencyKey: `wd-reverse:${w.id}`,
   });
-  await postEntry(tx, actor, {
+  const posted = await postEntry(tx, actor, {
     entryType: 'WITHDRAWAL_REVERSAL',
     sourceType: 'withdrawal',
     sourceId: w.id,
     idempotencyKey: `wd-reverse:${w.id}`,
     description: `إلغاء حجز طلب السحب #${w.number}`,
     approvalId: approval.id,
-    lines: [
-      { account: { code: 'SELLER_WITHDRAWAL_RESERVED', sellerId: w.sellerId }, debit: w.amount },
-      { account: { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, credit: w.amount },
-    ],
+    lines: live.flatMap((a) => [
+      { account: reservedAccount(a), debit: a.amount, memo: `allocation ${a.seq} ${a.sourceType}` },
+      { account: sourceAccount(a), credit: a.amount, memo: `restored to ${a.sourceType}` },
+    ]),
   });
+  for (const a of live) await markAllocations(tx, [a], { status: 'RELEASED', restoredAmount: a.amount, releaseJournalId: posted.entryId || null });
+  await syncDealPayouts(tx, actor, live.filter((a) => a.sourceType === 'PROTECTED_DEAL').map((a) => a.sourceEntityId));
 }
 
 /** Seller cancels a request that was not yet approved (nothing was reserved, so nothing moves). */
 export async function cancelWithdrawal(actor: Actor, id: string) {
-  const sellerId = requireSeller(actor, 'finance.withdraw');
+  const sellerId = actor.sellerId ? requireSeller(actor, 'finance.withdraw') : null;
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
-    if (w.sellerId !== sellerId) throw forbidden();
+    // Store staff cancel their store's requests; a beneficiary cancels their own account-level request.
+    if (sellerId ? w.sellerId !== sellerId : !actor.userId || w.userId !== actor.userId || w.requestedBy !== actor.userId) throw forbidden();
     if (w.status === 'CANCELLED') return;
     if (w.reservedAt) throw invalidState('الطلب ده اتعتمد والمبلغ اتحجز. لإلغائه تواصل مع فريق اضمن');
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'CANCELLED');
@@ -216,49 +363,77 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'APPROVED' || w.reservedAt) return;
     await assertNotPaused(tx, 'killswitch.withdrawals');
-    await assertNotSelfDealing(tx, actor, w.sellerId);
-    const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
-    if (seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن اعتماد السحب');
-    if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب)');
-    const { sellerLedgerDrift } = await import('@/server/modules/commerce/fulfilment');
-    if (await sellerLedgerDrift(tx, w.sellerId)) throw invalidState('أرصدة البائع المخزنة لا تطابق دفتر الأستاذ — تم إيقاف الاعتماد');
-    const [pm] = w.payoutMethodId ? await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId)) : [];
-    if (!pm || pm.status !== 'ACTIVE') throw invalidState('وسيلة السحب المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
-    assertVerifiedDestination(pm);
-    const dual = w.requiresDualControl || (await needsDualControl(tx, w.sellerId, 0));
-    // Re-validate transfer cost and channel limits now (never split, never switch provider silently).
-    const tq = await quoteTransfer(tx, { payoutType: pm.type, amount: w.amount, sellerId: w.sellerId, payoutMethodId: pm.id, excludeWithdrawalId: w.id });
+    await assertNotOwnWithdrawal(tx, actor, w);
+    const owner = await beneficiaryOf(tx, w);
+    await lockBeneficiary(tx, owner);
+    const { identityStatus } = await import('@/server/modules/identity/service');
+    if ((await identityStatus(tx, owner)) !== 'APPROVED') throw invalidState('هوية صاحب السحب غير متحقق منها حاليًا. لا يمكن اعتماد سحب جديد');
+    await assertNoLiability(tx, owner, true);
+    let destination: Record<string, unknown>;
+    if (w.sellerId) {
+      const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
+      if (seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن اعتماد السحب');
+      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب)');
+      const { sellerLedgerDrift } = await import('@/server/modules/commerce/fulfilment');
+      if (await sellerLedgerDrift(tx, w.sellerId)) throw invalidState('أرصدة البائع المخزنة لا تطابق دفتر الأستاذ — تم إيقاف الاعتماد');
+      const [pm] = w.payoutMethodId ? await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId)) : [];
+      if (!pm || pm.status !== 'ACTIVE') throw invalidState('وسيلة السحب المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
+      assertVerifiedDestination(pm);
+      destination = { payoutMethodId: pm.id, type: pm.type, masked: pm.maskedLabel, holderName: pm.holderName, verifiedAt: pm.verifiedAt?.toISOString() ?? null };
+    } else {
+      const { approvedDestinationOf, destinationIntact } = await import('@/server/modules/identity/receiving');
+      const d = w.receivingDestinationId ? await approvedDestinationOf(tx, owner, w.receivingDestinationId) : null;
+      if (!d || !destinationIntact(d)) throw invalidState('وجهة الصرف لم تعد متحققًا منها. ارفض الطلب ويُطلب سحب جديد');
+      destination = { receivingDestinationId: d.id, version: d.version, type: d.type, masked: d.maskedLabel, holderName: d.holderName, fingerprint: d.fingerprint, verifiedAt: d.reviewedAt?.toISOString() ?? null, verifiedBy: d.reviewedBy };
+    }
+    // Authoritative source allocation under locks (policy: withdrawal-allocation.ts).
+    // Store requests (store context / scheduled settlement) use Marketplace funds only; account requests use the
+    // beneficiary's Protected Deal payables, plus Marketplace funds when paid to the store's own payout method.
+    const scope: Scope = w.source !== 'ACCOUNT' ? 'MARKETPLACE' : w.sellerId ? 'ALL_FOR_STORE_DESTINATION' : 'PROTECTED_DEAL';
+    const { candidates } = await sourceCandidates(tx, { userId: owner, sellerId: w.sellerId, scope, lock: true });
+    const plan = planAllocation(candidates, w.amount);
+    if (!plan) throw new DomainError('INSUFFICIENT_BALANCE', 'الرصيد المتاح من المصادر المسموح بها لا يغطي مبلغ السحب الآن');
+    const recipientKey = w.payoutMethodId ?? w.receivingDestinationId;
+    const tq = await quoteTransfer(tx, { payoutType: w.payoutType, amount: w.amount, sellerId: w.sellerId ?? '', payoutMethodId: recipientKey, excludeWithdrawalId: w.id });
     if (tq.violations.length) throw invalidState(`تجاوز حدود قناة التحويل: ${tq.violations.join('، ')}. لا يتم تقسيم السحب أو تغيير القناة تلقائيًا`);
-    const destination = { payoutMethodId: pm.id, type: pm.type, masked: pm.maskedLabel, holderName: pm.holderName, verifiedAt: pm.verifiedAt?.toISOString() ?? null };
     const approval = await grantApproval(tx, actor, {
       action: 'WITHDRAWAL_RESERVATION',
       entityType: 'withdrawal',
       entityId: w.id,
       amount: w.amount,
-      economicVersion: `amount:${w.amount}:pm:${pm.id}`,
+      economicVersion: `amount:${w.amount}:dest:${recipientKey}:alloc:${plan.map((x) => `${x.sourceType}:${x.sourceEntityId}:${x.amount}`).join(',')}`,
       reason: note?.trim() || 'اعتماد طلب السحب وحجز المبلغ',
       idempotencyKey: `wd:${w.id}`,
       destinationSnapshot: destination,
     });
-    await postEntry(tx, actor, {
+    const rows = await tx
+      .insert(withdrawalAllocations)
+      .values(plan.map((x, i) => ({ withdrawalId: w.id, seq: i + 1, userId: owner, sellerId: x.sourceType === 'MARKETPLACE' ? x.sourceEntityId : null, sourceType: x.sourceType, sourceEntityType: x.sourceEntityType, sourceEntityId: x.sourceEntityId, dealId: x.dealId, amount: x.amount })))
+      .returning();
+    const posted = await postEntry(tx, actor, {
       entryType: 'WITHDRAWAL_RESERVE',
       sourceType: 'withdrawal',
       sourceId: w.id,
       idempotencyKey: `wd:${w.id}`,
       description: `حجز مبلغ طلب السحب #${w.number} عند الاعتماد`,
       approvalId: approval.id,
-      lines: [
-        { account: { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, debit: w.amount },
-        { account: { code: 'SELLER_WITHDRAWAL_RESERVED', sellerId: w.sellerId }, credit: w.amount },
+      lines: rows.flatMap((a) => [
+        { account: sourceAccount(a), debit: a.amount, memo: `allocation ${a.seq} ${a.sourceType}${a.dealId ? ` deal ${a.dealId}` : ''}` },
+        { account: reservedAccount(a), credit: a.amount, memo: `reserved for withdrawal #${w.number}` },
+      ]),
+      guards: [
+        ...rows.filter((a) => a.sourceType === 'MARKETPLACE').map((a) => ({ account: sourceAccount(a), min: 0 })),
+        ...(rows.some((a) => a.sourceType === 'PROTECTED_DEAL') ? [{ account: { code: 'DEAL_PAYOUTS_PAYABLE' as const }, min: 0 }] : []),
       ],
-      guards: [{ account: { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, min: 0 }],
     });
+    await markAllocations(tx, rows, { reservationJournalId: posted.entryId || null });
+    const kinds = new Set(rows.map((a) => a.sourceType));
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'APPROVED', note);
     await tx
       .update(withdrawalRequests)
-      .set({ status: 'APPROVED', approvedBy: actor.userId, approvedAt: new Date(), reservedAt: new Date(), reserveApprovalId: approval.id, destinationSnapshot: destination, requiresDualControl: dual, ...transferFields(tq) })
+      .set({ status: 'APPROVED', approvedBy: actor.userId, approvedAt: new Date(), reservedAt: new Date(), reserveApprovalId: approval.id, destinationSnapshot: destination, requiresDualControl: true, userId: owner, sourceType: kinds.size > 1 ? 'MIXED' : kinds.has('PROTECTED_DEAL') ? 'PROTECTED_DEAL' : 'MARKETPLACE', ...transferFields(tq) })
       .where(eq(withdrawalRequests.id, w.id));
-    await audit(tx, actor, { action: 'withdrawal.approved', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, approvalId: approval.id, reserved: true, dualControl: dual }, reason: note ?? null });
+    await audit(tx, actor, { action: 'withdrawal.approved', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, approvalId: approval.id, reserved: true, dualControl: true, allocations: rows.map((a) => ({ seq: a.seq, source: a.sourceType, entity: a.sourceEntityId, amount: a.amount })) }, reason: note ?? null });
     await notifySeller(tx, w, 'تم الاعتماد وحجز المبلغ', 'approved');
   });
 }
@@ -295,20 +470,21 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     // Owner rule: always two-person — the reservation approver is the Maker, the payer must be someone else.
     if (!w.approvedBy) throw invalidState('لا يوجد معتمد مسجل لهذا السحب. لا يمكن الصرف');
     if (w.approvedBy === actor.userId) throw forbidden('منفذ الصرف يجب أن يكون شخصاً مختلفاً عن معتمد السحب');
-    await assertNotSelfDealing(tx, actor, w.sellerId);
+    await assertNotOwnWithdrawal(tx, actor, w);
     if (w.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذا سحب تجريبي (TEST) ولا يمكن صرفه بعد تفعيل الأموال الحقيقية');
-    const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
-    if (!seller || seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن صرف السحب');
-    if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب). لا يمكن الصرف الآن');
-    if ((await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
-      throw invalidState('على البائع مديونية (رصيد متاح سالب بعد استرداد). يجب تسويتها قبل صرف أي سحب');
+    if (w.sellerId) {
+      const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
+      if (!seller || seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن صرف السحب');
+      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب). لا يمكن الصرف الآن');
+      if ((await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
+        throw invalidState('على البائع مديونية (رصيد متاح سالب بعد استرداد). يجب تسويتها قبل صرف أي سحب');
+      }
     }
-    const snap = (w.destinationSnapshot ?? null) as { payoutMethodId?: string } | null;
-    if (snap?.payoutMethodId) {
-      const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, snap.payoutMethodId));
-      if (!pm || pm.status !== 'ACTIVE') throw invalidState('وجهة الصرف المعتمدة لم تعد صالحة. ارفض الطلب ويُطلب سحب جديد');
-      assertVerifiedDestination(pm);
-    }
+    await assertNoLiability(tx, await beneficiaryOf(tx, w), true);
+    await assertDestinationStillValid(tx, w);
+    const { rows: allocations } = await allocationsOf(tx, w);
+    const live = allocations.filter((a) => a.status === 'RESERVED');
+    if (live.reduce((n, a) => n + a.amount, 0) !== w.amount) throw invalidState('توزيع مصادر السحب لا يطابق مبلغه. تم إيقاف الصرف وإبلاغ المالية');
     // Transfer cost: the seller never pays more than the cost quoted and frozen at approval; any excess
     // (or the whole cost under EDMN_PAYS) is an EDMN expense. The EDMN sale fees are NOT charged here.
     const quoted = w.transferCost;
@@ -320,7 +496,7 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     const net = w.amount - sellerCharge;
     if (net <= 0) throw invalidState('صافي التحويل غير صالح');
     if (w.payoutChannel) {
-      const tq = await quoteTransfer(tx, { payoutType: w.payoutType, amount: w.amount, sellerId: w.sellerId, payoutMethodId: w.payoutMethodId, excludeWithdrawalId: w.id });
+      const tq = await quoteTransfer(tx, { payoutType: w.payoutType, amount: w.amount, sellerId: w.sellerId ?? '', payoutMethodId: w.payoutMethodId ?? w.receivingDestinationId, excludeWithdrawalId: w.id });
       if (tq.violations.length) throw invalidState(`تجاوز حدود قناة التحويل: ${tq.violations.join('، ')}`);
     }
     const approval = await grantApproval(tx, actor, {
@@ -348,7 +524,7 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
       description: `صرف طلب السحب #${w.number} — مرجع ${ref}`,
       approvalId: approval.id,
       lines: [
-        { account: { code: 'SELLER_WITHDRAWAL_RESERVED', sellerId: w.sellerId }, debit: w.amount },
+        ...live.map((a) => ({ account: reservedAccount(a), debit: a.amount, memo: `allocation ${a.seq} ${a.sourceType} paid out` })),
         { account: { code: 'PLATFORM_CASH' }, credit: net, memo: 'net transferred to the seller' },
         ...(sellerCharge > 0 ? [{ account: { code: 'PLATFORM_CASH' as const }, credit: sellerCharge, memo: 'transfer cost paid to the provider (borne by the seller)' }] : []),
         ...(edmnCost > 0
@@ -364,7 +540,9 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
         await tx.insert(transactionCosts).values({ entityType: 'withdrawal', entityId: w.id, costType: 'PAYOUT_TRANSFER', nature: 'ACTUAL', borneBy, amount: amt, reference: ref, journalEntryId: posted.entryId || null, idempotencyKey: `wd-cost:${w.id}:${borneBy}`, createdBy: actor.userId }).onConflictDoNothing();
       }
     }
-    await audit(tx, actor, { action: 'withdrawal.paid', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, reference: ref, approvalId: approval.id } });
+    await markAllocations(tx, live, { status: 'PAID', payoutJournalId: posted.entryId || null });
+    await syncDealPayouts(tx, actor, live.filter((a) => a.sourceType === 'PROTECTED_DEAL').map((a) => a.sourceEntityId), { reference: ref, approvalId: approval.id });
+    await audit(tx, actor, { action: 'withdrawal.paid', entityType: 'withdrawal', entityId: w.id, newValues: { amount: w.amount, reference: ref, approvalId: approval.id, allocations: live.map((a) => ({ seq: a.seq, source: a.sourceType, amount: a.amount })) } });
     await notifySeller(tx, w, 'تم التحويل', 'paid');
   });
 }
@@ -439,7 +617,7 @@ export async function markWithdrawalFailedBeforeTransfer(actor: Actor, id: strin
     if (w.status === 'FAILED_BEFORE_TRANSFER') return;
     if (w.status !== 'PROCESSING' && w.status !== 'TRANSFER_UNCERTAIN') throw invalidState('هذا الإجراء لطلب جارٍ تحويله أو نتيجته غير مؤكدة فقط');
     if (w.processingBy === actor.userId || w.transferUncertainBy === actor.userId) throw forbidden('إثبات عدم خروج التحويل يجب أن يتم بواسطة شخص غير منفذ التحويل');
-    await assertNotSelfDealing(tx, actor, w.sellerId);
+    await assertNotOwnWithdrawal(tx, actor, w);
     const mreq = await takeMovementRequest(tx, actor, 'WITHDRAWAL_REVERSAL', w.id, w.amount);
     if ((mreq.params as { mode?: string }).mode !== 'FAILED_BEFORE_TRANSFER') throw invalidState('طلب المنشئ ليس طلب فشل قبل التحويل');
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'FAILED_BEFORE_TRANSFER', why);
@@ -472,10 +650,21 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
     if (w.status === 'RETURNED') return;
     if (w.status !== 'PAID') throw invalidState('تسجيل الارتداد متاح لسحب تم صرفه فقط');
     if (w.paidBy === actor.userId) throw forbidden('تسجيل ارتداد التحويل يجب أن يتم بواسطة شخص غير منفذ الصرف');
-    await assertNotSelfDealing(tx, actor, w.sellerId);
+    await assertNotOwnWithdrawal(tx, actor, w);
     const transferred = w.netTransferAmount ?? w.amount;
     if (input.amount > transferred) throw validation(`المبلغ المرتد أكبر من المبلغ المحوّل (${formatEGP(transferred)})`);
     const mreq = await takeMovementRequest(tx, actor, 'WITHDRAWAL_RETURN', w.id, input.amount);
+    // Restored per ORIGINAL allocation, in allocation order (seq), each up to what it contributed; a shortfall
+    // (the transfer cost actually paid to the provider) stays on the last allocations. Never pooled.
+    const { rows: allocations } = await allocationsOf(tx, w);
+    const paidAllocs = allocations.filter((a) => a.status === 'PAID');
+    let left = input.amount;
+    const parts = paidAllocs.map((a) => {
+      const part = Math.min(left, a.amount);
+      left -= part;
+      return { a, part };
+    }).filter((x) => x.part > 0);
+    if (left !== 0) throw invalidState('المبلغ المرتد أكبر مما صُرف من مصادر هذا السحب');
     const approval = await grantApproval(tx, actor, {
       dualControl: { requestedBy: mreq.requestedBy },
       action: 'WITHDRAWAL_PAYOUT_RETURN',
@@ -487,7 +676,7 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
       idempotencyKey: `wd-returned:${w.id}`,
       destinationSnapshot: (w.destinationSnapshot as Record<string, unknown>) ?? { masked: w.payoutMasked, type: w.payoutType },
     });
-    await postEntry(tx, actor, {
+    const posted = await postEntry(tx, actor, {
       entryType: 'WITHDRAWAL_RETURNED',
       sourceType: 'withdrawal',
       sourceId: w.id,
@@ -496,7 +685,7 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
       approvalId: approval.id,
       lines: [
         { account: { code: 'PLATFORM_CASH' }, debit: input.amount, memo: 'payout returned by the bank/provider' },
-        { account: { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, credit: input.amount, memo: 'returned payout re-credited to the seller' },
+        ...parts.map(({ a, part }) => ({ account: sourceAccount(a), credit: part, memo: `returned payout restored to allocation ${a.seq} ${a.sourceType}` })),
       ],
     });
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'RETURNED', why);
@@ -505,11 +694,17 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
       .set({ status: 'RETURNED', returnedAmount: input.amount, returnedAt: new Date(), returnedBy: actor.userId, returnedReference: ref, returnReason: why, returnApprovalId: approval.id })
       .where(eq(withdrawalRequests.id, w.id));
     await completeMovementRequest(tx, actor, mreq, approval.id);
+    for (const { a, part } of parts) await markAllocations(tx, [a], { status: 'RETURNED', restoredAmount: part, returnJournalId: posted.entryId || null });
+    await syncDealPayouts(tx, actor, parts.filter(({ a }) => a.sourceType === 'PROTECTED_DEAL').map(({ a }) => a.sourceEntityId));
+    // A bounced user-level destination must be verified again before any further payout.
+    if (w.receivingDestinationId) {
+      await tx.update(receivingDestinations).set({ status: 'REVERIFICATION_REQUIRED', reviewReason: `ارتد تحويل السحب #${w.number}` }).where(and(eq(receivingDestinations.id, w.receivingDestinationId), eq(receivingDestinations.status, 'APPROVED')));
+    }
     // The destination that bounced is no longer trusted: it must be verified again before any payout.
     if (w.payoutMethodId) {
       await tx.update(sellerPayoutMethods).set({ status: 'PENDING_VERIFICATION', isDefault: false }).where(and(eq(sellerPayoutMethods.id, w.payoutMethodId), eq(sellerPayoutMethods.status, 'ACTIVE')));
     }
-    await audit(tx, actor, { action: 'withdrawal.payout_returned', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'RETURNED', amount: input.amount, reference: ref, approvalId: approval.id, destinationReverification: !!w.payoutMethodId }, reason: why });
+    await audit(tx, actor, { action: 'withdrawal.payout_returned', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'RETURNED', amount: input.amount, reference: ref, approvalId: approval.id, destinationReverification: !!(w.payoutMethodId || w.receivingDestinationId), restored: parts.map(({ a, part }) => ({ seq: a.seq, source: a.sourceType, amount: part })) }, reason: why });
     await notifySeller(tx, w, 'ارتد التحويل — أُعيد المبلغ لرصيدك المتاح ويلزم إعادة اعتماد وسيلة السحب', 'returned');
   });
 }
@@ -646,62 +841,34 @@ export async function decideAdjustment(actor: Actor, id: string, approve: boolea
 export { recordRefundPayout as markRefundPaid } from './refunds';
 
 export async function markDealPayoutPaid(actor: Actor, payoutId: string, reference: string, proof?: { data: Buffer; name: string } | null) {
-  requirePermission(actor, 'deals.payout');
-  requireStepUp(actor);
-  const ref = reference?.trim();
-  if (!ref || ref.length < 3) throw validation('رقم مرجع التحويل مطلوب');
-  await db.transaction(async (tx) => {
-    const [p] = await tx.select().from(dealPayouts).where(eq(dealPayouts.id, payoutId)).for('update');
-    if (!p) throw notFound('المستحق');
-    if (p.status === 'PAID') return;
-    if (p.status !== 'PENDING') throw invalidState('حالة المستحق لا تسمح بالصرف');
-    if (p.payeeUserId === actor.userId) throw forbidden('لا يمكنك صرف مستحق لنفسك');
-    await assertNotPaused(tx, 'killswitch.payouts');
-    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId));
-    // Owner rule: always two-person — the settlement (release) approver is the Maker, the payer someone else.
-    const releaser = deal.releaseApprovalId ? (await tx.select({ by: financialApprovals.approvedBy }).from(financialApprovals).where(eq(financialApprovals.id, deal.releaseApprovalId)))[0]?.by : null;
-    if (!releaser) throw invalidState('لا يوجد معتمد تسوية مسجل لهذه الصفقة. لا يمكن الصرف');
-    if (releaser === actor.userId) throw forbidden('منفذ الصرف يجب أن يكون شخصاً مختلفاً عن معتمد التسوية');
-    const dual = true;
-    const approval = await grantApproval(tx, actor, {
-      action: 'DEAL_PAYOUT',
-      entityType: 'deal_payout',
-      entityId: p.id,
-      amount: p.amount,
-      economicVersion: `amount:${p.amount}`,
-      reason: `صرف مستحق صفقة — مرجع ${ref}`,
-      idempotencyKey: `deal-payout-paid:${p.id}`,
-      destinationSnapshot: { masked: deal.sellerPayoutMasked, type: deal.sellerPayoutType },
-      dualControl: dual ? { requestedBy: releaser } : null,
-    });
-    const file = proof ? await storeUpload(tx, actor, { purpose: 'WITHDRAWAL_PROOF', data: proof.data, originalName: proof.name }) : null;
-    await tx.update(dealPayouts).set({ status: 'PAID', paidReference: ref, paidProofFileId: file?.id ?? null, paidBy: actor.userId, paidAt: new Date(), payoutApprovalId: approval.id }).where(eq(dealPayouts.id, p.id));
-    await postEntry(tx, actor, {
-      approvalId: approval.id,
-      entryType: 'DEAL_PAYOUT_PAID',
-      sourceType: 'external_deal',
-      sourceId: p.dealId,
-      idempotencyKey: `deal-payout-paid:${p.id}`,
-      description: `صرف مستحق البائع للصفقة #${deal.number} — مرجع ${ref}`,
-      lines: [
-        { account: { code: 'DEAL_PAYOUTS_PAYABLE' }, debit: p.amount },
-        { account: { code: 'PLATFORM_CASH' }, credit: p.amount },
-      ],
-    });
-    await audit(tx, actor, { action: 'deal.payout_paid', entityType: 'deal_payout', entityId: p.id, newValues: { amount: p.amount, reference: ref } });
-  });
+  // Batch 1.5 closure: a Protected Deal payout is NEVER sent to the unverified destination typed into the offer.
+  // It is paid only through a withdrawal by the beneficiary to a VERIFIED destination (allocation-attributed,
+  // two-person approval + payout). This direct path is closed (fail closed); history stays as recorded.
+  void actor; void payoutId; void reference; void proof;
+  throw invalidState('مستحقات الصفقات المحمية تُصرف فقط عبر طلب سحب من البائع إلى وجهة صرف متحقق منها');
 }
 
 export async function withdrawalQueue(statuses: string[], limit = 50, offset = 0) {
   return db
     .select({ w: withdrawalRequests, seller: { id: sellers.id, legalName: sellers.legalName, status: sellers.status, payoutHoldUntil: sellers.payoutHoldUntil }, requester: users.fullName })
     .from(withdrawalRequests)
-    .innerJoin(sellers, eq(sellers.id, withdrawalRequests.sellerId))
+    .leftJoin(sellers, eq(sellers.id, withdrawalRequests.sellerId))
     .leftJoin(users, eq(users.id, withdrawalRequests.requestedBy))
     .where(inArray(withdrawalRequests.status, statuses as Withdrawal['status'][]))
     .orderBy(withdrawalRequests.slaDueAt)
     .limit(limit)
     .offset(offset);
+}
+
+/** A beneficiary's own withdrawals (account-level and store requests they own), with their source allocations. */
+export async function accountWithdrawals(userId: string) {
+  const rows = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.userId, userId)).orderBy(desc(withdrawalRequests.createdAt)).limit(50);
+  const allocs = rows.length ? await db.select().from(withdrawalAllocations).where(inArray(withdrawalAllocations.withdrawalId, rows.map((r) => r.id))) : [];
+  return rows.map((w) => ({ w, allocations: allocs.filter((a) => a.withdrawalId === w.id).sort((x, y) => x.seq - y.seq) }));
+}
+
+export async function withdrawalAllocationsOf(withdrawalId: string): Promise<Allocation[]> {
+  return db.select().from(withdrawalAllocations).where(eq(withdrawalAllocations.withdrawalId, withdrawalId)).orderBy(withdrawalAllocations.seq);
 }
 
 export async function sellerWithdrawals(sellerId: string) {
@@ -737,10 +904,16 @@ export async function revealPayoutDetails(actor: Actor, kind: 'withdrawal' | 'de
   let details: Record<string, unknown>;
   if (kind === 'withdrawal') {
     const [w] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, id));
-    if (!w?.payoutMethodId) throw notFound('طلب السحب');
-    const [pm] = await db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId));
-    if (!pm) throw notFound('وسيلة السحب');
-    details = { type: pm.type, holderName: pm.holderName, ...decryptJson<Record<string, unknown>>(pm.detailsEnc) };
+    if (!w) throw notFound('طلب السحب');
+    if (w.payoutMethodId) {
+      const [pm] = await db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId));
+      if (!pm) throw notFound('وسيلة السحب');
+      details = { type: pm.type, holderName: pm.holderName, ...decryptJson<Record<string, unknown>>(pm.detailsEnc) };
+    } else if (w.receivingDestinationId) {
+      const [d] = await db.select().from(receivingDestinations).where(eq(receivingDestinations.id, w.receivingDestinationId));
+      if (!d) throw notFound('وجهة الصرف');
+      details = { ...decryptJson<Record<string, unknown>>(d.detailsEnc), type: d.type, holderName: d.holderName };
+    } else throw notFound('وجهة الصرف');
   } else {
     const [p] = await db.select().from(dealPayouts).where(eq(dealPayouts.id, id));
     if (!p) throw notFound('المستحق');

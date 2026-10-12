@@ -97,3 +97,56 @@ The application refuses first (`takeMovementRequest`, `grantApproval`), the data
 * Alerts run from the job scheduler (traffic-driven + daily cron on Vercel Hobby): timing granularity depends on
   that cadence.
 * SLA values are NOT invented: until an operator sets `support.sla`, no due dates and no SLA alerts exist.
+
+## Closure pass (Batch 1.5 acceptance items)
+
+### Cross-source seller withdrawal — migration `0015_batch15_closure_withdrawal_allocations` (additive)
+* New `withdrawal_allocations` (withdrawal, seq, user, seller, source_type MARKETPLACE | PROTECTED_DEAL,
+  source entity `seller_account` | `deal_payout`, deal, amount, status RESERVED → PAID | RELEASED → RETURNED,
+  restored_amount, reservation / payout / release / return journal ids). DB guard: identity fields immutable,
+  forward-only transitions, never deleted. Invariants: `WITHDRAWAL_ALLOCATION_SUM` (Σ allocations = amount),
+  `WITHDRAWAL_ALLOCATION_MISSING`, `WITHDRAWAL_OVERAGE` (store reserved = its RESERVED Marketplace allocations +
+  legacy reserved rows), `DEAL_PAYABLE_ATTRIBUTION` (payable = Σ per-deal unconsumed), `DEAL_RESERVED_ATTRIBUTION`.
+* `withdrawal_requests`: `seller_id` now nullable (Protected-Deal-only seller), `user_id` (beneficiary),
+  `receiving_destination_id`, `source_type` MARKETPLACE | PROTECTED_DEAL | MIXED. New platform account
+  `DEAL_PAYOUTS_RESERVED`.
+* **Allocation policy (accounting mechanics only, no fee/price effect):** Protected Deal payables first, oldest
+  first (`deal_payouts.created_at`, id), then the Marketplace available balance. Store-context requests and scheduled
+  settlements use Marketplace only. Marketplace funds leave only through the store's verified payout method, so a
+  withdrawal to a user-level destination is Protected-Deal-only. Computed and stored at approval under a
+  per-beneficiary advisory lock, atomically with the reservation journal.
+* Journals per allocation: reserve `SELLER_AVAILABLE→SELLER_WITHDRAWAL_RESERVED` / `DEAL_PAYOUTS_PAYABLE→DEAL_PAYOUTS_RESERVED`;
+  payout `*_RESERVED→PLATFORM_CASH`; failure/reject mirror back to each source (once); uncertain = no entry;
+  return = `PLATFORM_CASH→source` per allocation in seq order (a transfer-cost shortfall stays on the last parts).
+  A deal payout is PAID once fully paid through withdrawals and becomes payable again on a return.
+* Legacy reserved withdrawals (before allocations) are treated as one implicit Marketplace allocation — never back-filled.
+* A store liability (negative available) blocks every withdrawal of its owner, from any source; Protected Deal funds
+  are never netted against it (no collection policy invented).
+
+### Protected Deal seller payout destination
+* The destination typed into the offer is no longer a payout destination: `markDealPayoutPaid` is closed (fail closed),
+  the admin "record payout" form is removed. A deal payout is paid only by a withdrawal of the payee to a VERIFIED
+  destination: the store payout method (if they own a store) or «بيانات استلام الأموال» (user-level, no store needed;
+  INSTAPAY added). PENDING_REVIEW → APPROVED by `destinations.review` + fresh 2FA, never self, owner identity APPROVED
+  + holder confirmed; reviewer / reviewed_at / fingerprint / audit; masked display; full details only
+  `destinations.view_full` / `withdrawals.pay` + fresh 2FA, audited. Any change = new version (old archived) →
+  an approved-unpaid withdrawal to the old version is refused at payout; a paid withdrawal's snapshot never changes;
+  a returned payout sets the destination to REVERIFICATION_REQUIRED.
+
+### KYC existing-obligation matrix (tested: `batch15-closure.test.ts`, identical for all three statuses)
+| Capability | PENDING_REVIEW / MORE_INFO_REQUIRED / REVERIFICATION_REQUIRED |
+|---|---|
+| login, view existing order / Protected Deal, communicate, fulfil an existing paid order, delivery evidence, respond to dispute + upload evidence, respond to return, resolve existing refund, resolve existing liability (finance adjustment), contact support | ALLOWED |
+| new product, NEW SALE (buyer checkout refuses a store whose owner identity is not APPROVED), new Protected Deal commitment, add/change payout method, new withdrawal | BLOCKED |
+Receiving details can be submitted, but are only approved once the owner identity is APPROVED (refunds keep going to
+the original payment method meanwhile). The legacy seller with incomplete documents gets no case (mapping
+`leftIncomplete`) and reaches PENDING_REVIEW by submitting front + back from «التحقق من الهوية».
+
+### Refund revocation accounting
+APPROVED posts `REFUND` (`refund:<id>`): Dr `SELLER_PENDING` (or `SELLER_AVAILABLE` after release) seller liability,
+Dr `COMMISSION_DEFERRED` (or `COMMISSION_REVENUE`) fee reversal, Cr `CUSTOMER_REFUNDS_PAYABLE` — an OBLIGATION to the
+customer, no cash. Revocation (APPROVED and not transferred only; ADMIN/DISPUTE refunds on a live sub-order) posts
+`REFUND_REVERSAL` (`refund-revocation:<id>`), the exact line mirror, `reverses_entry_id` = the original entry, under its
+own two-person approval (Maker request + Checker with refunds.approve + fresh 2FA). No cash account is touched;
+the original journal is immutable. A transferred refund (paid_at / payout approval) is refused — that needs a separate
+compensating recovery workflow.

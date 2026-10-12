@@ -53,7 +53,7 @@ export const userIdentityVerifications = pgTable(
 /* ═════════════════ Buyer money-receiving details (NOT a wallet: no balance, no withdrawal) ═════════════════
  * Versioned and immutable: a material change creates a NEW version (the previous one is ARCHIVED), so a refund
  * snapshot always names the exact verified version. Usable only once APPROVED by a destination reviewer. */
-export const RECEIVING_DESTINATION_TYPES = ['BANK_ACCOUNT', 'MOBILE_WALLET'] as const;
+export const RECEIVING_DESTINATION_TYPES = ['BANK_ACCOUNT', 'MOBILE_WALLET', 'INSTAPAY'] as const;
 export const RECEIVING_DESTINATION_STATUSES = ['PENDING_REVIEW', 'APPROVED', 'MORE_INFO_REQUIRED', 'REJECTED', 'REVERIFICATION_REQUIRED', 'ARCHIVED'] as const;
 export type ReceivingDestinationStatus = (typeof RECEIVING_DESTINATION_STATUSES)[number];
 

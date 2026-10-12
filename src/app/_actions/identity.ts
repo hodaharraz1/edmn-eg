@@ -30,7 +30,9 @@ export async function submitReceivingDestinationAction(_p: ActionState, fd: Form
     const input =
       type === 'BANK_ACCOUNT'
         ? { type: 'BANK_ACCOUNT' as const, holderName: str(fd, 'holderName'), bankName: str(fd, 'bankName'), accountNumber: str(fd, 'accountNumber'), iban: str(fd, 'iban') }
-        : { type: 'MOBILE_WALLET' as const, holderName: str(fd, 'holderName'), walletProvider: str(fd, 'walletProvider'), walletNumber: str(fd, 'walletNumber') };
+        : type === 'INSTAPAY'
+          ? { type: 'INSTAPAY' as const, holderName: str(fd, 'holderName'), instapayAddress: str(fd, 'instapayAddress') }
+          : { type: 'MOBILE_WALLET' as const, holderName: str(fd, 'holderName'), walletProvider: str(fd, 'walletProvider'), walletNumber: str(fd, 'walletNumber') };
     await submitReceivingDestination(actor, input, { replacesId: str(fd, 'replacesId') || undefined });
     return { message: 'البيانات اتسجلت وهتتراجع قبل استخدامها. مفيش أي مبلغ بيتحول بمجرد الحفظ.' };
   });
@@ -113,7 +115,7 @@ export async function destinationReviewAction(_p: ActionState, fd: FormData): Pr
   }, ['/admin/receiving-destinations']);
 }
 
-const FIELD_LABELS: Record<string, string> = { type: 'النوع', holderName: 'اسم صاحب الحساب', bankName: 'البنك', accountNumber: 'رقم الحساب', iban: 'IBAN', walletProvider: 'مزود المحفظة', walletNumber: 'رقم المحفظة', method: 'الوسيلة', payerName: 'اسم المحوِّل', payerReference: 'مرجع الدفع', details: 'البيانات', masked: 'مختصر' };
+const FIELD_LABELS: Record<string, string> = { instapayAddress: 'عنوان إنستاباي', type: 'النوع', holderName: 'اسم صاحب الحساب', bankName: 'البنك', accountNumber: 'رقم الحساب', iban: 'IBAN', walletProvider: 'مزود المحفظة', walletNumber: 'رقم المحفظة', method: 'الوسيلة', payerName: 'اسم المحوِّل', payerReference: 'مرجع الدفع', details: 'البيانات', masked: 'مختصر' };
 const rowsOf = (o: Record<string, unknown>) =>
   Object.entries(o)
     .filter(([k, v]) => FIELD_LABELS[k] && v !== '' && v != null)

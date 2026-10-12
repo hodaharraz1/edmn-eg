@@ -294,12 +294,20 @@ export const ALERT_RULES: AlertRule[] = [
   {
     code: 'DEAL_PAYOUT_PENDING',
     category: 'PROTECTED_DEAL',
-    title: 'مستحق صفقة بانتظار الصرف',
-    body: 'مستحق البائع للصفقة {{ref}} ينتظر الصرف بواسطة شخص غير معتمد التسوية.',
-    staffPermission: 'deals.payout',
+    title: 'مستحقاتك من صفقة محمية جاهزة للسحب',
+    body: 'مستحقاتك من الصفقة {{ref}} متاحة. اطلب سحب لوجهة صرف متحقق منها من «مستحقاتي من البيع».',
     severity: 'NORMAL',
-    defaults: { preHours: 0, cooldownHours: 24, agingHours: 24 },
-    candidates: async (c, cfg) => toCandidates(await q<Row>(c, sql`select p.id, (p.created_at + ${hours(cfg.agingHours)})::text due, 'EDMN-' || lpad(d.number::text, 8, '0') ref from deal_payouts p join external_deals d on d.id = p.deal_id where p.status = 'PENDING'`), 'deal_payout', () => '/admin/refunds?tab=deals', false),
+    defaults: { preHours: 0, cooldownHours: 72, agingHours: 24 },
+    // Payable and not yet reserved by any withdrawal → the seller (payee) is told to request it.
+    candidates: async (c, cfg) =>
+      toCandidates(
+        await q<Row>(c, sql`select p.id, (p.created_at + ${hours(cfg.agingHours)})::text due, 'EDMN-' || lpad(d.number::text, 8, '0') ref, p.payee_user_id uid
+          from deal_payouts p join external_deals d on d.id = p.deal_id
+          where p.status = 'PENDING' and p.payee_user_id is not null
+            and p.amount > coalesce((select sum(a.amount - a.restored_amount) from withdrawal_allocations a where a.source_entity_type = 'deal_payout' and a.source_entity_id = p.id), 0)`),
+        'deal_payout',
+        () => '/account/earnings',
+      ),
   },
   /* ───── Inventory ───── */
   {

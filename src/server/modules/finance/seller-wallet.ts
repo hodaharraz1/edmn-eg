@@ -23,7 +23,7 @@ export interface SourceBalances {
   entitledAwaitingRelease: number;
   /** Released and payable to the seller (Marketplace: withdrawable; Protected Deal: payout due per deal). */
   available: number;
-  /** Locked by an in-flight withdrawal (Marketplace only). */
+  /** Locked by an in-flight (approved, not yet paid) withdrawal — per source. */
   reserved: number;
   /** Owed BY the seller (e.g. a refund after release exceeded the available balance). */
   liability: number;
@@ -88,17 +88,27 @@ export async function sellerFinancialView(conn: DbOrTx, userId: string): Promise
       m[bucket] += amount;
       items.push({ sourceType: 'MARKETPLACE', entityType: 'seller_order', entityId: o.id, ref: o.ref, bucket, amount });
     }
-    const [paid] = await rows<{ n: string }>(conn, sql`select coalesce(sum(amount), 0)::text n from withdrawal_requests where seller_id = ${seller.id} and status = 'PAID'`);
+    // Paid out from the MARKETPLACE source only: its share of allocated withdrawals (net of restored amounts),
+    // plus legacy withdrawals (before allocations) which were Marketplace-only by construction.
+    const [paid] = await rows<{ n: string }>(
+      conn,
+      sql`select (coalesce((select sum(a.amount - a.restored_amount) from withdrawal_allocations a where a.source_type = 'MARKETPLACE' and a.seller_id = ${seller.id} and a.status in ('PAID','RETURNED')), 0)
+        + coalesce((select sum(w.amount - coalesce(w.returned_amount, 0)) from withdrawal_requests w where w.seller_id = ${seller.id} and w.status in ('PAID','RETURNED')
+            and not exists (select 1 from withdrawal_allocations a where a.withdrawal_id = w.id)), 0))::text n`,
+    );
     m.paidOut = Number(paid.n);
     marketplace = m;
   }
 
   /* ── PROTECTED DEAL (deals where the user is the bound seller; no store required) ── */
   let protectedDeal: SourceBalances | null = null;
-  const deals = await rows<{ id: string; number: string; status: string; hold: boolean; pays: string | null; fee: string; refund: string; payout_status: string | null; payout_amount: string | null }>(
+  const deals = await rows<{ id: string; number: string; status: string; hold: boolean; pays: string | null; fee: string; refund: string; payout_status: string | null; payout_amount: string | null; reserved: string; paid_alloc: string; has_alloc: boolean }>(
     conn,
     sql`select d.id, d.number::text, d.status, d.financial_hold hold, d.buyer_pays::text pays, d.fee_amount::text fee, d.pending_buyer_refund::text refund,
-          p.status payout_status, p.amount::text payout_amount
+          p.status payout_status, p.amount::text payout_amount,
+          coalesce((select sum(a.amount) from withdrawal_allocations a where a.source_entity_type = 'deal_payout' and a.source_entity_id = p.id and a.status = 'RESERVED'), 0)::text reserved,
+          coalesce((select sum(a.amount - a.restored_amount) from withdrawal_allocations a where a.source_entity_type = 'deal_payout' and a.source_entity_id = p.id and a.status in ('PAID','RETURNED')), 0)::text paid_alloc,
+          exists (select 1 from withdrawal_allocations a where a.source_entity_type = 'deal_payout' and a.source_entity_id = p.id) has_alloc
         from external_deals d left join deal_payouts p on p.deal_id = d.id
        where d.seller_user_id = ${userId}`,
   );
@@ -110,10 +120,15 @@ export async function sellerFinancialView(conn: DbOrTx, userId: string): Promise
       let bucket: AttributedItem['bucket'] | null = null;
       let amount = expectedNet;
       if (d.status === 'COMPLETED') {
+        // Per-deal payable split by its withdrawal allocations: reserved (in flight), paid out, still available.
+        const reserved = Number(d.reserved);
+        const paidOut = d.has_alloc ? Number(d.paid_alloc) : d.payout_status === 'PAID' ? Number(d.payout_amount ?? 0) : 0;
+        pd.reserved += reserved;
+        pd.paidOut += paidOut;
         if (d.payout_status === 'PENDING') {
           bucket = 'available';
-          amount = Number(d.payout_amount);
-        } else if (d.payout_status === 'PAID') pd.paidOut += Number(d.payout_amount);
+          amount = Number(d.payout_amount) - reserved - Number(d.paid_alloc);
+        }
       } else if (['ACTIVE', 'DELIVERED', 'DELIVERY_HANDOVER_VERIFIED', 'BUYER_CONFIRMATION_PENDING', 'BUYER_CONFIRMED_RECEIPT', 'ENTITLED_AWAITING_RELEASE', 'DISPUTED'].includes(d.status) && d.pays) {
         bucket = d.hold || d.status === 'DISPUTED' ? 'held' : ['BUYER_CONFIRMED_RECEIPT', 'ENTITLED_AWAITING_RELEASE'].includes(d.status) ? 'entitledAwaitingRelease' : 'pending';
       }
