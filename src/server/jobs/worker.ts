@@ -1,71 +1,33 @@
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { runAlertSweep } from '@/server/modules/alerts/engine';
 import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db } from '@/server/db/client';
-import { jobs, outboundMessages } from '@/server/db/schema';
+import { jobs } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
 import { flagMissingDeliveryEvents, flagMissingDeliveryEvidence, flagSellerSlaBreaches, processBuyerResponseTimeouts } from '@/server/modules/commerce/fulfilment';
 import { expireDealInvitations, expireDeliveryOtps, flagDealsAwaitingConfirmation } from '@/server/modules/deals/service';
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
-import { providerFor } from '@/server/modules/notifications/providers';
+import { flushOutbound, redactExpiredSecrets } from '@/server/modules/notifications/outbox';
+import { runLedgerHealthCheck } from '@/server/modules/finance/ledger-health';
+import { scanPendingFiles } from '@/server/storage/scanning';
+import type { ScheduledJob } from './scheduler';
 import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
 
 type Handler = (payload: Record<string, unknown>) => Promise<unknown>;
 
-/** Events whose message body carries a one-time code, reset link or invitation link. */
-export const SECRET_EVENTS = ['ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED', 'DEAL_DELIVERY_OTP'];
-export const REDACTED_BODY = '[تم حذف المحتوى الأمني (رمز/رابط) بعد الإرسال أو انتهاء الصلاحية]';
-
-/**
- * Codes and links expire within 30 minutes (deal invitations are shared from the app itself), so
- * any stored copy older than an hour is useless to the owner and only a risk: redact it.
- */
-export async function redactExpiredSecrets() {
-  const r = await db.execute(sql`update outbound_messages set body = ${REDACTED_BODY}
-    where event in ('ACCOUNT_SECURITY', 'EXTERNAL_DEAL_INVITED', 'DEAL_DELIVERY_OTP') and body <> ${REDACTED_BODY} and created_at < now() - interval '1 hour'`);
-  return r.rowCount ?? 0;
-}
-
-/** Sends pending email/SMS through the configured adapters with retry bookkeeping. */
-export async function flushOutbound(limit = 50) {
-  const pending = await db.select().from(outboundMessages).where(and(eq(outboundMessages.status, 'PENDING'), lte(outboundMessages.attempts, 4))).limit(limit);
-  let sent = 0;
-  for (const m of pending) {
-    try {
-      const p = await providerFor(m.channel);
-      await p.send({ recipient: m.recipient, subject: m.subject, body: m.body, secret: SECRET_EVENTS.includes(m.event ?? '') });
-      // Once a real provider has delivered it, a message carrying a code or secret link is redacted at rest.
-      // Delivery OTPs are never kept after hand-off to any driver (the buyer's staging display uses its own encrypted copy).
-      const redact = SECRET_EVENTS.includes(m.event ?? '') && (!p.name.startsWith('log') || m.event === 'DEAL_DELIVERY_OTP');
-      await db
-        .update(outboundMessages)
-        .set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1, ...(redact ? { body: REDACTED_BODY } : {}) })
-        .where(eq(outboundMessages.id, m.id));
-      sent++;
-    } catch (e) {
-      const attempts = m.attempts + 1;
-      await db
-        .update(outboundMessages)
-        // A secret (code / reset link) that will never be delivered is redacted immediately.
-        .set({ attempts, lastError: safeErrorMessage(e), status: attempts >= 5 ? 'FAILED' : 'PENDING', ...(attempts >= 5 && SECRET_EVENTS.includes(m.event ?? '') ? { body: REDACTED_BODY } : {}) })
-        .where(eq(outboundMessages.id, m.id));
-      logger.warn('outbound.send_failed', { id: m.id, channel: m.channel, attempts, error: safeErrorMessage(e) });
-    }
-  }
-  // Expiry redaction also runs with every flush (the scheduled job alone depends on traffic on Vercel Hobby).
-  await redactExpiredSecrets();
-  return sent;
-}
+// The reliable outbox lives in notifications/outbox.ts (claim, backoff, dead letter, sealed secrets).
+export { SECRET_EVENTS, REDACTED_BODY, redactExpiredSecrets, flushOutbound } from '@/server/modules/notifications/outbox';
 
 export const HANDLERS: Record<string, Handler> = {
   'outbound.flush': () => flushOutbound(),
   'orders.expire': (p) => expireOrder(String(p.orderId)),
   'notify.dispatch': () => dispatchDeliveries(),
+  'files.scan': () => scanPendingFiles(),
 };
 
 /** Periodic maintenance tasks run by the worker (cron-like). */
-export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unknown> }[] = [
+export const SCHEDULE: ScheduledJob[] = [
   { name: 'orders.expire_overdue', everyMs: 5 * 60_000, run: () => expireOverdueOrders() },
   // Entitlement only (never a release): buyer window expiry, missing evidence/events, SLA flags.
   { name: 'orders.buyer_response_timeouts', everyMs: 5 * 60_000, run: () => processBuyerResponseTimeouts() },
@@ -83,7 +45,20 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   // Proactive alerts: notifications only — never moves money or changes a business record.
   { name: 'alerts.sweep', everyMs: 5 * 60_000, run: () => runAlertSweep() },
   { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },
+  // Batch 2: read-only ledger health (never fixes anything; a CRITICAL snapshot blocks new money movements).
+  { name: 'ledger.health', everyMs: 30 * 60_000, leaseMs: 10 * 60_000, run: () => runLedgerHealthCheck('scheduler') },
+  // Malware scanning of quarantined uploads (no-op while no scanner is configured — never fakes CLEAN).
+  { name: 'files.scan', everyMs: 5 * 60_000, run: () => scanPendingFiles() },
+  // Operational telemetry retention (job runs, resolved error groups) — see docs/runbooks retention policy.
+  { name: 'ops.prune_telemetry', everyMs: 24 * 60 * 60_000, run: () => pruneTelemetry() },
 ];
+
+/** Retention of operational telemetry only (never business, financial or audit records). */
+export async function pruneTelemetry() {
+  const runs = await db.execute(sql`delete from job_runs where started_at < now() - interval '14 days'`);
+  const errs = await db.execute(sql`delete from error_events where last_seen_at < now() - interval '90 days'`);
+  return { processed: (runs.rowCount ?? 0) + (errs.rowCount ?? 0) };
+}
 
 /** Claims one due job with FOR UPDATE SKIP LOCKED (safe with multiple workers). */
 export async function runOneJob(): Promise<boolean> {

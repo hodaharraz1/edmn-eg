@@ -174,3 +174,39 @@ export async function reconImportsList(limit = 20) {
   return db.select().from(reconImports).orderBy(desc(reconImports.createdAt)).limit(limit);
 }
 
+
+/* ═══════════════ Batch 2: reconciliation status vocabulary ═══════════════ */
+
+export const RECON_REVIEW_STATUSES = ['MATCHED', 'UNMATCHED', 'DUPLICATE_SUSPECTED', 'AMOUNT_MISMATCH', 'REFERENCE_MISMATCH', 'REVIEW_REQUIRED'] as const;
+export type ReconReviewStatus = (typeof RECON_REVIEW_STATUSES)[number];
+
+/**
+ * Pure classification of an imported statement line (no provider is called — none is connected). Derived from the
+ * stored workflow state, the match suggestions and possible duplicates (same channel/direction/amount/counterparty
+ * within 24 h under a different reference). Classification never matches, posts or changes anything.
+ */
+export function classifyReconciliation(
+  t: Pick<ExternalTx, 'state' | 'suggestion'>,
+  ctx: { possibleDuplicates: number },
+): ReconReviewStatus {
+  if (t.state === 'MATCHED') return 'MATCHED';
+  if (t.state === 'MISMATCH') return 'AMOUNT_MISMATCH';
+  if (t.state === 'IGNORED_WITH_REASON') return 'REVIEW_REQUIRED';
+  if (ctx.possibleDuplicates > 0) return 'DUPLICATE_SUSPECTED';
+  const cands = (Array.isArray((t.suggestion as { candidates?: unknown } | null)?.candidates) ? (t.suggestion as { candidates: Candidate[] }).candidates : Array.isArray(t.suggestion) ? (t.suggestion as Candidate[]) : []) as Candidate[];
+  if (!cands.length) return 'UNMATCHED';
+  if (cands.length > 1) return 'REVIEW_REQUIRED';
+  return cands[0].strength === 'AMOUNT_ONLY' ? 'REFERENCE_MISMATCH' : 'REVIEW_REQUIRED';
+}
+
+export async function reconciliationReview(conn: DbOrTx = db, limit = 500) {
+  const rows = await conn.select().from(externalTransactions).orderBy(desc(externalTransactions.occurredAt)).limit(limit);
+  const dup = await conn.execute<{ id: string; n: string }>(sql`select a.id::text id, count(b.id)::text n from external_transactions a
+    join external_transactions b on b.id <> a.id and b.channel = a.channel and b.direction = a.direction and b.amount = a.amount
+      and coalesce(b.counterparty, '') = coalesce(a.counterparty, '') and abs(extract(epoch from b.occurred_at - a.occurred_at)) < 86400
+    group by a.id`);
+  const dups = new Map(dup.rows.map((r) => [r.id, Number(r.n)]));
+  const items = rows.map((t) => ({ id: t.id, externalRef: t.externalRef, amount: t.amount, status: classifyReconciliation(t, { possibleDuplicates: dups.get(t.id) ?? 0 }) }));
+  const counts = Object.fromEntries(RECON_REVIEW_STATUSES.map((s) => [s, items.filter((i) => i.status === s).length])) as Record<ReconReviewStatus, number>;
+  return { counts, items };
+}

@@ -8,6 +8,7 @@ import { logger, safeErrorMessage } from '@/server/core/logger';
 import type { DbOrTx } from '@/server/db/client';
 import { files, type FilePurpose } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
+import { initialScanStatus } from './scanning';
 import { storage } from './storage';
 
 type Kind = 'jpeg' | 'png' | 'webp' | 'pdf';
@@ -138,6 +139,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
     variantKeys,
     originalName: input.originalName ? input.originalName.slice(0, 120) : null,
     ownerUserId: userId,
+    scanStatus: initialScanStatus(visibility),
   });
   return { id, storageKey, visibility, mimeType: mime, sourceSha256: sha256(input.data) };
 }

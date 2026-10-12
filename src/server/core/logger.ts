@@ -87,7 +87,7 @@ function threshold(): number {
 function write(level: Level, msg: string, ctx?: Record<string, unknown>) {
   if (ORDER[level] < threshold()) return;
   if (process.env.NODE_ENV === 'test' && level !== 'error' && !process.env.LOG_IN_TESTS) return;
-  const line = JSON.stringify({ ts: new Date().toISOString(), level, msg, ...(redact(ctx ?? {}) as object) });
+  const line = JSON.stringify({ ts: new Date().toISOString(), level, env: process.env.EDMN_ENVIRONMENT ?? process.env.NODE_ENV, msg, ...(redact(ctx ?? {}) as object) });
   if (level === 'error' || level === 'warn') console.error(line);
   else console.log(line);
 }

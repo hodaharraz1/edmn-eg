@@ -90,6 +90,8 @@ export async function runScheduled(job: ScheduledJob, opts: { force?: boolean; o
     await db.execute(sql`update job_runs set status = 'FAILED', finished_at = now(), error_safe = ${msg} where run_id = ${runId}`).catch(() => {});
     await releaseLease(job.name, owner, false).catch(() => {});
     logger.error('schedule.failed', { name: job.name, attempt, error: msg });
+    const { captureError } = await import('@/server/core/error-tracking');
+    await captureError(e, { source: 'schedule', route: job.name });
     return 'FAILED';
   }
 }

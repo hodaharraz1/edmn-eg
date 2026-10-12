@@ -3,6 +3,7 @@ import type { DbOrTx } from '@/server/db/client';
 import { notificationTemplates, notifications, outboundMessages, users } from '@/server/db/schema';
 import { enqueueJob } from '@/server/jobs/queue';
 import { EVENT_TEMPLATES, render, type EventName } from './events';
+import { protectOutboxRow } from './outbox';
 
 export interface NotifyInput {
   event: EventName;
@@ -64,7 +65,7 @@ export async function notify(tx: DbOrTx, input: NotifyInput): Promise<void> {
     }
   }
   if (rows.length) {
-    await tx.insert(outboundMessages).values(rows);
+    await tx.insert(outboundMessages).values(rows.map(protectOutboxRow));
     await enqueueJob(tx, 'outbound.flush', {}, { dedupeKey: 'outbound.flush' });
   }
 }
@@ -81,7 +82,7 @@ export async function sendDirect(
   if (to.email) rows.push({ channel: 'EMAIL', recipient: to.email, subject: render(def.title, vars), body: render(def.body, vars), event });
   if (to.phone) rows.push({ channel: 'SMS', recipient: to.phone, body: render(def.body, vars).slice(0, 300), event });
   if (rows.length) {
-    await tx.insert(outboundMessages).values(rows);
+    await tx.insert(outboundMessages).values(rows.map(protectOutboxRow));
     await enqueueJob(tx, 'outbound.flush', {}, { dedupeKey: 'outbound.flush' });
   }
 }

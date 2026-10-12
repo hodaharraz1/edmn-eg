@@ -3,6 +3,7 @@ import { audit } from '@/server/audit/audit';
 import { hasPermission, type Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { files } from '@/server/db/schema';
+import { servable } from './scanning';
 import { storage } from './storage';
 
 /**
@@ -91,6 +92,8 @@ export async function readPrivateFile(actor: Actor, fileId: string) {
   if (!/^[0-9a-f-]{36}$/.test(fileId)) return null;
   if (!(await canReadPrivateFile(actor, fileId))) return null;
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
+  // Batch 2: a quarantined / infected / unscanned-where-required file is never served (uniform 404).
+  if (!servable(f)) return null;
   const data = await storage().get(f.visibility, f.storageKey);
   if (!data) return null;
   if (actor.type === 'ADMIN' && SENSITIVE_PURPOSES.has(f.purpose)) {

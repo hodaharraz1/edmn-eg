@@ -13,6 +13,11 @@ import { auditLogs, userRoles, users } from '../src/server/db/schema';
  * echoed or logged. Prints a TOTP enrolment URI that must be added to an authenticator app.
  */
 async function main() {
+  // Batch 2: ONE-TIME bootstrap. Once any SUPER_ADMIN exists, further staff are created from the admin console
+  // (audited, role-separated) — this script can never mint a second all-powerful account silently.
+  const existing = await db.select({ id: userRoles.userId }).from(userRoles).where(eq(userRoles.roleCode, 'SUPER_ADMIN')).limit(1);
+  if (existing.length) throw new Error('a SUPER_ADMIN already exists: bootstrap is one-time only');
+  if (!process.stdin.isTTY) throw new Error('interactive terminal required (credentials are never read from files, arguments or CI)');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const email = (await rl.question('Admin email: ')).trim().toLowerCase();
   const fullName = (await rl.question('Full name: ')).trim();
@@ -20,6 +25,7 @@ async function main() {
   const password = await rl.question('Password (min 12, letters+digits+symbol): ');
   rl.close();
   if (!email.includes('@') || !fullName || !phone) throw new Error('invalid input');
+  if (/\.local$/i.test(email)) throw new Error('reserved demo/test domain (.local) is not allowed for a real administrator');
   const problem = passwordProblems(password, STAFF_POLICY);
   if (problem) throw new Error(problem);
   const [exists] = await db.select().from(users).where(eq(users.email, email));

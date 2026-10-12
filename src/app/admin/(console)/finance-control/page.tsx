@@ -7,6 +7,8 @@ import { db } from '@/server/db/client';
 import { financialCloses } from '@/server/db/schema';
 import { controlBalances, financialInvariants, goLiveGate, killSwitchStates } from '@/server/modules/finance/controls';
 import { recentApprovals } from '@/server/modules/finance/approvals';
+import { latestLedgerHealth } from '@/server/modules/finance/ledger-health';
+import { getSetting } from '@/server/modules/settings';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -32,6 +34,7 @@ export default async function FinanceControl() {
     (select count(*) from jobs where status = 'PENDING' and run_at < now() - interval '1 hour')::text pending_old`)).rows[0];
   const outbound = (await db.execute<{ failed: string }>(sql`select count(*)::text failed from outbound_messages where status = 'FAILED'`)).rows[0];
   const canControl = hasPermission(actor, 'finance.controls');
+  const [releaseRequest, health] = await Promise.all([getSetting('killswitch.globalReleaseRequest'), latestLedgerHealth()]);
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date(new Date().getTime() - 86400_000));
   return (
     <div className="space-y-4">
@@ -76,7 +79,17 @@ export default async function FinanceControl() {
       </section>
       <section className="card p-4">
         <h2 className="mb-2 font-bold">مفاتيح الإيقاف المالية</h2>
-        <p className="mb-2 text-xs text-muted">توقف العمليات الجديدة فقط (لا تمس أي سجل قديم). تغييرها يتطلب تحققًا ثنائيًا وسببًا ويُسجل.</p>
+        <p className="mb-2 text-xs text-muted">توقف العمليات الجديدة فقط (لا تمس أي سجل قديم). تغييرها يتطلب تحققًا ثنائيًا وسببًا ويُسجل. «إيقاف الطوارئ» بيوقف كل الحركات المالية مرة واحدة، ورفعه محتاج شخصين (طلب + موافقة شخص تاني).</p>
+        {releaseRequest && (
+          <Alert tone="warning" className="mb-2" title="طلب رفع إيقاف الطوارئ بانتظار موافقة شخص تاني">
+            اتطلب {formatDate(releaseRequest.requestedAt, true)} — السبب: {releaseRequest.reason}
+          </Alert>
+        )}
+        <p className="mb-2 text-xs" data-testid="ledger-health">
+          سلامة دفتر الأستاذ (آخر فحص تلقائي للقراءة فقط):{' '}
+          {health ? <Badge tone={health.status === 'OK' ? 'success' : health.status === 'WARNING' ? 'warning' : 'danger'}>{health.status}</Badge> : <Badge>لم يتم فحص بعد</Badge>}
+          {health && <span className="text-muted"> — {formatDate(health.checkedAt, true)}</span>}
+        </p>
         <ul className="space-y-2">
           {switches.map((k) => (
             <li key={k.key} className="flex flex-wrap items-center gap-2 text-sm">

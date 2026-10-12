@@ -490,6 +490,10 @@ export const KNOWN_PRODUCTION_BLOCKERS: { code: string; label: string }[] = [
   { code: 'PAYMENT_PROVIDER', label: 'لا يوجد مزود دفع/صرف حقيقي مربوط ولا مطابقة كشوف آلية' },
   { code: 'SECRETS_ROTATION', label: 'تدوير أسرار الإنتاج لم يتم ولم يوثق' },
   { code: 'PRODUCTION_MESSAGING', label: 'مزودا البريد والرسائل للإنتاج غير مفعّلين' },
+  // Batch 2 — evidence that only exists outside the code (removed only by a reviewed change citing the evidence).
+  { code: 'BACKUP_VERIFIED', label: 'النسخ الاحتياطي للإنتاج (قاعدة البيانات + الملفات الخاصة) غير مُثبت باستعادة فعلية' },
+  { code: 'MONITORING_ALERT_TEST', label: 'لم يتم إثبات وصول تنبيه تشغيل تجريبي لشخص مسؤول (On-call)' },
+  { code: 'PUSH_DEVICE_TEST', label: 'إشعارات المتصفح لم تُختبر على أجهزة حقيقية (اختبار يدوي من المالك)' },
 ];
 
 export async function goLiveGate(conn: DbOrTx = db) {
@@ -523,6 +527,21 @@ export async function goLiveGate(conn: DbOrTx = db) {
   const inv = await financialInvariants(conn);
   if (!inv.ok) blockers.push({ code: 'INVARIANTS', label: `مخالفات مالية: ${inv.checks.filter((c) => c.count).map((c) => c.code).join(', ')}` });
   if (inv.totals.difference !== 0) blockers.push({ code: 'LEDGER_IMBALANCE', label: `فرق دفتر الأستاذ ${inv.totals.difference}` });
+  // Batch 2 infrastructure gates (computed — never assumed).
+  const { validateEnvironment } = await import('@/server/core/runtime-env');
+  if (validateEnvironment().errors.length) blockers.push({ code: 'CONFIG_POLICY', label: 'إعدادات البيئة فيها مخالفات لسياسة المتغيرات' });
+  const { ensureFingerprint } = await import('@/server/db/fingerprint');
+  const fp = await ensureFingerprint();
+  if (fp.status !== 'OK') blockers.push({ code: 'ENV_FINGERPRINT', label: `بصمة البيئة غير متحققة (${fp.status})` });
+  if (await getSetting('killswitch.global', conn)) blockers.push({ code: 'GLOBAL_KILL_SWITCH', label: 'إيقاف الطوارئ المالي مفعّل' });
+  const lh = await rows<{ status: string; fresh: boolean }>(conn, sql`select status, checked_at > now() - interval '2 hours' fresh from ledger_health_checks order by checked_at desc limit 1`);
+  if (!lh.length || !lh[0].fresh || lh[0].status === 'CRITICAL') blockers.push({ code: 'LEDGER_HEALTH', label: 'لا يوجد فحص سلامة دفتر حديث (خلال ساعتين) بنتيجة غير حرجة' });
+  const sched = await rows<{ ok: boolean }>(conn, sql`select coalesce(bool_and(last_succeeded_at > now() - interval '2 hours'), false) ok from job_leases where job_name in ('ledger.health','outbound.flush','alerts.sweep')`);
+  if (!sched[0]?.ok) blockers.push({ code: 'SCHEDULER', label: 'المهام المجدولة الحرجة (سلامة الدفتر/الرسائل/التنبيهات) مش شغالة بانتظام' });
+  if (!env.ERROR_TRACKING_DSN) blockers.push({ code: 'ERROR_TRACKING', label: 'تتبع الأخطاء الخارجي غير مضبوط' });
+  if (!env.MALWARE_SCANNER_URL) blockers.push({ code: 'MALWARE_SCANNER_INACTIVE', label: 'MALWARE SCANNER ACTIVE: NO' });
+  const delivered = await rows<{ n: string }>(conn, sql`select count(*)::text n from outbound_messages where status = 'DELIVERED' and channel = 'EMAIL'`);
+  if (Number(delivered[0].n) === 0) blockers.push({ code: 'EMAIL_DELIVERY_EVIDENCE', label: 'لا يوجد أي بريد مؤكد وصوله من المزود (DELIVERED)' });
   // Owner approval is still required even when everything passes: a passing gate never enables real money.
   return { pass: blockers.length === 0, blockers, automaticSellerRelease: false as const };
 }

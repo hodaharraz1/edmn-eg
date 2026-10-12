@@ -162,4 +162,3 @@ export async function outboxStats() {
   };
 }
 
-export { logger as _outboxLogger };

@@ -429,7 +429,8 @@ export async function dealReleaseAction(_p: ActionState, fd: FormData) {
 export async function killSwitchAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const { setKillSwitch } = await import('@/server/modules/finance/controls');
-    await setKillSwitch(a, str(fd, 'key') as Parameters<typeof setKillSwitch>[1], str(fd, 'paused') === 'true', str(fd, 'reason'));
+    const res = await setKillSwitch(a, str(fd, 'key') as Parameters<typeof setKillSwitch>[1], str(fd, 'paused') === 'true', str(fd, 'reason'));
+    if (res === 'RELEASE_REQUESTED') return done('اتسجل طلب رفع إيقاف الطوارئ. لازم شخص تاني بصلاحية الرقابة المالية يوافق عليه.');
     return done();
   }, ['/admin/finance-control']);
 }
@@ -472,4 +473,26 @@ export async function revokeApprovalAction(_p: ActionState, fd: FormData) {
     await revokeApproval(a, str(fd, 'approvalId'), str(fd, 'reason'));
     return done();
   }, ['/admin/finance-control']);
+}
+
+/** Batch 2: on-demand read-only ledger health snapshot (never changes a journal). */
+export async function ledgerHealthAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { requirePermission } = await import('@/server/core/actor');
+    requirePermission(a, 'finance.controls');
+    const { runLedgerHealthCheck } = await import('@/server/modules/finance/ledger-health');
+    const { audit } = await import('@/server/audit/audit');
+    const { db } = await import('@/server/db/client');
+    const row = await runLedgerHealthCheck('manual');
+    await audit(db, a, { action: 'ledger.health_checked', entityType: 'ledger_health_check', entityId: row.id, newValues: { status: row.status } });
+    return done(`نتيجة الفحص: ${row.status}`);
+  }, ['/admin/ops', '/admin/finance-control']);
+}
+
+export async function requeueDeadLetterAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { requeueDeadLetter } = await import('@/server/modules/notifications/outbox');
+    await requeueDeadLetter(a, str(fd, 'id'), str(fd, 'reason'));
+    return done('اترجعت للطابور');
+  }, ['/admin/ops', '/admin/notifications']);
 }

@@ -132,6 +132,12 @@ export async function login(identifier: string, password: string, scope: Scope, 
   });
 }
 
+/** Staff idle timeout: ADMIN_IDLE_TIMEOUT_MINUTES (default 30 — a PROPOSED security default, configurable 5–240). */
+export function adminIdleTimeoutMs(raw: Record<string, string | undefined> = process.env): number {
+  const n = Number(raw.ADMIN_IDLE_TIMEOUT_MINUTES ?? 30);
+  return Math.min(240, Math.max(5, Number.isFinite(n) ? n : 30)) * 60_000;
+}
+
 export async function resolveSession(token: string | undefined | null, scope: Scope) {
   if (!token || token.length < 20 || token.length > 100) return null;
   const id = sha256(token);
@@ -142,6 +148,12 @@ export async function resolveSession(token: string | undefined | null, scope: Sc
     .where(and(eq(sessions.id, id), eq(sessions.scope, scope), isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date())));
   if (!row || row.user.status !== 'ACTIVE') return null;
   if (row.user.passwordChangedAt && row.session.createdAt < row.user.passwordChangedAt) return null;
+  // Batch 2: staff sessions (Admin / Finance / KYC reviewers) end after inactivity; the session is revoked, not just hidden.
+  // lastSeenAt is touched every 5 minutes, so the effective timeout is the configured value + ≤ 5 minutes.
+  if (scope === 'ADMIN' && Date.now() - row.session.lastSeenAt.getTime() > adminIdleTimeoutMs()) {
+    await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, id));
+    return null;
+  }
   // Touch at most once per 5 minutes.
   if (Date.now() - row.session.lastSeenAt.getTime() > 5 * 60_000) {
     await db.update(sessions).set({ lastSeenAt: new Date() }).where(eq(sessions.id, id));

@@ -19,3 +19,4 @@ next-env.d.ts
 .vercel
 /.test-storage
 /.e2e-storage
+drills/

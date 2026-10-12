@@ -18,6 +18,7 @@ import { postEntry } from '@/server/modules/finance/ledger';
 import { notify } from '@/server/modules/notifications/notify';
 import { enqueueJob } from '@/server/jobs/queue';
 import { outboundMessages } from '@/server/db/schema';
+import { protectOutboxRow } from '@/server/modules/notifications/outbox';
 import { decryptLocation, encryptLocation, locationFromValues, locationSchema, toStoredLocation } from '@/server/modules/locations';
 import { payoutMask, payoutSchema, currentLegalVersion, type PayoutInput } from '@/server/modules/sellers/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
@@ -190,6 +191,8 @@ export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: bo
   if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_INVITATION');
+  const { assertPilotAllowed } = await import('@/server/ops/pilot');
+  await assertPilotAllowed(db, requireUser(actor), 'DEAL');
   return db.transaction(async (tx) => {
     const deal = await requireDraft(tx, actor, dealId);
     const missing = dealProblems(deal);
@@ -664,6 +667,8 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة مش مستنية دفع');
+    const { assertPilotAllowed } = await import('@/server/ops/pilot');
+    await assertPilotAllowed(tx, deal.buyerId, 'DEAL', deal.buyerPays);
     const [existing] = await tx.select().from(payments).where(eq(payments.dealId, deal.id)).for('update');
     if (existing) {
       // A deal has no stock to release: an elapsed payment window is simply reopened (audited) so the
@@ -767,7 +772,7 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
   const [buyer] = await tx.select({ phone: users.phone }).from(users).where(eq(users.id, deal.buyerId));
   if (buyer?.phone) {
     const body = `رمز استلام صفقة اضمن #${dealRef(deal.number)}: ${code} — متدّيهوش لحد غير لما تستلم المنتج فعلًا. صالح لحد ${formatDate(expiresAt, true)}.`;
-    await tx.insert(outboundMessages).values({ channel: 'SMS', recipient: buyer.phone, body, event: 'DEAL_DELIVERY_OTP' });
+    await tx.insert(outboundMessages).values(protectOutboxRow({ channel: 'SMS', recipient: buyer.phone, body, event: 'DEAL_DELIVERY_OTP' }));
     await enqueueJob(tx, 'outbound.flush', {}, { dedupeKey: 'outbound.flush' });
   }
   await audit(tx, actor, { action: auditAction, entityType: 'external_deal', entityId: deal.id, newValues: { otpId: id, deliveryAttempt: Math.max(1, deal.deliveryAttempt), expiresAt: expiresAt.toISOString(), maxAttempts, invalidatedPrevious: prev.length } });

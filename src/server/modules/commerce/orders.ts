@@ -61,6 +61,8 @@ export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSch
   const d = parse(checkoutSchema, input);
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'ORDER_PLACEMENT');
+  const { assertPilotAllowed } = await import('@/server/ops/pilot');
+  await assertPilotAllowed(db, customerId, 'ORDER');
   try {
     return await placeOrderTx(actor, customerId, d);
   } catch (e) {
@@ -131,6 +133,8 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     }
     const changedPrices = priced.groups.flatMap((g) => g.lines.filter((l) => l.issues.includes('PRICE_CHANGED')).map((l) => l.title));
     if (changedPrices.length) throw new DomainError('CONFLICT', `السعر اتغير: ${changedPrices.join('، ')}. راجع الإجمالي الجديد وأكّد تاني`);
+    const { assertPilotAllowed } = await import('@/server/ops/pilot');
+    await assertPilotAllowed(tx, customerId, 'ORDER', priced.grandTotal);
     if (priced.grandTotal !== d.expectedTotal) {
       // Never silently charge an old or new amount: the buyer must see and confirm the changed total.
       throw new DomainError('CONFLICT', `الإجمالي اتغير من ${formatEGP(d.expectedTotal)} إلى ${formatEGP(priced.grandTotal)} (الشحن أو رسوم الخدمة اتغيرت). راجع وأكّد تاني`);

@@ -1,4 +1,5 @@
 import { logger, safeErrorMessage } from '@/server/core/logger';
+import { markAbandonedRuns, runScheduled } from './scheduler';
 import { recoverStuckJobs, runOneJob, SCHEDULE } from './worker';
 
 /**
@@ -6,25 +7,21 @@ import { recoverStuckJobs, runOneJob, SCHEDULE } from './worker';
  * Used by the long-running worker (scripts/worker.ts) and, on serverless hosts without one,
  * by the cron route and the throttled after-response trigger (INLINE_WORKER=true).
  */
-const lastRun = new Map<string, number>();
-
-export async function runTick(opts: { force?: boolean; budgetMs?: number; isStopping?: () => boolean } = {}): Promise<{ jobs: number }> {
+/**
+ * Batch 2: each schedule entry runs under its database lease (one run per period across every worker and
+ * serverless instance) with job_runs telemetry; the cadence is decided by the database, not process memory.
+ */
+export async function runTick(opts: { force?: boolean; budgetMs?: number; isStopping?: () => boolean } = {}): Promise<{ jobs: number; schedules: Record<string, number> }> {
   const deadline = opts.budgetMs ? Date.now() + opts.budgetMs : Infinity;
+  const schedules: Record<string, number> = { SUCCEEDED: 0, FAILED: 0, SKIPPED: 0 };
+  await markAbandonedRuns().catch((e) => logger.warn('schedule.abandon_scan_failed', { error: safeErrorMessage(e) }));
   for (const s of SCHEDULE) {
-    const last = lastRun.get(s.name) ?? 0;
-    if (opts.force || Date.now() - last >= s.everyMs) {
-      lastRun.set(s.name, Date.now());
-      try {
-        const res = await s.run();
-        logger.debug('schedule.ran', { name: s.name, res: typeof res === 'object' ? res : { value: res } });
-      } catch (e) {
-        logger.error('schedule.failed', { name: s.name, error: safeErrorMessage(e) });
-      }
-    }
+    if (opts.isStopping?.() || Date.now() >= deadline) break;
+    schedules[await runScheduled(s, { force: opts.force })]++;
   }
   let n = 0;
   while (!opts.isStopping?.() && Date.now() < deadline && (await runOneJob())) n++;
-  return { jobs: n };
+  return { jobs: n, schedules };
 }
 
 let inlineBusy = false;

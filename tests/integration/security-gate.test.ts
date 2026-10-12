@@ -289,9 +289,13 @@ describe('authentication (AUTH-01, AUTH-02, AUTH-06, 2FA)', () => {
     const prev = process.env.VERCEL;
     delete process.env.VERCEL;
     const h = (m: Record<string, string>) => ({ get: (k: string) => m[k.toLowerCase()] ?? null });
+    // Batch 2: without a declared trusted proxy no forwarding header is trusted at all.
+    expect(clientIp(h({ 'x-real-ip': '10.1.1.1', 'x-forwarded-for': '6.6.6.6, 10.0.0.9' }))).toBeNull();
+    process.env.TRUSTED_PROXY = 'true';
     expect(clientIp(h({ 'x-forwarded-for': '6.6.6.6, 10.0.0.9' }))).toBe('10.0.0.9');
     expect(clientIp(h({ 'x-real-ip': '10.1.1.1', 'x-forwarded-for': '6.6.6.6' }))).toBe('10.1.1.1');
     expect(clientIp(h({ 'x-forwarded-for': 'not-an-ip' }))).toBeNull();
+    delete process.env.TRUSTED_PROXY;
     process.env.VERCEL = '1';
     expect(clientIp(h({ 'x-forwarded-for': '6.6.6.6', 'x-vercel-forwarded-for': '41.33.1.2' }))).toBe('41.33.1.2');
     if (prev === undefined) delete process.env.VERCEL;

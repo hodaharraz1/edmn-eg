@@ -30,6 +30,8 @@ export async function runAction(fn: () => Promise<ActionState | void>): Promise<
     }
     const ref = Math.random().toString(36).slice(2, 10).toUpperCase();
     logger.error('action.failed', { ref, error: e as Error });
+    const { captureError } = await import('@/server/core/error-tracking');
+    await captureError(e, { source: 'action', requestId: ref });
     return { ok: false, error: `حصلت مشكلة غير متوقعة. جرّب تاني (مرجع: ${ref})`, at: Date.now() };
   }
 }

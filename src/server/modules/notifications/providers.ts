@@ -3,7 +3,8 @@ import { logger } from '@/server/core/logger';
 
 export interface OutboundProvider {
   name: string;
-  send(msg: { recipient: string; subject?: string | null; body: string; secret?: boolean }): Promise<void>;
+  /** `reference` = outbox id (idempotency reference for the provider). Returns the provider's message id when it gives one. */
+  send(msg: { recipient: string; subject?: string | null; body: string; secret?: boolean; reference?: string }): Promise<{ providerMessageId?: string } | void>;
 }
 
 const logProvider = (channel: string): OutboundProvider => ({
@@ -35,7 +36,10 @@ async function smtpProvider(): Promise<OutboundProvider> {
   smtp = {
     name: 'smtp',
     async send(msg) {
-      await transport.sendMail({ from: e.MAIL_FROM, to: msg.recipient, subject: msg.subject ?? 'EDMN', text: msg.body });
+      // Stable Message-ID per outbox row: a retried send is recognisable as the same message by the provider.
+      const domain = (e.MAIL_FROM.match(/@([^>\s]+)/)?.[1] ?? 'edmn.local').toLowerCase();
+      const info = await transport.sendMail({ from: e.MAIL_FROM, to: msg.recipient, subject: msg.subject ?? 'EDMN', text: msg.body, ...(msg.reference ? { messageId: `<${msg.reference}@${domain}>` } : {}) });
+      return { providerMessageId: info.messageId };
     },
   };
   return smtp;
@@ -49,10 +53,13 @@ const httpSms = (): OutboundProvider => ({
     const res = await fetch(e.SMS_HTTP_URL!, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${e.SMS_HTTP_TOKEN ?? ''}` },
-      body: JSON.stringify({ to: msg.recipient, from: e.SMS_SENDER_ID, text: msg.body }),
+      body: JSON.stringify({ to: msg.recipient, from: e.SMS_SENDER_ID, text: msg.body, reference: msg.reference }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`SMS provider responded ${res.status}`);
+    const json = (await res.json().catch(() => null)) as { id?: unknown; messageId?: unknown } | null;
+    const id = json?.messageId ?? json?.id;
+    return typeof id === 'string' || typeof id === 'number' ? { providerMessageId: String(id) } : {};
   },
 });
 

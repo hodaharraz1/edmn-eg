@@ -61,6 +61,10 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'VAPID_SUBJECT', classification: 'OPTIONAL', secret: false, purpose: 'Web Push contact' },
   { name: 'ERROR_TRACKING_DSN', classification: 'OPTIONAL', secret: true, purpose: 'Provider-neutral error tracking endpoint (NOT CONFIGURED when absent)' },
   { name: 'MALWARE_SCANNER_URL', classification: 'OPTIONAL', secret: false, purpose: 'Malware scanner endpoint (MALWARE SCANNER ACTIVE: NO when absent)' },
+  { name: 'TRUSTED_PROXY', classification: 'OPTIONAL', secret: false, purpose: 'Self-hosted only: trust X-Real-IP / X-Forwarded-For from our own reverse proxy' },
+  { name: 'ADMIN_IDLE_TIMEOUT_MINUTES', classification: 'OPTIONAL', secret: false, purpose: 'Staff session idle timeout (default 30, max 240)' },
+  { name: 'MALWARE_SCAN_REQUIRED', classification: 'OPTIONAL', secret: false, purpose: 'Gate private files on a scan outside production (always on in production)' },
+  { name: 'OUTBOX_ENCRYPT_SECRETS', classification: 'OPTIONAL', secret: false, purpose: 'Seal codes/links in the outbox outside production (always on in production)' },
   { name: 'STAGING_DEMO_PASSWORD', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo accounts password' },
   { name: 'STAGING_ADMIN_PASSWORD', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo admin password' },
   { name: 'STAGING_TOTP_SECRET', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo admin TOTP seed' },
@@ -115,6 +119,7 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
   if (kind === 'PRODUCTION') {
     if (raw.MAIL_DRIVER !== 'smtp') errors.push('MAIL_DRIVER=smtp is required in PRODUCTION');
     if (raw.SMS_DRIVER !== 'http') errors.push('SMS_DRIVER=http is required in PRODUCTION');
+    if (!raw.VERCEL && raw.TRUSTED_PROXY !== 'true') warnings.push('Self-hosted without TRUSTED_PROXY=true: client IPs are unknown (per-IP rate limits share one bucket)');
     if (raw.INLINE_WORKER !== 'true' && !raw.WORKER_DEDICATED) warnings.push('No dedicated worker declared (WORKER_DEDICATED) and INLINE_WORKER is off: jobs only run on the daily cron');
   }
   if (kind !== 'PRODUCTION' && kind !== 'STAGING' && raw.NODE_ENV === 'production' && !raw.EDMN_ENVIRONMENT) errors.push('EDMN_ENVIRONMENT must be set for a production build');
