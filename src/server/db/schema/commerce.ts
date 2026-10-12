@@ -512,6 +512,16 @@ export const refunds = pgTable(
     destinationChangedAt: ts(),
     destinationReapprovalRequired: boolean().notNull().default(false),
     destinationApprovedBy: uuid().references(() => users.id),
+    /** Batch 1.5 destination hierarchy: ORIGINAL_PAYMENT | RECEIVING_DESTINATION (verified fallback) | EXCEPTION. */
+    destinationSource: text(),
+    receivingDestinationId: uuid(),
+    receivingDestinationVersion: integer(),
+    destinationFingerprint: text(),
+    destinationSelectionReason: text(),
+    /** Revocation of an APPROVED, not-yet-executed refund (two-person, compensating journal; never a deletion). */
+    revokedAt: ts(),
+    revokedBy: uuid().references(() => users.id),
+    revokeReason: text(),
     idempotencyKey: text(),
     /** Cost attribution: why, at which stage, who is responsible, and which fee policy decided the components. */
     reasonCode: text(),

@@ -36,6 +36,7 @@ import {
   sendMessage,
   setConversationLock,
   staffThread,
+  grantMessageAccess,
   unreadForSeller,
   unreadForUser,
 } from '@/server/modules/messaging/service';
@@ -323,11 +324,18 @@ describe('security', () => {
       await expect(staffThread(await staff([role]), conv.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
     }
     const officer = await staff(['DISPUTE_OFFICER']);
+    // Batch 1.5: a privileged read needs a recorded purpose first (no purpose → refused, even with messages.view).
+    await expect(staffThread(officer, conv.id, { via: 'dispute' })).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'MESSAGE_ACCESS_PURPOSE_REQUIRED' });
+    await grantMessageAccess(officer, conv.id, { purpose: 'OPERATIONS', note: 'مراجعة تشغيلية للمحادثة في الاختبار' });
     const t = await staffThread(officer, conv.id, { via: 'dispute' });
     expect(t.conv.id).toBe(conv.id);
     const [log] = await db.select().from(auditLogs).where(and(eq(auditLogs.action, 'conversation.staff_viewed'), eq(auditLogs.entityId, conv.id), eq(auditLogs.actorUserId, officer.userId!)));
     expect(log.newValues).toMatchObject({ sellerOrderId: so.id, orderId: so.orderId, via: 'dispute' });
-    for (const role of ['CUSTOMER_SUPPORT', 'OPERATIONS_MANAGER', 'SUPER_ADMIN']) expect((await staffThread(await staff([role]), conv.id)).conv.id).toBe(conv.id);
+    for (const role of ['CUSTOMER_SUPPORT', 'OPERATIONS_MANAGER', 'SUPER_ADMIN']) {
+      const viewer = await staff([role]);
+      await grantMessageAccess(viewer, conv.id, { purpose: 'OPERATIONS', note: 'مراجعة تشغيلية للمحادثة في الاختبار' });
+      expect((await staffThread(viewer, conv.id)).conv.id).toBe(conv.id);
+    }
   });
 
   it('25-26 — script/HTML payloads are stored as plain text (rendered escaped); control characters are stripped', async () => {
@@ -441,6 +449,7 @@ describe('messaging behaviour', () => {
     await hideMessage(await staff(['CUSTOMER_SUPPORT']), m.id, 'طلب بيانات حساسة');
     const buyerView = await participantThread(c.actor, conv.id);
     expect(buyerView.messages[0]).toMatchObject({ hidden: true, body: '' });
+    await grantMessageAccess(admin, conv.id, { purpose: 'RISK', note: 'مراجعة رسالة مُبلّغ عنها' });
     const staffView = await staffThread(admin, conv.id);
     expect(staffView.messages[0].originalBody).toBe('ابعتلي رقم بطاقتك');
     expect((await db.select().from(conversationMessageReports).where(eq(conversationMessageReports.messageId, m.id)))[0].status).toBe('ACTIONED');
@@ -514,7 +523,9 @@ describe('money and state isolation', () => {
     await participantThread(s.actor, conv.id);
     await participantThread(c.actor, conv.id);
     await reportMessage(s.actor, m1.id, { reason: 'OTHER' });
-    await staffThread(await staff(['DISPUTE_OFFICER']), conv.id, { via: 'dispute' });
+    const officer = await staff(['DISPUTE_OFFICER']);
+    await grantMessageAccess(officer, conv.id, { purpose: 'OPERATIONS', note: 'مراجعة تشغيلية للمحادثة في الاختبار' });
+    await staffThread(officer, conv.id, { via: 'dispute' });
     expect(await snap()).toEqual(before);
     expect(before.dispute.s).toBe('OPEN');
     expect(before.so.s).toBe('SHIPPED');

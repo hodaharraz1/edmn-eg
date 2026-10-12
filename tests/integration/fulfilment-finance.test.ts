@@ -8,7 +8,7 @@ import { accountBalance, reconcile, sellerBalances } from '@/server/modules/fina
 import { approveWithdrawal, cancelWithdrawal, createAdjustment, decideAdjustment, markRefundPaid, markWithdrawalPaid, rejectWithdrawal, requestWithdrawal, revealPayoutDetails } from '@/server/modules/finance/withdrawals';
 import { adminActor } from '@/server/auth/actors';
 import { addPayoutMethod } from '@/server/modules/sellers/service';
-import { approveRefundsOf, checkout, ensurePaymentSetup, publishPricingVariant, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveRefundsOf, checkout, ensurePaymentSetup, publishPricingVariant, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -65,6 +65,7 @@ describe('shipping & buyer receipt confirmation', () => {
     expect(after.receiptConfirmedBy).toBe(c.user.id);
     // Admin release — double click / concurrent retry → exactly one release journal.
     const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await makerRequest('SELLER_RELEASE', so.id, so.sellerNet); // Batch 1.5: Maker first
     const rel = await Promise.allSettled([
       releaseSellerOrder(checker, so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد الاستلام' }),
       releaseSellerOrder(checker, so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد الاستلام' }),
@@ -220,6 +221,7 @@ describe('withdrawals', () => {
     const checker = await makeAdmin(['FINANCE_CHECKER']);
     await approveWithdrawal(checker, withdrawal.id);
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(b0.available - 100_00);
+    await makerRequest('WITHDRAWAL_REVERSAL', withdrawal.id, 100_00, { params: { mode: 'REJECT' } }); // reserved → Maker first
     await rejectWithdrawal(checker, withdrawal.id, 'بيانات الحساب غير مطابقة');
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(b0.available);
     const w2 = await requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() });
@@ -289,8 +291,9 @@ describe('ledger integrity', () => {
   it('an unbalanced entry is rejected by the database at commit', async () => {
     await expect(
       db.transaction(async (tx) => {
-        const [ap] = (await tx.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
-          values ('MANUAL_ADJUSTMENT', 'test', 'x', 100, 'v', array['X'], 'test', ${admin.userId}, now(), ${randomUUID()}) returning id`)).rows;
+        const maker = await makeAdmin(['FINANCE_OPERATOR']);
+        const [ap] = (await tx.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, dual_control, requested_by, approved_by, approved_at, idempotency_key)
+          values ('MANUAL_ADJUSTMENT', 'test', 'x', 100, 'v', array['X'], 'test', true, ${maker.userId}, ${admin.userId}, now(), ${randomUUID()}) returning id`)).rows;
         const [e] = await tx.execute<{ id: string }>(sql`insert into journal_entries (entry_type, source_type, source_id, idempotency_key, description, approval_id) values ('X','test','x', ${randomUUID()}, 'bad', ${ap.id}) returning id`).then((r) => r.rows);
         const [acc] = (await tx.execute<{ id: string }>(sql`select id from ledger_accounts limit 1`)).rows;
         await tx.execute(sql`insert into journal_lines (entry_id, account_id, debit, credit) values (${e.id}, ${acc.id}, 100, 0)`);

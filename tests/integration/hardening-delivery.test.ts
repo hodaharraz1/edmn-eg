@@ -17,7 +17,7 @@ import { sellerOrderPosition } from '@/server/modules/finance/postings';
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { adminActor } from '@/server/auth/actors';
 import type { Actor } from '@/server/core/actor';
-import { checkout, elapse, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, elapse, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 
 /**
  * Delivery evidence → buyer window → entitlement → Admin release (business-rule clarification §1):
@@ -51,6 +51,8 @@ const approvalsOf = async (id: string) => db.select().from(financialApprovals).w
 async function tryRelease(soId: string) {
   const so = await soOf(soId);
   const pos = await sellerOrderPosition(db, so);
+  // Batch 1.5: the Maker step (idempotent for the same maker/amount); release still enforces every blocker.
+  if (pos.pending > 0) await makerRequest('SELLER_RELEASE', soId, pos.pending).catch(() => undefined);
   return releaseSellerOrder(checker, soId, { expectedSellerAmount: pos.pending, reason: 'محاولة إتاحة في الاختبار' });
 }
 

@@ -26,7 +26,8 @@ export default async function BalancePage() {
   ];
   return (
     <div className="space-y-5">
-      <PageHeader title="الرصيد" actions={<LinkButton href="/seller/withdrawals">طلب سحب</LinkButton>} />
+      <PageHeader title="رصيد مبيعات المتجر" actions={<LinkButton href="/seller/withdrawals">طلب سحب</LinkButton>} />
+      <p className="text-sm text-muted">ده رصيد المتجر من السوق فقط. مستحقاتك الشخصية من الصفقات المحمية والإجمالي في <a className="text-brand-700 underline" href="/account/earnings">حسابك ← مستحقاتي من البيع</a>.</p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <div key={c.label} className={`rounded-2xl border p-5 ${c.tone}`}>

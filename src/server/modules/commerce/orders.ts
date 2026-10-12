@@ -59,6 +59,8 @@ export function orderLabel(number: number, suffix?: string) {
 export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSchema>) {
   const customerId = requireUser(actor);
   const d = parse(checkoutSchema, input);
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'ORDER_PLACEMENT');
   try {
     return await placeOrderTx(actor, customerId, d);
   } catch (e) {

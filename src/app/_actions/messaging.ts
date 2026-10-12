@@ -1,9 +1,10 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { after } from 'next/server';
 import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
-import { hideMessage, reportMessage, resolveReport, sendMessage, setConversationLock } from '@/server/modules/messaging/service';
+import { grantMessageAccess, hideMessage, reportMessage, resolveReport, sendMessage, setConversationLock, type MessageAccessPurpose } from '@/server/modules/messaging/service';
 import { runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin, requireCustomer, requireSellerActor } from '@/server/web/session';
 
@@ -55,6 +56,21 @@ export async function reportMessageAction(_p: ActionState | null, fd: FormData):
 }
 
 /* ── Staff moderation (audited in the service) ── */
+
+/** Privileged access: purpose + note (+ case for SUPPORT/DISPUTE) before any private conversation is shown. */
+export async function grantMessageAccessAction(_p: ActionState | null, fd: FormData): Promise<ActionState> {
+  const actor = await requireAdmin();
+  const id = str(fd, 'conversationId');
+  const res = await runAction(async () => {
+    await grantMessageAccess(actor, id, { purpose: str(fd, 'purpose') as MessageAccessPurpose, note: str(fd, 'note'), caseId: str(fd, 'caseId') || null });
+    return { message: 'تم تسجيل سبب الاطلاع' };
+  });
+  if (res.ok) {
+    revalidatePath(`/admin/messages/${id}`);
+    redirect(`/admin/messages/${id}`);
+  }
+  return res;
+}
 
 export async function hideMessageAction(_p: ActionState | null, fd: FormData): Promise<ActionState> {
   const actor = await requireAdmin();

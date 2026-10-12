@@ -2,6 +2,7 @@ import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { checkerMayExecute, MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
 import { canViewConversations, conversationIdFor } from '@/server/modules/messaging/service';
 
 import { isDomainError } from '@/server/core/errors';
@@ -32,6 +33,7 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
   const convId = canViewConversations(actor) ? await conversationIdFor({ dealId: d.id }) : null;
   const invites = await db.select().from(dealInvitations).where(eq(dealInvitations.dealId, d.id)).orderBy(asc(dealInvitations.createdAt));
   const disp = await db.select().from(disputes).where(eq(disputes.dealId, d.id));
+  const openRelease = await openMovementFor('DEAL_RELEASE', d.id);
   const history = await db.select().from(statusHistory).where(eq(statusHistory.entityId, d.id)).orderBy(asc(statusHistory.createdAt));
   // Handover evidence: issuance / expiry / regeneration / failures / verification. The code itself is never shown.
   const otps = await deliveryOtpEvents(d.id);
@@ -94,16 +96,20 @@ export default async function AdminDeal(props: PageProps<'/admin/deals/[id]'>) {
           <Field label="سبب الإجراء (يتطلب تأكيد 2FA حديث)" htmlFor="hold-reason" required><Textarea id="hold-reason" name="reason" rows={2} required minLength={3} /></Field>
           <SubmitButton variant={d.financialHold ? 'outline' : 'danger'} size="sm">{d.financialHold ? 'رفع إيقاف الصرف' : 'إيقاف الصرف لحين المراجعة'}</SubmitButton>
         </ActionForm>
-        {(d.status === 'BUYER_CONFIRMED_RECEIPT' || d.status === 'ENTITLED_AWAITING_RELEASE') && hasPermission(actor, 'finance.release') && (() => {
+        {(d.status === 'BUYER_CONFIRMED_RECEIPT' || d.status === 'ENTITLED_AWAITING_RELEASE') && (hasPermission(actor, 'finance.release') || hasPermission(actor, 'finance.movement.request')) && (() => {
           const remaining = (d.buyerPays ?? 0) - d.pendingBuyerRefund;
           const payout = remaining - Math.min(d.feeAmount, remaining);
           return (
-            <ActionForm action={dealReleaseAction} className="space-y-2 border-t border-line pt-3">
-              <input type="hidden" name="dealId" value={d.id} /><input type="hidden" name="expectedPayout" value={payout} /><input type="hidden" name="back" value={`/admin/deals/${d.id}`} />
-              <p className="text-sm">أساس الاستحقاق: {label('receiptBasis', d.receiptBasis)} · المحجوز {formatEGP(d.buyerPays ?? 0)} · رسوم {formatEGP(Math.min(d.feeAmount, remaining))} · استرداد للمشتري {formatEGP(d.pendingBuyerRefund)} → مستحق البائع {formatEGP(payout)}. التسوية لا تصرف للبائع؛ الصرف خطوة منفصلة.</p>
-              <Input name="reason" required minLength={3} placeholder="سبب الاعتماد" aria-label="سبب الاعتماد" />
-              <SubmitButton size="sm">اعتماد تسوية الصفقة ({formatEGP(payout)} للبائع)</SubmitButton>
-            </ActionForm>
+            <MovementPanel actor={actor} kind="DEAL_RELEASE" entityId={d.id} amount={payout} back={`/admin/deals/${d.id}`} open={openRelease}>
+              {hasPermission(actor, 'finance.release') && checkerMayExecute(actor, openRelease) && (
+                <ActionForm action={dealReleaseAction} className="space-y-2 border-t border-line pt-3">
+                  <input type="hidden" name="dealId" value={d.id} /><input type="hidden" name="expectedPayout" value={payout} /><input type="hidden" name="back" value={`/admin/deals/${d.id}`} />
+                  <p className="text-sm">أساس الاستحقاق: {label('receiptBasis', d.receiptBasis)} · المحجوز {formatEGP(d.buyerPays ?? 0)} · رسوم {formatEGP(Math.min(d.feeAmount, remaining))} · استرداد للمشتري {formatEGP(d.pendingBuyerRefund)} → مستحق البائع {formatEGP(payout)}. التسوية لا تصرف للبائع؛ الصرف خطوة منفصلة.</p>
+                  <Input name="reason" required minLength={3} placeholder="سبب الاعتماد" aria-label="سبب الاعتماد" />
+                  <SubmitButton size="sm">اعتماد تسوية الصفقة ({formatEGP(payout)} للبائع)</SubmitButton>
+                </ActionForm>
+              )}
+            </MovementPanel>
           );
         })()}
       </section>

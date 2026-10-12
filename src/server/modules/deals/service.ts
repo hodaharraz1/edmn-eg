@@ -188,6 +188,8 @@ async function issueInvitation(tx: DbOrTx, dealId: string) {
  */
 export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: boolean) {
   if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'DEAL_INVITATION');
   return db.transaction(async (tx) => {
     const deal = await requireDraft(tx, actor, dealId);
     const missing = dealProblems(deal);
@@ -434,6 +436,9 @@ export async function submitSellerOffer(
 ) {
   const userId = requireUser(actor);
   if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
+  // Commercial commitment of the Protected Deal seller: shared user identity (no store needed).
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'DEAL_OFFER');
   const offer = parse(sellerOfferSchema, input.offer);
   const policy = parse(returnPolicySchema, input.returnPolicy);
   return db.transaction(async (tx) => {
@@ -532,6 +537,10 @@ export const changeRequestSchema = z.object({ message: z.string().trim().min(3, 
 /** Buyer reviews the seller's offer: accept it, request a change (return policy), or reject the deal. */
 export async function respondToOffer(actor: Actor, dealId: string, version: number, decision: 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT', change?: { returnPolicy: unknown; message: string }) {
   const userId = requireUser(actor);
+  if (decision === 'ACCEPT') {
+    const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+    await requireApprovedIdentity(db, actor, 'DEAL_ACCEPTANCE');
+  }
   return db.transaction(async (tx) => {
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId)).for('update');
     if (!deal) throw notFound('الصفقة');
@@ -650,6 +659,8 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
 
 /** Buyer chooses how to pay → manual payment record created (same verification flow as orders). */
 export async function startDealPayment(actor: Actor, dealId: string, method: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH') {
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'DEAL_PAYMENT');
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة مش مستنية دفع');
@@ -1076,7 +1087,10 @@ export async function releaseDeal(actor: Actor, dealId: string, input: { expecte
     const payout = remaining - Math.min(deal.feeAmount, remaining);
     if (payout !== input.expectedPayout) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
     const { grantApproval } = await import('@/server/modules/finance/approvals');
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'DEAL_RELEASE', deal.id, payout);
     const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
       action: 'DEAL_RELEASE',
       entityType: 'external_deal',
       entityId: deal.id,
@@ -1087,6 +1101,7 @@ export async function releaseDeal(actor: Actor, dealId: string, input: { expecte
       destinationSnapshot: { payoutMasked: deal.sellerPayoutMasked, payoutType: deal.sellerPayoutType },
     });
     await postDealCompletion(tx, actor, deal, deal.pendingBuyerRefund, approval.id);
+    await completeMovementRequest(tx, actor, mreq, approval.id);
     await moveDeal(tx, actor, deal, 'COMPLETED', { completedAt: new Date(), releaseApprovalId: approval.id }, why);
     await audit(tx, actor, { action: 'deal.released', entityType: 'external_deal', entityId: deal.id, newValues: { approvalId: approval.id, payout, buyerRefund: deal.pendingBuyerRefund, receiptBasis: deal.receiptBasis }, reason: why });
     await notify(tx, { event: 'EXTERNAL_DEAL_COMPLETED', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}`, dedupeKey: `deal:${deal.id}:completed` });
@@ -1142,7 +1157,8 @@ export async function applyDealDecision(tx: DbOrTx, actor: Actor, dealId: string
 async function dealPaymentDestination(tx: DbOrTx, dealId: string) {
   const { originalPaymentDestination } = await import('@/server/modules/finance/refunds');
   const [pay] = await tx.select().from(payments).where(eq(payments.dealId, dealId));
-  return originalPaymentDestination(tx, pay);
+  const d = await originalPaymentDestination(tx, pay);
+  return d ? { source: 'ORIGINAL_PAYMENT', ...d } : null;
 }
 
 /** Admin approval of a deal refund (FULL_REFUND decision): posts DEAL_REFUND and closes the deal REFUNDED. */

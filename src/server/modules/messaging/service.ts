@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { enforce } from '@/server/auth/rate-limit';
 import { hasPermission, requirePermission, requireUser, type Actor } from '@/server/core/actor';
-import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
+import { conflict, DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import {
   conversationMessageAttachments,
@@ -16,6 +16,7 @@ import {
   MESSAGE_REPORT_REASONS,
   orderItems,
   orders,
+  privilegedMessageAccess,
   sellerMembers,
   sellerOrders,
   sellers,
@@ -670,16 +671,63 @@ export async function reportMessage(actor: Actor, messageId: string, input: { re
  * Staff view of a conversation. Requires `messages.view`; EVERY view is written to the audit log with the
  * related order/deal, because conversations are private customer communication. Staff never post as a party.
  */
+export const MESSAGE_ACCESS_PURPOSE_LABELS = { SUPPORT: 'تذكرة دعم', DISPUTE: 'نزاع', RISK: 'مراجعة مخاطر', OPERATIONS: 'تشغيل', FINANCIAL_REVIEW: 'مراجعة مالية' } as const;
+export type MessageAccessPurpose = keyof typeof MESSAGE_ACCESS_PURPOSE_LABELS;
+const ACCESS_MINUTES = 30;
+
+/**
+ * Privileged access to a private conversation (Batch 1.5): `messages.view` + a mandatory purpose and note;
+ * SUPPORT / DISPUTE purposes must name the case, and the case must concern THIS conversation's order or deal.
+ * The grant lasts 30 minutes, is per staff member and conversation, and is itself the audit record.
+ */
+export async function grantMessageAccess(actor: Actor, conversationId: string, input: { purpose: MessageAccessPurpose; note: string; caseId?: string | null }) {
+  requirePermission(actor, 'messages.view');
+  if (!isUuid(conversationId)) throw notAvailable();
+  if (!(input.purpose in MESSAGE_ACCESS_PURPOSE_LABELS)) throw validation('اختار سبب الاطلاع');
+  const note = input.note?.trim();
+  if (!note || note.length < 10) throw validation('اكتب سبب الاطلاع على المحادثة (10 أحرف على الأقل)');
+  const [conv] = await db.select().from(conversations).where(eq(conversations.id, conversationId));
+  if (!conv) throw notAvailable();
+  let caseType: string | null = null;
+  const caseId = input.caseId?.trim() || null;
+  if (input.purpose === 'DISPUTE' || input.purpose === 'SUPPORT') {
+    if (!caseId || !isUuid(caseId)) throw validation('حدد رقم الحالة (النزاع أو تذكرة الدعم) المرتبطة بالمحادثة');
+    const linked =
+      input.purpose === 'DISPUTE'
+        ? await db.execute(sql`select 1 from disputes d where d.id = ${caseId} and ((d.seller_order_id is not null and d.seller_order_id = ${conv.sellerOrderId}) or (d.deal_id is not null and d.deal_id = ${conv.dealId}))`)
+        : await db.execute(sql`select 1 from support_tickets t where t.id = ${caseId} and t.related_id is not null and t.related_id in (${conv.orderId ?? ''}, ${conv.sellerOrderId ?? ''}, ${conv.dealId ?? ''})`);
+    if (!linked.rows.length) throw forbidden('الحالة المذكورة لا تخص هذه المحادثة');
+    caseType = input.purpose === 'DISPUTE' ? 'dispute' : 'support_ticket';
+  }
+  const expiresAt = new Date(Date.now() + ACCESS_MINUTES * 60_000);
+  await db.insert(privilegedMessageAccess).values({ actorUserId: actor.userId!, conversationId: conv.id, purpose: input.purpose, note: note.slice(0, 1000), caseType, caseId, expiresAt });
+  await audit(db, actor, { action: 'conversation.privileged_access_granted', entityType: 'conversation', entityId: conv.id, newValues: { purpose: input.purpose, caseType, caseId, expiresAt: expiresAt.toISOString() }, reason: note });
+  return { expiresAt };
+}
+
+export async function activeMessageAccess(actor: Actor, conversationId: string) {
+  if (!actor.userId || !isUuid(conversationId)) return null;
+  const [g] = await db
+    .select()
+    .from(privilegedMessageAccess)
+    .where(and(eq(privilegedMessageAccess.actorUserId, actor.userId), eq(privilegedMessageAccess.conversationId, conversationId), gt(privilegedMessageAccess.expiresAt, new Date())))
+    .orderBy(desc(privilegedMessageAccess.createdAt))
+    .limit(1);
+  return g ?? null;
+}
+
 export async function staffThread(actor: Actor, conversationId: string, opts: { via?: string } = {}) {
   requirePermission(actor, 'messages.view');
   if (!isUuid(conversationId)) throw notAvailable();
   const [conv] = await db.select().from(conversations).where(eq(conversations.id, conversationId));
   if (!conv) throw notAvailable();
+  const grant = await activeMessageAccess(actor, conv.id);
+  if (!grant) throw new DomainError('FORBIDDEN', 'MESSAGE_ACCESS_PURPOSE_REQUIRED');
   await audit(db, actor, {
     action: 'conversation.staff_viewed',
     entityType: 'conversation',
     entityId: conv.id,
-    newValues: { context: conv.context, sellerOrderId: conv.sellerOrderId, orderId: conv.orderId, dealId: conv.dealId, via: opts.via ?? null },
+    newValues: { context: conv.context, sellerOrderId: conv.sellerOrderId, orderId: conv.orderId, dealId: conv.dealId, via: opts.via ?? null, purpose: grant.purpose, caseId: grant.caseId, grantId: grant.id },
   });
   const [ctx, messages, ws] = await Promise.all([contextLabel(db, conv), loadMessages(db, conv, { userId: null, side: 'STAFF' }), writeState(conv, null)]);
   const reports = await db
@@ -693,7 +741,9 @@ export async function staffThread(actor: Actor, conversationId: string, opts: { 
 
 export async function reportQueue(actor: Actor, status: 'OPEN' | 'ACTIONED' | 'DISMISSED' = 'OPEN') {
   requirePermission(actor, 'messages.view');
-  return db
+  // The reported message text is shown only to moderators (who must judge it); others see the report only.
+  const moderator = hasPermission(actor, 'messages.moderate');
+  const rows = await db
     .select({ r: conversationMessageReports, reporter: users.fullName, body: conversationMessages.body, hiddenAt: conversationMessages.hiddenAt })
     .from(conversationMessageReports)
     .innerJoin(users, eq(users.id, conversationMessageReports.reporterUserId))
@@ -701,6 +751,7 @@ export async function reportQueue(actor: Actor, status: 'OPEN' | 'ACTIONED' | 'D
     .where(eq(conversationMessageReports.status, status))
     .orderBy(desc(conversationMessageReports.createdAt))
     .limit(200);
+  return moderator ? rows : rows.map((x) => ({ ...x, body: '' }));
 }
 
 /** Hide a message from participants. The original stays stored and visible to staff; audited. */

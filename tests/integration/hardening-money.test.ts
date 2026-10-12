@@ -33,7 +33,7 @@ import { requestAccountClosure } from '@/server/modules/customers/closure';
 import { sellerOrderPosition } from '@/server/modules/finance/postings';
 import { applyBps } from '@/server/core/money';
 import { toCsv } from '@/server/modules/reports/service';
-import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, testApproval } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pdf, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, testApproval, makerRequest } from '../helpers/factory';
 
 let admin: Actor;
 let checker: Actor;
@@ -145,6 +145,7 @@ describe('Admin financial approvals — enforced by the database', () => {
     await shipIt(s.actor, so.id);
     await confirmReceipt(c.actor, so.id);
     const pos = await sellerOrderPosition(db, await soOf(so.id));
+    await makerRequest('SELLER_RELEASE', so.id, pos.pending); // Batch 1.5: Maker first
     const res = await Promise.allSettled([
       releaseSellerOrder(checker, so.id, { expectedSellerAmount: pos.pending, reason: 'إتاحة 1' }),
       releaseSellerOrder(checker, so.id, { expectedSellerAmount: pos.pending, reason: 'إتاحة 2' }),
@@ -215,6 +216,7 @@ describe('kill switches (fail closed)', () => {
     await shipIt(s.actor, so.id);
     await confirmReceipt(c.actor, so.id);
     const pos = await sellerOrderPosition(db, await soOf(so.id));
+    await makerRequest('SELLER_RELEASE', so.id, pos.pending);
     await setKillSwitch(admin, 'killswitch.sellerRelease', true, 'حادث اختبار');
     try {
       await expect(releaseSellerOrder(checker, so.id, { expectedSellerAmount: pos.pending, reason: 'محاولة' })).rejects.toThrow(/موقوف مؤقتًا/);
@@ -318,6 +320,7 @@ describe('cancellation before shipment only; refund obligation, never "refund pa
     expect(r.status).toBe('REQUESTED');
     expect(r.amount).toBe(so.grossTotal);
     expect((await journalsBySource(so.id)).map((j) => j.entryType)).toEqual(['ORDER_PAYMENT']);
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount);
     await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });
     const [approved] = await db.select().from(refunds).where(eq(refunds.id, r.id));
     expect(approved.status).toBe('APPROVED');
@@ -400,6 +403,7 @@ describe('partial / item / quantity refunds', () => {
     const r = await db.transaction((tx) =>
       requestRefundTx(tx, admin, { sellerOrderId: so.id, sourceType: 'ADMIN', sourceId: randomUUID(), items: [{ orderItemId: it.id, quantity: 1 }], reason: 'تعويض' }),
     );
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount);
     await expect(approveRefund(checker, r.id, { expectedAmount: r.amount - 1, reason: 'قيمة خطأ' })).rejects.toThrow();
     const b0 = await sellerBalances(db, s.actor.sellerId!);
     await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });

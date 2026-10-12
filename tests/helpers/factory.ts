@@ -36,7 +36,12 @@ const nextPhone = () => `+2010${String(phoneSeq++).padStart(8, '0')}`;
 
 let PASSWORD_HASH: string | null = null;
 
-export async function makeUser(opts: { staff?: boolean; roles?: string[]; name?: string } = {}) {
+/**
+ * Non-staff users get an APPROVED global identity by default (Batch 1.5: identity is required before any
+ * transactional operation) — through the REAL submit + independent staff review flow, never a direct insert.
+ * Pass `identity: false` for a user who has not verified yet.
+ */
+export async function makeUser(opts: { staff?: boolean; roles?: string[]; name?: string; identity?: boolean } = {}) {
   PASSWORD_HASH ??= await hashPassword('Test@12345');
   const [u] = await db
     .insert(users)
@@ -55,7 +60,18 @@ export async function makeUser(opts: { staff?: boolean; roles?: string[]; name?:
     if (!exists) throw new Error(`role ${r} not seeded`);
     await db.insert(userRoles).values({ userId: u.id, roleCode: r });
   }
+  if (!opts.staff && opts.identity !== false) await approveIdentity(u.id);
   return u;
+}
+
+let identityReviewer: Actor | null = null;
+/** Submit the National ID (front + back) as the user, then approve it as an independent identity reviewer. */
+export async function approveIdentity(userId: string, reviewer?: Actor) {
+  const { submitIdentity, reviewIdentity } = await import('@/server/modules/identity/service');
+  const r = await submitIdentity(customerActor(userId), { legalName: 'مستخدم اختبار ثلاثي الاسم', nationalId: '29001011234567' }, { front: { data: await png('idf'), name: 'front.png' }, back: { data: await png('idb'), name: 'back.png' } });
+  identityReviewer ??= await makeAdmin(['SELLER_REVIEWER']);
+  await reviewIdentity(reviewer ?? identityReviewer, r.id, 'APPROVE');
+  return r.id;
 }
 
 export async function makeAdmin(rolesList: string[] = ['SUPER_ADMIN']) {
@@ -63,8 +79,8 @@ export async function makeAdmin(rolesList: string[] = ['SUPER_ADMIN']) {
   return adminActor(u.id, { stepUpAt: new Date() });
 }
 
-export async function makeCustomer() {
-  const u = await makeUser({ name: 'عميل اختبار' });
+export async function makeCustomer(opts: { identity?: boolean } = {}) {
+  const u = await makeUser({ name: 'عميل اختبار', identity: opts.identity });
   const [address] = await db
     .insert(addresses)
     .values({ userId: u.id, recipientName: u.fullName, phone: u.phone!, governorateId: 1, city: 'القاهرة', street: 'شارع الاختبار', isDefault: true })
@@ -208,6 +224,17 @@ export async function pendingSubmission(paymentId: string) {
   return s;
 }
 
+let movementMaker: Actor | null = null;
+/**
+ * Universal Maker/Checker (Batch 1.5): the Maker step for one financial movement, by a finance operator who is
+ * NOT the Checker that will execute it. Returns the open request.
+ */
+export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
+  const { requestMovement } = await import('@/server/modules/finance/movements');
+  movementMaker ??= await makeAdmin(['FINANCE_OPERATOR']);
+  return requestMovement(opts.maker ?? movementMaker, kind, { entityId, amount, reason: 'طلب حركة مالية في الاختبار', params: opts.params });
+}
+
 /** Buyer confirms receipt, then a finance checker explicitly approves the seller release (the only path to available). */
 export async function receiveAndRelease(buyer: Actor, soId: string, admin?: Actor) {
   const { confirmReceipt, releaseSellerOrder } = await import('@/server/modules/commerce/fulfilment');
@@ -216,6 +243,7 @@ export async function receiveAndRelease(buyer: Actor, soId: string, admin?: Acto
   const releaser = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
   const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
   const pos = await sellerOrderPosition(db, so);
+  await makerRequest('SELLER_RELEASE', soId, pos.pending);
   return releaseSellerOrder(releaser, soId, { expectedSellerAmount: pos.pending, reason: 'اعتماد الإتاحة في الاختبار' });
 }
 
@@ -225,6 +253,7 @@ export async function approveRefundsOf(soId: string, admin?: Actor) {
   const { approveRefund } = await import('@/server/modules/finance/refunds');
   const checker = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
   const rows = await db.select().from(refunds).where(and(eq(refunds.sellerOrderId, soId), eq(refunds.status, 'REQUESTED')));
+  for (const r of rows) await makerRequest('REFUND_APPROVAL', r.id, r.amount);
   for (const r of rows) await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد الاسترداد في الاختبار' });
   return rows;
 }
@@ -242,8 +271,10 @@ export async function approveAndPayWithdrawal(withdrawalId: string, checker?: Ac
 export async function testApproval(entryTypes: string[], amount: number, approver?: Actor) {
   const { sql } = await import('drizzle-orm');
   const a = approver ?? (await makeAdmin());
-  const r = await db.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
-    values ('MANUAL_ADJUSTMENT', 'test', ${randomUUID()}, ${amount}, 'test', ${sql.raw(`array[${entryTypes.map((t) => `'${t.replace(/[^A-Z_]/g, '')}'`).join(',')}]`)}, 'test fixture', ${a.userId}, now(), ${randomUUID()}) returning id`);
+  // Every movement approval is two-person (DB-enforced): the fixture records a distinct maker.
+  const maker = await makeAdmin(['FINANCE_OPERATOR']);
+  const r = await db.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, dual_control, requested_by, approved_by, approved_at, idempotency_key)
+    values ('MANUAL_ADJUSTMENT', 'test', ${randomUUID()}, ${amount}, 'test', ${sql.raw(`array[${entryTypes.map((t) => `'${t.replace(/[^A-Z_]/g, '')}'`).join(',')}]`)}, 'test fixture', true, ${maker.userId}, ${a.userId}, now(), ${randomUUID()}) returning id`);
   return r.rows[0].id;
 }
 

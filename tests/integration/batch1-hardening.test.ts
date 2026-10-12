@@ -51,7 +51,7 @@ import { closeDispute, openDispute, resolveDispute, setDisputeStatus } from '@/s
 import { activePayoutMethod, addPayoutMethod, assertVerifiedDestination, decideSeller, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument, verifyPayoutMethod } from '@/server/modules/sellers/service';
 import { effectiveDualControlThreshold, realMoneyEnabled, updateSetting } from '@/server/modules/settings';
 import { createStaffUser, setRolePermissions, setStaffRole, setStaffStatus } from '@/server/rbac/staff';
-import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveIdentity, checkout, makerRequest, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 
 /**
  * PRODUCTION HARDENING — BATCH 1 (C1–C8 + operator wording) regression suite.
@@ -114,6 +114,7 @@ describe('C1 — a dispute (financial hold) leaves the open states only through 
   it('conflict of interest: a staff member who is the claimant cannot decide the dispute', async () => {
     const staff = await makeUser({ staff: true, roles: ['DISPUTE_OFFICER'] });
     const [address] = await db.insert(addresses).values({ userId: staff.id, recipientName: staff.fullName, phone: staff.phone!, governorateId: 1, city: 'القاهرة', street: 'شارع الاختبار', isDefault: true }).returning();
+    await approveIdentity(staff.id); // Batch 1.5: a staff member buying as a customer verifies identity like anyone
     const buyer = { user: staff, actor: customerActor(staff.id), address };
     const { so } = await shippedOrder(300_00, buyer);
     const d = await openDispute(buyer.actor, { sellerOrderId: so.id, reasonCode: 'NOT_AS_DESCRIBED', description: disputeText });
@@ -294,6 +295,7 @@ describe('C4 — refund destination is frozen at approval', () => {
     const { r } = await requestedRefund();
     expect(r.destinationSnapshot).toMatchObject({ method: 'INSTAPAY' });
     const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount); // Batch 1.5: universal Maker/Checker
     await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });
     const a = await refundOf(r.id);
     expect(a.approvedDestination).toEqual(a.destinationSnapshot);
@@ -304,6 +306,7 @@ describe('C4 — refund destination is frozen at approval', () => {
     const { r } = await requestedRefund();
     const checker = await makeAdmin(['FINANCE_CHECKER']);
     const operator = await makeAdmin(['FINANCE_OPERATOR']);
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount);
     await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });
     await expect(overrideRefundDestination(checker, r.id, { method: 'VODAFONE_CASH', details: '01000000001' }, 'المحفظة الأصلية مغلقة بحسب العميل')).rejects.toThrow(/صلاحية/);
     const changer = await makeAdmin(['SUPER_ADMIN']);
@@ -362,6 +365,7 @@ describe('C4 — refund destination is frozen at approval', () => {
     await resolveDispute(admin, d.id, { decision: 'FULL_REFUND', reasonCode: 'NOT_DELIVERED', note: 'لم يثبت التسليم — استرداد كامل' });
     const [r] = await db.select().from(refunds).where(eq(refunds.dealId, deal.id));
     expect(r.destinationSnapshot).toMatchObject({ method: 'INSTAPAY', paymentId: p.id });
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount);
     await approveRefund(await makeAdmin(['FINANCE_CHECKER']), r.id, { expectedAmount: r.amount, reason: 'اعتماد استرداد الصفقة' });
     expect((await refundOf(r.id)).approvedDestination).toEqual(r.destinationSnapshot);
   });
@@ -409,6 +413,9 @@ describe('C5 — once a transfer may have left EDMN, money is never assumed back
     await expect(rejectWithdrawal(checker, w.id, 'غير مؤكد')).rejects.toThrow(/بدأ التحويل بالفعل/);
     await expect(markWithdrawalFailedBeforeTransfer(executor, w.id, { reason: 'لم يخرج التحويل', evidence: 'STMT-9' })).rejects.toThrow(/صلاحية|غير منفذ التحويل/);
     await expect(markWithdrawalFailedBeforeTransfer(checker, w.id, { reason: 'لم يخرج التحويل', evidence: '' })).rejects.toThrow(/دليل/);
+    // Batch 1.5: the reversal is a movement — a Maker request first, executed by a different Checker.
+    await expect(markWithdrawalFailedBeforeTransfer(checker, w.id, { reason: 'كشف الحساب يؤكد عدم خروج التحويل', evidence: 'STMT-9' })).rejects.toThrow(/منشئ/);
+    await makerRequest('WITHDRAWAL_REVERSAL', w.id, w.amount, { params: { mode: 'FAILED_BEFORE_TRANSFER' } });
     await markWithdrawalFailedBeforeTransfer(checker, w.id, { reason: 'كشف الحساب يؤكد عدم خروج التحويل', evidence: 'STMT-9' });
     await markWithdrawalFailedBeforeTransfer(checker, w.id, { reason: 'إعادة المحاولة', evidence: 'STMT-9' }); // retry: no double credit
     const after = await bal();
@@ -431,6 +438,7 @@ describe('C5 — once a transfer may have left EDMN, money is never assumed back
     await expect(recordWithdrawalReturned(executor, w.id, { amount: paid.netTransferAmount!, reference: 'RET-1', reason: 'الحساب مغلق' })).rejects.toThrow(/صلاحية|غير منفذ الصرف/);
     await expect(recordWithdrawalReturned(await noStepUp(checker), w.id, { amount: paid.netTransferAmount!, reference: 'RET-1', reason: 'الحساب مغلق' })).rejects.toThrow(/تأكيد هويتك/);
     await expect(recordWithdrawalReturned(checker, w.id, { amount: paid.netTransferAmount! + 1, reference: 'RET-1', reason: 'الحساب مغلق' })).rejects.toThrow(/أكبر من المبلغ المحوّل/);
+    await makerRequest('WITHDRAWAL_RETURN', w.id, paid.netTransferAmount!); // Batch 1.5: Maker first
     await recordWithdrawalReturned(checker, w.id, { amount: paid.netTransferAmount!, reference: 'RET-1', reason: 'الحساب مغلق لدى البنك' });
     await recordWithdrawalReturned(checker, w.id, { amount: paid.netTransferAmount!, reference: 'RET-1', reason: 'تكرار' }); // idempotent
     expect((await bal()).available).toBe(before.available + paid.netTransferAmount!);

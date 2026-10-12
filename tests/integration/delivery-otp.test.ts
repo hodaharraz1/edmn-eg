@@ -31,7 +31,7 @@ import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { reconcile, sellerBalances } from '@/server/modules/finance/ledger';
 import { flushOutbound } from '@/server/jobs/worker';
 import { addTrackingEvent } from '@/server/modules/commerce/fulfilment';
-import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, pdf, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, pdf, png, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -307,6 +307,7 @@ describe('delivery OTP — money', () => {
     expect(await payouts(d.dealId)).toHaveLength(0);
     expect(await settlements(d.dealId)).toHaveLength(0);
     const expectedPayout = deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!);
+    await makerRequest('DEAL_RELEASE', d.dealId, expectedPayout); // Batch 1.5: Maker first, Checker releases
     await Promise.allSettled([
       releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد تأكيد المشتري' }),
       releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد تأكيد المشتري' }),
@@ -375,6 +376,7 @@ describe('delivery OTP — money', () => {
     await expect(setDealFinancialHold(plain, d.dealId, false, 'x x x')).rejects.toThrow();
     await setDealFinancialHold(admin, d.dealId, false, 'تمت المراجعة');
     expect(await payouts(d.dealId)).toHaveLength(0); // lifting the hold releases nothing by itself
+    await makerRequest('DEAL_RELEASE', d.dealId, expectedPayout);
     await releaseDeal(admin, d.dealId, { expectedPayout, reason: 'إتاحة بعد المراجعة' });
     expect(await payouts(d.dealId)).toHaveLength(1);
   });

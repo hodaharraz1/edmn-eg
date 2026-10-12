@@ -21,6 +21,8 @@ export const FILE_PURPOSES = [
   'REFUND_PROOF',
   'SUPPORT_ATTACHMENT',
   'MESSAGE_ATTACHMENT',
+  /** National ID front/back for the global identity verification (highly sensitive, private, audited). */
+  'IDENTITY_DOCUMENT',
 ] as const;
 export type FilePurpose = (typeof FILE_PURPOSES)[number];
 

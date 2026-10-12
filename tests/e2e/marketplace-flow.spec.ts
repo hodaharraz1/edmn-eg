@@ -50,6 +50,25 @@ test('a new seller registers, verifies the mobile number and submits the applica
   await page.getByRole('button', { name: 'تأكيد' }).first().click();
   await expect.poll(async () => (await q<{ v: Date | null }>(`select phone_verified_at v from users where email = $1`, [SELLER.email]))[0].v).not.toBeNull();
 
+  // Batch 1.5: the GLOBAL user identity comes first (front + back), reviewed by an identity reviewer.
+  // Identity approval is not seller approval: the store application is still decided separately below.
+  await page.goto('/account/identity');
+  await page.locator('input[name=legalName]').fill('محمد أحمد البائع');
+  await page.locator('input[name=nationalId]').fill(`2900101${RUN}`);
+  await page.locator('input[name=front]').setInputFiles({ name: 'id-front.png', mimeType: 'image/png', buffer: await png() });
+  await page.locator('input[name=back]').setInputFiles({ name: 'id-back.png', mimeType: 'image/png', buffer: await png() });
+  await page.getByRole('button', { name: 'إرسال للمراجعة' }).click();
+  await expect(page.getByTestId('identity-status')).toContainText('قيد المراجعة');
+  const identityOf = async () => (await q<{ id: string; status: string }>(`select v.id, v.status from user_identity_verifications v join users u on u.id = v.user_id where u.email = $1`, [SELLER.email]))[0];
+  const reviewer = await adminLogin(browser, 'catalog@edmn.local');
+  await reviewer.goto(`/admin/identity/${(await identityOf()).id}`);
+  await expect(reviewer.getByTestId('identity-documents').locator('img')).toHaveCount(2);
+  await reviewer.locator('select[name=decision]').selectOption('APPROVE');
+  await reviewer.getByRole('button', { name: 'تسجيل القرار' }).click();
+  await expect.poll(async () => (await identityOf()).status).toBe('APPROVED');
+  await reviewer.context().close();
+  expect(await sellerStatus()).not.toBe('APPROVED'); // identity approval did not approve the store
+
   await page.goto('/seller/onboarding?step=1');
 
   // Step 1 — identity
@@ -239,10 +258,21 @@ test('buyer confirms receipt: entitlement only — nothing becomes available wit
   expect((await q(`select id from journal_entries where entry_type = 'SELLER_RELEASE' and source_id = $1`, [soId])).length).toBe(0);
 });
 
-test('finance checker explicitly approves the seller release → available, order COMPLETED', async ({ browser }) => {
+test('two people release the seller funds: the finance operator requests, a different finance checker executes', async ({ browser }) => {
+  // Maker — requests the exact amount; nothing moves.
+  const operator = await adminLogin(browser, 'finance@edmn.local');
+  await operator.goto(`/admin/releases/${soId}`);
+  const maker = operator.getByTestId('movement-maker-SELLER_RELEASE');
+  await maker.locator('input[name=reason]').fill('استلام مؤكد من المشتري ولا توجد موانع');
+  await maker.getByRole('button', { name: /طلب إتاحة/ }).click();
+  await expect(operator.getByTestId('movement-open-SELLER_RELEASE')).toContainText('بانتظار معتمد آخر');
+  await expect(operator.getByRole('button', { name: /اعتماد إتاحة/ })).toHaveCount(0); // the Maker can never execute
+  expect((await q(`select id from journal_entries where entry_type = 'SELLER_RELEASE' and source_id = $1`, [soId])).length).toBe(0);
+  // Checker — a different person executes.
   const checker = await adminLogin(browser, 'checker@edmn.local');
   await checker.goto(`/admin/releases/${soId}`);
-  await checker.locator('input[name=reason]').fill('استلام مؤكد من المشتري ولا توجد موانع');
+  const open = checker.getByTestId('movement-open-SELLER_RELEASE');
+  await open.locator('form').filter({ has: checker.getByRole('button', { name: /اعتماد إتاحة/ }) }).locator('input[name=reason]').fill('مراجعة الطلب والتنفيذ');
   await checker.getByRole('button', { name: /اعتماد إتاحة/ }).click();
   const [{ net }] = await q<{ net: string }>(`select seller_net as net from seller_orders where id = $1`, [soId]);
   await expect.poll(async () => Number((await q<{ b: string }>(`select balance b from ledger_accounts where seller_id = $1 and code = 'SELLER_AVAILABLE'`, [sellerId]))[0]?.b ?? 0)).toBe(Number(net));
@@ -250,6 +280,9 @@ test('finance checker explicitly approves the seller release → available, orde
   const [{ approval }] = await q<{ approval: string | null }>(`select release_approval_id approval from seller_orders where id = $1`, [soId]);
   expect(approval).toBeTruthy();
   expect((await q(`select id from journal_entries where entry_type = 'SELLER_RELEASE' and source_id = $1 and approval_id = $2`, [soId, approval])).length).toBe(1);
+  const [appr] = await q<{ requested_by: string; approved_by: string; dual_control: boolean }>(`select requested_by, approved_by, dual_control from financial_approvals where id = $1`, [approval]);
+  expect(appr.dual_control).toBe(true);
+  expect(appr.requested_by).not.toBe(appr.approved_by);
   const [{ c }] = await q<{ c: string }>(`select commission_total c from seller_orders where id = $1`, [soId]);
   expect(Number(c)).toBeGreaterThan(0);
 });

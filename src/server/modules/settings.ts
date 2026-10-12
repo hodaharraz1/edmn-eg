@@ -97,6 +97,16 @@ export const SETTINGS_SCHEMA = {
   'killswitch.payouts': z.boolean().default(false),
   'killswitch.dealRelease': z.boolean().default(false),
   'killswitch.adjustments': z.boolean().default(false),
+  /**
+   * Support SLA per priority, in hours. NO default values (none were approved): while unset, tickets carry no
+   * due dates and SLA alerts stay silent. Example: {"HIGH":{"firstResponseHours":4,"resolutionHours":48}}.
+   */
+  'support.sla': z.record(z.string(), z.object({ firstResponseHours: z.number().positive().max(720).optional(), resolutionHours: z.number().positive().max(2160).optional() })).default({}),
+  /**
+   * Proactive alert timing overrides per rule code: {"RULE":{"preHours":24,"cooldownHours":12,"agingHours":48,"enabled":true}}.
+   * Rules without an override use their documented operational default (see alerts/rules.ts).
+   */
+  'alerts.rules': z.record(z.string(), z.object({ preHours: z.number().min(0).max(720).optional(), cooldownHours: z.number().min(1).max(720).optional(), agingHours: z.number().min(0).max(2160).optional(), enabled: z.boolean().optional() })).default({}),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -216,9 +226,10 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
  * Maker/checker threshold actually enforced (C6). With real money enabled it is ALWAYS 0 (every payout needs
  * a second person), whatever the stored setting says: configuration drift can never weaken dual control.
  */
-export async function effectiveDualControlThreshold(conn: DbOrTx = db): Promise<number> {
-  if (await realMoneyEnabled(conn)) return 0;
-  return getSetting('withdrawals.dualControlThreshold', conn);
+export async function effectiveDualControlThreshold(_conn: DbOrTx = db): Promise<number> {
+  // Owner rule (Batch 1.5): every actual financial movement is two-person — the effective threshold is 0 EGP
+  // in every environment; the stored setting can never weaken it.
+  return REAL_MONEY_DUAL_CONTROL_THRESHOLD;
 }
 
 /** True only when an authorized admin has explicitly enabled real money on a non-staging deployment. */

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { adminOrderAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { checkerMayExecute, MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { orders, sellerOrders, stores } from '@/server/db/schema';
@@ -33,6 +34,7 @@ export default async function ReleaseReview(props: PageProps<'/admin/releases/[i
   const paused = (await killSwitchStates()).find((k) => k.key === 'killswitch.sellerRelease')?.paused;
   const fee = soFeeSplit(so);
   const canRelease = hasPermission(actor, 'finance.release');
+  const open = await openMovementFor('SELLER_RELEASE', so.id);
   const ref = `${order.number}-${so.suffix}`;
   return (
     <div className="space-y-4">
@@ -67,13 +69,17 @@ export default async function ReleaseReview(props: PageProps<'/admin/releases/[i
       {paused && <Alert tone="danger">مفتاح إيقاف «إتاحة أرباح البائعين» مفعّل — لن يتم تنفيذ أي إتاحة.</Alert>}
       {so.fundsReleasedAt ? (
         <Alert tone="success">تمت الإتاحة في {formatDate(so.fundsReleasedAt, true)}.</Alert>
-      ) : canRelease && so.status === 'DELIVERED' && !blockers.length ? (
-        <ActionForm action={adminOrderAction} className="card space-y-3 p-4">
-          <input type="hidden" name="op" value="releaseFunds" /><input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="expectedAmount" value={pos.pending} /><input type="hidden" name="back" value={`/admin/releases/${so.id}`} />
-          <p className="text-sm">الإجراء: نقل <b>{formatEGP(pos.pending)}</b> من «معلق» إلى «متاح» في رصيد البائع داخل اضمن، والاعتراف بـ {formatEGP(pos.deferredCommission)} رسوم كإيراد. لا يُنشئ سحبًا ولا تحويلًا خارجيًا. يتطلب تحققًا ثنائيًا حديثًا ويُسجّل باسمك.</p>
-          <Input name="reason" required minLength={3} placeholder="سبب/ملاحظة الاعتماد" aria-label="سبب الاعتماد" />
-          <SubmitButton>اعتماد إتاحة {formatEGP(pos.pending)} للبائع {store?.name}</SubmitButton>
-        </ActionForm>
+      ) : so.status === 'DELIVERED' && !blockers.length ? (
+        <MovementPanel actor={actor} kind="SELLER_RELEASE" entityId={so.id} amount={pos.pending} back={`/admin/releases/${so.id}`} open={open}>
+          {canRelease && checkerMayExecute(actor, open) && (
+            <ActionForm action={adminOrderAction} className="space-y-3 border-t border-line pt-3">
+              <input type="hidden" name="op" value="releaseFunds" /><input type="hidden" name="sellerOrderId" value={so.id} /><input type="hidden" name="expectedAmount" value={pos.pending} /><input type="hidden" name="back" value={`/admin/releases/${so.id}`} />
+              <p className="text-sm">الإجراء: نقل <b>{formatEGP(pos.pending)}</b> من «معلق» إلى «متاح» في رصيد البائع داخل اضمن، والاعتراف بـ {formatEGP(pos.deferredCommission)} رسوم كإيراد. لا يُنشئ سحبًا ولا تحويلًا خارجيًا. يتطلب تحققًا ثنائيًا حديثًا ويُسجّل باسمك كمعتمد.</p>
+              <Input name="reason" required minLength={3} placeholder="سبب/ملاحظة الاعتماد" aria-label="سبب الاعتماد" />
+              <SubmitButton>اعتماد إتاحة {formatEGP(pos.pending)} للبائع {store?.name}</SubmitButton>
+            </ActionForm>
+          )}
+        </MovementPanel>
       ) : null}
       <p className="text-sm"><Link className="text-brand-700" href={`/admin/orders/${so.orderId}`}>صفحة الطلب الكاملة</Link></p>
     </div>

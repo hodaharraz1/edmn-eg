@@ -44,7 +44,7 @@ export default async function AdminDispute(props: PageProps<'/admin/disputes/[id
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'النزاعات', href: '/admin/disputes' }, { label: `#${d.number}` }]} />} title={`نزاع #${d.number}`} description={d.reasonCode} actions={<StatusChip status={d.status} />} />
       {convId && (
         <p className="text-sm" data-testid="dispute-conversation-evidence">
-          <Link href={`/admin/messages/${convId}?via=dispute`} className="font-semibold text-brand-700 underline">محادثة الطرفين (دليل مساعد)</Link>
+          <Link href={`/admin/messages/${convId}?via=dispute&case=${d.id}`} className="font-semibold text-brand-700 underline">محادثة الطرفين (دليل مساعد)</Link>
           <span className="text-muted"> — الرسائل لا تتجاوز السجلات الرسمية للدفع والشحن والشروط المتفق عليها ورمز الاستلام وتأكيد الاستلام.</span>
         </p>
       )}

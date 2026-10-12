@@ -163,6 +163,8 @@ export const withdrawalRequests = pgTable(
     returnedReference: text(),
     returnReason: text(),
     returnApprovalId: uuid(),
+    /** Funding source of the withdrawal (MARKETPLACE sub-ledger). Protected Deal earnings are paid per deal. */
+    sourceType: text().notNull().default('MARKETPLACE'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

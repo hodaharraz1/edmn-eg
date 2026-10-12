@@ -399,7 +399,10 @@ export async function submissionProblems(conn: DbOrTx, p: Product): Promise<stri
 export async function submitForReview(actor: Actor, productId: string) {
   return db.transaction(async (tx) => {
     const p = await loadOwned(tx, actor, productId);
-    await requireActiveSeller(tx, p.sellerId);
+    const seller = await requireActiveSeller(tx, p.sellerId);
+    // Seller transaction activation: the store owner's identity must be verified (Batch 1.5).
+    const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+    await requireApprovedIdentity(tx, actor, 'PRODUCT_SUBMISSION', seller.ownerUserId);
     if (!DIRECT_EDIT.includes(p.status)) throw invalidState('المنتج ليس في حالة تسمح بالإرسال للمراجعة');
     const problems = await submissionProblems(tx, p);
     if (problems.length) throw validation(problems.join('، '));

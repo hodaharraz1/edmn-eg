@@ -11,7 +11,8 @@ import { assertNotPaused } from './controls';
 import { decryptJson } from '@/server/core/crypto';
 import { notify } from '@/server/modules/notifications/notify';
 import { activePayoutMethod, assertVerifiedDestination } from '@/server/modules/sellers/service';
-import { effectiveDualControlThreshold, getSetting, realMoneyEnabled } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
+import { completeMovementRequest, takeMovementRequest } from './movements';
 import { storeUpload } from '@/server/storage/uploads';
 import { requireReason, transition } from '../_shared';
 import { accountBalance, postEntry } from './ledger';
@@ -57,6 +58,9 @@ export async function requestWithdrawal(
     if (dupe) return { withdrawal: dupe, created: false };
     const [seller] = await tx.select().from(sellers).where(eq(sellers.id, sellerId)).for('update');
     if (!seller || !['APPROVED', 'RESTRICTED'].includes(seller.status)) throw new DomainError('FORBIDDEN', 'السحب غير متاح لحالة حسابك الحالية');
+    // Financial seller operation: the store owner's identity must be verified (also for scheduled settlements).
+    const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+    await requireApprovedIdentity(tx, actor, 'WITHDRAWAL_REQUEST', seller.ownerUserId);
     // Same account lock as closure: a closing account cannot race a new withdrawal request.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'account:' + seller.ownerUserId}))`);
     const closing = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${seller.ownerUserId} and status = 'PENDING' limit 1`);
@@ -132,12 +136,9 @@ export async function previewWithdrawal(actor: Actor, amountInput: string | numb
   return { amount, transferCost: q.payer === 'SELLER_PAYS' ? q.cost : 0, payer: q.payer, net: q.net, channel: q.channel, warnings: q.warnings, violations: q.violations };
 }
 
-/** Dual control on the seller's rolling 24-hour total (splitting a payout does not avoid a second person). */
-async function needsDualControl(tx: DbOrTx, sellerId: string, amount: number) {
-  const threshold = await effectiveDualControlThreshold(tx);
-  const recent = await tx.execute<{ total: string }>(sql`select coalesce(sum(amount), 0)::text total from withdrawal_requests
-    where seller_id = ${sellerId} and created_at > now() - interval '24 hours' and status not in ('REJECTED','CANCELLED')`);
-  return Number(recent.rows[0]?.total ?? 0) + amount >= threshold;
+/** Owner rule (Batch 1.5): every payout is two-person — no threshold. Kept as a function for callers. */
+async function needsDualControl(_tx: DbOrTx, _sellerId: string, _amount: number) {
+  return true;
 }
 
 async function lockWithdrawal(tx: DbOrTx, id: string) {
@@ -151,10 +152,11 @@ async function notifySeller(tx: DbOrTx, w: Withdrawal, status: string, key: stri
   await notify(tx, { event: 'WITHDRAWAL_UPDATED', userIds: [s.ownerUserId], vars: { wd: w.number, status }, link: '/seller/withdrawals', dedupeKey: `wd:${w.id}:${key}` });
 }
 
-/** Return reserved funds to AVAILABLE — itself an Admin-approved reclassification. */
-async function reverseReservation(tx: DbOrTx, actor: Actor, w: Withdrawal, reason: string) {
+/** Return reserved funds to AVAILABLE — an approved, two-person reclassification (Maker = `makerId`). */
+async function reverseReservation(tx: DbOrTx, actor: Actor, w: Withdrawal, reason: string, makerId: string) {
   if (!w.reservedAt) return;
   const approval = await grantApproval(tx, actor, {
+    dualControl: { requestedBy: makerId },
     action: 'WITHDRAWAL_RELEASE_RESERVATION',
     entityType: 'withdrawal',
     entityId: w.id,
@@ -290,7 +292,9 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     if (w.status !== 'APPROVED' && w.status !== 'PROCESSING' && w.status !== 'TRANSFER_UNCERTAIN') throw invalidState('يجب اعتماد طلب السحب قبل تسجيل الصرف');
     if (!w.reservedAt) throw invalidState('المبلغ لم يُحجز بعد. يجب اعتماده أولاً');
     await assertNotPaused(tx, 'killswitch.payouts');
-    if (w.requiresDualControl && w.approvedBy === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن المعتمد');
+    // Owner rule: always two-person — the reservation approver is the Maker, the payer must be someone else.
+    if (!w.approvedBy) throw invalidState('لا يوجد معتمد مسجل لهذا السحب. لا يمكن الصرف');
+    if (w.approvedBy === actor.userId) throw forbidden('منفذ الصرف يجب أن يكون شخصاً مختلفاً عن معتمد السحب');
     await assertNotSelfDealing(tx, actor, w.sellerId);
     if (w.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذا سحب تجريبي (TEST) ولا يمكن صرفه بعد تفعيل الأموال الحقيقية');
     const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
@@ -328,7 +332,7 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
       reason: `تسجيل صرف — مرجع ${ref}`,
       idempotencyKey: `wd-paid:${w.id}`,
       destinationSnapshot: (w.destinationSnapshot as Record<string, unknown>) ?? { masked: w.payoutMasked, type: w.payoutType },
-      dualControl: w.requiresDualControl && w.approvedBy ? { requestedBy: w.approvedBy } : null,
+      dualControl: { requestedBy: w.approvedBy },
     });
     const file = proof ? await storeUpload(tx, actor, { purpose: 'WITHDRAWAL_PROOF', data: proof.data, originalName: proof.name }) : null;
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'PAID');
@@ -383,10 +387,19 @@ export async function rejectWithdrawal(actor: Actor, id: string, reason: string)
           : 'لا يمكن رفض طلب سحب في حالته الحالية',
       );
     }
-    if (w.reservedAt) requireStepUp(actor);
+    // A reserved amount going back to AVAILABLE is a financial movement: Maker (request) + different Checker.
+    let mreq: Awaited<ReturnType<typeof takeMovementRequest>> | null = null;
+    if (w.reservedAt) {
+      requireStepUp(actor);
+      mreq = await takeMovementRequest(tx, actor, 'WITHDRAWAL_REVERSAL', w.id, w.amount);
+      if ((mreq.params as { mode?: string }).mode !== 'REJECT') throw invalidState('طلب المنشئ ليس طلب رفض');
+    }
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'REJECTED', why);
     await tx.update(withdrawalRequests).set({ status: 'REJECTED', rejectReason: why }).where(eq(withdrawalRequests.id, w.id));
-    await reverseReservation(tx, actor, w, why);
+    if (mreq) {
+      await reverseReservation(tx, actor, w, why, mreq.requestedBy);
+      await completeMovementRequest(tx, actor, mreq, null);
+    }
     await audit(tx, actor, { action: 'withdrawal.rejected', entityType: 'withdrawal', entityId: w.id, reason: why, oldValues: { status: w.status }, newValues: { status: 'REJECTED', reservationReturned: !!w.reservedAt } });
     await notifySeller(tx, w, `مرفوض: ${why}`, 'rejected');
   });
@@ -427,12 +440,15 @@ export async function markWithdrawalFailedBeforeTransfer(actor: Actor, id: strin
     if (w.status !== 'PROCESSING' && w.status !== 'TRANSFER_UNCERTAIN') throw invalidState('هذا الإجراء لطلب جارٍ تحويله أو نتيجته غير مؤكدة فقط');
     if (w.processingBy === actor.userId || w.transferUncertainBy === actor.userId) throw forbidden('إثبات عدم خروج التحويل يجب أن يتم بواسطة شخص غير منفذ التحويل');
     await assertNotSelfDealing(tx, actor, w.sellerId);
+    const mreq = await takeMovementRequest(tx, actor, 'WITHDRAWAL_REVERSAL', w.id, w.amount);
+    if ((mreq.params as { mode?: string }).mode !== 'FAILED_BEFORE_TRANSFER') throw invalidState('طلب المنشئ ليس طلب فشل قبل التحويل');
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'FAILED_BEFORE_TRANSFER', why);
     await tx
       .update(withdrawalRequests)
       .set({ status: 'FAILED_BEFORE_TRANSFER', transferFailedAt: new Date(), transferFailedBy: actor.userId, transferFailureReason: why, transferFailureEvidence: evidence })
       .where(eq(withdrawalRequests.id, w.id));
-    await reverseReservation(tx, actor, w, `فشل قبل التحويل: ${why}`);
+    await reverseReservation(tx, actor, w, `فشل قبل التحويل: ${why}`, mreq.requestedBy);
+    await completeMovementRequest(tx, actor, mreq, null);
     await audit(tx, actor, { action: 'withdrawal.failed_before_transfer', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'FAILED_BEFORE_TRANSFER', reservationReturned: !!w.reservedAt, evidence }, reason: why });
     await notifySeller(tx, w, 'لم يتم التحويل — أُعيد المبلغ لرصيدك المتاح', 'failed-before-transfer');
   });
@@ -459,7 +475,9 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
     await assertNotSelfDealing(tx, actor, w.sellerId);
     const transferred = w.netTransferAmount ?? w.amount;
     if (input.amount > transferred) throw validation(`المبلغ المرتد أكبر من المبلغ المحوّل (${formatEGP(transferred)})`);
+    const mreq = await takeMovementRequest(tx, actor, 'WITHDRAWAL_RETURN', w.id, input.amount);
     const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
       action: 'WITHDRAWAL_PAYOUT_RETURN',
       entityType: 'withdrawal',
       entityId: w.id,
@@ -486,6 +504,7 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
       .update(withdrawalRequests)
       .set({ status: 'RETURNED', returnedAmount: input.amount, returnedAt: new Date(), returnedBy: actor.userId, returnedReference: ref, returnReason: why, returnApprovalId: approval.id })
       .where(eq(withdrawalRequests.id, w.id));
+    await completeMovementRequest(tx, actor, mreq, approval.id);
     // The destination that bounced is no longer trusted: it must be verified again before any payout.
     if (w.payoutMethodId) {
       await tx.update(sellerPayoutMethods).set({ status: 'PENDING_VERIFICATION', isDefault: false }).where(and(eq(sellerPayoutMethods.id, w.payoutMethodId), eq(sellerPayoutMethods.status, 'ACTIVE')));
@@ -559,8 +578,7 @@ export async function createAdjustment(actor: Actor, input: { sellerId: string; 
       .values({ sellerId: input.sellerId, sellerOrderId: input.sellerOrderId ?? null, amount, reasonCode: input.reasonCode, reason: why, createdBy: actor.userId! })
       .returning();
     await audit(tx, actor, { action: 'ledger.adjustment_created', entityType: 'ledger_adjustment', entityId: adj.id, newValues: { amount, sellerId: input.sellerId, reasonCode: input.reasonCode }, reason: why });
-    const threshold = await getSetting('ledger.adjustmentDualControlThreshold', tx);
-    if (threshold > 0 && Math.abs(amount) < threshold) await postAdjustment(tx, actor, adj.id, true);
+    // Owner rule: every adjustment is two-person (creator = Maker; a different person decides) — no threshold.
     return adj;
   });
 }
@@ -640,10 +658,11 @@ export async function markDealPayoutPaid(actor: Actor, payoutId: string, referen
     if (p.payeeUserId === actor.userId) throw forbidden('لا يمكنك صرف مستحق لنفسك');
     await assertNotPaused(tx, 'killswitch.payouts');
     const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId));
-    const threshold = await effectiveDualControlThreshold(tx);
+    // Owner rule: always two-person — the settlement (release) approver is the Maker, the payer someone else.
     const releaser = deal.releaseApprovalId ? (await tx.select({ by: financialApprovals.approvedBy }).from(financialApprovals).where(eq(financialApprovals.id, deal.releaseApprovalId)))[0]?.by : null;
-    const dual = p.amount >= threshold && !!releaser;
-    if (dual && releaser === actor.userId) throw forbidden('هذا المبلغ يتطلب أن يكون منفذ الصرف شخصاً مختلفاً عن معتمد التسوية');
+    if (!releaser) throw invalidState('لا يوجد معتمد تسوية مسجل لهذه الصفقة. لا يمكن الصرف');
+    if (releaser === actor.userId) throw forbidden('منفذ الصرف يجب أن يكون شخصاً مختلفاً عن معتمد التسوية');
+    const dual = true;
     const approval = await grantApproval(tx, actor, {
       action: 'DEAL_PAYOUT',
       entityType: 'deal_payout',
@@ -653,7 +672,7 @@ export async function markDealPayoutPaid(actor: Actor, payoutId: string, referen
       reason: `صرف مستحق صفقة — مرجع ${ref}`,
       idempotencyKey: `deal-payout-paid:${p.id}`,
       destinationSnapshot: { masked: deal.sellerPayoutMasked, type: deal.sellerPayoutType },
-      dualControl: dual ? { requestedBy: releaser! } : null,
+      dualControl: dual ? { requestedBy: releaser } : null,
     });
     const file = proof ? await storeUpload(tx, actor, { purpose: 'WITHDRAWAL_PROOF', data: proof.data, originalName: proof.name }) : null;
     await tx.update(dealPayouts).set({ status: 'PAID', paidReference: ref, paidProofFileId: file?.id ?? null, paidBy: actor.userId, paidAt: new Date(), payoutApprovalId: approval.id }).where(eq(dealPayouts.id, p.id));

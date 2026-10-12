@@ -4,6 +4,7 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { revealPayoutAction, withdrawalAdminAction } from '@/app/_actions/admin';
 import { RevealPayout } from '@/app/_components/reveal-id';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { checkerMayExecute, MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { sellers, statusHistory, stores, users, withdrawalRequests } from '@/server/db/schema';
@@ -31,7 +32,12 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   const canApprove = hasPermission(actor, 'withdrawals.approve');
   const canPay = hasPermission(actor, 'withdrawals.pay');
   const hold = s.seller.payoutHoldUntil && s.seller.payoutHoldUntil > new Date();
-  const sameAsApprover = w.requiresDualControl && w.approvedBy === actor.userId;
+  // Universal two-person rule (Batch 1.5): the payer is never the approver, whatever the amount.
+  const sameAsApprover = w.approvedBy === actor.userId;
+  const openReversal = await openMovementFor('WITHDRAWAL_REVERSAL', w.id);
+  const openReturn = await openMovementFor('WITHDRAWAL_RETURN', w.id);
+  const canMake = hasPermission(actor, 'finance.movement.request');
+  const back = `/admin/withdrawals/${w.id}`;
   const hidden = <><input type="hidden" name="withdrawalId" value={w.id} /><input type="hidden" name="back" value={`/admin/withdrawals/${w.id}`} /></>;
   return (
     <div className="space-y-4">
@@ -98,8 +104,10 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             <SubmitButton variant="outline">تسجيل نتيجة غير مؤكدة (2FA)</SubmitButton>
           </ActionForm>
         )}
-        {canApprove && ['PROCESSING', 'TRANSFER_UNCERTAIN'].includes(w.status) && w.processingBy !== actor.userId && w.transferUncertainBy !== actor.userId && (
-          <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5" data-testid="wd-failed-before-transfer">
+        {(canApprove || canMake) && ['PROCESSING', 'TRANSFER_UNCERTAIN'].includes(w.status) && (
+          <MovementPanel actor={actor} kind="WITHDRAWAL_REVERSAL" mode="FAILED_BEFORE_TRANSFER" entityId={w.id} amount={w.amount} back={back} open={openReversal}>
+          {canApprove && checkerMayExecute(actor, openReversal) && w.processingBy !== actor.userId && w.transferUncertainBy !== actor.userId && (
+          <ActionForm action={withdrawalAdminAction} className="space-y-2 border-t border-line pt-3" data-testid="wd-failed-before-transfer">
             {hidden}<input type="hidden" name="op" value="failed_before_transfer" />
             <h2 className="font-bold">فشل قبل التحويل (لم يخرج أي مبلغ)</h2>
             <p className="text-xs text-muted">استخدمه فقط بدليل أن التحويل لم يخرج من اضمن. يُعاد المبلغ المحجوز لرصيد البائع المتاح بقيد عكسي بموافقتك. يجب أن يكون شخصًا غير منفذ التحويل.</p>
@@ -107,23 +115,43 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
             <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
             <SubmitButton variant="danger">تأكيد الفشل قبل التحويل (2FA)</SubmitButton>
           </ActionForm>
+          )}
+          </MovementPanel>
         )}
-        {canApprove && w.status === 'PAID' && w.paidBy !== actor.userId && (
-          <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5" data-testid="wd-returned">
+        {(canApprove || canMake) && w.status === 'PAID' && (
+          <MovementPanel actor={actor} kind="WITHDRAWAL_RETURN" entityId={w.id} amount={w.netTransferAmount ?? w.amount} back={back} open={openReturn}>
+          {canApprove && checkerMayExecute(actor, openReturn) && w.paidBy !== actor.userId && (
+          <ActionForm action={withdrawalAdminAction} className="space-y-2 border-t border-line pt-3" data-testid="wd-returned">
             {hidden}<input type="hidden" name="op" value="returned" />
             <h2 className="font-bold">تسجيل ارتداد التحويل</h2>
             <p className="text-xs text-muted">للتحويل الذي سُجّل صرفه ثم رجع من البنك/المزود. يُسجل قيد تعويضي بموافقتك (لا يُعدّل قيد الصرف الأصلي) ويُعاد المبلغ لرصيد البائع المتاح، ويلزم إعادة اعتماد وسيلة السحب.</p>
-            <Field label="المبلغ المرتد (ج.م)" required><Input name="amount" required className="ltr" placeholder={((w.netTransferAmount ?? w.amount) / 100).toFixed(2)} /></Field>
+            <input type="hidden" name="amount" value={((openReturn?.r.amount ?? 0) / 100).toFixed(2)} />
+            <p className="text-sm">المبلغ المرتد (من طلب المنشئ): <b>{formatEGP(openReturn?.r.amount ?? 0)}</b></p>
             <Field label="مرجع الارتداد" required><Input name="reference" required minLength={3} className="ltr" /></Field>
             <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
             <SubmitButton variant="danger">تسجيل الارتداد (2FA)</SubmitButton>
           </ActionForm>
+          )}
+          </MovementPanel>
         )}
-        {canApprove && ['REQUESTED', 'UNDER_REVIEW', 'APPROVED'].includes(w.status) && (
+        {(canApprove || canMake) && w.status === 'APPROVED' && w.reservedAt && (
+          <MovementPanel actor={actor} kind="WITHDRAWAL_REVERSAL" mode="REJECT" entityId={w.id} amount={w.amount} back={back} open={openReversal}>
+            {canApprove && checkerMayExecute(actor, openReversal) && (
+              <ActionForm action={withdrawalAdminAction} className="space-y-2 border-t border-line pt-3">
+                {hidden}<input type="hidden" name="op" value="reject" />
+                <h2 className="font-bold">رفض الطلب وفك الحجز</h2>
+                <p className="text-xs text-muted">يُعاد المبلغ المحجوز إلى رصيد البائع المتاح بقيد عكسي معتمد من شخصين.</p>
+                <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
+                <SubmitButton variant="danger">رفض (2FA)</SubmitButton>
+              </ActionForm>
+            )}
+          </MovementPanel>
+        )}
+        {canApprove && ['REQUESTED', 'UNDER_REVIEW'].includes(w.status) && (
           <ActionForm action={withdrawalAdminAction} className="card space-y-2 p-5">
             {hidden}<input type="hidden" name="op" value="reject" />
             <h2 className="font-bold">رفض الطلب</h2>
-            <p className="text-xs text-muted">{w.reservedAt ? 'يُعاد المبلغ المحجوز إلى رصيد البائع المتاح (قيد عكسي بموافقتك).' : 'لم يُحجز أي مبلغ لهذا الطلب.'}</p>
+            <p className="text-xs text-muted">لم يُحجز أي مبلغ لهذا الطلب — الرفض لا يحرك أي مبلغ.</p>
             <Field label="السبب" required><Textarea name="reason" required minLength={5} rows={2} /></Field>
             <SubmitButton variant="danger">رفض</SubmitButton>
           </ActionForm>

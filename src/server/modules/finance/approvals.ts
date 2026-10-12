@@ -23,7 +23,29 @@ export const ACTION_ENTRY_TYPES: Record<FinancialAction, string[]> = {
   DEAL_REFUND: ['DEAL_REFUND'],
   DEAL_PAYOUT: ['DEAL_PAYOUT_PAID'],
   WITHDRAWAL_PAYOUT_RETURN: ['WITHDRAWAL_RETURNED'],
+  REFUND_REVOCATION: ['REFUND_REVERSAL'],
 };
+
+/**
+ * OWNER RULE (Batch 1.5): EVERY actual financial movement is two-person — a Maker and a DIFFERENT Checker,
+ * no amount threshold, no exception. Mirrored by the DB trigger `financial_approvals_movement_two_person`.
+ * Not listed (documented): PAYMENT_CONFIRMATION / DEAL_PAYMENT_CONFIRMATION verify money RECEIVED (the payer
+ * submits, a reviewer who is never the payer confirms; the payer is recorded as requester) and
+ * WITHDRAWAL_RESERVATION locks the seller's own funds at the seller's request (its payout is two-person).
+ */
+export const MOVEMENT_ACTIONS: readonly FinancialAction[] = [
+  'SELLER_RELEASE',
+  'REFUND_APPROVAL',
+  'REFUND_PAYOUT',
+  'REFUND_REVOCATION',
+  'WITHDRAWAL_RELEASE_RESERVATION',
+  'WITHDRAWAL_PAYOUT',
+  'WITHDRAWAL_PAYOUT_RETURN',
+  'MANUAL_ADJUSTMENT',
+  'DEAL_RELEASE',
+  'DEAL_REFUND',
+  'DEAL_PAYOUT',
+];
 
 export interface ApprovalRequest {
   action: FinancialAction;
@@ -53,6 +75,9 @@ export async function grantApproval(tx: DbOrTx, actor: Actor, req: ApprovalReque
   // Counted outside the business transaction so a refused operation still counts.
   await enforce(`fin-approve:${actor.userId}`, 300, 3600);
   if (!Number.isSafeInteger(req.amount) || req.amount < 0) throw invalidState('مبلغ الموافقة غير صالح');
+  if (MOVEMENT_ACTIONS.includes(req.action) && !req.dualControl?.requestedBy) {
+    throw forbidden('كل حركة مالية تتطلب شخصين: منشئ (Maker) ومعتمد/منفّذ مختلف (Checker)');
+  }
   if (req.dualControl && req.dualControl.requestedBy === actor.userId) {
     throw forbidden('هذه العملية تتطلب شخصين: لا يمكن لنفس الشخص أن يكون المنشئ والمعتمد');
   }

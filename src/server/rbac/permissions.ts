@@ -78,6 +78,15 @@ export const PERMISSIONS = {
   'audit.view': 'عرض سجل التدقيق',
   'roles.manage': 'إدارة الأدوار والصلاحيات',
   'settings.manage': 'إدارة إعدادات النظام',
+  // Batch 1.5 — identity, receiving destinations, Maker/Checker, privileged messages, support operations
+  'identity.view': 'عرض حالات التحقق من الهوية',
+  'identity.documents.view': 'عرض صور بطاقة الرقم القومي',
+  'identity.review': 'البت في التحقق من الهوية',
+  'destinations.review': 'مراجعة واعتماد بيانات استلام الأموال',
+  'destinations.view_full': 'عرض بيانات استلام الأموال كاملة',
+  'finance.movement.request': 'إنشاء طلب حركة مالية (Maker)',
+  'support.escalate': 'تصعيد تذاكر الدعم وتحويلها للمختصين',
+  'support.qa': 'مراجعة جودة خدمة العملاء',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -94,13 +103,13 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
       'sellers.suspend', 'products.view', 'products.moderate', 'orders.view', 'orders.manage', 'shipping.view',
       'delivery.verify', 'payments.view', 'returns.manage', 'disputes.manage', 'deals.view',
       'deals.manage', 'reviews.moderate', 'support.manage', 'cms.manage', 'audit.view', 'finance.view',
-      'withdrawals.view', 'messages.view', 'messages.moderate',
+      'withdrawals.view', 'messages.view', 'messages.moderate', 'identity.view', 'support.escalate', 'support.qa',
     ],
   },
   SELLER_REVIEWER: {
     nameAr: 'مراجع البائعين',
     nameEn: 'Seller reviewer',
-    permissions: ['dashboard.view', 'sellers.view', 'sellers.review', 'sellers.documents.view', 'sellers.payout.verify'],
+    permissions: ['dashboard.view', 'sellers.view', 'sellers.review', 'sellers.documents.view', 'sellers.payout.verify', 'identity.view', 'identity.documents.view', 'identity.review'],
   },
   CATALOG_REVIEWER: {
     nameAr: 'مراجع المنتجات',
@@ -118,7 +127,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.pay', 'refunds.pay', 'deals.payout',
       'ledger.adjust.create', 'payments.view', 'orders.view', 'settlements.manage', 'reports.view', 'reports.export',
-      'reconciliation.manage',
+      'reconciliation.manage', 'destinations.view_full', 'finance.movement.request',
       // Pricing maker: drafts, simulates and submits; never approves.
       'pricing.view', 'pricing.draft', 'pricing.simulate', 'pricing.submit', 'profitability.view',
     ],
@@ -129,7 +138,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.approve', 'ledger.adjust.approve',
       'commissions.manage', 'payments.destinations.manage', 'payments.view', 'orders.view', 'reports.view',
-      'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage',
+      'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage', 'destinations.review', 'destinations.view_full', 'finance.movement.request',
       // Read-only deal view: a settlement is approved from the deal page.
       'deals.view',
       // Pricing checker: approves/publishes versions a different person submitted.
@@ -139,14 +148,28 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
   DISPUTE_OFFICER: {
     nameAr: 'مسؤول النزاعات',
     nameEn: 'Dispute officer',
-    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view', 'delivery.verify'],
+    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view', 'delivery.verify', 'support.escalate'],
   },
   CUSTOMER_SUPPORT: {
     nameAr: 'خدمة العملاء',
     nameEn: 'Customer support',
-    permissions: ['dashboard.view', 'support.manage', 'customers.view', 'orders.view', 'sellers.view', 'deals.view', 'reviews.moderate', 'messages.view', 'messages.moderate'],
+    permissions: ['dashboard.view', 'support.manage', 'customers.view', 'orders.view', 'sellers.view', 'deals.view', 'reviews.moderate', 'messages.view', 'messages.moderate', 'support.escalate', 'identity.view'],
   },
 };
+
+/**
+ * Permissions introduced after the first seed. `seedReference` grants each (role, permission) pair ONCE
+ * (recorded in system_settings `rbac.additiveGrants`), so existing databases receive new capabilities
+ * without overwriting role edits an admin made afterwards.
+ */
+export const ADDITIVE_ROLE_GRANTS: { id: string; role: string; permissions: Permission[] }[] = [
+  { id: 'b15-identity-reviewer', role: 'SELLER_REVIEWER', permissions: ['identity.view', 'identity.documents.view', 'identity.review'] },
+  { id: 'b15-ops-identity', role: 'OPERATIONS_MANAGER', permissions: ['identity.view', 'support.escalate', 'support.qa'] },
+  { id: 'b15-finance-checker', role: 'FINANCE_CHECKER', permissions: ['destinations.review', 'destinations.view_full', 'finance.movement.request'] },
+  { id: 'b15-finance-operator', role: 'FINANCE_OPERATOR', permissions: ['destinations.view_full', 'finance.movement.request'] },
+  { id: 'b15-support', role: 'CUSTOMER_SUPPORT', permissions: ['support.escalate', 'identity.view'] },
+  { id: 'b15-dispute-officer', role: 'DISPUTE_OFFICER', permissions: ['support.escalate'] },
+];
 
 /** Seller-staff permissions inside the Seller Center (scoped to their own seller account). */
 export const SELLER_PERMISSIONS = [

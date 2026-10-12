@@ -24,6 +24,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/admin/sellers', label: 'البائعون', perm: 'sellers.view' },
       { href: '/admin/seller-verification', label: 'التحقق من البائعين', perm: 'sellers.review', badgeKey: 'sellers' },
+      { href: '/admin/identity', label: 'التحقق من الهوية', perm: 'identity.view', badgeKey: 'identity' },
       { href: '/admin/products', label: 'المنتجات', perm: 'products.view' },
       { href: '/admin/moderation', label: 'مراجعة المنتجات', perm: 'products.moderate', badgeKey: 'products' },
       { href: '/admin/categories', label: 'التصنيفات والعمولات', perm: 'catalog.manage' },
@@ -53,7 +54,9 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/admin/releases', label: 'إتاحة أرباح البائعين', perm: ['finance.release', 'finance.view'] },
       { href: '/admin/transactions', label: 'المعاملات', perm: ['finance.view', 'payments.view'] },
       { href: '/admin/balances', label: 'أرصدة البائعين', perm: 'finance.view' },
+      { href: '/admin/movements', label: 'حركات مالية بانتظار معتمد', perm: ['finance.view', 'finance.movement.request'], badgeKey: 'movements' },
       { href: '/admin/withdrawals', label: 'السحوبات', perm: 'withdrawals.view', badgeKey: 'withdrawals' },
+      { href: '/admin/receiving-destinations', label: 'بيانات استلام الأموال', perm: ['destinations.review', 'destinations.view_full'], badgeKey: 'destinations' },
       { href: '/admin/settlements', label: 'التسويات', perm: ['settlements.manage', 'finance.view'] },
       { href: '/admin/refunds', label: 'المستردات والمستحقات', perm: ['refunds.pay', 'refunds.approve', 'deals.payout', 'finance.view'], badgeKey: 'refunds' },
       { href: '/admin/reconciliation', label: 'المطابقة مع الكشوف', perm: ['reconciliation.manage', 'finance.view'] },
@@ -68,6 +71,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/admin/approvals', label: 'مركز الموافقات', perm: 'dashboard.view', badgeKey: 'approvals' },
       { href: '/admin/notifications', label: 'الإشعارات', perm: 'notifications.manage' },
+      { href: '/admin/alerts', label: 'التنبيهات الاستباقية', perm: ['notifications.manage', 'settings.manage'] },
       { href: '/admin/support', label: 'الدعم الفني', perm: 'support.manage', badgeKey: 'tickets' },
       { href: '/admin/messages', label: 'محادثات المشترين والبائعين', perm: 'messages.view' },
       { href: '/admin/reports', label: 'التقارير والتصدير', perm: 'reports.view' },
@@ -114,9 +118,12 @@ export default async function AdminConsoleLayout({ children }: { children: React
     (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) withdrawals,
     (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')) + (select count(*) from deal_payouts where status = 'PENDING') refunds,
     (select count(*) from support_tickets where status in ('OPEN','ESCALATED')) tickets,
-    (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments`);
+    (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments,
+    (select count(*) from user_identity_verifications where status = 'PENDING_REVIEW') identity,
+    (select count(*) from receiving_destinations where status = 'PENDING_REVIEW') destinations,
+    (select count(*) from financial_movement_requests where status = 'PENDING') movements`);
   const counts: Record<string, string> = { ...r.rows[0] };
-  counts.approvals = String(['sellers', 'products', 'payments', 'withdrawals', 'refunds', 'adjustments'].reduce((n, k) => n + Number(counts[k]), 0));
+  counts.approvals = String(['sellers', 'products', 'payments', 'withdrawals', 'refunds', 'adjustments', 'identity', 'destinations', 'movements'].reduce((n, k) => n + Number(counts[k]), 0));
   const groups: NavGroup[] = GROUPS.map((g) => ({
     title: g.title,
     items: g.items

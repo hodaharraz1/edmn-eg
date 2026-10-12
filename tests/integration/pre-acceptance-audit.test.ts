@@ -28,7 +28,7 @@ import { confirmReceipt, releaseSellerOrder, setFinancialHold } from '@/server/m
 import { createAdjustment } from '@/server/modules/finance/withdrawals';
 import { flushOutbound, REDACTED_BODY } from '@/server/jobs/worker';
 import { assertDemoSeedAllowed } from '@/server/db/seed/demo';
-import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -93,6 +93,7 @@ describe('pre-acceptance audit — protected deal fixes', () => {
     await confirmDealReceipt(d.buyer, d.dealId);
     [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
     expect(deal.status).toBe('BUYER_CONFIRMED_RECEIPT');
+    await makerRequest('DEAL_RELEASE', d.dealId, deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!));
     await releaseDeal(admin, d.dealId, { expectedPayout: deal.buyerPays! - Math.min(deal.feeAmount, deal.buyerPays!), reason: 'إتاحة بعد إعادة التسليم' });
     [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, d.dealId));
     expect(deal.status).toBe('COMPLETED');
@@ -251,11 +252,21 @@ describe('pre-acceptance audit — marketplace & seller center fixes', () => {
     void returnsT;
   });
 
-  it('customers cannot reply to a closed support ticket', async () => {
-    const { openTicket, replyToTicket, updateTicket } = await import('@/server/modules/support/service');
+  // Batch 1.5 (owner decisions #16–#18): a CLOSED ticket may be reopened — a customer reply reopens it with a
+  // NEW SLA cycle; the previous cycle and the full history are preserved (previously: replies were refused).
+  it('a customer reply to a closed support ticket reopens it with a new SLA cycle (history kept)', async () => {
+    const { openTicket, replyToTicket, updateTicket, ticketSlaCycles } = await import('@/server/modules/support/service');
+    const { supportTickets } = await import('@/server/db/schema');
     const c = await makeCustomer();
     const t = await openTicket(c.actor, { type: 'ACCOUNT', subject: 'مشكلة في الحساب', body: 'لا أستطيع تعديل بيانات الحساب الخاصة بي' });
     await updateTicket(admin, t.id, { status: 'CLOSED' });
-    await expect(replyToTicket(c.actor, t.id, 'رد بعد الإغلاق')).rejects.toThrow(/التذكرة دي اتقفلت/);
+    await replyToTicket(c.actor, t.id, 'المشكلة رجعت تاني بعد الإغلاق');
+    const [after] = await db.select().from(supportTickets).where(eq(supportTickets.id, t.id));
+    expect(after.status).toBe('OPEN');
+    expect(after.reopenCount).toBe(1);
+    expect(after.slaCycle).toBe(2);
+    const cycles = await ticketSlaCycles(t.id);
+    expect(cycles.map((x) => x.cycle)).toEqual([1, 2]);
+    expect(cycles[0].closedAt).not.toBeNull();
   });
 });

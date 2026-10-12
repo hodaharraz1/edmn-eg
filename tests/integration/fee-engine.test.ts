@@ -17,7 +17,7 @@ import { financialInvariants } from '@/server/modules/finance/controls';
 import { activeChannelConfig, saveChannelVersion } from '@/server/modules/pricing/payout-costs';
 import { economics, kpis, recordCost } from '@/server/modules/pricing/profitability';
 import { activeVersionId, approveVersion, compareVersions, createDraft, loadVersion, publishVersion, submitVersion, updateDraft } from '@/server/modules/pricing/service';
-import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, publishPricingVariant, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, publishPricingVariant, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 
 let admin: Actor;
 let checker: Actor;
@@ -339,6 +339,7 @@ describe('F. refunds with the fee engine', () => {
       expect(r.responsibleParty).toBe('SELLER');
       expect(r.lifecycleStage).toBe('BEFORE_SHIPMENT');
       expect(r.feePolicySource).toBe('UNPUBLISHED_SAFE_DEFAULT');
+      await makerRequest('REFUND_APPROVAL', r.id, r.amount);
       await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });
       const [e] = await db.select().from(journalEntries).where(eq(journalEntries.idempotencyKey, `refund:${r.id}`));
       const ls = await db.select().from(journalLines).where(eq(journalLines.entryId, e.id));

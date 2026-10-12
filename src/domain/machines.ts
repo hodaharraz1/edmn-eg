@@ -245,7 +245,8 @@ export type RefundStatus = (typeof REFUND_STATUSES)[number];
 export const refundMachine = defineMachine<RefundStatus>('refund', REFUND_STATUSES, {
   REQUESTED: ['UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'],
   UNDER_REVIEW: ['APPROVED', 'REJECTED'],
-  APPROVED: ['PROCESSING', 'COMPLETED', 'FAILED'],
+  // APPROVED → CANCELLED = two-person revocation before any money moved (compensating journal, Batch 1.5).
+  APPROVED: ['PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'],
   PROCESSING: ['COMPLETED', 'FAILED'],
   FAILED: ['PROCESSING', 'COMPLETED'],
   PENDING: ['PAID', 'PROCESSING', 'FAILED', 'COMPLETED'],
@@ -394,8 +395,9 @@ export const ticketMachine = defineMachine<TicketStatus>('support_ticket', TICKE
   WAITING_CUSTOMER: ['IN_PROGRESS', 'ESCALATED', 'RESOLVED', 'CLOSED'],
   WAITING_SELLER: ['IN_PROGRESS', 'ESCALATED', 'RESOLVED', 'CLOSED'],
   ESCALATED: ['IN_PROGRESS', 'RESOLVED', 'CLOSED'],
-  RESOLVED: ['CLOSED', 'IN_PROGRESS'],
-  CLOSED: [],
+  // Reopen (RESOLVED or CLOSED → OPEN) only through reopenTicket: it starts a NEW SLA cycle and keeps history.
+  RESOLVED: ['CLOSED', 'IN_PROGRESS', 'OPEN'],
+  CLOSED: ['OPEN'],
 });
 
 /* ───────────────────────── Misc enums ───────────────────────── */
@@ -422,7 +424,7 @@ export const RETURN_REASONS = [
   'OTHER',
 ] as const;
 export type ReturnReason = (typeof RETURN_REASONS)[number];
-export const TICKET_TYPES = ['ORDER', 'PAYMENT', 'SHIPPING', 'RETURN', 'PRODUCT', 'SELLER', 'EXTERNAL_DEAL', 'ACCOUNT'] as const;
+export const TICKET_TYPES = ['ORDER', 'PAYMENT', 'SHIPPING', 'RETURN', 'PRODUCT', 'SELLER', 'EXTERNAL_DEAL', 'ACCOUNT', 'IDENTITY', 'RECEIVING_DESTINATION', 'REFUND', 'DISPUTE', 'SELLER_FINANCE', 'WITHDRAWAL', 'TECHNICAL'] as const;
 export type TicketType = (typeof TICKET_TYPES)[number];
 export const TICKET_PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
 export type TicketPriority = (typeof TICKET_PRIORITIES)[number];

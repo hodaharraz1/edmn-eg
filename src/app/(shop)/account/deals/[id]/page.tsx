@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { DealTimer } from '@/app/_components/deal-timer';
 import Link from '@/ui/link';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
@@ -102,6 +103,26 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       />
 
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}
+      {['ACTIVE', 'DELIVERED'].includes(deal.status) && deal.deliveryDeadline && !dispute && (
+        <DealTimer
+          testid="deal-delivery-timer"
+          deadline={deal.deliveryDeadline.toISOString()}
+          serverNow={new Date().toISOString()}
+          label="الوقت المتبقي للتسليم"
+          overdueLabel="متأخر عن الموعد"
+          actions={canMessage ? [{ href: `/account/messages/open?deal=${deal.id}`, label: isBuyer ? 'تواصل مع البائع' : 'تواصل مع المشتري' }, ...(isBuyer ? [{ href: `/account/disputes/new?deal=${deal.id}`, label: 'عندي مشكلة' }] : [])] : undefined}
+        />
+      )}
+      {handoverOpen && deal.buyerResponseDueAt && !dispute && (
+        <DealTimer
+          testid="deal-inspection-timer"
+          deadline={deal.buyerResponseDueAt.toISOString()}
+          serverNow={new Date().toISOString()}
+          label="الوقت المتبقي لتأكيد حالة المنتج"
+          overdueLabel="انتهت مهلة تأكيد حالة المنتج — الإدارة بتراجع الاستحقاق"
+          actions={isBuyer ? [{ href: '#delivery-choice', label: 'أكّد الاستلام أو بلّغ عن مشكلة' }] : undefined}
+        />
+      )}
       {isBuyer && deal.status === 'DRAFT' && <Alert tone="info">طلب الصفقة لسه مكملش. <Link href={`/account/deals/new?deal=${deal.id}&step=${Math.min(deal.wizardStep, 6)}`} className="underline">كمّل الطلب</Link></Alert>}
       {isBuyer && deal.status === 'INVITED' && (
         <div className="card space-y-3 p-4 text-sm">
@@ -393,7 +414,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
 
       {/* ── Buyer: explicit final choice after a verified handover (OTP ≠ acceptance) ── */}
       {isBuyer && handoverOpen && !dispute && (
-        <section className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
+        <section id="delivery-choice" className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
           <p className="font-semibold">تسليم المنتج ليك اتأكد برمز الاستلام.</p>
           <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج واختار قبل {deal.buyerResponseDueAt ? formatDate(deal.buyerResponseDueAt, true) : `${deal.inspectionDays} يوم`}. لو المهلة خلصت من غير ما تبلّغ عن مشكلة، البائع بيبقى مستحق للمبلغ (من غير ما يتحسب إنك أكدت)، والمبلغ بيتحول له بس بموافقة الإدارة.</p>
           <div className="flex flex-col gap-2 sm:flex-row">

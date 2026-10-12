@@ -16,6 +16,7 @@ import {
   participantThread,
   sendMessage,
   staffThread,
+  grantMessageAccess,
   unreadForSeller,
   unreadForUser,
 } from '@/server/modules/messaging/service';
@@ -158,6 +159,7 @@ describe('live sync (no refresh)', () => {
     await send(s2.actor, convB.id, 'من المتجر التاني');
     expect(await unreadForUser(a.c.user.id)).toBe(2);
     const staffUser = await makeAdmin(['SUPER_ADMIN']);
+    await grantMessageAccess(staffUser, a.conv.id, { purpose: 'OPERATIONS', note: 'مراجعة تشغيلية للمحادثة في الاختبار' });
     await staffThread(staffUser, a.conv.id, { via: 'test' });
     expect(await unreadForUser(a.c.user.id)).toBe(2); // 13
     // tab 1 reads A; tab 2's next poll sees the authoritative count

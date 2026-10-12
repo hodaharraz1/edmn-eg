@@ -432,7 +432,11 @@ export async function releaseSellerOrder(actor: Actor, soId: string, input: { ex
     const pos = await sellerOrderPosition(tx, so);
     if (pos.pending !== input.expectedSellerAmount) throw invalidState('المبلغ المعلق تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
     if (pos.pending <= 0 && pos.deferredCommission <= 0) throw invalidState('لا يوجد رصيد معلق لإتاحته (الطلب مسترد بالكامل)');
+    // Universal Maker/Checker: a different authorized person must have requested exactly this release.
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'SELLER_RELEASE', so.id, pos.pending);
     const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
       action: 'SELLER_RELEASE',
       entityType: 'seller_order',
       entityId: so.id,
@@ -442,6 +446,7 @@ export async function releaseSellerOrder(actor: Actor, soId: string, input: { ex
       idempotencyKey: `release:${so.id}`,
     });
     await releaseSellerOrderFunds(tx, actor, so, approval.id);
+    await completeMovementRequest(tx, actor, mreq, approval.id);
     // Completion guards: receipt basis + committed release + nothing unresolved.
     const after = await releaseBlockers(tx, so);
     let completed = false;

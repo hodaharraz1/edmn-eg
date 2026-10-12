@@ -1,4 +1,5 @@
 import { and, eq, lte, sql } from 'drizzle-orm';
+import { runAlertSweep } from '@/server/modules/alerts/engine';
 import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db } from '@/server/db/client';
 import { jobs, outboundMessages } from '@/server/db/schema';
@@ -79,6 +80,8 @@ export const SCHEDULE: { name: string; everyMs: number; run: () => Promise<unkno
   // Message push retries + delayed email fallback (re-checks read state, preferences and cooldown first).
   { name: 'notify.dispatch', everyMs: 60_000, run: () => dispatchDeliveries() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },
+  // Proactive alerts: notifications only — never moves money or changes a business record.
+  { name: 'alerts.sweep', everyMs: 5 * 60_000, run: () => runAlertSweep() },
   { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },
 ];
 

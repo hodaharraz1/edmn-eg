@@ -13,7 +13,7 @@ import { createProductReview, moderateReview } from '@/server/modules/reviews/se
 import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, deliveryOtpForBuyer, verifyDeliveryOtp, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, releaseDeal } from '@/server/modules/deals/service';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { canReadPrivateFile } from '@/server/storage/access';
-import { approveRefundsOf, checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveRefundsOf, checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
 
 let admin: Actor;
@@ -113,6 +113,7 @@ describe('disputes', () => {
     await expect(confirmReceipt(c.actor, so.id)).rejects.toThrow(/نزاع مفتوح/);
     await resolveDispute(admin, d.id, { decision: 'REJECT_CLAIM', reasonCode: 'NO_EVIDENCE', note: 'لم تقدم أدلة تدعم الشكوى' });
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(0); // the decision lifts the hold, it does not pay
+    await makerRequest('SELLER_RELEASE', so.id, so.sellerNet);
     await releaseSellerOrder(await makeAdmin(['FINANCE_CHECKER']), so.id, { expectedSellerAmount: so.sellerNet, reason: 'إتاحة بعد رفض الشكوى' });
     expect((await sellerBalances(db, s.actor.sellerId!)).available).toBe(so.sellerNet);
   });
@@ -180,6 +181,7 @@ describe('external protected deals', () => {
     expect(again.alreadyConfirmed).toBe(true);
     [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('BUYER_CONFIRMED_RECEIPT');
+    await makerRequest('DEAL_RELEASE', deal.id, d.buyerPays! - Math.min(d.feeAmount, d.buyerPays!));
     await releaseDeal(admin, deal.id, { expectedPayout: d.buyerPays! - Math.min(d.feeAmount, d.buyerPays!), reason: 'إتاحة بعد تأكيد المشتري' });
     [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('COMPLETED');

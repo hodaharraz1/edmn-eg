@@ -31,7 +31,7 @@ const PUBLIC_PURPOSES: ReadonlySet<FilePurpose> = new Set([
   'CMS_IMAGE',
   'REVIEW_PHOTO',
 ]);
-const IMAGE_ONLY: ReadonlySet<FilePurpose> = new Set([...PUBLIC_PURPOSES]);
+const IMAGE_ONLY: ReadonlySet<FilePurpose> = new Set([...PUBLIC_PURPOSES, 'IDENTITY_DOCUMENT']);
 const ALLOWED_EXT = /\.(jpe?g|png|webp|pdf)$/i;
 
 export interface UploadInput {

@@ -1,16 +1,16 @@
 import { notFound } from 'next/navigation';
-import { hideMessageAction, lockConversationAction } from '@/app/_actions/messaging';
+import { grantMessageAccessAction, hideMessageAction, lockConversationAction } from '@/app/_actions/messaging';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { ConversationContextCard, toDTO } from '@/app/_components/conversation';
 import { MessageBubble } from '@/app/_components/live/message-bubble';
 import { formatDate } from '@/lib/format';
 import { hasPermission } from '@/server/core/actor';
 import { isDomainError } from '@/server/core/errors';
-import { REPORT_REASON_LABELS, staffThread } from '@/server/modules/messaging/service';
+import { MESSAGE_ACCESS_PURPOSE_LABELS, REPORT_REASON_LABELS, staffThread } from '@/server/modules/messaging/service';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { Alert, Badge, EmptyState, StatusChip } from '@/ui/feedback';
-import { Input } from '@/ui/form';
+import { Field, Input, Select, Textarea } from '@/ui/form';
 
 export const metadata = { title: 'محادثة' };
 
@@ -19,11 +19,34 @@ export default async function AdminConversation(props: PageProps<'/admin/message
   const { actor, allowed } = await adminWith('messages.view');
   if (!allowed) return <Forbidden />;
   const { id } = await props.params;
-  const via = String((await props.searchParams).via ?? 'direct').slice(0, 20);
+  const sp = await props.searchParams;
+  const via = String(sp.via ?? 'direct').slice(0, 20);
+  const caseId = typeof sp.case === 'string' ? sp.case : '';
   let t;
   try {
     t = await staffThread(actor, id, { via });
   } catch (e) {
+    if (isDomainError(e) && e.message === 'MESSAGE_ACCESS_PURPOSE_REQUIRED') {
+      // Privileged access: no private message is shown before a purpose (and case, where applicable) is recorded.
+      const defaultPurpose = via === 'dispute' ? 'DISPUTE' : via === 'support' ? 'SUPPORT' : 'OPERATIONS';
+      return (
+        <div className="mx-auto max-w-xl space-y-4">
+          <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'محادثات المشترين والبائعين', href: '/admin/messages' }, { label: 'سبب الاطلاع' }]} />} title="سبب الاطلاع على المحادثة" />
+          <Alert tone="warning">محادثات العملاء خاصة. سجّل سبب الاطلاع، وللدعم أو النزاع حدّد رقم الحالة المرتبطة بهذه المحادثة. الإذن صالح 30 دقيقة ومسجل في سجل التدقيق.</Alert>
+          <ActionForm action={grantMessageAccessAction} className="card space-y-3 p-5" data-testid="message-access-form">
+            <input type="hidden" name="conversationId" value={id} />
+            <Field label="الغرض" required>
+              <Select name="purpose" defaultValue={defaultPurpose}>
+                {Object.entries(MESSAGE_ACCESS_PURPOSE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </Select>
+            </Field>
+            <Field label="رقم الحالة (معرّف النزاع أو تذكرة الدعم)" hint="مطلوب لغرض الدعم أو النزاع"><Input name="caseId" defaultValue={caseId} className="ltr" /></Field>
+            <Field label="سبب الاطلاع" required><Textarea name="note" required minLength={10} rows={3} /></Field>
+            <SubmitButton>متابعة</SubmitButton>
+          </ActionForm>
+        </div>
+      );
+    }
     if (isDomainError(e)) notFound();
     throw e;
   }

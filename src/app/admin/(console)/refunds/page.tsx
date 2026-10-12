@@ -4,6 +4,8 @@ import { Banknote } from 'lucide-react';
 import { refundDecisionAction, refundPaidAction, revealPayoutAction } from '@/app/_actions/admin';
 import { RevealPayout } from '@/app/_components/reveal-id';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
+import { checkerMayExecute, MovementPanel } from '@/app/_components/movement-panel';
+import { openMovementRequests } from '@/server/modules/finance/movements';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { dealPayouts, externalDeals } from '@/server/db/schema';
@@ -53,14 +55,19 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
   const canOverride = hasPermission(actor, 'refunds.destination.override');
   const canPayout = hasPermission(actor, 'deals.payout');
   const back = `/admin/refunds?tab=${tab}`;
+  const openReqs = refundRows.length ? await openMovementRequests(refundRows.map((x) => x.r.id)) : [];
+  const openFor = (kind: 'REFUND_APPROVAL' | 'REFUND_REVOCATION', id: string) => openReqs.find((o) => o.r.kind === kind && o.r.entityId === id) ?? null;
   return (
     <div className="space-y-3">
       <PageHeader title="المستردات ومستحقات الصفقات" description="كل استرداد يمر بخطوتين: اعتماد إداري (قيد عكسي على مستحقات البائع والرسوم) ثم تسجيل الصرف الفعلي بمرجع. لا شيء يتحرك تلقائيًا." />
-      <Alert tone="info">الاعتماد والصرف يتطلبان تحققًا ثنائيًا حديثًا. فوق حد الرقابة المزدوجة، منفذ الصرف لازم يكون شخص غير معتمد الاسترداد. وجهة الاسترداد = وسيلة الدفع الأصلية، وأي استثناء يُسجل بسبب.</Alert>
+      <Alert tone="info">كل حركة مالية تحتاج شخصين مختلفين بدون أي حد أدنى للمبلغ: منشئ يطلب الاعتماد ومعتمد آخر ينفذه، ومنفذ الصرف لازم يكون شخص غير معتمد الاسترداد. الاعتماد لا يعني أن المبلغ اتحوّل. وجهة الاسترداد = وسيلة الدفع الأصلية، أو بيانات استلام أموال معتمدة للعميل نفسه عند تعذرها، وأي استثناء يُسجل بسبب.</Alert>
       <Tabs active={tab} tabs={[...TABS.map((t) => ({ key: t.key, label: t.label, href: `/admin/refunds?tab=${t.key}` })), { key: 'deals', label: 'مستحقات بائعي الصفقات', href: '/admin/refunds?tab=deals' }]} />
       {def && (refundRows.length === 0 ? <EmptyState icon={Banknote} title="لا توجد مستردات" /> : (
         <ul className="space-y-3">{refundRows.map(({ r, customer, orderNumber, suffix }) => {
-          const dest = (r.destinationSnapshot ?? null) as { method?: string; payerName?: string; payerReference?: string; details?: string } | null;
+          const dest = (r.destinationSnapshot ?? null) as { source?: string; method?: string; payerName?: string; payerReference?: string; details?: string; masked?: string; holderName?: string } | null;
+          const destText = dest?.source === 'RECEIVING_DESTINATION' ? `بيانات استلام معتمدة: ${dest.holderName ?? ''} ${dest.masked ?? ''}` : dest ? `وسيلة الدفع الأصلية: ${dest.method ?? ''} ${dest.payerName ?? ''} ${dest.payerReference ?? ''} ${dest.details ?? ''}` : '';
+          const openApproval = openFor('REFUND_APPROVAL', r.id);
+          const openRevocation = openFor('REFUND_REVOCATION', r.id);
           return (
             <li key={r.id} className="card p-4" data-testid="refund-row">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -70,20 +77,40 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
               <dl className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
                 {[['قيمة المنتجات', r.principalAmount], ['الشحن', r.shippingAmount], ['رسوم المشتري المستردة', r.buyerFeeRefund], ['عكس رسوم البائع', r.sellerFeeReversal], ['على البائع', r.sellerLiability]].map(([l, v]) => <div key={l as string} className="rounded bg-page p-2"><dt className="text-muted">{l}</dt><dd className="font-semibold">{formatEGP(v as number)}</dd></div>)}
               </dl>
-              <p className="mt-1 text-xs text-muted">{r.reason}{dest && ` · الوجهة: ${dest.method ?? ''} ${dest.payerName ?? ''} ${dest.payerReference ?? ''} ${dest.details ?? ''}`}{r.destinationOverride && ' (استثناء مسجل)'}{r.destinationReapprovalRequired && ' — الوجهة الجديدة بانتظار اعتماد شخص آخر قبل الصرف'}{r.paidReference && ` · مرجع ${r.paidReference}`}{r.failureReason && ` · فشل: ${r.failureReason}`}</p>
-              {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) && canApprove && (
-                <div className="mt-3 grid gap-2 border-t border-line pt-3 sm:grid-cols-2">
-                  <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="op" value="approve" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="expectedAmount" value={r.amount} /><input type="hidden" name="back" value={back} />
-                    <Input name="reason" required minLength={3} placeholder="سبب الاعتماد" aria-label="سبب الاعتماد" className="w-48" />
-                    <SubmitButton size="sm">اعتماد استرداد {formatEGP(r.amount)}</SubmitButton>
-                  </ActionForm>
-                  <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
+              <p className="mt-1 text-xs text-muted">{r.reason}{destText && ` · الوجهة: ${destText}`}{r.revokeReason && ` · أُلغي الاعتماد: ${r.revokeReason}`}{r.destinationOverride && ' (استثناء مسجل)'}{r.destinationReapprovalRequired && ' — الوجهة الجديدة بانتظار اعتماد شخص آخر قبل الصرف'}{r.paidReference && ` · مرجع ${r.paidReference}`}{r.failureReason && ` · فشل: ${r.failureReason}`}</p>
+              {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) && (canApprove || hasPermission(actor, 'finance.movement.request')) && (
+                <div className="mt-3 space-y-2 border-t border-line pt-3">
+                  <MovementPanel actor={actor} kind="REFUND_APPROVAL" entityId={r.id} amount={r.amount} back={back} open={openApproval}>
+                    {canApprove && checkerMayExecute(actor, openApproval) && (
+                      <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="op" value="approve" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="expectedAmount" value={r.amount} /><input type="hidden" name="back" value={back} />
+                        <Input name="reason" required minLength={3} placeholder="سبب الاعتماد" aria-label="سبب الاعتماد" className="w-48" />
+                        <SubmitButton size="sm">اعتماد استرداد {formatEGP(r.amount)}</SubmitButton>
+                      </ActionForm>
+                    )}
+                  </MovementPanel>
+                  {canApprove && <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="op" value="reject" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
                     <Input name="reason" required minLength={5} placeholder="سبب الرفض" aria-label="سبب الرفض" className="w-48" />
                     <SubmitButton size="sm" variant="outline">رفض (2FA)</SubmitButton>
-                  </ActionForm>
+                  </ActionForm>}
                 </div>
+              )}
+              {r.status === 'APPROVED' && !r.paidAt && r.sellerOrderId && (canApprove || hasPermission(actor, 'finance.movement.request')) && (
+                <details className="mt-3 border-t border-line pt-3" data-testid="refund-revocation">
+                  <summary className="cursor-pointer text-sm font-semibold text-red-700">إلغاء اعتماد خاطئ قبل التحويل (لا يُحذف شيء — قيد عكسي معتمد)</summary>
+                  <div className="mt-2">
+                    <MovementPanel actor={actor} kind="REFUND_REVOCATION" entityId={r.id} amount={r.amount} back={back} open={openRevocation}>
+                      {canApprove && checkerMayExecute(actor, openRevocation) && (
+                        <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="op" value="revoke" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
+                          <Input name="reason" required minLength={10} placeholder="سبب إلغاء الاعتماد" aria-label="سبب إلغاء الاعتماد" className="w-64" />
+                          <SubmitButton size="sm" variant="danger">تنفيذ إلغاء الاعتماد (2FA)</SubmitButton>
+                        </ActionForm>
+                      )}
+                    </MovementPanel>
+                  </div>
+                </details>
               )}
               {['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) && (canPay || canApprove || canOverride) && (
                 <div className="mt-3 space-y-2 border-t border-line pt-3">

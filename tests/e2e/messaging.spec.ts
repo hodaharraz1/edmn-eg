@@ -146,11 +146,19 @@ test.describe.serial('buyer ↔ seller communication (marketplace)', () => {
     // The link inside THIS sub-order's section (each seller sub-order has its own conversation).
     await admin.locator('section', { hasText: `${fx.number}-${fx.suffix} ·` }).getByTestId('admin-conversation-link').click();
     await admin.waitForURL(/\/admin\/messages\/[0-9a-f-]{36}/);
+    // Batch 1.5: no message body before a recorded purpose (privileged access, audited, time-limited).
+    const gate = admin.getByTestId('message-access-form');
+    await expect(gate).toBeVisible();
+    await expect(admin.getByTestId('message-body')).toHaveCount(0);
+    await gate.locator('select[name=purpose]').selectOption('OPERATIONS');
+    await gate.locator('textarea[name=note]').fill('مراجعة تشغيلية لمحادثة الطلب في الاختبار');
+    await gate.getByRole('button', { name: 'متابعة' }).click();
     await expect(admin.getByText('دليل مساعد فقط')).toBeVisible();
     await expect(admin.getByTestId('message-body').filter({ hasText: text })).toBeVisible();
     await expect(admin.getByTestId('message-composer')).toHaveCount(0); // staff never post as a party
     const logs = await q<{ n: number }>(`select count(*)::int as n from audit_logs where action = 'conversation.staff_viewed' and entity_id = $1`, [convId]);
     expect(Number(logs[0].n)).toBeGreaterThan(0);
+    expect(await q(`select id from privileged_message_access where conversation_id = $1 and purpose = 'OPERATIONS'`, [convId])).toHaveLength(1);
   });
 });
 

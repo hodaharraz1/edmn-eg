@@ -122,7 +122,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select entry_type, source_id, count(*) n from journal_entries
-        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID')
+        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL')
         group by entry_type, source_id having count(*) > 1`,
     ),
   );
@@ -240,6 +240,36 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'COMPLETION_WITHOUT_RELEASE',
     'طلب مكتمل بدون إتاحة أرباح أو أساس استلام',
     await rows(conn, sql`select id from seller_orders where status = 'COMPLETED' and (receipt_basis is null or funds_released_at is null)`),
+  );
+  add(
+    'STRANDED_BALANCE',
+    'مبالغ معلقة على طلب ملغي أو مكتمل بدون مسار تسوية (تخصيص غير محسوم)',
+    await rows(
+      conn,
+      sql`select so.id, so.status,
+            sum(case when a.code = 'SELLER_PENDING' then l.credit - l.debit else 0 end) pending,
+            sum(case when a.code = 'COMMISSION_DEFERRED' then l.credit - l.debit else 0 end) deferred
+          from seller_orders so
+          join journal_entries e on e.source_type = 'seller_order' and e.source_id = so.id::text
+          join journal_lines l on l.entry_id = e.id join ledger_accounts a on a.id = l.account_id
+         where so.status in ('CANCELLED','COMPLETED')
+           -- an undecided refund IS the settlement path (pending waits for its approval or rejection)
+           and not exists (select 1 from refunds r where r.seller_order_id = so.id and r.status = 'REQUESTED')
+         group by so.id
+        having sum(case when a.code = 'SELLER_PENDING' then l.credit - l.debit else 0 end) <> 0
+            or sum(case when a.code = 'COMMISSION_DEFERRED' then l.credit - l.debit else 0 end) <> 0`,
+    ),
+  );
+  add(
+    'DEAL_PAYABLE_ATTRIBUTION',
+    'مستحقات بائعي الصفقات في الدفتر لا تطابق مستحقات الصفقات غير المصروفة',
+    await rows(
+      conn,
+      sql`select coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0) ledger,
+            coalesce((select sum(amount) from deal_payouts where status = 'PENDING'), 0) payouts
+          where coalesce((select balance from ledger_accounts where code = 'DEAL_PAYOUTS_PAYABLE' and seller_id is null), 0)
+             <> coalesce((select sum(amount) from deal_payouts where status = 'PENDING'), 0)`,
+    ),
   );
   const ok = checks.every((c) => c.count === 0);
   return { ok, totals: { debits: rec.totalDebits, credits: rec.totalCredits, difference: rec.totalDebits - rec.totalCredits }, checks };

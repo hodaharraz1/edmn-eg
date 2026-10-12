@@ -33,8 +33,7 @@ import {
   receiveAndRelease,
   sellerOrdersOf,
   shipIt,
-  submitAndConfirm,
-} from '../helpers/factory';
+  submitAndConfirm, makerRequest } from '../helpers/factory';
 
 /** Remaining items of the hardening test matrix (1–108) not already covered by the other suites. */
 let admin: Actor;
@@ -150,6 +149,7 @@ describe('refunds (23, 108)', () => {
     await receiveAndRelease(c.actor, so.id, checker);
     const before = await db.select().from(journalEntries).where(eq(journalEntries.sourceId, so.id));
     const r = await db.transaction((tx) => requestRefundTx(tx, admin, { sellerOrderId: so.id, sourceType: 'ADMIN', sourceId: randomUUID(), principalAmount: 50_00, reason: 'تعويض بعد الإكمال' }));
+    await makerRequest('REFUND_APPROVAL', r.id, r.amount);
     await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد' });
     const after = await db.select().from(journalEntries).where(eq(journalEntries.sourceId, so.id));
     expect(after.length).toBeGreaterThanOrEqual(before.length);
@@ -197,6 +197,7 @@ describe('receipt / release races and guards (36, 99, 107)', () => {
     await shipIt(s.actor, so.id);
     await confirmReceipt(c.actor, so.id);
     const pos = await sellerOrderPosition(db, await soOf(so.id));
+    await makerRequest('SELLER_RELEASE', so.id, pos.pending);
     const [d, r] = await Promise.allSettled([
       reportOrderProblem(c.actor, so.id, 'PRODUCT_PROBLEM', 'المنتج فيه عيب واضح في الشاشة'),
       releaseSellerOrder(checker, so.id, { expectedSellerAmount: pos.pending, reason: 'إتاحة' }),
@@ -248,6 +249,7 @@ describe('withdrawals (40, 47)', () => {
     const b0 = await sellerBalances(db, s.actor.sellerId!);
     const { withdrawal } = await requestWithdrawal(s.actor, { amount: '150', clientKey: randomUUID() });
     await approveWithdrawal(checker, withdrawal.id);
+    await makerRequest('WITHDRAWAL_REVERSAL', withdrawal.id, 150_00, { params: { mode: 'REJECT' } });
     await rejectWithdrawal(checker, withdrawal.id, 'بيانات التحويل غير صحيحة');
     expect(await sellerBalances(db, s.actor.sellerId!)).toEqual(b0);
     const js = await db.select().from(journalEntries).where(eq(journalEntries.sourceId, withdrawal.id));

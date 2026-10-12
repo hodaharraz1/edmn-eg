@@ -6,6 +6,11 @@ async function main() {
   const demo = process.argv.includes('--demo');
   const ref = await seedReference();
   console.log('✓ reference data', ref);
+  // Batch 1.5 legacy KYC mapping (idempotent, additive): existing seller applications that already hold a legal
+  // name, an encrypted National ID and front/back scans get a user-level identity case in PENDING_REVIEW that
+  // LINKS those files. Never approved automatically — an identity reviewer decides each case.
+  const { mapLegacySellerIdentities } = await import('../src/server/modules/identity/service');
+  console.log('✓ legacy seller identity mapping', await mapLegacySellerIdentities());
   if (demo) {
     // Demo data is allowed on development machines and on explicitly-marked STAGING deployments only.
     if (process.env.NODE_ENV === 'production' && process.env.EDMN_ENVIRONMENT !== 'staging') {

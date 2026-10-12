@@ -167,7 +167,7 @@ export const LABELS = {
     COUNTERFEIT_SUSPECTED: 'شاكك إنه مش أصلي',
     OTHER: 'سبب آخر',
   } as Record<string, string>,
-  ticketType: { ORDER: 'طلب', PAYMENT: 'دفع', SHIPPING: 'شحن', RETURN: 'إرجاع', PRODUCT: 'منتج', SELLER: 'بائع', EXTERNAL_DEAL: 'صفقة محمية', ACCOUNT: 'الحساب' } as Record<string, string>,
+  ticketType: { ORDER: 'طلب', PAYMENT: 'دفع', SHIPPING: 'شحن', RETURN: 'إرجاع', PRODUCT: 'منتج', SELLER: 'بائع', EXTERNAL_DEAL: 'صفقة محمية', ACCOUNT: 'الحساب', IDENTITY: 'التحقق من الهوية', RECEIVING_DESTINATION: 'بيانات استلام الأموال', REFUND: 'استرداد', DISPUTE: 'نزاع', SELLER_FINANCE: 'مستحقات البائع', WITHDRAWAL: 'سحب', TECHNICAL: 'مشكلة تقنية' } as Record<string, string>,
   priority: { LOW: 'منخفضة', NORMAL: 'عادية', HIGH: 'مرتفعة', URGENT: 'عاجلة' } as Record<string, string>,
   docKind: {
     NATIONAL_ID_FRONT: 'البطاقة (وجه)',

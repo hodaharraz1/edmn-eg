@@ -12,7 +12,10 @@ export const metadata = { title: 'مركز الموافقات' };
 
 type Q = { key: string; label: string; hint: string; href: string; perm: Permission | Permission[]; icon: typeof BadgeCheck };
 const QUEUES: Q[] = [
-  { key: 'sellers', label: 'طلبات البائعين', hint: 'مراجعة الهوية والمستندات', href: '/admin/seller-verification', perm: 'sellers.review', icon: BadgeCheck },
+  { key: 'movements', label: 'حركات مالية بانتظار معتمد', hint: 'طلب منشئ — ينفذه شخص آخر', href: '/admin/movements', perm: ['finance.view', 'finance.movement.request'], icon: Banknote },
+  { key: 'identity', label: 'التحقق من الهوية', hint: 'بطاقة الرقم القومي — وجه وظهر', href: '/admin/identity', perm: 'identity.view', icon: BadgeCheck },
+  { key: 'destinations', label: 'بيانات استلام الأموال', hint: 'للمستردات — ليست محفظة', href: '/admin/receiving-destinations', perm: ['destinations.review', 'destinations.view_full'], icon: Wallet },
+  { key: 'sellers', label: 'طلبات البائعين', hint: 'مراجعة المتجر والمستندات', href: '/admin/seller-verification', perm: 'sellers.review', icon: BadgeCheck },
   { key: 'products', label: 'منتجات ومراجعات تعديل', hint: 'قبل الظهور للعامة', href: '/admin/moderation', perm: 'products.moderate', icon: PackageSearch },
   { key: 'payments', label: 'إثباتات دفع', hint: 'لا يُعتبر الطلب مدفوعاً قبل التأكيد', href: '/admin/payments', perm: 'payments.view', icon: CreditCard },
   { key: 'withdrawals', label: 'طلبات سحب البائعين', hint: 'مراجعة → اعتماد → صرف', href: '/admin/withdrawals', perm: 'withdrawals.view', icon: Wallet },
@@ -40,7 +43,10 @@ export default async function ApprovalCenter() {
     (select count(*) from seller_orders where status = 'DELIVERED' and funds_released_at is null) + (select count(*) from external_deals where status in ('BUYER_CONFIRMED_RECEIPT','ENTITLED_AWAITING_RELEASE')) releases,
     (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments,
     (select count(*) from disputes where status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION')) disputes,
-    (select count(*) from returns where status in ('REQUESTED','UNDER_REVIEW','RECEIVED','INSPECTION','REFUND_PENDING')) returns_open`);
+    (select count(*) from returns where status in ('REQUESTED','UNDER_REVIEW','RECEIVED','INSPECTION','REFUND_PENDING')) returns_open,
+    (select count(*) from financial_movement_requests where status = 'PENDING') movements,
+    (select count(*) from user_identity_verifications where status = 'PENDING_REVIEW') identity,
+    (select count(*) from receiving_destinations where status = 'PENDING_REVIEW') destinations`);
   const c = r.rows[0];
   const count = (k: string) => Number(k === 'dealPayouts' ? c.deal_payouts : k === 'returns' ? c.returns_open : c[k]);
   const visible = QUEUES.filter((q) => can(actor, q.perm));

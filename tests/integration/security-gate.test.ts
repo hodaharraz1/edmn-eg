@@ -20,7 +20,7 @@ import { redactExpiredSecrets, REDACTED_BODY } from '@/server/jobs/worker';
 import { clientIp } from '@/server/web/client-ip';
 import { safeNext } from '@/server/web/safe-next';
 import { SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
-import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, paymentOf, pdf, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, testApproval } from '../helpers/factory';
+import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, paymentOf, pdf, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, testApproval, makerRequest } from '../helpers/factory';
 
 /**
  * Security gate regression suite — one test per confirmed finding fixed in the pre-pilot audit
@@ -127,15 +127,17 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     expect(await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId: s.actor.sellerId! })).toBeGreaterThanOrEqual(0);
   });
 
-  it('SEC-WD-2: dual control uses a rolling 24h total, so split requests still need a second person', async () => {
+  // Batch 1.5 (owner decision #9/#10): EVERY payout is two-person — no amount threshold, so split requests
+  // cannot escape it either way (previously: a rolling 24h total above the threshold).
+  it('SEC-WD-2: every withdrawal needs a second person, whatever the amount or split (no threshold)', async () => {
     const { s } = await releasedOrder(2000_00);
     const before = await db.execute(sql`select value from system_settings where key = 'withdrawals.dualControlThreshold'`);
     await db.execute(sql`insert into system_settings (key, value) values ('withdrawals.dualControlThreshold', '150000'::jsonb) on conflict (key) do update set value = '150000'::jsonb`);
     try {
       const w1 = await requestWithdrawal(s.actor, { amount: '1000', clientKey: randomUUID() });
       const w2 = await requestWithdrawal(s.actor, { amount: '600', clientKey: randomUUID() });
-      expect(w1.withdrawal.requiresDualControl).toBe(false);
-      expect(w2.withdrawal.requiresDualControl).toBe(true); // 1,000 + 600 ≥ 1,500 within 24h
+      expect(w1.withdrawal.requiresDualControl).toBe(true); // below the old threshold: still two-person
+      expect(w2.withdrawal.requiresDualControl).toBe(true);
       await approveWithdrawal(admin, w2.withdrawal.id);
       await expect(markWithdrawalPaid(admin, w2.withdrawal.id, 'TRX-SPLIT')).rejects.toThrow(/شخصاً مختلفاً/);
     } finally {
@@ -163,7 +165,8 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
         { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: available + 10_000 },
       ],
     }));
-    await expect(markWithdrawalPaid(admin, w.withdrawal.id, 'TRX-DEBT')).rejects.toThrow(/مديونية/);
+    const payer = await makeAdmin(['FINANCE_OPERATOR']); // a different person (two-person rule), still refused
+    await expect(markWithdrawalPaid(payer, w.withdrawal.id, 'TRX-DEBT')).rejects.toThrow(/مديونية/);
     await expect(requestWithdrawal(s.actor, { amount: '100', clientKey: randomUUID() })).rejects.toThrow();
     // Reverse the synthetic debt so the shared refunds-payable account is left as other suites expect.
     const ap2 = await testApproval(['REFUND_DECISION'], available + 10_000);
@@ -190,6 +193,7 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     const other = await makeAdmin();
     await expect(rejectWithdrawal(other, w.withdrawal.id, 'تعذر التحويل — تم التحقق مع البنك')).rejects.toThrow(/بدأ التحويل بالفعل/);
     await expect(markWithdrawalFailedBeforeTransfer(admin, w.withdrawal.id, { reason: 'لم يتم التحويل', evidence: 'BANK-STMT-1' })).rejects.toThrow(/غير منفذ التحويل/);
+    await makerRequest('WITHDRAWAL_REVERSAL', w.withdrawal.id, 300_00, { params: { mode: 'FAILED_BEFORE_TRANSFER' } });
     await markWithdrawalFailedBeforeTransfer(other, w.withdrawal.id, { reason: 'تعذر التحويل — تم التحقق مع البنك', evidence: 'BANK-STMT-1' });
     const [row] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, w.withdrawal.id));
     expect(row.status).toBe('FAILED_BEFORE_TRANSFER');
@@ -200,7 +204,7 @@ describe('seller balance & withdrawals (FIN-P1-1, FIN-P1-2, FIN-P2)', () => {
     const w = await requestWithdrawal(s.actor, { amount: '300', clientKey: randomUUID() });
     await approveWithdrawal(admin, w.withdrawal.id);
     await db.execute(sql`update sellers set status = 'SUSPENDED' where id = ${s.actor.sellerId!}`);
-    await expect(markWithdrawalPaid(admin, w.withdrawal.id, 'TRX-SUSP')).rejects.toThrow(/موقوف/);
+    await expect(markWithdrawalPaid(await makeAdmin(['FINANCE_OPERATOR']), w.withdrawal.id, 'TRX-SUSP')).rejects.toThrow(/موقوف/);
   });
 
   it('SEC-WD-6: staff cannot approve a withdrawal of a store they own', async () => {

@@ -10,7 +10,7 @@ import { storage } from './storage';
  * business record the file is attached to (purpose-specific rules below). Denials are uniform 404s.
  */
 const DOC_STEP_UP_MS = 60 * 60_000;
-const SENSITIVE_PURPOSES = new Set(['SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE', 'MESSAGE_ATTACHMENT']);
+const SENSITIVE_PURPOSES = new Set(['IDENTITY_DOCUMENT', 'SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE', 'MESSAGE_ATTACHMENT']);
 
 export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<boolean> {
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
@@ -20,7 +20,17 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
   const uid = actor.userId;
   const one = async (q: ReturnType<typeof sql>) => (await db.execute(q)).rows.length > 0;
 
+  // Global identity cases may LINK seller-application scans (legacy mapping, no duplication): identity
+  // reviewers can open exactly the files referenced by an identity case, with a fresh 2FA re-check.
+  const freshDocStepUp = !!actor.stepUpAt && Date.now() - actor.stepUpAt.getTime() < DOC_STEP_UP_MS;
+  if ((f.purpose === 'IDENTITY_DOCUMENT' || f.purpose === 'SELLER_DOCUMENT') && hasPermission(actor, 'identity.documents.view') && freshDocStepUp) {
+    if (await one(sql`select 1 from user_identity_verifications v where v.front_file_id = ${f.id} or v.back_file_id = ${f.id}`)) return true;
+  }
+
   switch (f.purpose) {
+    case 'IDENTITY_DOCUMENT':
+      // Only the owner of the identity case (and identity reviewers, above). Never sellers, never other staff.
+      return one(sql`select 1 from user_identity_verifications v where (v.front_file_id = ${f.id} or v.back_file_id = ${f.id}) and v.user_id = ${uid}`);
     case 'SELLER_DOCUMENT':
       // Identity scans show the full national ID: staff need the permission AND a 2FA re-check within the hour.
       if (hasPermission(actor, 'sellers.documents.view')) return !!actor.stepUpAt && Date.now() - actor.stepUpAt.getTime() < DOC_STEP_UP_MS;

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { acceptDialogs, adminLogin, customerLogin, png, q } from './helpers';
+import { acceptDialogs, adminLogin, customerLogin, png, q, verifyIdentityViaUi } from './helpers';
 
 /**
  * External Protected Deal — invitation-first flow:
@@ -127,6 +127,9 @@ async function sellerPage(browser: Parameters<typeof customerLogin>[0]) {
 
 test('seller verifies phone, location denied → manual address, offers with "no voluntary returns"', async ({ browser }) => {
   const page = await sellerPage(browser);
+  // Batch 1.5: the Protected Deal seller verifies the SAME global identity — and never needs a store.
+  await verifyIdentityViaUi(browser, page, NEW_SELLER.email, `2900202${RUN}`, 'كريم البائع الخارجي محمد');
+  expect(await q(`select s.id from sellers s join users u on u.id = s.owner_user_id where u.email = $1`, [NEW_SELLER.email])).toHaveLength(0);
   // Simulate the user pressing "Block" on the browser's location prompt (headless Chromium leaves an
   // ungranted prompt pending instead of answering it).
   await page.addInitScript(() => {
@@ -269,6 +272,14 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   await expect.poll(status).toBe('BUYER_CONFIRMED_RECEIPT'); // entitled, still held until an Admin approves
   expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
   expect(await q(`select id from deal_payouts where deal_id = $1`, [dealId])).toHaveLength(0);
+  // Two people: the finance operator requests the settlement, a different finance checker executes it.
+  const operator = await adminLogin(browser, 'finance@edmn.local');
+  await operator.goto(`/admin/deals/${dealId}`);
+  await operator.waitForLoadState('networkidle');
+  await operator.getByTestId('movement-maker-DEAL_RELEASE').locator('input[name=reason]').fill('استلام مؤكد من المشتري بدون موانع');
+  await operator.getByRole('button', { name: /طلب تسوية صفقة محمية/ }).click();
+  await expect(operator.getByTestId('movement-open-DEAL_RELEASE')).toBeVisible();
+  expect(await q(`select id from journal_entries where source_id = $1 and entry_type = 'DEAL_SETTLEMENT'`, [dealId])).toHaveLength(0);
   const checker = await adminLogin(browser, 'checker@edmn.local');
   await checker.goto(`/admin/deals/${dealId}`);
   await checker.waitForLoadState('networkidle');

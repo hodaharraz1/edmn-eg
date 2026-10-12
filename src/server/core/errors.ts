@@ -13,7 +13,8 @@ export type DomainErrorCode =
   | 'INSUFFICIENT_BALANCE'
   | 'RATE_LIMITED'
   | 'MFA_REQUIRED'
-  | 'STEP_UP_REQUIRED';
+  | 'STEP_UP_REQUIRED'
+  | 'IDENTITY_REQUIRED';
 
 export class DomainError extends Error {
   constructor(

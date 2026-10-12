@@ -12,6 +12,7 @@ import { isDomainError } from '@/server/core/errors';
 import { requireCustomer } from '@/server/web/session';
 import { sellerOrderMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
 import { MessageCtaLink } from '@/app/_components/message-cta';
+import { RefundDestination } from '@/app/_components/refund-destination';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { ActionForm, ConfirmSubmit, SubmitButton } from '@/ui/action-form';
@@ -116,7 +117,10 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               )}
               {pendingCancel && <Alert tone="warning">طلب الإلغاء بتاعك مستني رد البائع أو فريق اضمن، والشحن موقوف.</Alert>}
               {soRefunds.map((r) => (
-                <p key={r.id} className="rounded-lg bg-page p-2 text-sm" data-testid="refund-status">استرداد {formatEGP(r.amount)}: <StatusChip status={r.status} kind="refund" /> {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) ? '— قيد مراجعة الإدارة' : ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) ? '— تم اعتماده وهو بانتظار التحويل (لم يصلك بعد)' : ['COMPLETED', 'PAID'].includes(r.status) ? `— اتحول${r.paidReference ? ` (مرجع ${r.paidReference})` : ''}` : ''}</p>
+                <div key={r.id}>
+                <p className="rounded-lg bg-page p-2 text-sm" data-testid="refund-status">استرداد {formatEGP(r.amount)}: <StatusChip status={r.status} kind="refund" /> {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) ? '— قيد مراجعة الإدارة' : ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) ? '— تم اعتماده وهو بانتظار التحويل (لم يصلك بعد)' : ['COMPLETED', 'PAID'].includes(r.status) ? `— اتحول${r.paidReference ? ` (مرجع ${r.paidReference})` : ''}` : r.status === 'CANCELLED' && r.revokedAt ? '— اتلغى اعتماده قبل أي تحويل' : ''}</p>
+                {['REQUESTED', 'UNDER_REVIEW', 'APPROVED'].includes(r.status) && <RefundDestination refund={r} userId={actor.userId!} back={`/account/orders/${g.order.id}`} />}
+                </div>
               ))}
               <ul className="divide-y divide-line">
                 {items.map((it) => (

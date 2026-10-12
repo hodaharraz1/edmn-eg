@@ -245,6 +245,8 @@ export function payoutMask(p: z.infer<typeof payoutSchema>): string {
 export async function addPayoutMethod(actor: Actor, input: PayoutInput) {
   const p = parse(payoutSchema, input);
   if (p.type === 'MOBILE_WALLET' && !normalizeEgyptMobile(p.walletNumber)) throw validation('رقم المحفظة غير صحيح');
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'PAYOUT_DESTINATION');
   return db.transaction(async (tx) => {
     let sellerId: string;
     if (actor.type === 'SELLER') sellerId = requireSeller(actor, 'payout.manage');
@@ -395,6 +397,8 @@ export async function applicationChecklist(conn: DbOrTx, seller: Seller) {
 
 export async function submitApplication(actor: Actor, acceptAgreement: boolean) {
   if (!acceptAgreement) throw validation('يجب الموافقة على اتفاقية البائع');
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'SELLER_APPLICATION');
   return db.transaction(async (tx) => {
     const s = await loadEditable(tx, actor);
     const checklist = await applicationChecklist(tx, s);

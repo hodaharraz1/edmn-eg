@@ -58,6 +58,13 @@ export const EVENT_TEMPLATES = {
   SUPPORT_REPLY: { title: 'رد جديد على تذكرة الدعم', body: 'فيه رد جديد على التذكرة #{{ticket}}.', sms: false },
   REVIEW_RECEIVED: { title: 'تقييم جديد', body: 'حصلت على تقييم جديد ({{rating}}/5).', sms: false },
   ACCOUNT_SECURITY: { title: 'تنبيه أمني', body: '{{message}}', sms: false },
+  // ── Batch 1.5 (never any identity number, document, bank / wallet detail in these bodies)
+  IDENTITY_UPDATED: { title: 'تحديث على التحقق من الهوية', body: 'حالة التحقق من هويتك: {{status}}. {{reason}}', sms: false },
+  RECEIVING_DESTINATION_UPDATED: { title: 'تحديث على بيانات استلام الأموال', body: 'حالة {{destination}}: {{status}}. {{reason}}', sms: false },
+  FINANCE_MOVEMENT_DECIDED: { title: 'قرار على طلب حركة مالية', body: '{{kind}}: {{decision}}', sms: false },
+  SUPPORT_TICKET_REOPENED: { title: 'تمت إعادة فتح تذكرة الدعم', body: 'التذكرة #{{ticket}} اتفتحت تاني وبدأت دورة متابعة جديدة.', sms: false },
+  /** Proactive alerts (deadline / SLA / aging / stock). Body is built from safe references only. */
+  OPS_ALERT: { title: '{{title}}', body: '{{body}}', sms: false },
 } as const;
 
 export type EventName = keyof typeof EVENT_TEMPLATES;

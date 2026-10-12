@@ -228,10 +228,19 @@ export async function seedDemo() {
   const checker = await user('checker@edmn.local', 'المراجع المالي (تجريبي)', '+201000000004', { staff: true, roles: ['FINANCE_CHECKER'], password: demoCredentials().adminPassword });
   const operator = await user('finance@edmn.local', 'المنفذ المالي (تجريبي)', '+201000000005', { staff: true, roles: ['FINANCE_OPERATOR'], password: demoCredentials().adminPassword });
   await user('support@edmn.local', 'خدمة العملاء (تجريبي)', '+201000000006', { staff: true, roles: ['CUSTOMER_SUPPORT'], password: demoCredentials().adminPassword });
-  await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: demoCredentials().adminPassword });
+  const catalog = await user('catalog@edmn.local', 'مراجع المنتجات (تجريبي)', '+201000000007', { staff: true, roles: ['CATALOG_REVIEWER', 'SELLER_REVIEWER'], password: demoCredentials().adminPassword });
   const A = await adminActor(admin.id, { stepUpAt: new Date() });
   const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
   const operatorActor = await adminActor(operator.id, { stepUpAt: new Date() });
+  const reviewerActor = await adminActor(catalog.id, { stepUpAt: new Date() });
+  // Global identity (Batch 1.5): every demo customer/seller goes through the REAL flow — the user submits the
+  // National ID (front + back), an independent identity reviewer approves it. Never a direct status insert.
+  async function verifyIdentity(u: { id: string; fullName: string }, nationalId: string) {
+    const { submitIdentity, reviewIdentity } = await import('@/server/modules/identity/service');
+    const legalName = u.fullName.split(' ').length >= 3 ? u.fullName : `${u.fullName} محمد`;
+    const r = await submitIdentity(customerActor(u.id), { legalName, nationalId }, { front: { data: await demoDocument('NATIONAL_ID_FRONT'), name: 'front.png' }, back: { data: await demoDocument('NATIONAL_ID_BACK'), name: 'back.png' } });
+    await reviewIdentity(reviewerActor, r.id, 'APPROVE');
+  }
   // Fresh demo database only (an existing database is skipped above): activate the seeded owner-approved
   // pricing versions through the real maker (finance operator) / checker (finance checker) workflow.
   {
@@ -246,6 +255,9 @@ export async function seedDemo() {
     const { sellerOrderPosition } = await import('@/server/modules/finance/postings');
     const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
     const pos = await sellerOrderPosition(db, so);
+    // Universal Maker/Checker: the finance operator requests, a different finance checker executes.
+    const { requestMovement } = await import('@/server/modules/finance/movements');
+    await requestMovement(operatorActor, 'SELLER_RELEASE', { entityId: soId, amount: pos.pending, reason: 'طلب إتاحة بعد تأكيد الاستلام (بيانات عرض)' });
     await releaseSellerOrder(checkerActor, soId, { expectedSellerAmount: pos.pending, reason: 'إتاحة بعد تأكيد المشتري للاستلام (بيانات عرض)' });
   }
 
@@ -277,6 +289,8 @@ export async function seedDemo() {
   const sUsed = await user('used@demo.edmn.local', 'كريم مصطفى', '+201033333333');
   const sHome = await user('homestyle@demo.edmn.local', 'هبة السيد', '+201044444444');
   const sPending = await user('newseller@demo.edmn.local', 'يوسف حسن', '+201055555555');
+  // Identity APPROVED is not seller approval: the pending seller below is verified but its store is not approved.
+  for (const [u, nid] of [[sTech, '28501011234567'], [sFashion, '29203151234561'], [sUsed, '29007221234562'], [sHome, '28811111234563'], [sPending, '29905051234564']] as const) await verifyIdentity(u, nid);
   const tech = await onboardSeller(sTech, A, { type: 'BUSINESS', store: 'تك زون', description: 'موبايلات ولابتوبات وإكسسوارات أصلية بضمان الوكيل.', nationalId: '28501011234567', gov: 1 });
   const fashion = await onboardSeller(sFashion, A, { type: 'INDIVIDUAL', store: 'بيت الأناقة', description: 'أزياء رجالي وحريمي بخامات مصرية.', nationalId: '29203151234561', gov: 2 });
   const usedSeller = await onboardSeller(sUsed, A, { type: 'INDIVIDUAL', store: 'مستعمل بضمير', description: 'إلكترونيات مستعملة مفحوصة بصور حقيقية وعيوب واضحة.', nationalId: '29007221234562', gov: 3 });
@@ -300,6 +314,7 @@ export async function seedDemo() {
   const c1 = await user('ahmed@demo.edmn.local', 'أحمد علي', '+201066666666');
   const c2 = await user('mona@demo.edmn.local', 'منى خالد', '+201077777777');
   const c3 = await user('omar@demo.edmn.local', 'عمر سمير', '+201088888888');
+  for (const [u, nid] of [[c1, '29101011234565'], [c2, '29302021234566'], [c3, '29503031234568']] as const) await verifyIdentity(u, nid);
   const addr = async (uid: string, name: string, phone: string, gov: number, city: string) =>
     (await db.insert(addresses).values({ userId: uid, label: 'المنزل', recipientName: name, phone, governorateId: gov, city, street: 'شارع 9، المعادي', building: '12', floor: '3', apartment: '7', isDefault: true }).returning())[0];
   const a1 = await addr(c1.id, c1.fullName, c1.phone!, 1, 'المعادي');

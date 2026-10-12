@@ -49,6 +49,8 @@ export const proofSchema = z.object({
 export async function submitProof(actor: Actor, paymentId: string, input: z.input<typeof proofSchema>, proof: { data: Buffer; name: string } | null) {
   const userId = requireUser(actor);
   const d = parse(proofSchema, input);
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'PAYMENT_SUBMISSION');
   await enforce(`proof:${userId}`, 10, 3600);
   let claimed: number;
   try {

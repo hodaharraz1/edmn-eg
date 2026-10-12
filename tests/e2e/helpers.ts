@@ -95,3 +95,24 @@ export async function submitAndExpect(page: Page, button: string | RegExp, expec
   await page.getByRole('button', { name: button }).first().click();
   await expect(page.getByText(expectText).first()).toBeVisible();
 }
+
+/**
+ * Batch 1.5: the user's GLOBAL identity through the real UI — the user submits the National ID (front + back),
+ * an independent identity reviewer (catalog@, SELLER_REVIEWER) approves it. Never a direct database write.
+ */
+export async function verifyIdentityViaUi(browser: Browser, page: Page, email: string, nationalId: string, legalName = 'مستخدم اختبار ثلاثي الاسم') {
+  await page.goto('/account/identity');
+  await page.locator('input[name=legalName]').fill(legalName);
+  await page.locator('input[name=nationalId]').fill(nationalId);
+  await page.locator('input[name=front]').setInputFiles({ name: 'id-front.png', mimeType: 'image/png', buffer: await png() });
+  await page.locator('input[name=back]').setInputFiles({ name: 'id-back.png', mimeType: 'image/png', buffer: await png() });
+  await page.getByRole('button', { name: 'إرسال للمراجعة' }).click();
+  await expect(page.getByTestId('identity-status')).toContainText('قيد المراجعة');
+  const caseOf = async () => (await q<{ id: string; status: string }>(`select v.id, v.status from user_identity_verifications v join users u on u.id = v.user_id where u.email = $1`, [email]))[0];
+  const reviewer = await adminLogin(browser, 'catalog@edmn.local');
+  await reviewer.goto(`/admin/identity/${(await caseOf()).id}`);
+  await reviewer.locator('select[name=decision]').selectOption('APPROVE');
+  await reviewer.getByRole('button', { name: 'تسجيل القرار' }).click();
+  await expect.poll(async () => (await caseOf()).status).toBe('APPROVED');
+  await reviewer.context().close();
+}

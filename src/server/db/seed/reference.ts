@@ -13,8 +13,9 @@ import {
   paymentMethods,
   rolePermissions,
   roles,
+  systemSettings,
 } from '@/server/db/schema';
-import { DEFAULT_ROLES } from '@/server/rbac/permissions';
+import { ADDITIVE_ROLE_GRANTS, DEFAULT_ROLES } from '@/server/rbac/permissions';
 import { audit } from '@/server/audit/audit';
 import { SYSTEM_ACTOR } from '@/server/core/actor';
 import { LEGAL_TEXTS, LEGAL_VERSION } from './legal-texts';
@@ -271,6 +272,16 @@ export async function seedReference() {
       for (const p of r.permissions) await db.insert(rolePermissions).values({ roleCode: code, permission: p }).onConflictDoNothing();
     }
   }
+  // Permissions introduced later: granted once per (grant id), never re-added after an admin removed them.
+  const [applied] = await db.select().from(systemSettings).where(eq(systemSettings.key, 'rbac.additiveGrants'));
+  const done = new Set<string>(Array.isArray(applied?.value) ? (applied!.value as string[]) : []);
+  for (const g of ADDITIVE_ROLE_GRANTS) {
+    if (done.has(g.id)) continue;
+    const [role] = await db.select().from(roles).where(eq(roles.code, g.role));
+    if (role) for (const p of g.permissions) await db.insert(rolePermissions).values({ roleCode: g.role, permission: p }).onConflictDoNothing();
+    done.add(g.id);
+  }
+  await db.insert(systemSettings).values({ key: 'rbac.additiveGrants', value: [...done] }).onConflictDoUpdate({ target: systemSettings.key, set: { value: [...done] } });
   // Payment methods (disabled until an admin configures destinations)
   const methods: [string, string, string, number][] = [
     ['INSTAPAY', 'إنستاباي', 'InstaPay', 1],
