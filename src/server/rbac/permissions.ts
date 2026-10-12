@@ -127,7 +127,7 @@ export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; per
     permissions: [
       'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.pay', 'refunds.pay', 'deals.payout',
       'ledger.adjust.create', 'payments.view', 'orders.view', 'settlements.manage', 'reports.view', 'reports.export',
-      'reconciliation.manage', 'destinations.view_full', 'finance.movement.request',
+      'reconciliation.manage', 'destinations.view_full', 'finance.movement.request', 'deals.view',
       // Pricing maker: drafts, simulates and submits; never approves.
       'pricing.view', 'pricing.draft', 'pricing.simulate', 'pricing.submit', 'profitability.view',
     ],
@@ -166,7 +166,7 @@ export const ADDITIVE_ROLE_GRANTS: { id: string; role: string; permissions: Perm
   { id: 'b15-identity-reviewer', role: 'SELLER_REVIEWER', permissions: ['identity.view', 'identity.documents.view', 'identity.review'] },
   { id: 'b15-ops-identity', role: 'OPERATIONS_MANAGER', permissions: ['identity.view', 'support.escalate', 'support.qa'] },
   { id: 'b15-finance-checker', role: 'FINANCE_CHECKER', permissions: ['destinations.review', 'destinations.view_full', 'finance.movement.request'] },
-  { id: 'b15-finance-operator', role: 'FINANCE_OPERATOR', permissions: ['destinations.view_full', 'finance.movement.request'] },
+  { id: 'b15-finance-operator', role: 'FINANCE_OPERATOR', permissions: ['destinations.view_full', 'finance.movement.request', 'deals.view'] },
   { id: 'b15-support', role: 'CUSTOMER_SUPPORT', permissions: ['support.escalate', 'identity.view'] },
   { id: 'b15-dispute-officer', role: 'DISPUTE_OFFICER', permissions: ['support.escalate'] },
 ];

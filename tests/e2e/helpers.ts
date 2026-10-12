@@ -69,8 +69,23 @@ export async function customerLogin(browser: Browser, email: string, password = 
 }
 
 let lastStep = 0;
+/**
+ * Staff sessions are reused like customer sessions (same production login rate limit), but only while the
+ * 2FA performed at login is still fresh for step-up actions (window 10 min → reuse for at most 8 min).
+ */
+const adminSessions = new Map<string, { state: Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>; at: number }>();
 /** Staff login + TOTP. Codes are single-use, so wait for a fresh 30s step if the last one was consumed. */
 export async function adminLogin(browser: Browser, email = 'admin@edmn.local'): Promise<Page> {
+  const saved = adminSessions.get(email);
+  if (saved && Date.now() - saved.at < 8 * 60_000) {
+    const c = await browser.newContext({ locale: 'ar-EG', storageState: saved.state });
+    const p = await c.newPage();
+    await p.goto('/admin');
+    const path = new URL(p.url()).pathname;
+    if (path === '/admin' || path === '/admin/') return p;
+    await c.close();
+  }
+  adminSessions.delete(email);
   const ctx = await browser.newContext({ locale: 'ar-EG' });
   const page = await ctx.newPage();
   await page.goto('/admin/login');
@@ -83,6 +98,7 @@ export async function adminLogin(browser: Browser, email = 'admin@edmn.local'): 
   await page.locator('input[name=code]').fill(totpCode(DEMO_TOTP_SECRET));
   await page.locator('form button[type=submit]').click();
   await page.waitForURL((u) => u.pathname === '/admin' || u.pathname === '/admin/');
+  adminSessions.set(email, { state: await ctx.storageState(), at: Date.now() });
   return page;
 }
 

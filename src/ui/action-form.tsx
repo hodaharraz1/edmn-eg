@@ -36,6 +36,7 @@ export function ActionForm({
   resetOnSuccess,
   encType,
   id,
+  'data-testid': testId,
 }: {
   action: FormAction;
   children: ReactNode;
@@ -44,6 +45,7 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   encType?: 'multipart/form-data';
   id?: string;
+  'data-testid'?: string;
 }) {
   const [state, formAction, isPending] = useActionState(action, {} as ClientActionState);
   const ref = useRef<HTMLFormElement>(null);
@@ -63,7 +65,7 @@ export function ActionForm({
   return (
     <FormStateCtx.Provider value={state}>
       <PendingCtx.Provider value={isPending}>
-      <form ref={ref} action={formAction} onSubmit={onSubmit} className={className} encType={encType} id={id} noValidate={false}>
+      <form ref={ref} action={formAction} onSubmit={onSubmit} className={className} encType={encType} id={id} data-testid={testId} noValidate={false}>
         <div ref={alertRef} aria-live="polite">
           {state.error && (
             <Alert tone="danger" className="mb-4" key={state.at}>

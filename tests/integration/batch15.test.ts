@@ -43,7 +43,6 @@ import { saveIdentity, startApplication, uploadSellerDocument } from '@/server/m
 import { openTicket, qaReviewTicket, rateTicket, reopenTicket, replyToTicket, ticketSlaCycles, updateTicket } from '@/server/modules/support/service';
 import { canReadPrivateFile } from '@/server/storage/access';
 import {
-  approveIdentity,
   checkout,
   ensurePaymentSetup,
   makeAdmin,
