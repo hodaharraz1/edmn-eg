@@ -86,7 +86,7 @@ test('a new seller registers, verifies the mobile number and submits the applica
   await ctx.close();
 });
 
-test('seller cannot list products before approval; admin approves the seller (and the submitted payout method)', async ({ browser }) => {
+test('seller cannot list products before approval; admin approves the seller, then the payout verifier verifies the payout method', async ({ browser }) => {
   const seller = await customerLogin(browser, SELLER.email, SELLER.password);
   await seller.goto('/seller/products/new');
   await expect(seller.locator('select[name=categoryId]')).toHaveCount(0);
@@ -96,8 +96,15 @@ test('seller cannot list products before approval; admin approves the seller (an
   await admin.locator('select[name=decision]').selectOption('APPROVE');
   await admin.getByRole('button', { name: 'تسجيل القرار' }).click();
   await expect.poll(sellerStatus).toBe('APPROVED');
-  // The payout method submitted with the application is verified as part of the approval.
-  await expect.poll(async () => (await q<{ status: string }>(`select status from seller_payout_methods where seller_id = $1 and status <> 'ARCHIVED'`, [sellerId]))[0]?.status).toBe('ACTIVE');
+  // Batch 1 C3: SELLER APPROVED ≠ PAYOUT DESTINATION VERIFIED — the approval leaves the payout method pending.
+  const payoutStatus = async () => (await q<{ status: string }>(`select status from seller_payout_methods where seller_id = $1 and status <> 'ARCHIVED'`, [sellerId]))[0]?.status;
+  expect(await payoutStatus()).toBe('PENDING_VERIFICATION');
+  // A holder of sellers.payout.verify (fresh 2FA from the admin login) verifies it explicitly.
+  await admin.reload();
+  await admin.locator('form').filter({ has: admin.locator('input[name=decision][value=approve]') }).getByRole('button', { name: 'اعتماد' }).click();
+  await expect.poll(payoutStatus).toBe('ACTIVE');
+  const [pm] = await q<{ verified_fingerprint: string | null }>(`select verified_fingerprint from seller_payout_methods where seller_id = $1 and status = 'ACTIVE'`, [sellerId]);
+  expect(pm.verified_fingerprint).toMatch(/^[a-f0-9]{64}$/);
 });
 
 test('approved seller configures shipping, creates a product and submits it for review', async ({ browser }) => {
