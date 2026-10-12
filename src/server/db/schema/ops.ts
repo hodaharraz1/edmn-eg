@@ -39,7 +39,11 @@ export const notifications = pgTable(
   ],
 );
 
-export const OUTBOUND_STATUSES = ['PENDING', 'SENT', 'FAILED'] as const;
+/**
+ * PENDING (queued) → SENDING (claimed by one flusher) → SENT (accepted by the provider) → DELIVERED / BOUNCED
+ * (only from a provider callback — never assumed). FAILED = dead letter after max attempts (dead_lettered_at).
+ */
+export const OUTBOUND_STATUSES = ['PENDING', 'SENDING', 'SENT', 'DELIVERED', 'BOUNCED', 'FAILED'] as const;
 export const outboundMessages = pgTable(
   'outbound_messages',
   {
@@ -55,8 +59,17 @@ export const outboundMessages = pgTable(
     lastError: text(),
     sentAt: ts(),
     createdAt: createdAt(),
+    maxAttempts: integer().notNull().default(5),
+    nextAttemptAt: ts(),
+    lockedAt: ts(),
+    providerMessageId: text(),
+    deliveredAt: ts(),
+    bouncedAt: ts(),
+    deadLetteredAt: ts(),
+    /** Secret-bearing bodies (codes, reset links) in AES-GCM; `body` then only holds a placeholder. Destroyed after hand-off. */
+    bodyEnc: text(),
   },
-  (t) => [index('outbound_status_idx').on(t.status, t.createdAt)],
+  (t) => [index('outbound_status_idx').on(t.status, t.createdAt), enumCheck('outbound_messages_status_chk', t.status, OUTBOUND_STATUSES)],
 );
 
 export const notificationTemplates = pgTable(

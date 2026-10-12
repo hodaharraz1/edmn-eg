@@ -11,6 +11,7 @@ import { reconcile } from './ledger';
 /* ═══════════════ Kill switches ═══════════════ */
 
 export const KILL_SWITCHES = {
+  'killswitch.global': 'إيقاف طوارئ: كل الحركات المالية الجديدة',
   'killswitch.paymentConfirmation': 'تأكيد المدفوعات اليدوية',
   'killswitch.sellerRelease': 'إتاحة أرباح البائعين (Seller release)',
   'killswitch.refunds': 'اعتماد الاستردادات',
@@ -21,8 +22,33 @@ export const KILL_SWITCHES = {
 } as const satisfies Partial<Record<SettingKey, string>>;
 export type KillSwitch = keyof typeof KILL_SWITCHES;
 
+/**
+ * Batch 2 MONEY GATE, evaluated before every new money movement (each path already calls assertNotPaused):
+ *   1. the environment fingerprint (database / storage / key of the right kind) — fail closed on a violation
+ *   2. the emergency global kill switch
+ *   3. the latest read-only ledger health snapshot is not CRITICAL
+ * Login, support, history, disputes and investigation never pass through here, so they keep working.
+ */
+export async function assertFinancialSafety(conn: DbOrTx): Promise<void> {
+  const { ensureFingerprint } = await import('@/server/db/fingerprint');
+  const fp = await ensureFingerprint();
+  if (fp.status === 'VIOLATION' || (fp.status === 'UNVERIFIED' && fp.runtime === 'PRODUCTION')) {
+    throw new DomainError('INVALID_STATE', 'الحركات المالية موقوفة: إعدادات البيئة (قاعدة البيانات/التخزين/مفاتيح التشفير) غير متطابقة. مفيش أي حركة اتعملت.');
+  }
+  let globalPaused: boolean;
+  try {
+    globalPaused = await getSetting('killswitch.global', conn);
+  } catch {
+    globalPaused = true;
+  }
+  if (globalPaused) throw new DomainError('INVALID_STATE', 'كل الحركات المالية الجديدة موقوفة مؤقتًا (إيقاف طوارئ من الإدارة). مفيش أي حركة اتعملت — الدخول والدعم والسجل والنزاعات شغالين عادي.');
+  const { assertLedgerHealthy } = await import('./ledger-health');
+  await assertLedgerHealthy(conn);
+}
+
 /** Throws when a financial kill switch is engaged. Fails CLOSED: an unreadable switch counts as paused. */
 export async function assertNotPaused(conn: DbOrTx, key: KillSwitch): Promise<void> {
+  await assertFinancialSafety(conn);
   let paused: boolean;
   try {
     paused = await getSetting(key, conn);
@@ -48,12 +74,17 @@ export async function killSwitchStates(conn: DbOrTx = db) {
   return out;
 }
 
-/** Engage / release a kill switch. Stops NEW sensitive actions only; never touches history. */
-export async function setKillSwitch(actor: Actor, key: KillSwitch, paused: boolean, reason: string) {
+/**
+ * Engage / release a kill switch. Stops NEW sensitive actions only; never touches history.
+ * The emergency global switch engages at once, but its release is two-person: the first call records a release
+ * request, a DIFFERENT authorized person (fresh 2FA) completes it. Returns what happened.
+ */
+export async function setKillSwitch(actor: Actor, key: KillSwitch, paused: boolean, reason: string): Promise<'ENGAGED' | 'RELEASED' | 'RELEASE_REQUESTED'> {
   requirePermission(actor, 'finance.controls');
   requireStepUp(actor);
   if (!(key in KILL_SWITCHES)) throw validation('مفتاح غير معروف');
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر السبب');
+  if (key === 'killswitch.global') return setGlobalKillSwitch(actor, paused, reason.trim());
   await db.transaction(async (tx) => {
     const old = await getSetting(key, tx);
     await tx
@@ -61,6 +92,39 @@ export async function setKillSwitch(actor: Actor, key: KillSwitch, paused: boole
       .values({ key, value: paused as unknown as object, updatedBy: actor.userId })
       .onConflictDoUpdate({ target: systemSettings.key, set: { value: paused as unknown as object, updatedBy: actor.userId, updatedAt: new Date() } });
     await audit(tx, actor, { action: paused ? 'killswitch.engaged' : 'killswitch.released', entityType: 'kill_switch', entityId: key, oldValues: { paused: old }, newValues: { paused }, reason });
+  });
+  return paused ? 'ENGAGED' : 'RELEASED';
+}
+
+async function writeSetting(tx: DbOrTx, actor: Actor, key: SettingKey, value: unknown) {
+  await tx
+    .insert(systemSettings)
+    .values({ key, value: value as object, updatedBy: actor.userId })
+    .onConflictDoUpdate({ target: systemSettings.key, set: { value: value as object, updatedBy: actor.userId, updatedAt: new Date() } });
+}
+
+async function setGlobalKillSwitch(actor: Actor, paused: boolean, reason: string): Promise<'ENGAGED' | 'RELEASED' | 'RELEASE_REQUESTED'> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('killswitch.global'))`);
+    const engaged = await getSetting('killswitch.global', tx);
+    const request = await getSetting('killswitch.globalReleaseRequest', tx);
+    if (paused) {
+      await writeSetting(tx, actor, 'killswitch.global', true);
+      await writeSetting(tx, actor, 'killswitch.globalReleaseRequest', null); // a new emergency cancels a pending release
+      await audit(tx, actor, { action: 'killswitch.global_engaged', entityType: 'kill_switch', entityId: 'killswitch.global', oldValues: { paused: engaged }, newValues: { paused: true }, reason });
+      return 'ENGAGED';
+    }
+    if (!engaged) throw conflict('إيقاف الطوارئ مش مفعّل أصلًا');
+    if (!request) {
+      await writeSetting(tx, actor, 'killswitch.globalReleaseRequest', { requestedBy: actor.userId!, requestedAt: new Date().toISOString(), reason });
+      await audit(tx, actor, { action: 'killswitch.global_release_requested', entityType: 'kill_switch', entityId: 'killswitch.global', newValues: { pendingSecondApproval: true }, reason });
+      return 'RELEASE_REQUESTED';
+    }
+    if (request.requestedBy === actor.userId) throw new DomainError('FORBIDDEN', 'رفع إيقاف الطوارئ محتاج موافقة شخص تاني غير اللي طلب الرفع (Maker/Checker).');
+    await writeSetting(tx, actor, 'killswitch.global', false);
+    await writeSetting(tx, actor, 'killswitch.globalReleaseRequest', null);
+    await audit(tx, actor, { action: 'killswitch.global_released', entityType: 'kill_switch', entityId: 'killswitch.global', oldValues: { paused: true, requestedBy: request.requestedBy, requestReason: request.reason }, newValues: { paused: false, approvedBy: actor.userId }, reason });
+    return 'RELEASED';
   });
 }
 

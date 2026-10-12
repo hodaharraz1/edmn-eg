@@ -25,6 +25,12 @@ export const FILE_PURPOSES = [
   'IDENTITY_DOCUMENT',
 ] as const;
 export type FilePurpose = (typeof FILE_PURPOSES)[number];
+/**
+ * Malware scanning lifecycle. UNSCANNED = no scanner was active at upload (honest, never shown as clean).
+ * With a scanner: QUARANTINED → SCANNING → CLEAN | INFECTED | REJECTED | SCAN_FAILED. Only CLEAN (or UNSCANNED
+ * where the environment does not require scanning) is ever served.
+ */
+export const FILE_SCAN_STATUSES = ['UNSCANNED', 'QUARANTINED', 'SCANNING', 'CLEAN', 'INFECTED', 'REJECTED', 'SCAN_FAILED'] as const;
 
 /**
  * Metadata for every stored object. PRIVATE files are never reachable by a predictable URL:
@@ -48,8 +54,13 @@ export const files = pgTable(
     ownerUserId: uuid().references(() => users.id),
     createdAt: createdAt(),
     deletedAt: ts(),
+    scanStatus: text({ enum: FILE_SCAN_STATUSES }).notNull().default('UNSCANNED'),
+    scannedAt: ts(),
+    scanEngine: text(),
+    scanDetail: text(),
   },
   (t) => [
+    enumCheck('files_scan_status_chk', t.scanStatus, FILE_SCAN_STATUSES),
     uniqueIndex('files_storage_key_uq').on(t.storageKey),
     index('files_owner_idx').on(t.ownerUserId),
     enumCheck('files_visibility_chk', t.visibility, FILE_VISIBILITIES),

@@ -98,6 +98,35 @@ export const SETTINGS_SCHEMA = {
   'killswitch.dealRelease': z.boolean().default(false),
   'killswitch.adjustments': z.boolean().default(false),
   /**
+   * Batch 2 EMERGENCY FINANCIAL KILL SWITCH: blocks EVERY new money movement (all of the above at once) while
+   * login, support, order/deal history, disputes and investigation keep working. Engaging is immediate
+   * (finance.controls + fresh 2FA + reason, audited); releasing needs a SECOND person (Maker/Checker).
+   */
+  'killswitch.global': z.boolean().default(false),
+  'killswitch.globalReleaseRequest': z.object({ requestedBy: z.string().uuid(), requestedAt: z.string(), reason: z.string() }).nullable().default(null),
+  /**
+   * Batch 2 CONTROLLED PILOT. When enabled, only allow-listed users may place orders / create Protected Deals and
+   * (optionally) amounts are capped. No limit is invented: a null cap means "no cap configured" — the owner sets them.
+   */
+  'pilot.enabled': z.boolean().default(false),
+  'pilot.allowedUserIds': z.array(z.string().uuid()).max(500).default([]),
+  'pilot.maxOrderAmount': z.number().int().positive().nullable().default(null),
+  'pilot.maxDealAmount': z.number().int().positive().nullable().default(null),
+  /**
+   * Operational alert thresholds (counts). Zero-tolerance defaults for failures that are never normal; backlog
+   * thresholds are null (= not alerted) until Operations sets them from observed traffic.
+   */
+  'ops.thresholds': z
+    .object({
+      deadLetters: z.number().int().min(0).nullable().default(0),
+      failedJobs: z.number().int().min(0).nullable().default(0),
+      staleSchedules: z.number().int().min(0).nullable().default(0),
+      outboxBacklog: z.number().int().min(0).nullable().default(null),
+      errorEventsPerHour: z.number().int().min(0).nullable().default(null),
+      quarantinedFiles: z.number().int().min(0).nullable().default(null),
+    })
+    .default({ deadLetters: 0, failedJobs: 0, staleSchedules: 0, outboxBacklog: null, errorEventsPerHour: null, quarantinedFiles: null }),
+  /**
    * Support SLA per priority, in hours. NO default values (none were approved): while unset, tickets carry no
    * due dates and SLA alerts stay silent. Example: {"HIGH":{"firstResponseHours":4,"resolutionHours":48}}.
    */
@@ -116,6 +145,11 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA
 
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payments.realMoneyEnabled',
+  'pilot.enabled',
+  'pilot.allowedUserIds',
+  'pilot.maxOrderAmount',
+  'pilot.maxDealAmount',
+  'ops.thresholds',
   'withdrawals.dualControlThreshold',
   'ledger.adjustmentDualControlThreshold',
   'withdrawals.minimumAmount',
@@ -144,6 +178,8 @@ export const RESTRICTED_SETTINGS: readonly SettingKey[] = [
   'killswitch.payouts',
   'killswitch.dealRelease',
   'killswitch.adjustments',
+  'killswitch.global',
+  'killswitch.globalReleaseRequest',
   'fees.ownerApproved',
   'legal.policiesApproved',
 ];

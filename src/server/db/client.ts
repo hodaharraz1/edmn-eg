@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema';
@@ -22,7 +23,9 @@ export function getPool(): Pool {
       connectionString: url,
       max: Number(process.env.DATABASE_POOL_MAX ?? 10),
       idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
+      connectionTimeoutMillis: Number(process.env.DATABASE_CONNECT_TIMEOUT_MS ?? 10_000),
+      // Client-side ceiling (longer than the server statement timeout below, so the server cancels first).
+      query_timeout: Number(process.env.DATABASE_QUERY_TIMEOUT_MS ?? 60_000) || undefined,
     });
     globalForDb.__edmnUrl = url;
     globalForDb.__edmnDb = undefined;
@@ -30,9 +33,36 @@ export function getPool(): Pool {
   return globalForDb.__edmnPool;
 }
 
+/**
+ * Server-side limits for every application transaction (Batch 2). Applied with SET LOCAL semantics
+ * (set_config(..., true)) so they work through a transaction pooler and never leak to another transaction.
+ * A statement / lock wait that exceeds them aborts the WHOLE transaction: a money movement is either fully
+ * committed or not at all. 0 disables a limit (the migration runner does this).
+ */
+export function transactionTimeouts() {
+  const n = (v: string | undefined, d: number) => (v === undefined || v === '' ? d : Math.max(0, Number(v) || 0));
+  return {
+    statementMs: n(process.env.DATABASE_STATEMENT_TIMEOUT_MS, 30_000),
+    lockMs: n(process.env.DATABASE_LOCK_TIMEOUT_MS, 10_000),
+    idleInTxMs: n(process.env.DATABASE_IDLE_TX_TIMEOUT_MS, 60_000),
+  };
+}
+
 export function getDb(): DB {
   if (!globalForDb.__edmnDb) {
-    globalForDb.__edmnDb = drizzle(getPool(), { schema, casing: 'snake_case' });
+    const real = drizzle(getPool(), { schema, casing: 'snake_case' });
+    const begin = real.transaction.bind(real);
+    real.transaction = ((fn: (tx: Tx) => Promise<unknown>, config?: Parameters<DB['transaction']>[1]) =>
+      begin(async (tx) => {
+        const t = transactionTimeouts();
+        if (t.statementMs || t.lockMs || t.idleInTxMs) {
+          await tx.execute(
+            sql`select set_config('statement_timeout', ${String(t.statementMs)}, true), set_config('lock_timeout', ${String(t.lockMs)}, true), set_config('idle_in_transaction_session_timeout', ${String(t.idleInTxMs)}, true)`,
+          );
+        }
+        return fn(tx);
+      }, config)) as DB['transaction'];
+    globalForDb.__edmnDb = real;
   }
   return globalForDb.__edmnDb;
 }
