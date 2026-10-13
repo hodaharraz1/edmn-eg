@@ -10,7 +10,7 @@ import { recentApprovals } from '@/server/modules/finance/approvals';
 import { latestLedgerHealth } from '@/server/modules/finance/ledger-health';
 import { getSetting } from '@/server/modules/settings';
 import { formatDate, formatEGP } from '@/lib/format';
-import { label } from '@/lib/i18n/labels';
+import { label, statusLabel } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { DefinitionList, PageHeader } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
@@ -87,7 +87,7 @@ export default async function FinanceControl() {
         )}
         <p className="mb-2 text-xs" data-testid="ledger-health">
           سلامة دفتر الأستاذ (آخر فحص تلقائي للقراءة فقط):{' '}
-          {health ? <Badge tone={health.status === 'OK' ? 'success' : health.status === 'WARNING' ? 'warning' : 'danger'}>{health.status}</Badge> : <Badge>لم يتم فحص بعد</Badge>}
+          {health ? <Badge tone={health.status === 'OK' ? 'success' : health.status === 'WARNING' ? 'warning' : 'danger'}>{statusLabel(health.status)}</Badge> : <Badge>لم يتم فحص بعد</Badge>}
           {health && <span className="text-muted"> — {formatDate(health.checkedAt, true)}</span>}
         </p>
         <ul className="space-y-2">
@@ -130,7 +130,7 @@ export default async function FinanceControl() {
           </table>
         </div>
       </section>
-      <p className="text-sm"><Link className="text-brand-700" href="/admin/reconciliation">المطابقة مع كشوف الحسابات</Link> · <Link className="text-brand-700" href="/admin/releases">إتاحة أرباح البائعين</Link> · <Link className="text-brand-700" href="/admin/refunds">الاستردادات</Link> · <Link className="text-brand-700" href="/admin/operations">طوابير العمليات</Link></p>
+      <p className="text-sm"><Link className="text-brand-700" href="/admin/reconciliation">المطابقة مع كشوف الحسابات</Link> · <Link className="text-brand-700" href="/admin/releases">إتاحة مستحقات البائعين</Link> · <Link className="text-brand-700" href="/admin/refunds">الاستردادات</Link> · <Link className="text-brand-700" href="/admin/operations">طوابير العمليات</Link></p>
     </div>
   );
 }

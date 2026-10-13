@@ -106,7 +106,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
               <ul className="text-xs">{(soRefunds.get(so.id) ?? []).map((r) => <li key={r.id}>استرداد #{r.number} · {label('refundSource', r.sourceType)} · {formatEGP(r.amount)} <StatusChip status={r.status} kind="refund" /> <Link href="/admin/refunds" className="text-brand-700">قائمة الاستردادات</Link></li>)}</ul>
             )}
             {so.status === 'DELIVERED' && !so.fundsReleasedAt && (
-              <p className="text-sm"><Link href={`/admin/releases/${so.id}`} className="font-semibold text-brand-700 underline" data-testid="release-link">مراجعة واعتماد إتاحة أرباح البائع</Link></p>
+              <p className="text-sm"><Link href={`/admin/releases/${so.id}`} className="font-semibold text-brand-700 underline" data-testid="release-link">مراجعة واعتماد إتاحة مستحقات البائع</Link></p>
             )}
             {(canManage || canVerify) && (
               <ActionForm action={adminOrderAction} className="flex flex-wrap items-center gap-2 border-t border-line pt-3">

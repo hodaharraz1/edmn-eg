@@ -33,7 +33,7 @@ export const IDENTITY_GUARDED_ACTIONS = {
   SELLER_APPLICATION: 'تقديم طلب بائع',
   PRODUCT_SUBMISSION: 'إرسال منتج للمراجعة',
   WITHDRAWAL_REQUEST: 'طلب سحب',
-  PAYOUT_DESTINATION: 'إضافة وسيلة سحب',
+  PAYOUT_DESTINATION: 'إضافة بيانات استلام الأموال',
   DEAL_INVITATION: 'إرسال دعوة صفقة محمية',
   DEAL_OFFER: 'تقديم عرض في صفقة محمية',
   DEAL_ACCEPTANCE: 'قبول شروط صفقة محمية',

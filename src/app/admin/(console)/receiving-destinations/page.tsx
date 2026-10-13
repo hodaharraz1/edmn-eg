@@ -8,6 +8,7 @@ import { DESTINATION_STATUS_LABELS, destinationQueue } from '@/server/modules/id
 import { identityStatus, IDENTITY_LABELS } from '@/server/modules/identity/service';
 import { db } from '@/server/db/client';
 import { formatDate } from '@/lib/format';
+import { label } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader, Tabs } from '@/ui/data';
 import { Alert, Badge, EmptyState } from '@/ui/feedback';
@@ -41,7 +42,7 @@ export default async function ReceivingDestinationsAdmin(props: PageProps<'/admi
           {rows.map(({ d, owner }, i) => (
             <li key={d.id} className="card space-y-2 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span><b>{owner}</b> · {d.type === 'BANK_ACCOUNT' ? 'حساب بنكي' : 'محفظة موبايل'} · <span className="ltr">{d.maskedLabel}</span> · صاحب الحساب: {d.holderName} · نسخة {d.version} · {formatDate(d.createdAt, true)}</span>
+                <span><b>{owner}</b> · {label('payoutType', d.type)} · <span className="ltr">{d.maskedLabel}</span> · صاحب الحساب: {d.holderName} · نسخة {d.version} · {formatDate(d.createdAt, true)}</span>
                 <span className="flex gap-2"><Badge tone={ids[i] === 'APPROVED' ? 'success' : 'warning'}>الهوية: {IDENTITY_LABELS[ids[i]]}</Badge><Badge>{DESTINATION_STATUS_LABELS[d.status]}</Badge></span>
               </div>
               {canReveal && <RevealRows action={revealDestinationAction} id={d.id} back={back} label="عرض البيانات كاملة (2FA، مسجل)" />}

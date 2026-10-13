@@ -18,7 +18,7 @@ export default async function Commissions() {
   const rules = await db.select({ r: commissionRules, cat: categories.nameAr }).from(commissionRules).leftJoin(categories, eq(categories.id, commissionRules.categoryId)).orderBy(desc(commissionRules.effectiveFrom));
   return (
     <div className="space-y-4">
-      <PageHeader title="قواعد العمولات" description="العمولة تُحسب لكل بند في الطلب وفق القاعدة السارية لتصنيفه لحظة الطلب، وتُحفظ لقطة منها على البند فلا تتأثر الطلبات السابقة بأي تعديل لاحق." />
+      <PageHeader title="قواعد العمولات" description="أرشيف: قواعد العمولة القديمة لم تعد تُستخدم في تسعير الطلبات الجديدة. رسوم الطلبات والصفقات تُحسب من إصدار التسعير المنشور (المالية ← التسعير)، واللقطات المحفوظة على الطلبات القديمة لا تتغير بأي تعديل هنا." />
       <Alert tone="info">القيم الافتراضية المزروعة هي قيم مرجعية تقريبية من السوق (Benchmark) وليست أسعاراً معتمدة — راجعها قبل الإطلاق. يُطبَّق أقرب تصنيف أب له قاعدة، ثم القاعدة العامة.</Alert>
       <DataTable rows={rules} rowKey={(x) => x.r.id} columns={[
         { key: 'l', header: 'القاعدة', cell: (x) => <span className="font-semibold">{x.r.label}</span> },

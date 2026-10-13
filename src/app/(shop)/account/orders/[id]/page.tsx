@@ -153,7 +153,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                   <ActionForm action={confirmReceiptAction} className="w-full space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                     <input type="hidden" name="sellerOrderId" value={so.id} />
                     <input type="hidden" name="orderId" value={order.id} />
-                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ تأكيدك بيثبت إن البائع يستحق المبلغ، والإدارة بتراجع وتوافق على تحويله له. متأكّدش قبل ما المنتج يوصلك فعلاً.</p>
+                    <p className="text-sm text-emerald-900"><PackageCheck className="me-1 inline size-4" /> استلمت الطلب وفحصته؟ تأكيدك بيثبت إن البائع يستحق المبلغ، والإدارة بتراجع وتوافق على إتاحته له. متأكّدش قبل ما المنتج يوصلك فعلاً.</p>
                     <SubmitButton variant="success">أكّد الاستلام</SubmitButton>
                   </ActionForm>
                 )}

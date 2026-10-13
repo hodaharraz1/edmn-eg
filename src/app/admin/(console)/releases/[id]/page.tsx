@@ -18,7 +18,7 @@ import { Breadcrumbs, DefinitionList, PageHeader } from '@/ui/data';
 import { Alert, StatusChip } from '@/ui/feedback';
 import { Input } from '@/ui/form';
 
-export const metadata = { title: 'اعتماد إتاحة أرباح البائع' };
+export const metadata = { title: 'اعتماد إتاحة مستحقات البائع' };
 
 export default async function ReleaseReview(props: PageProps<'/admin/releases/[id]'>) {
   const { actor, allowed } = await adminWith(['finance.release', 'finance.view']);
@@ -38,7 +38,7 @@ export default async function ReleaseReview(props: PageProps<'/admin/releases/[i
   const ref = `${order.number}-${so.suffix}`;
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'إتاحة الأرباح', href: '/admin/releases' }, { label: ref }]} />} title={`اعتماد إتاحة أرباح ${ref}`} description={store?.name} actions={<StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'إتاحة المستحقات', href: '/admin/releases' }, { label: ref }]} />} title={`اعتماد إتاحة مستحقات ${ref}`} description={store?.name} actions={<StatusChip status={so.status} kind="sellerOrder" receiptBasis={so.receiptBasis} />} />
       <section className="card p-4">
         <h2 className="mb-2 font-bold">أساس الاستحقاق والمهل</h2>
         <DefinitionList
@@ -66,7 +66,7 @@ export default async function ReleaseReview(props: PageProps<'/admin/releases/[i
         />
       </section>
       {blockers.length > 0 && <Alert tone="danger" title="الإتاحة متوقفة">{blockers.join('، ')}</Alert>}
-      {paused && <Alert tone="danger">مفتاح إيقاف «إتاحة أرباح البائعين» مفعّل — لن يتم تنفيذ أي إتاحة.</Alert>}
+      {paused && <Alert tone="danger">مفتاح إيقاف «إتاحة مستحقات البائعين» مفعّل — لن يتم تنفيذ أي إتاحة.</Alert>}
       {so.fundsReleasedAt ? (
         <Alert tone="success">تمت الإتاحة في {formatDate(so.fundsReleasedAt, true)}.</Alert>
       ) : so.status === 'DELIVERED' && !blockers.length ? (

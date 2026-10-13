@@ -41,6 +41,7 @@ import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
 import { syncParentStatus } from './orders';
 import { formatEGP } from '@/lib/format';
+import { label as enumLabel, statusLabel } from '@/lib/i18n/labels';
 
 export type SellerOrder = typeof sellerOrders.$inferSelect;
 
@@ -531,7 +532,7 @@ async function cancelSellerOrderTx(tx: DbOrTx, actor: Actor, so: SellerOrder, co
       shippingAmount: left.shipping,
       buyerFeeRefund: left.buyerFee,
       sellerFeeReversal: left.sellerFee,
-      reason: `إلغاء قبل الشحن (${code}): ${note}`,
+      reason: `إلغاء قبل الشحن (${enumLabel('cancelReason', code)}): ${note}`,
       ...cancellationAttribution(code),
     });
   }
@@ -697,7 +698,7 @@ export async function resolveShipmentException(actor: Actor, soId: string, outco
             shippingAmount: left.shipping,
             buyerFeeRefund: left.buyerFee,
             sellerFeeReversal: left.sellerFee,
-            reason: `فشل التوصيل (${to}): ${why}`,
+            reason: `فشل التوصيل (${statusLabel(to)}): ${why}`,
             reasonCode: 'NON_DELIVERY',
             responsibleParty: 'CARRIER',
           });

@@ -9,6 +9,7 @@ import { FileInput } from '@/ui/client';
 import { PageHeader, Tabs } from '@/ui/data';
 import { Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
+import { label } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'إدارة المحتوى' };
 
@@ -31,7 +32,7 @@ export default async function Cms(props: PageProps<'/admin/cms'>) {
           {type && <p className="text-sm text-muted">عرض أقسام النوع <span className="ltr font-mono">{type}</span> فقط — <a href="/admin/cms" className="text-brand-700 underline">كل الأقسام</a></p>}
           {blocks.map((b) => (
             <details key={b.id} className="card p-4">
-              <summary className="flex cursor-pointer flex-wrap items-center gap-2"><b>{b.title ?? b.type}</b><Badge tone="neutral">{b.type}</Badge><Badge tone="neutral">{b.placement} · {b.sortOrder}</Badge>{b.isActive ? <Badge tone="success">ظاهر</Badge> : <Badge tone="neutral">مخفي</Badge>}</summary>
+              <summary className="flex cursor-pointer flex-wrap items-center gap-2"><b>{b.title ?? label('cmsBlock', b.type)}</b><Badge tone="neutral">{label('cmsBlock', b.type)}</Badge><Badge tone="neutral">{b.placement} · {b.sortOrder}</Badge>{b.isActive ? <Badge tone="success">ظاهر</Badge> : <Badge tone="neutral">مخفي</Badge>}</summary>
               <BlockForm b={b} />
               {b.isActive && <ActionForm action={cmsBlockAction} className="mt-2"><input type="hidden" name="op" value="disable" /><input type="hidden" name="id" value={b.id} /><SubmitButton size="sm" variant="ghost">إخفاء القسم</SubmitButton></ActionForm>}
             </details>

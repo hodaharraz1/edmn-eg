@@ -32,7 +32,7 @@ export default async function Customer360(props: PageProps<'/admin/customers/[id
   ]);
   return (
     <div className="space-y-4">
-      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'العملاء', href: '/admin/customers' }, { label: u.fullName }]} />} title={u.fullName} description={`عميل منذ ${formatDate(u.createdAt)}`} actions={<Badge tone={u.status === 'ACTIVE' ? 'success' : 'danger'}>{u.status}</Badge>} />
+      <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'العملاء', href: '/admin/customers' }, { label: u.fullName }]} />} title={u.fullName} description={`عميل منذ ${formatDate(u.createdAt)}`} actions={<Badge tone={u.status === 'ACTIVE' ? 'success' : 'danger'}>{label('userStatus', u.status)}</Badge>} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="card p-4"><DefinitionList items={[
           { label: 'البريد', value: <span className="ltr">{u.email} {u.emailVerifiedAt && '✓'}</span> },

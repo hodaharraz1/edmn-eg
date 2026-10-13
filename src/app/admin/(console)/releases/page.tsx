@@ -9,7 +9,7 @@ import { PageHeader, Tabs } from '@/ui/data';
 import { Alert, Badge, EmptyState } from '@/ui/feedback';
 import { pageOf } from '@/server/modules/_shared';
 
-export const metadata = { title: 'إتاحة أرباح البائعين' };
+export const metadata = { title: 'إتاحة مستحقات البائعين' };
 
 type Row = { id: string; number: string; suffix: string; store: string; receipt_basis: string; entitled_at: string; seller_net: string; refunded_total: string; blocked: boolean; deal: boolean };
 
@@ -38,7 +38,7 @@ export default async function Releases(props: PageProps<'/admin/releases'>) {
         ).rows.filter((r) => (tab === 'blocked' ? r.blocked : !r.blocked));
   return (
     <div className="space-y-4">
-      <PageHeader title="إتاحة أرباح البائعين" description="الطلبات اللي اتأكد استلامها أو انتهت مهلة المشتري بدون اعتراض. الفلوس لسه معلقة — مفيش أي إتاحة تلقائية؛ كل إتاحة بموافقة صريحة وتحقق ثنائي." />
+      <PageHeader title="إتاحة مستحقات البائعين" description="الطلبات اللي اتأكد استلامها أو انتهت مهلة المشتري بدون اعتراض. الفلوس لسه معلقة — مفيش أي إتاحة تلقائية؛ كل إتاحة بموافقة صريحة وتحقق ثنائي." />
       <Alert tone="warning">«مستحق وفي انتظار موافقة الإدارة» ≠ «متاح للسحب». الإتاحة لا تُنشئ سحبًا ولا تحويلًا خارجيًا.</Alert>
       <Tabs active={tab} tabs={[{ key: 'ready', label: 'جاهزة للمراجعة', href: '/admin/releases' }, { key: 'blocked', label: 'متوقفة (تجميد/نزاع/إرجاع)', href: '/admin/releases?tab=blocked' }, { key: 'deals', label: 'صفقات محمية', href: '/admin/releases?tab=deals' }]} />
       {rows.length === 0 ? (

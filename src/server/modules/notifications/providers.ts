@@ -38,7 +38,7 @@ async function smtpProvider(): Promise<OutboundProvider> {
     async send(msg) {
       // Stable Message-ID per outbox row: a retried send is recognisable as the same message by the provider.
       const domain = (e.MAIL_FROM.match(/@([^>\s]+)/)?.[1] ?? 'edmn.local').toLowerCase();
-      const info = await transport.sendMail({ from: e.MAIL_FROM, to: msg.recipient, subject: msg.subject ?? 'EDMN', text: msg.body, ...(msg.reference ? { messageId: `<${msg.reference}@${domain}>` } : {}) });
+      const info = await transport.sendMail({ from: e.MAIL_FROM, to: msg.recipient, subject: msg.subject ?? 'اضمن', text: msg.body, ...(msg.reference ? { messageId: `<${msg.reference}@${domain}>` } : {}) });
       return { providerMessageId: info.messageId };
     },
   };

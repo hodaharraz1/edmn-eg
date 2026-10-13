@@ -11,6 +11,7 @@ import { formatDate, formatNumber } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { DefinitionList, PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
+import { label, statusLabel } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'صحة التشغيل' };
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ export default async function OpsHealth() {
           items={[
             { label: 'نوع البيئة', value: <Badge tone={h.environment === 'PRODUCTION' ? 'danger' : 'neutral'}>{h.environment}</Badge> },
             { label: 'الجاهزية', value: <Badge tone={h.ready.ready ? 'success' : 'danger'}>{h.ready.ready ? 'جاهز' : 'غير جاهز'}</Badge> },
-            { label: 'بصمة البيئة', value: <span><Badge tone={h.fingerprint.status === 'OK' ? 'success' : 'danger'}>{h.fingerprint.status}</Badge> <span className="ltr text-xs">db={String(h.fingerprint.database)} · {h.fingerprint.storage} · key={h.fingerprint.key}</span></span> },
+            { label: 'بصمة البيئة', value: <span><Badge tone={h.fingerprint.status === 'OK' ? 'success' : 'danger'}>{h.fingerprint.status === 'OK' ? 'مطابقة' : 'غير مطابقة'}</Badge> <span className="ltr text-xs">db={String(h.fingerprint.database)} · {h.fingerprint.storage} · key={h.fingerprint.key}</span></span> },
             { label: 'الترحيلات', value: <span className="ltr">{h.migrations.applied} / {h.migrations.expected} ({h.migrations.latest})</span> },
           ]}
         />
@@ -87,7 +88,7 @@ export default async function OpsHealth() {
           <ul className="space-y-2 text-sm">
             {dead.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2 border-t border-line pt-2">
-                <span className="ltr text-xs">{m.channel} · {m.event} · {m.attempts}×</span>
+                <span className="ltr text-xs">{label('notifyChannel', m.channel)} · {m.event} · {m.attempts}×</span>
                 <span className="ltr min-w-0 flex-1 break-all text-xs text-muted">{m.lastError}</span>
                 {!SECRET_EVENTS.includes(m.event ?? '') && (
                   <ActionForm action={requeueDeadLetterAction} className="flex items-center gap-2">
@@ -106,7 +107,7 @@ export default async function OpsHealth() {
         {h.ledger ? (
           <DefinitionList
             items={[
-              { label: 'الحالة', value: <Badge tone={h.ledger.status === 'OK' ? 'success' : h.ledger.status === 'WARNING' ? 'warning' : 'danger'}>{h.ledger.status}</Badge> },
+              { label: 'الحالة', value: <Badge tone={h.ledger.status === 'OK' ? 'success' : h.ledger.status === 'WARNING' ? 'warning' : 'danger'}>{statusLabel(h.ledger.status)}</Badge> },
               { label: 'مدين / دائن / فرق', value: <span className="ltr tabular-nums">{h.ledger.debits} / {h.ledger.credits} / {h.ledger.difference}</span> },
               { label: 'مخالفات حرجة', value: <span className="ltr">{JSON.stringify(h.ledger.criticalChecks)}</span> },
               { label: 'تنبيهات', value: <span className="ltr">{JSON.stringify(h.ledger.warningChecks)}</span> },

@@ -4,7 +4,7 @@ import { formatEGP } from '@/lib/format';
 import Link from '@/ui/link';
 
 const ROWS: { key: keyof SourceBalances; label: string; hint: string }[] = [
-  { key: 'available', label: 'رصيد متاح', hint: 'اتاحته الإدارة بعد موافقتها. في السوق: متاح لطلب السحب. في الصفقات المحمية: مستحق يتحوّل على بيانات استلام الأموال المسجلة في الصفقة.' },
+  { key: 'available', label: 'رصيد متاح', hint: 'أتاحته الإدارة بعد موافقتها، ومتاح لطلب السحب. التحويل بيتم بس بعد طلب سحب تعتمده الإدارة: رصيد المتجر على بيانات استلام أموال المتجر، ومستحقات الصفقات المحمية على «بيانات استلام الأموال» المتحقق منها.' },
   { key: 'pending', label: 'رصيد معلّق', hint: 'مدفوع من المشتري ولسه في التسليم أو مهلة رد المشتري.' },
   { key: 'entitledAwaitingRelease', label: 'مستحق — بانتظار موافقة الإدارة', hint: 'المشتري أكد الاستلام أو انتهت مهلته. لسه محتاج موافقة الإدارة. التأكيد أو انتهاء المهلة لا يحرك فلوس لوحده.' },
   { key: 'held', label: 'مجمّد بسبب نزاع أو تجميد إداري', hint: 'لا يتحرك لحد ما يتحسم النزاع أو يترفع التجميد.' },
@@ -49,7 +49,7 @@ export function SellerFinanceSummary({ view, showProtectedDeal = true }: { view:
         )}
         {showProtectedDeal && view.protectedDeal && (
           <Column title="رصيد الصفقات المحمية" b={view.protectedDeal} testid="balance-protected-deal">
-            <p className="text-xs text-muted">مستحقات كل صفقة تتحوّل على بيانات استلام الأموال اللي سجلتها في عرضك على نفس الصفقة. مش محتاج متجر.</p>
+            <p className="text-xs text-muted">مستحقات الصفقات بتتحوّل بس لما تطلب سحب من «مستحقاتي من البيع» على «بيانات استلام الأموال» المتحقق منها والإدارة تعتمده. مش محتاج متجر.</p>
           </Column>
         )}
         {showProtectedDeal && view.marketplace && view.protectedDeal && (

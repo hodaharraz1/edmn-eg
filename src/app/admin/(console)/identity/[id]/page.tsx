@@ -10,6 +10,7 @@ import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Breadcrumbs, DefinitionList, PageHeader, Timeline } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
 import { Field, Select, Textarea } from '@/ui/form';
+import { statusLabel } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'مراجعة هوية' };
 
@@ -83,7 +84,7 @@ export default async function IdentityCasePage(props: PageProps<'/admin/identity
       )}
       <section className="card p-4">
         <h2 className="mb-2 font-bold">السجل</h2>
-        <Timeline items={c.history.map((h) => ({ title: `${h.action} — ${h.fromStatus ?? '∅'} ← ${h.toStatus}`, time: formatDate(h.createdAt, true), body: h.reason }))} />
+        <Timeline items={c.history.map((h) => ({ title: `${h.action} — ${h.fromStatus ? statusLabel(h.fromStatus) : '∅'} ← ${statusLabel(h.toStatus)}`, time: formatDate(h.createdAt, true), body: h.reason }))} />
       </section>
     </div>
   );

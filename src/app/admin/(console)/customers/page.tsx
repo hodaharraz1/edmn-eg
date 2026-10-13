@@ -6,6 +6,7 @@ import { users } from '@/server/db/schema';
 import { formatDate } from '@/lib/format';
 import { DataTable, PageHeader, Pagination } from '@/ui/data';
 import { Badge } from '@/ui/feedback';
+import { label } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'العملاء' };
 
@@ -30,7 +31,7 @@ export default async function Customers(props: PageProps<'/admin/customers'>) {
         { key: 'p', header: 'الهاتف', cell: (r) => <span className="ltr text-xs">{r.u.phone}</span> },
         { key: 'o', header: 'الطلبات', cell: (r) => r.orders },
         { key: 'd', header: 'التسجيل', cell: (r) => formatDate(r.u.createdAt) },
-        { key: 's', header: 'الحالة', cell: (r) => <Badge tone={r.u.status === 'ACTIVE' ? 'success' : 'danger'}>{r.u.status}</Badge> },
+        { key: 's', header: 'الحالة', cell: (r) => <Badge tone={r.u.status === 'ACTIVE' ? 'success' : 'danger'}>{label('userStatus', r.u.status)}</Badge> },
       ]} />
       <Pagination page={page} pages={Math.ceil(n / 25)} hrefFor={(p) => `/admin/customers?page=${p}&q=${encodeURIComponent(q)}`} />
     </div>

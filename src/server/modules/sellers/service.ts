@@ -311,13 +311,13 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
   if (!approve) requireReason(reason);
   await db.transaction(async (tx) => {
     const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, payoutMethodId)).for('update');
-    if (!pm) throw notFound('وسيلة السحب');
+    if (!pm) throw notFound('بيانات استلام الأموال');
     const [owner] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, pm.sellerId));
     if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد بيانات استلام أموال خاصة بمتجرك');
     await assertNotSelfDealing(tx, actor, pm.sellerId);
-    if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة وسيلة السحب بالفعل');
+    if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة بيانات استلام الأموال بالفعل');
     const [seller] = await tx.select({ status: sellers.status }).from(sellers).where(eq(sellers.id, pm.sellerId));
-    if (approve && !['APPROVED', 'RESTRICTED'].includes(seller?.status ?? '')) throw invalidState('اعتماد وسيلة السحب يتم بعد اعتماد البائع');
+    if (approve && !['APPROVED', 'RESTRICTED'].includes(seller?.status ?? '')) throw invalidState('اعتماد بيانات استلام الأموال يتم بعد اعتماد البائع');
     const fingerprint = payoutFingerprint(pm);
     if (approve) {
       await tx.update(sellerPayoutMethods).set({ isDefault: false }).where(eq(sellerPayoutMethods.sellerId, pm.sellerId));
@@ -344,7 +344,7 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
  */
 export function assertVerifiedDestination(pm: typeof sellerPayoutMethods.$inferSelect | null | undefined): asserts pm is typeof sellerPayoutMethods.$inferSelect {
   if (!pm || pm.status !== 'ACTIVE' || !pm.verifiedAt || !pm.verifiedBy) throw invalidState('بيانات استلام الأموال غير معتمدة بعد');
-  if (pm.verifiedFingerprint && pm.verifiedFingerprint !== payoutFingerprint(pm)) throw invalidState('بيانات وسيلة السحب لا تطابق ما تم اعتماده — يلزم اعتماد جديد');
+  if (pm.verifiedFingerprint && pm.verifiedFingerprint !== payoutFingerprint(pm)) throw invalidState('بيانات استلام الأموال لا تطابق ما تم اعتماده — يلزم اعتماد جديد');
 }
 
 export async function activePayoutMethod(conn: DbOrTx, sellerId: string) {

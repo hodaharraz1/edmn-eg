@@ -56,7 +56,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
           {step === 2 && (
             <>
               <Field label={`سعر الوحدة (ج.م) × الكمية ${deal?.quantity ?? 1}`} htmlFor="unitPrice" required><Input id="unitPrice" name="unitPrice" inputMode="decimal" dir="ltr" defaultValue={toInputAmount(deal?.unitPrice)} required /></Field>
-              <p className="text-xs text-muted">رسوم خدمة الضمان تدريجية حسب قيمة الصفقة ومقسومة بالتساوي بينك وبين البائع، وهتشوفها في صفحة المراجعة قبل الإرسال.</p>
+              <p className="text-xs text-muted">رسوم خدمة الضمان تدريجية حسب قيمة الصفقة ومقسومة بينك وبين البائع حسب التسعير المنشور، وهتشوف نصيب كل طرف في صفحة المراجعة قبل الإرسال.</p>
             </>
           )}
           {step === 3 && (

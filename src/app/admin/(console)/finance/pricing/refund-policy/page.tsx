@@ -9,6 +9,7 @@ import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
 import { Checkbox, Input, Select } from '@/ui/form';
 import { pctOf, PricingNav } from '../_view';
+import { statusLabel } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'سياسة استرداد الرسوم' };
 const pctIn = (bps: number) => (bps / 100).toFixed(2).replace(/\.?0+$/, '');
@@ -39,7 +40,7 @@ export default async function RefundFeePolicy() {
         const rows = editable ? [...v.rules, null, null] : v.rules;
         return (
           <section key={v.id} className="card space-y-2 overflow-x-auto p-4" data-testid={`refund-policy-${v.versionNo}`}>
-            <div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">الإصدار {v.versionNo}</h2><Badge tone={v.status === 'PUBLISHED' ? 'success' : 'neutral'}>{v.status}</Badge>{v.legalReviewRequired && <Badge tone="warning">LEGAL REVIEW REQUIRED</Badge>}</div>
+            <div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">الإصدار {v.versionNo}</h2><Badge tone={v.status === 'PUBLISHED' ? 'success' : 'neutral'}>{statusLabel(v.status)}</Badge>{v.legalReviewRequired && <Badge tone="warning">LEGAL REVIEW REQUIRED</Badge>}</div>
             <ActionForm action={refundPolicyAction} className="space-y-2">
               <input type="hidden" name="op" value="saveRules" /><input type="hidden" name="versionId" value={v.id} /><input type="hidden" name="back" value="/admin/finance/pricing/refund-policy" />
               <table className="w-full min-w-[900px] text-xs">

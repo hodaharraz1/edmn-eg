@@ -295,6 +295,11 @@ export const LABELS = {
     DEAL_PAYOUT: 'صرف مستحق صفقة',
     WITHDRAWAL_PAYOUT_RETURN: 'ارتداد تحويل سحب',
   } as Record<string, string>,
+  moneyChannel: { BANK_TRANSFER: 'تحويل بنكي', INSTAPAY: 'إنستاباي', VODAFONE_CASH: 'فودافون كاش', PSP: 'بوابة دفع', MOBILE_WALLET: 'محفظة موبايل', FUTURE_PSP: 'بوابة دفع (لاحقًا)', OTHER: 'أخرى' } as Record<string, string>,
+  notifyChannel: { IN_APP: 'داخل التطبيق', PUSH: 'إشعار المتصفح', EMAIL: 'بريد إلكتروني', SMS: 'رسالة نصية', WHATSAPP: 'واتساب', MOBILE_PUSH: 'إشعار الموبايل' } as Record<string, string>,
+  attributeType: { TEXT: 'نص', NUMBER: 'رقم', SELECT: 'اختيار واحد', MULTI_SELECT: 'اختيارات متعددة', BOOLEAN: 'نعم / لا' } as Record<string, string>,
+  cmsBlock: { HERO: 'الواجهة الرئيسية', BANNER: 'بانر', FEATURED_CATEGORIES: 'تصنيفات مميزة', PRODUCT_RAIL: 'شريط منتجات', FEATURED_SELLERS: 'متاجر مميزة', DEAL_CTA: 'دعوة للصفقة المحمية', TRUST: 'عناصر الثقة', FOOTER: 'الفوتر' } as Record<string, string>,
+  userStatus: { ACTIVE: 'نشط', LOCKED: 'مقفول مؤقتًا', DISABLED: 'معطّل', CLOSED: 'مغلق' } as Record<string, string>,
   storeInvitation: { PENDING: 'مستنية رد', ACCEPTED: 'اتقبلت', DECLINED: 'اترفضت', REVOKED: 'اتلغت', EXPIRED: 'انتهت صلاحيتها' } as Record<string, string>,
   sellerRole: { STORE_OWNER: 'مالك المتجر', STORE_MANAGER: 'مدير المتجر', CATALOG_MANAGER: 'مسؤول المنتجات', ORDER_MANAGER: 'مسؤول الطلبات', FINANCE: 'المالية', SUPPORT: 'الدعم' } as Record<string, string>,
 };

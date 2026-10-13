@@ -22,10 +22,10 @@ export async function ShopFooter() {
       <div className="container-page grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-3">
           <p className="text-sm leading-relaxed text-white/70">
-            {data.about || 'اضمن سوق مصري للمنتجات الجديدة والمستعملة من بائعين كتير. بتدفع لاضمن، والبائع بياخد فلوسه بعد الاستلام وموافقة الإدارة. وتقدر كمان تعمل صفقة محمية لأي حاجة بتشتريها من برّه السوق.'}
+            {data.about || 'اضمن سوق مصري للمنتجات الجديدة والمستعملة من بائعين تمت مراجعتهم. بتدفع لاضمن، ومستحقات البائع مش بتتاح له غير بعد الاستلام وموافقة الإدارة. وتقدر كمان تعمل صفقة محمية لأي حاجة بتشتريها من برّه السوق.'}
           </p>
           <p className="flex items-center gap-2 text-xs text-emerald-300">
-            <ShieldCheck className="size-4" /> البائع ما بياخدش فلوسه قبل ما الطلب يتسلّم وتعدّي مهلة الاعتراض وتوافق الإدارة
+            <ShieldCheck className="size-4" /> البائع ما بياخدش فلوسه قبل ما الطلب يتسلّم، وتأكد الاستلام أو تعدّي مهلة الاعتراض، وتوافق الإدارة
           </p>
         </div>
         <div>

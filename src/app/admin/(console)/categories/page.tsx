@@ -9,6 +9,7 @@ import { PageHeader } from '@/ui/data';
 import { Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select } from '@/ui/form';
 import Link from '@/ui/link';
+import { label } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'التصنيفات' };
 
@@ -28,7 +29,7 @@ export default async function CategoriesAdmin(props: PageProps<'/admin/categorie
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div>
-        <PageHeader title="التصنيفات" description={`التغيير هنا لا يحتاج نشر كود. العمولة الافتراضية: ${defRule ? bpsToPercentString(defRule.percentBps) : '—'}% — إدارة العمولات من صفحة العمولات.`} />
+        <PageHeader title="التصنيفات" description={`التغيير هنا لا يحتاج نشر كود. العمولة القديمة الافتراضية (أرشيف — لا تُستخدم في التسعير): ${defRule ? bpsToPercentString(defRule.percentBps) : '—'}%. الرسوم الفعلية من إصدار التسعير المنشور (المالية ← التسعير).`} />
         <div className="card divide-y divide-line">
           {ordered.map((c) => {
             const rule = rules.find((r) => r.categoryId === c.id);
@@ -41,7 +42,7 @@ export default async function CategoriesAdmin(props: PageProps<'/admin/categorie
                   {c.isRestricted && <Badge tone="warning">مراجعة خاصة</Badge>}
                   {c.isProhibited && <Badge tone="danger">محظور</Badge>}
                 </span>
-                <span className="text-xs text-muted">{rule ? `عمولة ${bpsToPercentString(rule.percentBps)}%` : 'العمولة الموروثة'}</span>
+                <span className="text-xs text-muted">{rule ? `عمولة قديمة (أرشيف) ${bpsToPercentString(rule.percentBps)}%` : 'العمولة القديمة الموروثة (أرشيف)'}</span>
               </div>
             );
           })}
@@ -81,7 +82,7 @@ export default async function CategoriesAdmin(props: PageProps<'/admin/categorie
             ))}
             <ActionForm action={categoryAttributeAction} className="space-y-2">
               <input type="hidden" name="categoryId" value={editing.id} />
-              <Select name="attributeId" aria-label="السمة">{attrs.map((a) => <option key={a.id} value={a.id}>{a.nameAr} ({a.type})</option>)}</Select>
+              <Select name="attributeId" aria-label="السمة">{attrs.map((a) => <option key={a.id} value={a.id}>{a.nameAr} ({label('attributeType', a.type)})</option>)}</Select>
               <div className="flex flex-wrap gap-3"><Checkbox name="isRequired" label="إلزامي" /><Checkbox name="isFilterable" label="قابل للفلترة" /><Checkbox name="isVariantAxis" label="يكوّن خيارات" /></div>
               <SubmitButton size="sm" variant="outline">ربط السمة</SubmitButton>
             </ActionForm>

@@ -56,7 +56,7 @@ export const EVENT_TEMPLATES = {
   /** Current message events (the two above are kept only to render historical rows). Never include message text. */
   MESSAGE_RECEIVED: { title: 'رسالة جديدة من {{party}}', body: 'بخصوص {{ref}}', sms: false },
   MESSAGE_ATTACHMENT_RECEIVED: { title: 'مرفق جديد من {{party}}', body: 'بخصوص {{ref}}', sms: false },
-  EXTERNAL_DEAL_COMPLETED: { title: 'الصفقة اكتملت', body: 'الصفقة #{{deal}} اكتملت. مستحقات البائع هتتحوّل على بيانات استلام الأموال المسجّلة، وهنبلغك عند التحويل.', sms: false },
+  EXTERNAL_DEAL_COMPLETED: { title: 'الصفقة اكتملت', body: 'الصفقة #{{deal}} اكتملت بعد موافقة الإدارة على إتاحة مستحقات البائع. المستحقات بقت في «رصيد الصفقات المحمية» للبائع، وتحويلها بيتم بس لما البائع يطلب سحب على «بيانات استلام الأموال» المتحقق منها والإدارة تعتمده.', sms: false },
   SUPPORT_REPLY: { title: 'رد جديد على تذكرة الدعم', body: 'فيه رد جديد على التذكرة #{{ticket}}.', sms: false },
   REVIEW_RECEIVED: { title: 'تقييم جديد', body: 'حصلت على تقييم جديد ({{rating}}/5).', sms: false },
   ACCOUNT_SECURITY: { title: 'تنبيه أمني', body: '{{message}}', sms: false },

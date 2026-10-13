@@ -373,11 +373,11 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     if (w.sellerId) {
       const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
       if (seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن اعتماد السحب');
-      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب)');
+      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات استلام الأموال)');
       const { sellerLedgerDrift } = await import('@/server/modules/commerce/fulfilment');
       if (await sellerLedgerDrift(tx, w.sellerId)) throw invalidState('أرصدة البائع المخزنة لا تطابق دفتر الأستاذ — تم إيقاف الاعتماد');
       const [pm] = w.payoutMethodId ? await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId)) : [];
-      if (!pm || pm.status !== 'ACTIVE') throw invalidState('وسيلة السحب المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
+      if (!pm || pm.status !== 'ACTIVE') throw invalidState('بيانات استلام الأموال المطلوبة لم تعد معتمدة. ارفض الطلب واطلب من البائع طلبًا جديدًا');
       assertVerifiedDestination(pm);
       destination = { payoutMethodId: pm.id, type: pm.type, masked: pm.maskedLabel, holderName: pm.holderName, verifiedAt: pm.verifiedAt?.toISOString() ?? null };
     } else {
@@ -475,7 +475,7 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     if (w.sellerId) {
       const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
       if (!seller || seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن صرف السحب');
-      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات السحب). لا يمكن الصرف الآن');
+      if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات استلام الأموال). لا يمكن الصرف الآن');
       if ((await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
         throw invalidState('على البائع مديونية (رصيد متاح سالب بعد استرداد). يجب تسويتها قبل صرف أي سحب');
       }
@@ -907,7 +907,7 @@ export async function revealPayoutDetails(actor: Actor, kind: 'withdrawal' | 'de
     if (!w) throw notFound('طلب السحب');
     if (w.payoutMethodId) {
       const [pm] = await db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, w.payoutMethodId));
-      if (!pm) throw notFound('وسيلة السحب');
+      if (!pm) throw notFound('بيانات استلام الأموال');
       details = { type: pm.type, holderName: pm.holderName, ...decryptJson<Record<string, unknown>>(pm.detailsEnc) };
     } else if (w.receivingDestinationId) {
       const [d] = await db.select().from(receivingDestinations).where(eq(receivingDestinations.id, w.receivingDestinationId));

@@ -32,7 +32,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
       <div className="rounded-2xl bg-gradient-to-l from-accent-600 to-brand-900 p-5 text-white">
         <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-5" aria-hidden /> طلب صفقة محمية على اضمن</p>
         <h1 className="mt-2 text-xl font-bold sm:text-2xl">مشترٍ يريد شراء «{s.title}» منك</h1>
-        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري بيدفع لاضمن الأول، وبعد التسليم وتأكيد المشتري (أو انتهاء مهلته بدون اعتراض) وموافقة الإدارة بيتحوّل لك مستحقك.</p>
+        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري بيدفع لاضمن الأول، وبعد التسليم وتأكيد المشتري (أو انتهاء مهلته بدون اعتراض) وموافقة الإدارة مستحقك بيتاح لك، وتقدر تطلب سحبه على «بيانات استلام الأموال» المتحقق منها.</p>
       </div>
 
       {inv.isBuyer && <Alert tone="info">ده رابط الدعوة بتاع صفقتك (انت المشتري). ابعته للبائع.</Alert>}
@@ -47,7 +47,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
           { label: 'المنتج', value: `${s.title} × ${s.quantity}` },
           { label: 'الحالة', value: s.condition === 'NEW' ? 'جديد' : 'مستعمل' },
           { label: 'السعر اللي طلبه المشتري', value: formatEGP(s.totalAmount) },
-          { label: 'رسوم الضمان عليك (تقديرية — النهائية تظهر في عرضك)', value: formatEGP((s.totalAmount ?? 0) - (s.sellerReceives ?? 0)) },
+          { label: 'رسوم خدمة الضمان عليك (تقديرية — النهائية تظهر في عرضك)', value: formatEGP((s.totalAmount ?? 0) - (s.sellerReceives ?? 0)) },
           { label: 'صافي اللي هتستلمه (قبل الشحن)', value: formatEGP(s.sellerReceives) },
           { label: 'طريقة التسليم المفضلة للمشتري', value: s.deliveryMethod ?? '—' },
           { label: 'المشتري يفضّل يستلم قبل', value: formatDate(s.deliveryDeadline) },

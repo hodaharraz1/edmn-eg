@@ -11,7 +11,7 @@ import { db } from '@/server/db/client';
 import { sellers, statusHistory, stores, users, withdrawalRequests } from '@/server/db/schema';
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { formatDate, formatEGP } from '@/lib/format';
-import { label } from '@/lib/i18n/labels';
+import { label, statusLabel } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { FileInput } from '@/ui/client';
 import { Breadcrumbs, DefinitionList, PageHeader, Timeline } from '@/ui/data';
@@ -47,11 +47,11 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'السحوبات', href: '/admin/withdrawals' }, { label: `#${w.number}` }]} />} title={`طلب سحب #${w.number} — ${formatEGP(w.amount)}`} description={s?.store ?? `بائع صفقات محمية — ${beneficiary?.n ?? ''}`} actions={<StatusChip status={w.status} kind="withdrawal" />} />
       {w.isTest && <TestMoneyNotice kind="payout" />}
       {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s?.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
-      {s && s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {s.seller.status}</Alert>}
+      {s && s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {statusLabel(s.seller.status)}</Alert>}
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'البائع', value: s ? <Link className="text-brand-700" href={`/admin/sellers/${w.sellerId}`}>{s.store} · {s.seller.legalName}</Link> : `${beneficiary?.n ?? '—'} (بدون متجر — صفقات محمية)` },
-          { label: 'وجهة الصرف', value: w.receivingDestinationId ? 'بيانات استلام أموال متحقق منها (مستوى المستخدم)' : 'وسيلة سحب المتجر المتحقق منها' },
+          { label: 'وجهة الصرف', value: w.receivingDestinationId ? 'بيانات استلام أموال متحقق منها (مستوى المستخدم)' : 'بيانات استلام أموال المتجر المتحقق منها' },
           { label: 'الحساب (مقنّع)', value: <span>{label('payoutType', w.payoutType)} <span className="ltr">{w.payoutMasked}</span></span> },
           { label: 'المصدر', value: w.source === 'SCHEDULED' ? 'تسوية دورية' : w.source === 'ACCOUNT' ? 'طلب من حساب المستخدم' : 'طلب البائع' },
           { label: 'موعد SLA', value: formatDate(w.slaDueAt, true) },
@@ -143,7 +143,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           <ActionForm action={withdrawalAdminAction} className="space-y-2 border-t border-line pt-3" data-testid="wd-returned">
             {hidden}<input type="hidden" name="op" value="returned" />
             <h2 className="font-bold">تسجيل ارتداد التحويل</h2>
-            <p className="text-xs text-muted">للتحويل الذي سُجّل صرفه ثم رجع من البنك/المزود. يُسجل قيد تعويضي بموافقتك (لا يُعدّل قيد الصرف الأصلي) ويُعاد المبلغ لرصيد البائع المتاح، ويلزم إعادة اعتماد وسيلة السحب.</p>
+            <p className="text-xs text-muted">للتحويل الذي سُجّل صرفه ثم رجع من البنك/المزود. يُسجل قيد تعويضي بموافقتك (لا يُعدّل قيد الصرف الأصلي) ويُعاد المبلغ لرصيد البائع المتاح، ويلزم إعادة اعتماد بيانات استلام الأموال.</p>
             <input type="hidden" name="amount" value={((openReturn?.r.amount ?? 0) / 100).toFixed(2)} />
             <p className="text-sm">المبلغ المرتد (من طلب المنشئ): <b>{formatEGP(openReturn?.r.amount ?? 0)}</b></p>
             <Field label="مرجع الارتداد" required><Input name="reference" required minLength={3} className="ltr" /></Field>

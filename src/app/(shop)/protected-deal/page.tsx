@@ -19,7 +19,7 @@ export default async function ProtectedDealLanding() {
     { icon: FileText, title: 'اكتب تفاصيل الصفقة', body: 'المنتج، السعر، موعد التسليم، وأي شروط خاصة اتفقتوا عليها.' },
     { icon: Handshake, title: 'ابعت للبائع', body: 'هتاخد رابط آمن تبعته للبائع، يراجع منه الشروط ويوافق.' },
     { icon: Wallet, title: 'ادفع لاضمن', body: 'بتحوّل المبلغ لحساب اضمن، وفريقنا بيراجع التحويل يدويًا.' },
-    { icon: PackageCheck, title: 'استلم وأكّد', body: 'بعد ما تفحص المنتج، أكّد الاستلام، وبعد موافقة الإدارة المبلغ يتحوّل للبائع. لو فيه مشكلة افتح نزاع.' },
+    { icon: PackageCheck, title: 'استلم وأكّد', body: 'بعد ما تفحص المنتج، أكّد الاستلام. تأكيدك بيثبت استحقاق البائع، والمبلغ مش بيتاح له غير بموافقة الإدارة. لو فيه مشكلة افتح نزاع.' },
   ];
   return (
     <div className="container-page space-y-10 py-8">
@@ -47,7 +47,7 @@ export default async function ProtectedDealLanding() {
       <section className="grid gap-4 md:grid-cols-3">
         <div className="card p-5"><BadgeCheck className="mb-2 size-6 text-brand-600" /><p className="font-bold">مفيش دفع مباشر لحد متعرفوش</p><p className="text-sm text-muted">بتدفع بس لحساب اضمن اللي ظاهر في صفحة الدفع.</p></div>
         <div className="card p-5"><ShieldCheck className="mb-2 size-6 text-brand-600" /><p className="font-bold">نزاعات بقرار محايد</p><p className="text-sm text-muted">لو المنتج مختلف أو موصلش، فريق اضمن بيراجع الأدلة ويقرر.</p></div>
-        <div className="card p-5"><Wallet className="mb-2 size-6 text-brand-600" /><p className="font-bold">رسوم واضحة</p><p className="text-sm text-muted">{fee ? `رسوم خدمة الضمان تدريجية: تبدأ من ${bpsToPercentString(fee.firstBps)}% على أول ${formatEGP(fee.firstUpTo)} وتقل كل ما القيمة تزيد، بحد أدنى ${formatEGP(fee.minFee)}، ومقسومة بالتساوي بين المشتري والبائع. بتظهر قبل ما تأكد.` : 'هتشوف الرسوم قبل ما تأكد الصفقة.'}</p></div>
+        <div className="card p-5"><Wallet className="mb-2 size-6 text-brand-600" /><p className="font-bold">رسوم واضحة</p><p className="text-sm text-muted">{fee ? `رسوم خدمة الضمان تدريجية: تبدأ من ${bpsToPercentString(fee.firstBps)}% على أول ${formatEGP(fee.firstUpTo)} وتقل كل ما القيمة تزيد، بحد أدنى ${formatEGP(fee.minFee)}، ومقسومة بين المشتري والبائع حسب التسعير المنشور. نصيب كل طرف بيظهر قبل ما تأكد.` : 'هتشوف الرسوم قبل ما تأكد الصفقة.'}</p></div>
       </section>
     </div>
   );

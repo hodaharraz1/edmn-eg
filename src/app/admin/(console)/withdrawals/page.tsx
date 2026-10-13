@@ -9,7 +9,7 @@ import { label } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { DataTable, PageHeader, Tabs } from '@/ui/data';
 import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
-import { realMoneyEnabled } from '@/server/modules/settings';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { Badge, EmptyState, StatusChip } from '@/ui/feedback';
 
 export const metadata = { title: 'طلبات السحب' };
@@ -22,10 +22,11 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
   const rows = await withdrawalQueue(GROUPS[tab] ?? GROUPS.open, 200);
   const now = new Date();
   const live = await realMoneyEnabled();
+  const sla = await getSetting('withdrawals.slaBusinessHours');
   return (
     <div className="space-y-3">
       {!live && <TestMoneyNotice kind="payout" />}
-      <PageHeader title="طلبات السحب" description="هدف الخدمة: الصرف خلال 48 ساعة عمل من الطلب (الأحد–الخميس). المراجِع يعتمد والمنفّذ يسجّل التحويل؛ المبالغ الكبيرة تتطلب شخصين مختلفين." actions={hasPermission(actor, 'settlements.manage') && (
+      <PageHeader title="طلبات السحب" description={`هدف الخدمة: الصرف خلال ${sla} ساعة عمل من الطلب. المراجِع يعتمد ويحجز المبلغ، ومنفّذ مختلف يسجّل التحويل — كل صرف يحتاج شخصين مختلفين بدون حد أدنى للمبلغ.`} actions={hasPermission(actor, 'settlements.manage') && (
         <ActionForm action={runSettlementAction}><input type="hidden" name="back" value="/admin/withdrawals" /><SubmitButton size="sm" variant="outline">تشغيل التسوية الدورية الآن</SubmitButton></ActionForm>
       )} />
       <Tabs active={tab} tabs={[{ key: 'open', label: 'بانتظار الاعتماد', href: '/admin/withdrawals' }, { key: 'approved', label: 'معتمدة للصرف', href: '/admin/withdrawals?tab=approved' }, { key: 'paid', label: 'مصروفة', href: '/admin/withdrawals?tab=paid' }, { key: 'closed', label: 'مرفوضة/ملغاة', href: '/admin/withdrawals?tab=closed' }]} />

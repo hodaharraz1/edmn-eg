@@ -143,13 +143,13 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           { label: 'البائع', value: deal.sellerFullName ?? (isBuyer && deal.sellerName ? `${deal.sellerName} (لسه مدخلش)` : 'لسه مدخلش') },
           { label: 'قيمة الصفقة + الشحن', value: formatEGP(deal.totalAmount) },
           ...(deal.pricingSource === 'ENGINE'
-            ? [isBuyer ? { label: 'رسوم خدمة الضمان من اضمن', value: formatEGP(deal.buyerFeeAmount) } : { label: 'رسوم الضمان على البائع', value: `−${formatEGP(deal.sellerFeeAmount)}` }]
+            ? [isBuyer ? { label: 'رسوم خدمة الضمان من اضمن', value: formatEGP(deal.buyerFeeAmount) } : { label: 'رسوم خدمة الضمان على البائع', value: `−${formatEGP(deal.sellerFeeAmount)}` }]
             : []),
           { label: isBuyer ? 'الإجمالي المطلوب' : 'صافي استحقاقك', value: formatEGP(isBuyer ? deal.buyerPays : deal.sellerReceives) },
           { label: 'التسليم المتوقع', value: `${deal.deliveryMethod ?? '—'} · قبل ${formatDate(deal.deliveryDeadline)}` },
           { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
           { label: 'شروط خاصة', value: deal.customTerms ?? 'مفيش' },
-          ...(isSeller && deal.sellerPayoutMasked ? [{ label: 'بيانات استلام الأموال', value: deal.sellerPayoutMasked }] : []),
+          ...(isSeller && deal.sellerPayoutMasked ? [{ label: 'وسيلة الاستلام المسجّلة في العرض (للمرجع)', value: deal.sellerPayoutMasked }] : []),
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{deal.description}</p>
       </section>
@@ -317,7 +317,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {deal.status === 'PAYMENT_UNDER_REVIEW' && <Alert tone="info">فريق اضمن بيراجع إثبات الدفع.</Alert>}
       {deal.status === 'ACTIVE' && isBuyer && (
         <Alert tone="success" title="الصفقة شغالة">
-          اضمن أكّد إن الدفع وصل. البائع مش هياخد مستحقه غير بعد خطوتين: التحقق من التسليم برمز الاستلام، وبعدها تأكيدك إن المنتج مطابق.
+          اضمن أكّد إن الدفع وصل. البائع مش هيستحق المبلغ غير بعد التحقق من التسليم برمز الاستلام، وبعدها تأكيدك إن المنتج مطابق (أو انتهاء مهلتك بدون اعتراض)، ومش هيتاح له غير بموافقة الإدارة.
           {!dispute && <span className="mt-2 block"><Link href={`/account/disputes/new?deal=${deal.id}&reason=NOT_RECEIVED`} className="underline">لسه مستلمتش</Link></span>}
         </Alert>
       )}
@@ -416,7 +416,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isBuyer && handoverOpen && !dispute && (
         <section id="delivery-choice" className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
           <p className="font-semibold">تسليم المنتج ليك اتأكد برمز الاستلام.</p>
-          <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج واختار قبل {deal.buyerResponseDueAt ? formatDate(deal.buyerResponseDueAt, true) : `${deal.inspectionDays} يوم`}. لو المهلة خلصت من غير ما تبلّغ عن مشكلة، البائع بيبقى مستحق للمبلغ (من غير ما يتحسب إنك أكدت)، والمبلغ بيتحول له بس بموافقة الإدارة.</p>
+          <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج واختار قبل {deal.buyerResponseDueAt ? formatDate(deal.buyerResponseDueAt, true) : `${deal.inspectionDays} يوم`}. لو المهلة خلصت من غير ما تبلّغ عن مشكلة، البائع بيبقى مستحق للمبلغ (من غير ما يتحسب إنك أكدت)، والمبلغ مش بيتاح له غير بموافقة الإدارة.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={dealConfirmAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
@@ -459,7 +459,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> ظهرت مشكلة؟ بلّغ قبل الإتاحة</LinkButton>
       )}
       {deal.status === 'REFUND_PENDING' && <Alert tone="warning" title="استرداد قيد الاعتماد">قرار النزاع استرداد كامل للمشتري، والإدارة بتراجع وتعتمد الاسترداد قبل التحويل.</Alert>}
-      {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} هيتحوّل على ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'تم التحويل' : 'مستحق — لم يُحوَّل بعد'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
+      {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `الإدارة أتاحت مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} في «رصيد الصفقات المحمية». ${g.payout?.status === 'PAID' ? 'الحالة: تم التحويل.' : 'الحالة: مستحق — لم يُحوَّل بعد. اطلب سحبه من «مستحقاتي من البيع» على «بيانات استلام الأموال» المتحقق منها.'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
 
       {versions.length > 0 && (
         <details className="card p-4" data-testid="terms-history">
@@ -514,7 +514,7 @@ function TermsTable({ t }: { t: Terms }) {
         ? [
             { label: 'رسوم خدمة الضمان من اضمن (على المشتري)', value: formatEGP(t.price.buyerFee) },
             { label: 'الإجمالي المطلوب من المشتري', value: <strong>{formatEGP(t.price.buyerPays)}</strong> },
-            { label: 'رسوم الضمان على البائع', value: `−${formatEGP(t.price.sellerFee ?? 0)}` },
+            { label: 'رسوم خدمة الضمان على البائع', value: `−${formatEGP(t.price.sellerFee ?? 0)}` },
             { label: 'صافي استحقاق البائع (قيمة + شحن − رسوم)', value: formatEGP(t.price.sellerReceives) },
           ]
         : [
@@ -556,7 +556,8 @@ function OfferFields({ condition, defaults, request }: { condition: string | nul
 function PayoutFields({ holder }: { holder: string }) {
   return (
     <fieldset className="space-y-3 rounded-xl border border-line p-4">
-      <legend className="px-1 text-sm font-bold">بيانات استلام الأموال</legend>
+      <legend className="px-1 text-sm font-bold">وسيلة الاستلام (بتتسجل مع العرض)</legend>
+      <p className="text-xs text-muted">للمرجع في العرض بس، ومش بتُستخدم للصرف. مستحقات الصفقة بتتحوّل لما تطلب سحب من «مستحقاتي من البيع» على «بيانات استلام الأموال» المتحقق منها والإدارة تعتمده.</p>
       <Field label="الوسيلة" htmlFor="payoutType"><Select id="payoutType" name="payoutType" defaultValue="INSTAPAY"><option value="INSTAPAY">إنستاباي</option><option value="MOBILE_WALLET">محفظة موبايل</option><option value="BANK_ACCOUNT">حساب بنكي</option></Select></Field>
       <Field label="اسم صاحب الحساب" htmlFor="holderName" required><Input id="holderName" name="holderName" defaultValue={holder} required /></Field>
       <Field label="عنوان إنستاباي (لإنستاباي)" htmlFor="instapayAddress"><Input id="instapayAddress" name="instapayAddress" dir="ltr" /></Field>

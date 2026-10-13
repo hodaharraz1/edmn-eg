@@ -60,13 +60,13 @@ export default async function AdminReturn(props: PageProps<'/admin/returns/[id]'
         {['RECEIVED', 'INSPECTION', 'DISPUTED'].includes(r.status) && (
           <ActionForm action={adminReturnAction} className="card space-y-2 p-5 md:col-span-2">
             {hidden}<input type="hidden" name="op" value="refund" />
-            <h2 className="font-bold">اعتماد الاسترداد</h2>
-            <p className="text-xs text-muted">الحد الأقصى شاملاً الشحن: {formatEGP(ceiling.max)}. يُنشأ سجل استرداد يُصرف يدوياً من صفحة المستردات.</p>
+            <h2 className="font-bold">قبول الإرجاع وتسجيل طلب استرداد</h2>
+            <p className="text-xs text-muted">الحد الأقصى شاملاً الشحن: {formatEGP(ceiling.max)}. يُنشأ طلب استرداد فقط — لا يتحرك أي مبلغ هنا. الاعتماد المالي (منشئ ومعتمد مختلفان) ثم تسجيل الصرف يتمان من صفحة المستردات.</p>
             <Field label="المبلغ (اتركه فارغاً للحد الأقصى)"><Input name="amount" inputMode="decimal" placeholder={toInputAmount(ceiling.max)} /></Field>
             <Checkbox name="includeShipping" label="يشمل رسوم الشحن" />
             <Checkbox name="restock" label="إعادة المنتج للمخزون" />
             <Field label="ملاحظة"><Input name="note" /></Field>
-            <SubmitButton>اعتماد الاسترداد</SubmitButton>
+            <SubmitButton>تسجيل طلب الاسترداد</SubmitButton>
           </ActionForm>
         )}
       </div>

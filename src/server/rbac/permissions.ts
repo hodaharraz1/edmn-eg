@@ -53,7 +53,7 @@ export const PERMISSIONS = {
   'ledger.adjust.create': 'إنشاء تسوية مالية',
   'ledger.adjust.approve': 'اعتماد تسوية مالية',
   'settlements.manage': 'إدارة التسويات الدورية',
-  'finance.release': 'اعتماد إتاحة أرباح البائع بعد الاستلام',
+  'finance.release': 'اعتماد إتاحة مستحقات البائع بعد الاستلام',
   'finance.controls': 'مفاتيح الإيقاف المالية والإقفال اليومي',
   'reconciliation.manage': 'المطابقة مع كشوف الحسابات',
   // Pricing & fees (versioned fee engine)

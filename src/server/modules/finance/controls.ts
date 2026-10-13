@@ -13,7 +13,7 @@ import { reconcile } from './ledger';
 export const KILL_SWITCHES = {
   'killswitch.global': 'إيقاف طوارئ: كل الحركات المالية الجديدة',
   'killswitch.paymentConfirmation': 'تأكيد المدفوعات اليدوية',
-  'killswitch.sellerRelease': 'إتاحة أرباح البائعين (Seller release)',
+  'killswitch.sellerRelease': 'إتاحة مستحقات البائعين (Seller release)',
   'killswitch.refunds': 'اعتماد الاستردادات',
   'killswitch.withdrawals': 'اعتماد وحجز طلبات السحب',
   'killswitch.payouts': 'تسجيل صرف السحب والاستردادات ومستحقات الصفقات',
@@ -313,7 +313,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
   );
   add(
     'COMPLETION_WITHOUT_RELEASE',
-    'طلب مكتمل بدون إتاحة أرباح أو أساس استلام',
+    'طلب مكتمل بدون إتاحة مستحقات أو أساس استلام',
     await rows(conn, sql`select id from seller_orders where status = 'COMPLETED' and (receipt_basis is null or funds_released_at is null)`),
   );
   add(

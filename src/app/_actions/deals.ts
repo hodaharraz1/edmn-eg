@@ -96,7 +96,7 @@ export async function dealConfirmAction(_p: ActionState, fd: FormData): Promise<
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await confirmDealReceipt(actor, str(fd, 'dealId'));
-    return { message: 'أكدت الاستلام وإن المنتج مطابق. مستحقات البائع هتتحوّل بس بعد مراجعة وموافقة الإدارة.' };
+    return { message: 'أكدت الاستلام وإن المنتج مطابق. مستحقات البائع مش هتتاح له غير بعد مراجعة وموافقة الإدارة.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;

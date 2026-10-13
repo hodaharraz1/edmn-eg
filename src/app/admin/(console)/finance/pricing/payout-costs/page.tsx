@@ -9,6 +9,7 @@ import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select } from '@/ui/form';
 import { pctOf, PricingNav } from '../_view';
+import { label } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'تكاليف وحدود التحويل' };
 const money = (v: number | null) => (v === null ? 'بدون حد' : formatEGP(v));
@@ -71,7 +72,7 @@ export default async function PayoutCosts() {
         <h2 className="mb-2 font-bold">سجل الإصدارات</h2>
         <table className="w-full min-w-[560px] text-xs">
           <thead className="text-muted"><tr><th className="p-1 text-start">القناة</th><th className="p-1 text-start">إصدار</th><th className="p-1 text-start">من</th><th className="p-1 text-start">إلى</th><th className="p-1 text-start">التكلفة</th></tr></thead>
-          <tbody>{rows.map((r) => <tr key={r.id} className="border-t border-line"><td className="p-1">{r.channel}</td><td className="p-1">{r.version}</td><td className="p-1">{formatDate(r.effectiveFrom, true)}</td><td className="p-1">{r.effectiveTo ? formatDate(r.effectiveTo, true) : 'سارية'}</td><td className="p-1">{pctOf(r.costBps)} + {formatEGP(r.costFixed)}</td></tr>)}</tbody>
+          <tbody>{rows.map((r) => <tr key={r.id} className="border-t border-line"><td className="p-1">{label('moneyChannel', r.channel)}</td><td className="p-1">{r.version}</td><td className="p-1">{formatDate(r.effectiveFrom, true)}</td><td className="p-1">{r.effectiveTo ? formatDate(r.effectiveTo, true) : 'سارية'}</td><td className="p-1">{pctOf(r.costBps)} + {formatEGP(r.costFixed)}</td></tr>)}</tbody>
         </table>
       </section>
     </div>

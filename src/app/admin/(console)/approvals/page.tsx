@@ -19,7 +19,7 @@ const QUEUES: Q[] = [
   { key: 'products', label: 'منتجات ومراجعات تعديل', hint: 'قبل الظهور للعامة', href: '/admin/moderation', perm: 'products.moderate', icon: PackageSearch },
   { key: 'payments', label: 'إثباتات دفع', hint: 'لا يُعتبر الطلب مدفوعاً قبل التأكيد', href: '/admin/payments', perm: 'payments.view', icon: CreditCard },
   { key: 'withdrawals', label: 'طلبات سحب البائعين', hint: 'مراجعة → اعتماد → صرف', href: '/admin/withdrawals', perm: 'withdrawals.view', icon: Wallet },
-  { key: 'releases', label: 'إتاحة أرباح البائعين', hint: 'مستحق — لا إتاحة تلقائية', href: '/admin/releases', perm: ['finance.release', 'finance.view'], icon: Banknote },
+  { key: 'releases', label: 'إتاحة مستحقات البائعين', hint: 'مستحق — لا إتاحة تلقائية', href: '/admin/releases', perm: ['finance.release', 'finance.view'], icon: Banknote },
   { key: 'refunds', label: 'مستردات للعملاء', hint: 'اعتماد ثم صرف', href: '/admin/refunds', perm: ['refunds.pay', 'refunds.approve', 'finance.view'], icon: RotateCcw },
   { key: 'dealPayouts', label: 'مستحقات صفقات خارجية', hint: 'بانتظار الصرف للبائع', href: '/admin/refunds', perm: ['deals.payout', 'finance.view'], icon: Banknote },
   { key: 'adjustments', label: 'تسويات دفترية', hint: 'نظام المُنشئ/المعتمِد', href: '/admin/ledger?tab=adjustments', perm: 'ledger.adjust.approve', icon: Scale },

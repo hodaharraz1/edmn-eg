@@ -199,7 +199,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته قبل استلامك للطلب وانتهاء مهلة الاعتراض وموافقة الإدارة. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
+              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته قبل استلامك للطلب، وتأكيدك أو انتهاء مهلة الاعتراض، وموافقة الإدارة. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
             </div>
           </div>
           <div className="card space-y-3 p-4 text-sm">

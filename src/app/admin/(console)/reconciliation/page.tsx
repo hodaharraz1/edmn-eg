@@ -12,6 +12,7 @@ import { PageHeader, Tabs } from '@/ui/data';
 import { Alert, EmptyState, StatusChip } from '@/ui/feedback';
 import { Input, Select, Textarea } from '@/ui/form';
 import { Landmark } from 'lucide-react';
+import { label, statusLabel } from '@/lib/i18n/labels';
 
 export const metadata = { title: 'المطابقة مع كشوف الحسابات' };
 
@@ -48,7 +49,7 @@ export default async function Reconciliation(props: PageProps<'/admin/reconcilia
             return (
               <li key={t.id} className="card p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span><b className="ltr">{t.externalRef}</b> · {t.channel} · {t.direction === 'IN' ? 'وارد' : 'صادر'} · {formatDate(t.occurredAt, true)} {t.counterparty && `· ${t.counterparty}`}</span>
+                  <span><b className="ltr">{t.externalRef}</b> · {label('moneyChannel', t.channel)} · {t.direction === 'IN' ? 'وارد' : 'صادر'} · {formatDate(t.occurredAt, true)} {t.counterparty && `· ${t.counterparty}`}</span>
                   <span className="flex items-center gap-2"><b>{formatEGP(t.amount)}</b><StatusChip status={t.state} /></span>
                 </div>
                 {t.matchedType && <p className="text-xs text-muted">مطابقة مع {t.matchedType}:{t.matchedId?.slice(0, 8)} {t.note && `— ${t.note}`}</p>}
@@ -74,7 +75,7 @@ export default async function Reconciliation(props: PageProps<'/admin/reconcilia
         </ul>
       )}
       <p className="text-xs text-muted">صفحة {page}{rows.length === limit && <> · <Link className="text-brand-700" href={`/admin/reconciliation?state=${state}&page=${page + 1}`}>التالي</Link></>}</p>
-      <section className="card p-4 text-sm"><h2 className="mb-1 font-bold">آخر عمليات الاستيراد</h2>{imports.map((i) => <p key={i.id}>{i.channel} · {i.rowCount} سطر · {i.status}{i.error ? ` — ${i.error}` : ''} · {formatDate(i.createdAt, true)}</p>)}</section>
+      <section className="card p-4 text-sm"><h2 className="mb-1 font-bold">آخر عمليات الاستيراد</h2>{imports.map((i) => <p key={i.id}>{label('moneyChannel', i.channel)} · {i.rowCount} سطر · {statusLabel(i.status)}{i.error ? ` — ${i.error}` : ''} · {formatDate(i.createdAt, true)}</p>)}</section>
     </div>
   );
 }

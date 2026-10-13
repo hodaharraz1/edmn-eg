@@ -24,7 +24,7 @@ export default async function IdentityQueue(props: PageProps<'/admin/identity'>)
   const rows = await identityQueue(actor, tab.statuses);
   return (
     <div className="space-y-4">
-      <PageHeader title="مركز التحقق من الهوية" description="هوية واحدة على مستوى المستخدم تُستخدم للشراء والبيع في السوق والصفقات المحمية. التحقق من الهوية ليس اعتمادًا للمتجر ولا اعتمادًا لوسيلة سحب." />
+      <PageHeader title="مركز التحقق من الهوية" description="هوية واحدة على مستوى المستخدم تُستخدم للشراء والبيع في السوق والصفقات المحمية. التحقق من الهوية ليس اعتمادًا للمتجر ولا اعتمادًا لبيانات استلام الأموال." />
       <Alert tone="info">حالات «ربط من طلب بائع سابق» لم تُعتمد تلقائيًا أبدًا: قرار البائع السابق كان لطلب المتجر، والهوية تحتاج مراجعة مستقلة.</Alert>
       <Tabs active={tab.key} tabs={TABS.map((t) => ({ key: t.key, label: t.label, href: `/admin/identity?tab=${t.key}` }))} />
       {rows.length === 0 ? (
