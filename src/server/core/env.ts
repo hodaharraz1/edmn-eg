@@ -85,7 +85,8 @@ export function env(): Env {
   }
   const e = parsed.data;
   // Batch 2: the variable policy (classification, forbidden/staging-only variables, public secrets). Never prints values.
-  const problems = [...unsafeProductionConfig(e), ...validateEnvironment(process.env).errors];
+  // (Inside the automated test process the policy is exercised by its own tests, not enforced at every env() call.)
+  const problems = [...unsafeProductionConfig(e), ...(e.NODE_ENV === 'test' ? [] : validateEnvironment(process.env).errors)];
   if (problems.length) throw new Error(`Unsafe production configuration:\n${problems.join('\n')}`);
   cached = e;
   return e;

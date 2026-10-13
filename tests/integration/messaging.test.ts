@@ -298,7 +298,12 @@ describe('security', () => {
     expect(await canReadPrivateFile(other.s.actor, att.fileId)).toBe(false);
     expect(await canReadPrivateFile(customerActor(s.user.id), att.fileId)).toBe(false); // store owner acting as a plain customer
     expect(await canReadPrivateFile(await staff(['CATALOG_REVIEWER']), att.fileId)).toBe(false);
-    expect(await canReadPrivateFile(await staff(['DISPUTE_OFFICER']), att.fileId)).toBe(true);
+    // Final audit F-8: staff with message access still need an active, purpose-bound grant for THIS conversation.
+    const officer = await staff(['DISPUTE_OFFICER']);
+    expect(await canReadPrivateFile(officer, att.fileId)).toBe(false);
+    const { grantMessageAccess } = await import('@/server/modules/messaging/service');
+    await grantMessageAccess(officer, conv.id, { purpose: 'OPERATIONS', note: 'مراجعة شكوى عن صورة المنتج في المحادثة' });
+    expect(await canReadPrivateFile(officer, att.fileId)).toBe(true);
   });
 
   it('22-23 — store staff without `orders.communicate` (catalog, finance-only) are blocked; order staff allowed', async () => {

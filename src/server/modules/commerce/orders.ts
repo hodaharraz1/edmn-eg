@@ -58,11 +58,12 @@ export function orderLabel(number: number, suffix?: string) {
  */
 export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSchema>) {
   const customerId = requireUser(actor);
+  // A closed shop says so first (before form validation or identity requirements).
+  const { assertTransactionsOpen } = await import('@/server/ops/commerce-gate');
+  await assertTransactionsOpen(db);
   const d = parse(checkoutSchema, input);
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'ORDER_PLACEMENT');
-  const { assertTransactionsOpen } = await import('@/server/ops/commerce-gate');
-  await assertTransactionsOpen(db);
   const { assertPilotAllowed } = await import('@/server/ops/pilot');
   await assertPilotAllowed(db, customerId, 'ORDER');
   try {

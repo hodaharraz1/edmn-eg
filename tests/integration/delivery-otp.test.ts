@@ -99,17 +99,22 @@ describe('delivery OTP — generation, storage, lifecycle', () => {
   });
 
   it('production keeps no recoverable copy of the code', async () => {
+    // The deal is created first (new deals are refused in production until real money is enabled — final audit);
+    // the delivery step then runs as production with a declared SMS provider.
+    const d = await activeDeal();
     const prev = process.env.EDMN_ENVIRONMENT;
+    const prevSms = process.env.SMS_DRIVER;
     process.env.EDMN_ENVIRONMENT = 'production';
+    process.env.SMS_DRIVER = 'http';
     try {
       expect(deliveryOtpTestMode()).toBe(false);
-      const d = await activeDeal();
       await markDealDelivered(d.seller, d.dealId, 'شحن');
       const [row] = await db.select().from(dealDeliveryOtps).where(eq(dealDeliveryOtps.dealId, d.dealId));
       expect(row.testCodeEnc).toBeNull();
       expect((await deliveryOtpForBuyer(d.buyer, d.dealId))!.testCode).toBeNull();
     } finally {
       process.env.EDMN_ENVIRONMENT = prev;
+      process.env.SMS_DRIVER = prevSms;
     }
   });
 
