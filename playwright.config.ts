@@ -16,6 +16,8 @@ const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH ?? (process.env.PLAY
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // The audit crawler (_audit-crawl.spec.ts) is an explicit tool, never part of the regression suite.
+  testIgnore: process.env.CRAWL_OUT ? [] : ['**/_audit-*.spec.ts'],
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
