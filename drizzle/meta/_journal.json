@@ -127,6 +127,13 @@
       "when": 1791914931697,
       "tag": "0017_batch_final_seller_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791918991680,
+      "tag": "0018_infra_provider_health",
+      "breakpoints": true
     }
   ]
 }

@@ -6,6 +6,7 @@ import { env } from '@/server/core/env';
 import { logger } from '@/server/core/logger';
 import { databaseCompatible, runtimeEnvironment, type DatabaseMarker, type RuntimeEnvironment } from '@/server/core/runtime-env';
 import { db, type DbOrTx } from './client';
+import { secretCheckValue } from '@/server/core/known-nonprod';
 
 /**
  * ENVIRONMENT FINGERPRINT (Batch 2). A runtime proves it is wired to resources of its own kind:
@@ -68,6 +69,13 @@ async function keyFingerprint(conn: DbOrTx, runtime: RuntimeEnvironment): Promis
   await conn.execute(sql`insert into secret_fingerprints (name, kcv, environment) values (${name}, ${kcv}, ${runtime}) on conflict (name) do nothing`);
   const r = await conn.execute<{ kcv: string; environment: string }>(sql`select kcv, environment from secret_fingerprints where name = ${name}`);
   const row = r.rows[0];
+  // Check values of the other environment-bound secrets are recorded too (evidence only, never compared here):
+  // they feed the non-production denylist that production checks at boot (src/server/core/known-nonprod.ts).
+  for (const n of ['SESSION_SECRET', 'CRON_SECRET'] as const) {
+    const v = process.env[n];
+    if (v) await conn.execute(sql`insert into secret_fingerprints (name, kcv, environment) values (${n}, ${secretCheckValue(n, v)}, ${runtime})
+      on conflict (name) do update set kcv = excluded.kcv, recorded_at = now() where secret_fingerprints.environment = excluded.environment`);
+  }
   if (row.environment !== runtime) return { key: 'MISMATCH', reason: `encryption key fingerprint was recorded by ${row.environment}` };
   if (row.kcv !== kcv) return { key: 'MISMATCH', reason: `primary encryption key (${primaryKeyId()}) differs from the recorded key: rotate with a new key id, never in place` };
   return { key: 'MATCH' };

@@ -55,7 +55,9 @@ export async function readiness(): Promise<{ ready: boolean; checks: Record<stri
 
 export async function deepHealth() {
   const { SCHEDULE } = await import('@/server/jobs/worker');
-  const [ready, fp, jobs, outbox, ledger, switches, scanner, thresholds] = await Promise.all([
+  const { providerHealthReport } = await import('./provider-health');
+  const { readinessTiers } = await import('@/server/core/runtime-env');
+  const [ready, fp, jobs, outbox, ledger, switches, scanner, thresholds, providerHealth] = await Promise.all([
     readiness(),
     ensureFingerprint(),
     scheduleHealth(SCHEDULE),
@@ -64,6 +66,7 @@ export async function deepHealth() {
     killSwitchStates(),
     scannerStatus(),
     getSetting('ops.thresholds'),
+    providerHealthReport(),
   ]);
   const q = await db.execute<{ failed_jobs: string; backlog: string; errors_1h: string; error_groups: string; applied: string }>(sql`select
     (select count(*) from jobs where status = 'FAILED')::text failed_jobs,
@@ -103,6 +106,8 @@ export async function deepHealth() {
       push: pushConfigured() ? 'VAPID CONFIGURED — REAL-DEVICE TEST REQUIRED' : 'PUSH NOT CONFIGURED',
       malwareScanner: scanner.active ? 'SCANNER CONFIGURED' : 'MALWARE SCANNER ACTIVE: NO',
     },
+    providerHealth,
+    tiers: readinessTiers(process.env, Object.fromEntries(providerHealth.map((p) => [p.provider, p.status]))),
     alerts,
     checkedAt: new Date().toISOString(),
   };

@@ -81,6 +81,28 @@ export default async function OpsHealth() {
           ]}
         />
       </section>
+      <section className="card p-4" data-testid="ops-provider-health">
+        <h2 className="mb-2 font-bold">صحة المزودين (من أدلة فعلية فقط)</h2>
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="صحة المزودين">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead><tr className="text-xs text-muted"><th className="p-2 text-start">المزود</th><th className="p-2 text-start">الحالة</th><th className="p-2 text-start">آخر نجاح</th><th className="p-2 text-start">آخر فشل</th><th className="p-2 text-start">إخفاقات متتالية</th></tr></thead>
+            <tbody>{h.providerHealth.map((p) => <tr key={p.provider} className="border-t border-line"><td className="p-2 ltr">{p.provider}</td><td className="p-2"><Badge tone={p.status === 'HEALTHY' ? 'success' : p.status === 'FAILED' ? 'danger' : p.status === 'DEGRADED' ? 'warning' : 'neutral'}>{p.status}</Badge></td><td className="p-2">{when(p.lastSuccessAt)}</td><td className="p-2">{when(p.lastFailureAt)}</td><td className="p-2 tabular-nums">{p.consecutiveFailures}</td></tr>)}</tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-xs text-muted">HEALTHY بتظهر بس بعد نجاح فعلي متسجّل — الإعداد لوحده بيظهر CONFIGURED_UNVERIFIED.</p>
+      </section>
+      <section className="card p-4" data-testid="ops-readiness-tiers">
+        <h2 className="mb-2 font-bold">الجاهزية حسب المرحلة (البنية التحتية فقط)</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          {h.tiers.map((t) => (
+            <div key={t.tier} className="rounded-lg border border-line p-3 text-sm">
+              <p className="mb-1 flex items-center justify-between gap-2 font-semibold"><span className="ltr">{t.tier}</span><Badge tone={t.ready ? 'success' : 'warning'}>{t.ready ? 'جاهز' : 'غير جاهز'}</Badge></p>
+              <ul className="space-y-1 text-xs">{t.requirements.filter((r) => r.tier === t.tier).map((r) => <li key={r.code} className={r.met ? 'text-emerald-700' : 'text-amber-800'}>{r.met ? '✓' : '✗'} <span className="ltr">{r.label}</span></li>)}</ul>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">الفلوس الحقيقية محتاجة كمان بوابة الإطلاق المالية كاملة (صفحة الرقابة المالية) — ومفيش أي حاجة هنا بتفعّلها.</p>
+      </section>
       {canRequeue && dead.length > 0 && (
         <section className="card p-4" data-testid="ops-dead-letters">
           <h2 className="mb-2 font-bold">رسائل فشلت نهائيًا (آخر 20)</h2>

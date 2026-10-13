@@ -1,3 +1,5 @@
+import { NONPROD_DATA_KEY_KCVS, NONPROD_DB_ENDPOINT_HASHES, NONPROD_SECRET_KCVS, dataKeyCheckValue, databaseEndpointHash, secretCheckValue } from './known-nonprod';
+
 /**
  * ENVIRONMENT MODEL (Batch 2).
  *
@@ -71,6 +73,15 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'ADMIN_IDLE_TIMEOUT_MINUTES', classification: 'OPTIONAL', secret: false, purpose: 'Staff session idle timeout (default 30, max 240)' },
   { name: 'MALWARE_SCAN_REQUIRED', classification: 'OPTIONAL', secret: false, purpose: 'Gate private files on a scan outside production (always on in production)' },
   { name: 'OUTBOX_ENCRYPT_SECRETS', classification: 'OPTIONAL', secret: false, purpose: 'Seal codes/links in the outbox outside production (always on in production)' },
+  { name: 'ADMIN_APP_URL', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'Admin console origin (https://admin host)' },
+  { name: 'SELLER_APP_URL', classification: 'OPTIONAL', secret: false, purpose: 'Seller Center URL (www/seller at launch)' },
+  { name: 'ERROR_TRACKING_PROVIDER', classification: 'OPTIONAL', secret: false, purpose: 'sentry | webhook (detected from the DSN when absent)' },
+  { name: 'ERROR_TRACKING_TOKEN', classification: 'OPTIONAL', secret: true, purpose: 'Bearer token for a generic webhook error tracker' },
+  { name: 'EDMN_RELEASE', classification: 'OPTIONAL', secret: false, purpose: 'Release tag for error tracking (defaults to the Vercel git SHA)' },
+  { name: 'EMAIL_WEBHOOK_SECRET', classification: 'OPTIONAL', secret: true, purpose: 'Signing secret of the email delivery webhook (DELIVERED/BOUNCED evidence)' },
+  { name: 'MALWARE_SCANNER_TOKEN', classification: 'OPTIONAL', secret: true, purpose: 'Bearer token of the private scanner wrapper' },
+  { name: 'MALWARE_SCANNER_TIMEOUT_MS', classification: 'OPTIONAL', secret: false, purpose: 'Scanner request timeout (default 30000; a timeout is a scan failure)' },
+  { name: 'PUSH_ALLOW_ANY_ENDPOINT', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'Test tooling: accept non-standard push endpoints' },
   { name: 'STAGING_DEMO_PASSWORD', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo accounts password' },
   { name: 'STAGING_ADMIN_PASSWORD', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo admin password' },
   { name: 'STAGING_TOTP_SECRET', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo admin TOTP seed' },
@@ -131,11 +142,110 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
     if (raw.SMS_DRIVER === 'http' && (!raw.SMS_HTTP_URL || !raw.SMS_HTTP_TOKEN)) errors.push('SMS_DRIVER=http needs SMS_HTTP_URL and SMS_HTTP_TOKEN');
     if (!raw.VERCEL && raw.TRUSTED_PROXY !== 'true') warnings.push('Self-hosted without TRUSTED_PROXY=true: client IPs are unknown (per-IP rate limits share one bucket)');
     if (raw.INLINE_WORKER !== 'true' && !raw.WORKER_DEDICATED) warnings.push('No dedicated worker declared (WORKER_DEDICATED) and INLINE_WORKER is off: jobs only run on the daily cron');
+    errors.push(...productionIsolationErrors(raw));
   }
   if (kind !== 'PRODUCTION' && kind !== 'STAGING' && raw.NODE_ENV === 'production' && !raw.EDMN_ENVIRONMENT) errors.push('EDMN_ENVIRONMENT must be set for a production build');
   if (present('DATA_ENCRYPTION_KEYS_PREVIOUS') && !/^([a-z0-9_-]{1,16}:[A-Za-z0-9+/=]{20,})(,[a-z0-9_-]{1,16}:[A-Za-z0-9+/=]{20,})*$/i.test(raw.DATA_ENCRYPTION_KEYS_PREVIOUS!)) errors.push('DATA_ENCRYPTION_KEYS_PREVIOUS must be "kid:base64,kid:base64"');
   if (present('DATA_ENCRYPTION_KEY_ID') && !/^[a-z0-9_-]{1,16}$/i.test(raw.DATA_ENCRYPTION_KEY_ID!)) errors.push('DATA_ENCRYPTION_KEY_ID must be 1-16 chars [a-z0-9_-]');
   return { environment: kind, errors, warnings, variables };
+}
+
+const hostOf = (u: string | undefined) => {
+  try {
+    return u ? new URL(u).hostname.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+};
+const baseDomain = (h: string) => h.split('.').slice(-2).join('.');
+
+/**
+ * PRODUCTION ISOLATION (production infrastructure batch): refuses staging / test resources and secrets, and an
+ * inconsistent host layout. Pure — only one-way fingerprints are compared (src/server/core/known-nonprod.ts).
+ */
+export interface NonProdDenylist {
+  dataKeys: readonly string[];
+  secrets: readonly string[];
+  dbEndpoints: readonly string[];
+}
+const DENY: NonProdDenylist = { dataKeys: NONPROD_DATA_KEY_KCVS, secrets: NONPROD_SECRET_KCVS, dbEndpoints: NONPROD_DB_ENDPOINT_HASHES };
+
+export function productionIsolationErrors(raw: Raw, deny: NonProdDenylist = DENY): string[] {
+  const errors: string[] = [];
+  const present = (n: string) => typeof raw[n] === 'string' && raw[n] !== '';
+  // Secrets: never a known staging/test value, never shared between purposes, a deliberate key id.
+  if (present('DATA_ENCRYPTION_KEY') && deny.dataKeys.includes(dataKeyCheckValue(raw.DATA_ENCRYPTION_KEY!))) errors.push('DATA_ENCRYPTION_KEY is a known staging/test key');
+  for (const n of ['SESSION_SECRET', 'CRON_SECRET']) if (present(n) && deny.secrets.includes(secretCheckValue(n, raw[n]!))) errors.push(`${n} is a known staging/test secret`);
+  if (!present('DATA_ENCRYPTION_KEY_ID') || raw.DATA_ENCRYPTION_KEY_ID === 'default') errors.push('DATA_ENCRYPTION_KEY_ID must be set to a production key id (not "default")');
+  const secrets = ['SESSION_SECRET', 'DATA_ENCRYPTION_KEY', 'CRON_SECRET'].filter(present).map((n) => raw[n]);
+  if (new Set(secrets).size !== secrets.length) errors.push('SESSION_SECRET, DATA_ENCRYPTION_KEY and CRON_SECRET must all be different secrets');
+  // Database: never the staging endpoint, never a local / test / staging database.
+  for (const n of ['DATABASE_URL', 'DATABASE_URL_UNPOOLED']) {
+    if (!present(n)) continue;
+    const url = raw[n]!;
+    const h = databaseEndpointHash(url);
+    if (h && deny.dbEndpoints.includes(h)) errors.push(`${n} points at the staging database`);
+    if (/@(localhost|127\.0\.0\.1|\[::1\])[:/]/i.test(url)) errors.push(`${n} points at a local database`);
+    const dbName = url.match(/\/([^/?]+)(\?|$)/)?.[1] ?? '';
+    if (/(^|[_-])(test|e2e|staging|demo)([_-]|$)/i.test(dbName)) errors.push(`${n} names a test/staging database`);
+  }
+  // Hosts: public site and admin console on different, consistent https origins.
+  const app = hostOf(raw.APP_URL);
+  const admin = hostOf(raw.ADMIN_APP_URL);
+  const adminHost = (raw.ADMIN_HOST ?? '').toLowerCase();
+  if (app && /(^|[.-])(staging|localhost)([.-]|$)/.test(app)) errors.push('APP_URL must be the production site, not a staging/local host');
+  if (!adminHost) errors.push('ADMIN_HOST must be set explicitly in PRODUCTION');
+  if (present('ADMIN_APP_URL') && !raw.ADMIN_APP_URL!.startsWith('https://')) errors.push('ADMIN_APP_URL must be https');
+  if (admin && adminHost && admin !== adminHost) errors.push('ADMIN_APP_URL host must equal ADMIN_HOST');
+  if (app && adminHost && app === adminHost) errors.push('ADMIN_HOST must differ from the public APP_URL host');
+  // Email sender on the production domain (skipped while the site still runs on a platform preview domain).
+  const from = raw.MAIL_FROM?.match(/<?([^<>\s]+@([^<>\s]+))>?\s*$/);
+  if (raw.MAIL_FROM && !from) errors.push('MAIL_FROM must contain a sender address');
+  if (from && app && !/\.vercel\.app$/.test(app) && baseDomain(from[2].toLowerCase()) !== baseDomain(app)) errors.push('MAIL_FROM must use the production domain');
+  // Optional providers: when configured, configured safely.
+  if (present('VAPID_PUBLIC_KEY') && !/^(mailto:[^@\s]+@[^@\s]+|https:\/\/)/.test(raw.VAPID_SUBJECT ?? '')) errors.push('VAPID_SUBJECT must be mailto:<official address> or an https URL');
+  if (/example\.(com|org|net)|\.local\b/i.test(raw.VAPID_SUBJECT ?? '')) errors.push('VAPID_SUBJECT must be the real contact');
+  for (const n of ['MALWARE_SCANNER_URL', 'ERROR_TRACKING_DSN']) if (present(n) && !raw[n]!.startsWith('https://')) errors.push(`${n} must be https in PRODUCTION`);
+  if (present('MALWARE_SCANNER_URL') && !present('MALWARE_SCANNER_TOKEN')) errors.push('MALWARE_SCANNER_TOKEN is required with MALWARE_SCANNER_URL');
+  if (present('EMAIL_WEBHOOK_SECRET') && raw.EMAIL_WEBHOOK_SECRET!.length < 24) errors.push('EMAIL_WEBHOOK_SECRET is too short');
+  return errors;
+}
+
+/* ═══════════════ Readiness tiers (public website / controlled pilot / real money) ═══════════════ */
+
+export type Tier = 'PUBLIC_WEBSITE' | 'CONTROLLED_PILOT' | 'REAL_MONEY';
+export interface TierRequirement {
+  tier: Tier;
+  code: string;
+  label: string;
+  met: boolean;
+}
+
+/**
+ * What each launch tier needs, from configuration + recorded provider evidence (never from configuration alone
+ * where evidence exists). REAL_MONEY additionally requires the full go-live gate (financial controls) — reported
+ * there; this list only covers infrastructure. Each tier includes the requirements of the tiers before it.
+ */
+export function readinessTiers(raw: Raw, providerStatus: Partial<Record<string, string>>): { tier: Tier; ready: boolean; requirements: TierRequirement[] }[] {
+  const ok = (p: string) => providerStatus[p] === 'HEALTHY';
+  const configured = (p: string) => !!providerStatus[p] && providerStatus[p] !== 'NOT_CONFIGURED';
+  const req: TierRequirement[] = [
+    { tier: 'PUBLIC_WEBSITE', code: 'CONFIG_POLICY', label: 'Environment policy has no errors', met: validateEnvironment(raw).errors.length === 0 },
+    { tier: 'PUBLIC_WEBSITE', code: 'ADMIN_HOST', label: 'Admin console on its own host', met: raw.ENFORCE_ADMIN_HOST === 'true' || raw.ENFORCE_HOSTS === 'true' },
+    { tier: 'PUBLIC_WEBSITE', code: 'SMTP', label: 'Transactional email configured', met: configured('SMTP') },
+    { tier: 'PUBLIC_WEBSITE', code: 'SCHEDULER', label: 'Scheduler running (critical jobs current)', met: ok('SCHEDULER') },
+    { tier: 'CONTROLLED_PILOT', code: 'SMTP_EVIDENCE', label: 'Email accepted by the provider (recorded)', met: ok('SMTP') },
+    { tier: 'CONTROLLED_PILOT', code: 'MALWARE_SCANNER', label: 'Private malware scanner healthy (private files are unavailable without it)', met: ok('MALWARE_SCANNER') },
+    { tier: 'CONTROLLED_PILOT', code: 'ERROR_TRACKING', label: 'External error tracking healthy', met: ok('ERROR_TRACKING') },
+    { tier: 'REAL_MONEY', code: 'EMAIL_WEBHOOK', label: 'Email delivery webhook healthy (DELIVERED evidence)', met: ok('EMAIL_WEBHOOK') },
+    { tier: 'REAL_MONEY', code: 'SMS', label: 'SMS provider configured', met: raw.SMS_DRIVER === 'http' },
+    { tier: 'REAL_MONEY', code: 'PAYMENT_WEBHOOK', label: 'Payment provider signing secret configured', met: !!raw.PAYMENT_WEBHOOK_SECRET },
+  ];
+  const order: Tier[] = ['PUBLIC_WEBSITE', 'CONTROLLED_PILOT', 'REAL_MONEY'];
+  return order.map((tier, i) => {
+    const requirements = req.filter((r) => order.indexOf(r.tier) <= i);
+    return { tier, ready: requirements.every((r) => r.met), requirements };
+  });
 }
 
 /** SMS can really be delivered: an HTTP provider, or a non-production environment (log driver for testing). */

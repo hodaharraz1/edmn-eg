@@ -4,6 +4,7 @@ import { runtimeEnvironment } from '@/server/core/runtime-env';
 import { db } from '@/server/db/client';
 import { files, type FilePurpose } from '@/server/db/schema';
 import { storage } from './storage';
+import { recordProviderResult } from '@/server/ops/provider-health';
 
 /* ═══════════════ Storage classification (Batch 2) ═══════════════ */
 
@@ -36,10 +37,30 @@ export interface MalwareScanner {
 }
 
 /**
- * Generic HTTP scanner adapter (e.g. a ClamAV REST sidecar): POST the bytes, expect
- * {"result":"CLEAN"|"INFECTED", "signature"?:string}. Anything else is a scan failure, never a pass.
+ * HTTP scanner adapter for a PRIVATE scanner service we operate (e.g. ClamAV behind `ops/scanner/clamd-http.mjs`).
+ * Contract: POST the raw bytes (application/octet-stream, Bearer MALWARE_SCANNER_TOKEN) → 200 JSON
+ *   {"result":"CLEAN"} | {"result":"INFECTED","signature":"…"} | {"result":"REJECTED","reason":"…"}
+ * FAIL CLOSED: a non-200 status, a timeout, an unreachable scanner, a non-JSON body or any other "result" is a
+ * scan FAILURE (the file stays unavailable) — never CLEAN. Files are never sent to a public multi-engine service.
  */
-export function httpScanner(url: string, token?: string): MalwareScanner {
+export class ScannerError extends Error {}
+
+export function parseScannerResponse(status: number, text: string): ScanVerdict {
+  if (status !== 200) throw new ScannerError(`scanner responded ${status}`);
+  let j: { result?: unknown; signature?: unknown; reason?: unknown };
+  try {
+    j = JSON.parse(text);
+  } catch {
+    throw new ScannerError('scanner returned a malformed response');
+  }
+  if (!j || typeof j !== 'object') throw new ScannerError('scanner returned a malformed response');
+  if (j.result === 'CLEAN') return { verdict: 'CLEAN', engine: 'http-scanner' };
+  if (j.result === 'INFECTED') return { verdict: 'INFECTED', engine: 'http-scanner', detail: String(j.signature ?? 'unknown').replace(/[^\w.:/-]/g, '').slice(0, 120) || 'unknown' };
+  if (j.result === 'REJECTED') return { verdict: 'REJECTED', engine: 'http-scanner', detail: String(j.reason ?? 'rejected').replace(/[^\w .:/-]/g, '').slice(0, 120) };
+  throw new ScannerError('scanner returned no verdict');
+}
+
+export function httpScanner(url: string, token?: string, timeoutMs = Number(process.env.MALWARE_SCANNER_TIMEOUT_MS ?? 30_000)): MalwareScanner {
   return {
     name: 'http-scanner',
     async scan(data, meta) {
@@ -47,13 +68,9 @@ export function httpScanner(url: string, token?: string): MalwareScanner {
         method: 'POST',
         headers: { 'content-type': 'application/octet-stream', 'x-file-id': meta.fileId, ...(token ? { authorization: `Bearer ${token}` } : {}) },
         body: new Uint8Array(data),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
-      if (!res.ok) throw new Error(`scanner responded ${res.status}`);
-      const j = (await res.json()) as { result?: string; signature?: string };
-      if (j.result === 'CLEAN') return { verdict: 'CLEAN', engine: 'http-scanner' };
-      if (j.result === 'INFECTED') return { verdict: 'INFECTED', engine: 'http-scanner', detail: String(j.signature ?? 'unknown').slice(0, 120) };
-      throw new Error('scanner returned no verdict');
+      return parseScannerResponse(res.status, await res.text());
     },
   };
 }
@@ -95,8 +112,11 @@ export function servable(f: { visibility: string; scanStatus: string }): boolean
 export async function scanPendingFiles(limit = 20) {
   const scanner = activeScanner();
   if (!scanner) return { processed: 0, scanner: 'NONE' };
+  // A failed scan (scanner down, timeout, malformed reply) is retried after 15 minutes; the file stays unavailable
+  // meanwhile. Retried files queue behind new uploads (ordered by last attempt), so failures never starve the queue.
+  await db.execute(sql`update files set scan_status = 'QUARANTINED' where scan_status = 'SCAN_FAILED' and deleted_at is null and scanned_at < now() - interval '15 minutes'`);
   const claimed = await db.execute<{ id: string }>(sql`update files set scan_status = 'SCANNING'
-    where id in (select id from files where scan_status = 'QUARANTINED' and deleted_at is null order by created_at limit ${limit} for update skip locked)
+    where id in (select id from files where scan_status = 'QUARANTINED' and deleted_at is null order by coalesce(scanned_at, created_at) limit ${limit} for update skip locked)
     returning id`);
   // A SCANNING row older than 30 minutes (crashed scan) goes back to the queue.
   await db.execute(sql`update files set scan_status = 'QUARANTINED' where scan_status = 'SCANNING' and coalesce(scanned_at, created_at) < now() - interval '30 minutes' and id not in (${claimed.rows.length ? sql.join(claimed.rows.map((r) => sql`${r.id}::uuid`), sql`, `) : sql`null`})`);
@@ -111,9 +131,11 @@ export async function scanPendingFiles(limit = 20) {
       const v = await scanner.scan(data, { fileId: f.id, mimeType: f.mimeType });
       await db.update(files).set({ scanStatus: v.verdict, scannedAt: new Date(), scanEngine: v.engine, scanDetail: v.detail ?? null }).where(eq(files.id, f.id));
       if (v.verdict !== 'CLEAN') logger.warn('file.scan_blocked', { fileId: f.id, purpose: f.purpose, verdict: v.verdict });
+      await recordProviderResult('MALWARE_SCANNER', true);
       processed++;
     } catch (e) {
       failed++;
+      if (!(e instanceof Error && e.message === 'object missing from storage')) await recordProviderResult('MALWARE_SCANNER', false, e);
       await db.update(files).set({ scanStatus: 'SCAN_FAILED', scannedAt: new Date(), scanEngine: scanner.name, scanDetail: safeErrorMessage(e).slice(0, 200) }).where(eq(files.id, f.id));
     }
   }

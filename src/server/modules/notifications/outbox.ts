@@ -8,6 +8,7 @@ import { runtimeEnvironment } from '@/server/core/runtime-env';
 import { db } from '@/server/db/client';
 import { outboundMessages } from '@/server/db/schema';
 import { providerFor } from './providers';
+import { recordProviderResult } from '@/server/ops/provider-health';
 
 /**
  * RELIABLE OUTBOX (Batch 2) for email / SMS.
@@ -85,8 +86,10 @@ export async function flushOutbound(limit = 50) {
         .update(outboundMessages)
         .set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1, lockedAt: null, providerMessageId: res?.providerMessageId ?? null, bodyEnc: null, ...(redact ? { body: REDACTED_BODY } : {}) })
         .where(eq(outboundMessages.id, m.id));
+      if (p.name === 'smtp') await recordProviderResult('SMTP', true);
       sent++;
     } catch (e) {
+      if (m.channel === 'EMAIL' && process.env.MAIL_DRIVER === 'smtp') await recordProviderResult('SMTP', false, e);
       const attempts = m.attempts + 1;
       const dead = attempts >= m.maxAttempts || (e instanceof Error && e.message === 'secret content expired before delivery');
       await db

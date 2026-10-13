@@ -24,9 +24,14 @@ export interface ScheduledJob {
 export const WORKER_ID = `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`;
 
 /** Atomically takes the lease if the job is due (or forced) and no live lease exists. */
-export async function acquireLease(job: Pick<ScheduledJob, 'name' | 'everyMs' | 'leaseMs'>, owner: string, force = false): Promise<boolean> {
+/**
+ * `dueRatio` (0 < r ≤ 1) lets an external scheduler whose invocations jitter by a few seconds still find a job due
+ * (e.g. 0.9 → a 60 s job is due after 54 s). It never allows two runs at once: the live lease still decides.
+ */
+export async function acquireLease(job: Pick<ScheduledJob, 'name' | 'everyMs' | 'leaseMs'>, owner: string, force = false, dueRatio = 1): Promise<boolean> {
   const leaseMs = job.leaseMs ?? Math.min(15 * 60_000, Math.max(60_000, job.everyMs));
   const every = Math.round(job.everyMs / 1000);
+  const dueAfter = Math.max(1, Math.round(every * Math.min(1, Math.max(0.5, dueRatio))));
   const r = await db.execute<{ job_name: string }>(sql`
     insert into job_leases (job_name, owner, lease_until, every_seconds, last_started_at, next_expected_at)
     values (${job.name}, ${owner}, now() + make_interval(secs => ${leaseMs / 1000}), ${every}, now(), now() + make_interval(secs => ${every}))
@@ -34,7 +39,7 @@ export async function acquireLease(job: Pick<ScheduledJob, 'name' | 'everyMs' | 
       owner = excluded.owner, lease_until = excluded.lease_until, every_seconds = excluded.every_seconds,
       last_started_at = now(), next_expected_at = excluded.next_expected_at, updated_at = now()
     where job_leases.lease_until < now()
-      and (${force} or job_leases.last_started_at is null or job_leases.last_started_at <= now() - make_interval(secs => ${every}))
+      and (${force} or job_leases.last_started_at is null or job_leases.last_started_at <= now() - make_interval(secs => ${dueAfter}))
     returning job_name`);
   return r.rows.length > 0;
 }
@@ -60,11 +65,11 @@ function items(res: unknown): { processed: number | null; failed: number | null 
 export type RunOutcome = 'SUCCEEDED' | 'FAILED' | 'SKIPPED';
 
 /** Runs one scheduled job under its lease, recording telemetry. Never throws. */
-export async function runScheduled(job: ScheduledJob, opts: { force?: boolean; owner?: string } = {}): Promise<RunOutcome> {
+export async function runScheduled(job: ScheduledJob, opts: { force?: boolean; owner?: string; dueRatio?: number } = {}): Promise<RunOutcome> {
   const owner = opts.owner ?? WORKER_ID;
   let leased = false;
   try {
-    leased = await acquireLease(job, owner, !!opts.force);
+    leased = await acquireLease(job, owner, !!opts.force, opts.dueRatio ?? 1);
   } catch (e) {
     logger.error('schedule.lease_failed', { name: job.name, error: safeErrorMessage(e) });
     return 'SKIPPED';

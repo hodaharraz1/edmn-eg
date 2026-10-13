@@ -103,3 +103,17 @@ export const errorEvents = pgTable(
   },
   (t) => [uniqueIndex('error_events_fingerprint_uq').on(t.fingerprint), index('error_events_last_seen_idx').on(t.lastSeenAt)],
 );
+
+/**
+ * External provider evidence (production infrastructure batch): the last real success / failure observed for each
+ * provider adapter (SMTP hand-off, delivery webhook, error tracking forward, malware scan, Web Push send).
+ * HEALTHY is only ever derived from a recorded success — configuration alone is CONFIGURED_UNVERIFIED.
+ */
+export const providerHealth = pgTable('provider_health', {
+  provider: text().primaryKey(),
+  lastSuccessAt: ts(),
+  lastFailureAt: ts(),
+  consecutiveFailures: integer().notNull().default(0),
+  lastErrorSafe: text(),
+  updatedAt: updatedAt(),
+});

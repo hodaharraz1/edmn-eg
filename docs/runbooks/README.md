@@ -16,3 +16,4 @@
 
 Where things are: Ops deep health `/admin/ops`; financial control center `/admin/finance-control`; readiness `/api/ready`; liveness `/api/health`; ledger check `npm run ledger:check`.
 Rules that every runbook inherits: never reset staging/production, never truncate or rewrite financial history, never mutate A-100016, never weaken Maker/Checker / KYC / payout verification, fail closed.
+- `PRODUCTION_INFRASTRUCTURE.md` — connecting providers (cron, region, email delivery webhook, error tracking, private ClamAV scanner, Web Push) with every OWNER ACTION marked.

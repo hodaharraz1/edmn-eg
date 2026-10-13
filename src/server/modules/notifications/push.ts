@@ -5,6 +5,7 @@ import { logger } from '@/server/core/logger';
 import { notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { pushSubscriptions } from '@/server/db/schema';
+import { recordProviderResult } from '@/server/ops/provider-health';
 
 /**
  * Web Push (standard W3C Push API + VAPID). Subscriptions are per browser/device and stored encrypted.
@@ -130,7 +131,7 @@ async function defaultSender(secret: PushSecret, payload: string) {
   const res = await webpush.sendNotification({ endpoint: secret.endpoint, keys: { p256dh: secret.p256dh, auth: secret.auth } }, payload, {
     TTL: 6 * 3600,
     urgency: 'normal',
-    vapidDetails: { subject: e.VAPID_SUBJECT ?? 'mailto:support@edmneg.com', publicKey: e.VAPID_PUBLIC_KEY!, privateKey: e.VAPID_PRIVATE_KEY! },
+    vapidDetails: { subject: e.VAPID_SUBJECT ?? 'mailto:info@edmneg.com', publicKey: e.VAPID_PUBLIC_KEY!, privateKey: e.VAPID_PRIVATE_KEY! },
   });
   return { statusCode: res.statusCode };
 }
@@ -148,6 +149,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
   let accepted = 0;
   let failed = 0;
   let lastError: string | null = null;
+  let serviceFailure: unknown = null;
   const body = JSON.stringify(payload);
   for (const s of subs) {
     let secret: PushSecret;
@@ -177,7 +179,11 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
           .where(eq(pushSubscriptions.id, s.id));
       }
       logger.warn('push.send_failed', { subscription: s.id, status: code ?? null });
+      // An expired / rejected subscription (4xx) is the device's state, not a push-service failure.
+      if (!code || code >= 500 || code === 429) serviceFailure = e;
     }
   }
+  if (accepted > 0) await recordProviderResult('WEB_PUSH', true);
+  else if (serviceFailure) await recordProviderResult('WEB_PUSH', false, serviceFailure);
   return { accepted, failed, lastError };
 }
