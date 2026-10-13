@@ -61,6 +61,18 @@ async function storageFingerprint(runtime: RuntimeEnvironment, raw: Record<strin
   return ok ? { storage: `local:${current}` } : { storage: `local:${current}`, reason: `storage root is marked ${current}, runtime is ${runtime}` };
 }
 
+/**
+ * Check values of the other environment-bound secrets (evidence only, never compared here): they feed the
+ * non-production denylist production checks at boot (src/server/core/known-nonprod.ts). secret_fingerprints is
+ * append-only (no UPDATE): the first recording stands; a later rotation is recorded under the key-id process.
+ */
+export async function recordSecretCheckValues(conn: DbOrTx, runtime: RuntimeEnvironment, raw: Record<string, string | undefined> = process.env) {
+  for (const n of ['SESSION_SECRET', 'CRON_SECRET'] as const) {
+    const v = raw[n];
+    if (v) await conn.execute(sql`insert into secret_fingerprints (name, kcv, environment) values (${n}, ${secretCheckValue(n, v)}, ${runtime}) on conflict (name) do nothing`);
+  }
+}
+
 /** Records (first hosted boot) or compares the primary key's check value. Never stores or logs the key. */
 async function keyFingerprint(conn: DbOrTx, runtime: RuntimeEnvironment): Promise<{ key: FingerprintResult['key']; reason?: string }> {
   if (runtime !== 'STAGING' && runtime !== 'PRODUCTION') return { key: 'NOT_TRACKED' };
@@ -69,13 +81,7 @@ async function keyFingerprint(conn: DbOrTx, runtime: RuntimeEnvironment): Promis
   await conn.execute(sql`insert into secret_fingerprints (name, kcv, environment) values (${name}, ${kcv}, ${runtime}) on conflict (name) do nothing`);
   const r = await conn.execute<{ kcv: string; environment: string }>(sql`select kcv, environment from secret_fingerprints where name = ${name}`);
   const row = r.rows[0];
-  // Check values of the other environment-bound secrets are recorded too (evidence only, never compared here):
-  // they feed the non-production denylist that production checks at boot (src/server/core/known-nonprod.ts).
-  for (const n of ['SESSION_SECRET', 'CRON_SECRET'] as const) {
-    const v = process.env[n];
-    if (v) await conn.execute(sql`insert into secret_fingerprints (name, kcv, environment) values (${n}, ${secretCheckValue(n, v)}, ${runtime})
-      on conflict (name) do update set kcv = excluded.kcv, recorded_at = now() where secret_fingerprints.environment = excluded.environment`);
-  }
+  await recordSecretCheckValues(conn, runtime);
   if (row.environment !== runtime) return { key: 'MISMATCH', reason: `encryption key fingerprint was recorded by ${row.environment}` };
   if (row.kcv !== kcv) return { key: 'MISMATCH', reason: `primary encryption key (${primaryKeyId()}) differs from the recorded key: rotate with a new key id, never in place` };
   return { key: 'MATCH' };

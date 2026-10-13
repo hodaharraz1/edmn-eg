@@ -379,6 +379,21 @@ describe('production environment isolation', () => {
     expect(dataKeyCheckValue(process.env.DATA_ENCRYPTION_KEY!)).toBe(keyCheckValue());
   });
 
+  it('secret check values are recorded once and re-recording never touches the append-only table (fingerprint stays verifiable)', async () => {
+    const { recordSecretCheckValues } = await import('@/server/db/fingerprint');
+    const names = ['SESSION_SECRET', 'CRON_SECRET'];
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`delete from secret_fingerprints where name in ('SESSION_SECRET', 'CRON_SECRET')`).catch(() => {});
+    }).catch(() => {});
+    const raw = { SESSION_SECRET: 's'.repeat(44), CRON_SECRET: 'c'.repeat(32) };
+    await recordSecretCheckValues(db, 'STAGING', raw);
+    await expect(recordSecretCheckValues(db, 'STAGING', raw)).resolves.toBeUndefined(); // second boot: no UPDATE attempted
+    await expect(recordSecretCheckValues(db, 'STAGING', { SESSION_SECRET: 'x'.repeat(44) })).resolves.toBeUndefined();
+    const rows = await db.execute<{ name: string; kcv: string }>(sql`select name, kcv from secret_fingerprints where name in ('SESSION_SECRET', 'CRON_SECRET') order by name`);
+    expect(rows.rows.map((r) => r.name).sort()).toEqual(names.sort());
+    expect(rows.rows.find((r) => r.name === 'SESSION_SECRET')!.kcv).toBe(secretCheckValue('SESSION_SECRET', 's'.repeat(44)));
+  });
+
   it('staging is unaffected: the production isolation rules never apply to STAGING', () => {
     const r = validateEnvironment({ EDMN_ENVIRONMENT: 'staging', DATABASE_URL: 'postgresql://u:p@localhost/x_test', SESSION_SECRET: 'a'.repeat(44), DATA_ENCRYPTION_KEY: 'b'.repeat(44), APP_URL: 'https://edmn-staging.vercel.app' });
     expect(r.errors).toEqual([]);
