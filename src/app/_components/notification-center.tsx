@@ -107,6 +107,6 @@ export async function NotificationCenter({ userId, base, filter, crumbs }: { use
 
 /** Internal path only (no scheme, no protocol-relative URL) — notification links are never open redirects. */
 export function safeInternalPath(link: string | null | undefined, fallback: string): string {
-  if (!link || !link.startsWith('/') || link.startsWith('//') || link.includes('\\') || /[\r\n]/.test(link)) return fallback;
+  if (!link || !link.startsWith('/') || link.startsWith('//') || link.includes('\\') || /[\u0000-\u001f\u007f]/.test(link)) return fallback;
   return link;
 }

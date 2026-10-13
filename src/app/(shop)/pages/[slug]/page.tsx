@@ -5,7 +5,7 @@ import { PageHeader } from '@/ui/data';
 
 export async function generateMetadata(props: PageProps<'/pages/[slug]'>): Promise<Metadata> {
   const p = await pageBySlug(decodeURIComponent((await props.params).slug));
-  return p ? { title: p.title } : {};
+  return p ? { title: p.title, description: `${p.title} — اضمن`, alternates: { canonical: `/pages/${p.slug}` } } : {};
 }
 
 export default async function CmsPage(props: PageProps<'/pages/[slug]'>) {

@@ -2,7 +2,7 @@ import Link from '@/ui/link';
 import { LEGAL_CODES } from '@/server/modules/cms/service';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 
-export const metadata = { title: 'السياسات والشروط' };
+export const metadata = { title: 'السياسات والشروط', description: 'شروط الاستخدام والخصوصية والإرجاع والشحن والصفقات المحمية على اضمن.', alternates: { canonical: '/legal' } };
 
 export default function LegalIndex() {
   return (

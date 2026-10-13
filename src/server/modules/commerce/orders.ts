@@ -61,6 +61,8 @@ export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSch
   const d = parse(checkoutSchema, input);
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'ORDER_PLACEMENT');
+  const { assertTransactionsOpen } = await import('@/server/ops/commerce-gate');
+  await assertTransactionsOpen(db);
   const { assertPilotAllowed } = await import('@/server/ops/pilot');
   await assertPilotAllowed(db, customerId, 'ORDER');
   try {

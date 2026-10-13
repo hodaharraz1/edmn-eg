@@ -6,18 +6,22 @@ import { LEGAL_CODES } from '@/server/modules/cms/service';
 
 export const dynamic = 'force-dynamic';
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
+/** One sitemap file holds at most 50,000 URLs: products are capped so the total always stays below it. */
+const MAX_URLS = 49_000;
 
 /** Sitemap of public, indexable pages only (LIVE products of active sellers). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const u = (p: string) => new URL(p, APP_URL).toString();
   const [prods, cats, brs, sts] = await Promise.all([
-    db.select({ slug: products.slug, updatedAt: products.updatedAt }).from(products).innerJoin(sellers, eq(sellers.id, products.sellerId)).where(and(eq(products.status, 'LIVE'), inArray(sellers.status, ['APPROVED', 'RESTRICTED']))).limit(45000),
+    db.select({ slug: products.slug, updatedAt: products.updatedAt }).from(products).innerJoin(sellers, eq(sellers.id, products.sellerId)).where(and(eq(products.status, 'LIVE'), inArray(sellers.status, ['APPROVED', 'RESTRICTED']))).limit(40_000),
     db.select({ slug: categories.slug, updatedAt: categories.updatedAt }).from(categories).where(and(eq(categories.isActive, true), eq(categories.isProhibited, false))),
     db.select({ slug: brands.slug, updatedAt: brands.updatedAt }).from(brands).where(eq(brands.isActive, true)),
     db.select({ slug: stores.slug, updatedAt: stores.updatedAt }).from(stores).innerJoin(sellers, eq(sellers.id, stores.sellerId)).where(eq(sellers.status, 'APPROVED')),
   ]);
-  return [
+  const all: MetadataRoute.Sitemap = [
     { url: u('/'), changeFrequency: 'daily', priority: 1 },
+    { url: u('/legal'), changeFrequency: 'monthly', priority: 0.2 },
+    { url: u('/contact'), changeFrequency: 'monthly', priority: 0.3 },
     { url: u('/deals'), changeFrequency: 'daily', priority: 0.8 },
     { url: u('/best-sellers'), changeFrequency: 'daily', priority: 0.7 },
     { url: u('/categories'), changeFrequency: 'weekly', priority: 0.6 },
@@ -30,4 +34,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...sts.map((s) => ({ url: u(`/store/${s.slug}`), lastModified: s.updatedAt, priority: 0.5 })),
     ...prods.map((p) => ({ url: u(`/product/${p.slug}`), lastModified: p.updatedAt, changeFrequency: 'weekly' as const, priority: 0.8 })),
   ];
+  return all.slice(0, MAX_URLS);
 }

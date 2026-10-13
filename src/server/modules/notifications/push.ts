@@ -38,7 +38,7 @@ export function vapidPublicKey(): string | null {
 }
 
 const MAX_FAILURES = 5;
-const ALLOWED_PUSH_HOST = /(^|\.)((googleapis\.com)|(mozilla\.com)|(mozaws\.net)|(push\.apple\.com)|(notify\.windows\.com)|(windows\.com))$/i;
+const ALLOWED_PUSH_HOST = /(^|\.)((fcm\.googleapis\.com)|(push\.services\.mozilla\.com)|(mozaws\.net)|(push\.apple\.com)|(notify\.windows\.com))$/i;
 
 /** Only HTTPS endpoints on known browser push services (prevents using push as an SSRF primitive). */
 export function validEndpoint(raw: string): boolean {

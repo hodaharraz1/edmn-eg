@@ -288,7 +288,9 @@ export async function requestWithdrawalAction(_p: ActionState, fd: FormData): Pr
   const actor = await requireSellerActor('/seller/withdrawals');
   const res = await runAction(async () => {
     const r = await requestWithdrawal(actor, { amount: str(fd, 'amount'), clientKey: str(fd, 'clientKey') });
-    return { message: r.created ? `تم تقديم طلب السحب #${r.withdrawal.number}. المستهدف تنفيذه خلال 48 ساعة عمل.` : 'تم استلام هذا الطلب بالفعل.' };
+    const { getSetting } = await import('@/server/modules/settings');
+    const sla = await getSetting('withdrawals.slaBusinessHours');
+    return { message: r.created ? `تم تقديم طلب السحب #${r.withdrawal.number}. مفيش أي مبلغ اتحرك لحد ما الإدارة تعتمده — المستهدف خلال ${sla} ساعة عمل.` : 'تم استلام هذا الطلب بالفعل.' };
   });
   revalidatePath('/seller/withdrawals');
   return res;

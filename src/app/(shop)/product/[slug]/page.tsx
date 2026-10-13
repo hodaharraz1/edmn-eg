@@ -29,7 +29,8 @@ export async function generateMetadata(props: PageProps<'/product/[slug]'>): Pro
     title: d.product.seoTitle || d.product.titleAr,
     description: d.product.seoDescription || (d.product.description ?? '').slice(0, 155),
     alternates: { canonical: `/product/${d.product.slug}` },
-    openGraph: { title: d.product.titleAr, images: img ? [img] : undefined, type: 'website' },
+    // Nested openGraph replaces the root one: repeat site name and locale.
+    openGraph: { title: d.product.titleAr, images: img ? [img] : undefined, type: 'website', siteName: 'اضمن | EDMN', locale: 'ar_EG' },
   };
 }
 

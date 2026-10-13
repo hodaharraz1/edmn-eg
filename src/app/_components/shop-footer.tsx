@@ -1,12 +1,16 @@
 import { ShieldCheck } from 'lucide-react';
 import Link from '@/ui/link';
 import { activeBlocks, LEGAL_CODES } from '@/server/modules/cms/service';
+import { getAllSettings } from '@/server/modules/settings';
 import { Logo } from '@/ui/logo';
 
 export async function ShopFooter() {
   const footer = (await activeBlocks('HOME')).find((b) => b.type === 'FOOTER');
   const data = (footer?.data ?? {}) as { about?: string; links?: { label: string; href: string }[] };
-  const legal = Object.values(LEGAL_CODES);
+  // Customer-facing policies (seller agreement and fees are in the sellers column; everything is on /legal).
+  const legal = (['TERMS_OF_USE', 'PRIVACY_POLICY', 'BUYER_TERMS', 'RETURNS_POLICY', 'SHIPPING_POLICY', 'EXTERNAL_DEAL_TERMS', 'DISPUTE_POLICY', 'PROHIBITED_PRODUCTS', 'COOKIE_POLICY'] as const).map((c) => LEGAL_CODES[c]);
+  const s = await getAllSettings();
+  const company = [s['company.legalName'], s['company.commercialRegistration'] && `سجل تجاري ${s['company.commercialRegistration']}`, s['company.taxId'] && `رقم ضريبي ${s['company.taxId']}`, s['company.address']].filter(Boolean).join(' · ');
   return (
     <footer className="mt-16 bg-brand-950 pb-24 text-white/85 lg:pb-0">
       {/* Light brand band so the transparent official logo keeps its contrast. */}
@@ -49,15 +53,21 @@ export async function ShopFooter() {
         <div>
           <h2 className="mb-3 font-semibold text-white">السياسات والمساعدة</h2>
           <ul className="grid grid-cols-1 gap-2 text-sm">
-            <li><Link href="/account/support" className="hover:text-white">تواصل معانا</Link></li>
-            {legal.slice(0, 7).map((l) => (
+            <li><Link href="/contact" className="hover:text-white">تواصل معانا</Link></li>
+            {legal.map((l) => (
               <li key={l.slug}><Link href={`/legal/${l.slug}`} className="hover:text-white">{l.title}</Link></li>
             ))}
             <li><Link href="/legal" className="hover:text-white">كل السياسات</Link></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">© {new Date().getFullYear()} اضمن. جميع الحقوق محفوظة.</div>
+      <div className="space-y-1 border-t border-white/10 px-4 py-4 text-center text-xs text-white/50">
+        {company && <p data-testid="company-details">{company}</p>}
+        {s['company.socialLinks'].length > 0 && (
+          <p className="flex flex-wrap justify-center gap-3">{s['company.socialLinks'].map((l) => <a key={l.href} href={l.href} rel="noopener noreferrer" target="_blank" className="hover:text-white">{l.label}</a>)}</p>
+        )}
+        <p>© {new Date().getFullYear()} اضمن. جميع الحقوق محفوظة.</p>
+      </div>
     </footer>
   );
 }

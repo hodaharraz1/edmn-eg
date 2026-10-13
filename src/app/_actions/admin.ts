@@ -294,7 +294,10 @@ export async function adjustmentAction(_p: ActionState, fd: FormData) {
 export async function runSettlementAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     requirePermission(a, 'settlements.manage');
+    requireStepUp(a);
     const r = await runScheduledSettlement(new Date());
+    // The batch itself is recorded as SYSTEM; who triggered it manually is recorded here (F-14).
+    await audit(db, a, { action: 'settlement.manual_run', entityType: 'settlement', entityId: new Date().toISOString().slice(0, 10), newValues: r as unknown as Record<string, unknown> });
     return done('created' in r && r.created ? `تم إنشاء ${r.created} طلب سحب ضمن التسوية` : `لم يتم إنشاء طلبات (${'skipped' in r ? r.skipped : 'لا يوجد بائعون مؤهلون'})`);
   }, ['/admin/withdrawals']);
 }

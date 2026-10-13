@@ -355,6 +355,8 @@ export async function seedReference() {
     if (!exists) await db.insert(listingPolicyRules).values({ kind, pattern, reasonCode });
   }
 
+  // Versions this seed writes; anything else was published by an admin and is left untouched.
+  const SEEDED_LEGAL_VERSIONS: string[] = ['0.1-draft', '0.2-draft', LEGAL_VERSION, LEGAL_V11_VERSION, LEGAL_V12_VERSION];
   // Legal documents — DRAFT placeholders only (never fabricated final legal text)
   // Version 1.0 (approved by the company owner) replaces the untouched seeded drafts as a NEW version.
   // Documents an admin has since published under another version are left alone.
@@ -376,6 +378,8 @@ export async function seedReference() {
     const rows = await db.select().from(legalDocuments).where(eq(legalDocuments.code, code));
     if (rows.some((r) => r.version === LEGAL_V11_VERSION)) continue;
     const current = rows.find((r) => r.isCurrent);
+    // A version an admin published (anything the seed did not write) is never replaced by a seed draft.
+    if (current && !SEEDED_LEGAL_VERSIONS.includes(current.version)) continue;
     await db.transaction(async (tx) => {
       if (current) await tx.update(legalDocuments).set({ isCurrent: false }).where(eq(legalDocuments.id, current.id));
       await tx.insert(legalDocuments).values({ code, version: LEGAL_V11_VERSION, title: LEGAL_CODES[code].title, body, status: 'DRAFT', isCurrent: true });
@@ -387,6 +391,7 @@ export async function seedReference() {
     const rows = await db.select().from(legalDocuments).where(eq(legalDocuments.code, code));
     if (rows.some((r) => r.version === LEGAL_V12_VERSION)) continue;
     const current = rows.find((r) => r.isCurrent);
+    if (current && !SEEDED_LEGAL_VERSIONS.includes(current.version)) continue;
     await db.transaction(async (tx) => {
       if (current) await tx.update(legalDocuments).set({ isCurrent: false }).where(eq(legalDocuments.id, current.id));
       await tx.insert(legalDocuments).values({ code, version: LEGAL_V12_VERSION, title: LEGAL_CODES[code].title, body, status: 'DRAFT', isCurrent: true });

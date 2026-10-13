@@ -4,6 +4,7 @@ import { exportDataset, rangeFromPreset } from '@/server/modules/reports/service
 import { audit } from '@/server/audit/audit';
 import { db } from '@/server/db/client';
 import { getAdminActor } from '@/server/web/session';
+import { hit } from '@/server/auth/rate-limit';
 
 const DATASETS = ['orders', 'sellers', 'withdrawals', 'payments', 'products'] as const;
 
@@ -15,6 +16,9 @@ export async function GET(req: Request) {
   const dataset = url.searchParams.get('dataset') as (typeof DATASETS)[number];
   if (!DATASETS.includes(dataset)) return NextResponse.json({ error: 'unknown dataset' }, { status: 400 });
   const preset = url.searchParams.get('range') ?? '30d';
+  // Bulk personal data: fresh 2FA and a per-admin export budget (F-16).
+  if (!actor.stepUpAt || Date.now() - actor.stepUpAt.getTime() > 10 * 60_000) return NextResponse.json({ error: 'أكّد هويتك بالتحقق بخطوتين الأول (خطوة إضافية) ثم أعد التصدير' }, { status: 403 });
+  if (!(await hit(`export:${actor.userId}`, 20, 3600))) return NextResponse.json({ error: 'عدد كبير من التصديرات. حاول بعد شوية' }, { status: 429 });
   try {
     const csv = await exportDataset(actor, dataset, rangeFromPreset(preset));
     await audit(db, actor, { action: 'reports.exported', entityType: 'report', entityId: dataset, newValues: { range: preset } });

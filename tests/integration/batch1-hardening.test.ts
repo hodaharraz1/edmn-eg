@@ -161,7 +161,6 @@ describe('C1 — a dispute (financial hold) leaves the open states only through 
 
 /* ═══════════════════════════ C2 — SUPER_ADMIN escalation ═══════════════════════════ */
 describe('C2 — roles.manage alone can never mint SUPER_ADMIN (or any privileged role)', () => {
-  const pw = 'Strong#Pass2026x';
   const email = () => `staff-${randomUUID().slice(0, 8)}@test.local`;
   const phone = () => `+2011${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
   let manager: Actor;

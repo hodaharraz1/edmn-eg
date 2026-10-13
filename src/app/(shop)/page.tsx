@@ -11,6 +11,11 @@ import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
 import { ProductCard, ProductRail, RailItem, SellerCard, mediaUrl } from '@/ui/commerce';
 import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
 import { RecentlyViewed } from './recently-viewed';
+import type { Metadata } from 'next';
+import { JsonLd, siteJsonLd } from '@/app/_components/seo';
+import { getAllSettings } from '@/server/modules/settings';
+
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 type Block = Awaited<ReturnType<typeof activeBlocks>>[number];
 const TRUST_ICONS: LucideIcon[] = [BadgeCheck, ShieldCheck, Camera, Sparkles];
@@ -210,6 +215,7 @@ function trust(b: Block) {
 }
 
 export default async function HomePage() {
+  const s = await getAllSettings();
   const blocks = await activeBlocks('HOME');
   const seen = new Set<string>();
   const rendered: React.ReactNode[] = [];
@@ -225,6 +231,7 @@ export default async function HomePage() {
   }
   return (
     <div className="container-page space-y-8 py-4 sm:py-6">
+      <JsonLd data={siteJsonLd({ legalName: s['company.legalName'] || undefined, email: s['marketplace.supportEmail'] || undefined, phone: s['marketplace.supportPhone'] || undefined, sameAs: s['company.socialLinks'].map((l) => l.href) })} />
       {rendered}
       <RecentlyViewed />
     </div>

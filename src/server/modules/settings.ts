@@ -14,6 +14,15 @@ export const SETTINGS_SCHEMA = {
   'marketplace.name': z.string().min(1).default('اضمن | EDMN'),
   'marketplace.supportEmail': z.string().default(''),
   'marketplace.supportPhone': z.string().default(''),
+  // ── Company / contact details (OWNER INPUT: empty until the owner supplies them — never invented).
+  'marketplace.whatsapp': z.string().max(30).default(''),
+  'marketplace.businessHours': z.string().max(200).default(''),
+  'company.legalName': z.string().max(200).default(''),
+  'company.commercialRegistration': z.string().max(60).default(''),
+  'company.taxId': z.string().max(60).default(''),
+  'company.address': z.string().max(300).default(''),
+  'company.socialLinks': z.array(z.object({ label: z.string().max(40), href: z.string().url().startsWith('https://') })).max(8).default([]),
+  /** true = new orders / deal invitations / deal payments are refused (site, accounts, support and history stay up). */
   'marketplace.maintenanceMode': z.boolean().default(false),
   /** Hours a customer has to pay (or submit proof) before an unpaid order expires and stock is released. */
   /**

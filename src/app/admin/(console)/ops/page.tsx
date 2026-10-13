@@ -1,4 +1,9 @@
-import { ledgerHealthAction } from '@/app/_actions/admin';
+import { ledgerHealthAction, requeueDeadLetterAction } from '@/app/_actions/admin';
+import { desc, eq } from 'drizzle-orm';
+import { db } from '@/server/db/client';
+import { outboundMessages } from '@/server/db/schema';
+import { SECRET_EVENTS } from '@/server/modules/notifications/outbox';
+import { Input } from '@/ui/form';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { deepHealth } from '@/server/ops/health';
@@ -18,6 +23,8 @@ export default async function OpsHealth() {
   const { actor, allowed } = await adminWith(['settings.manage', 'finance.controls', 'notifications.manage']);
   if (!allowed) return <Forbidden />;
   const h = await deepHealth();
+  const canRequeue = hasPermission(actor, 'notifications.manage');
+  const dead = canRequeue ? await db.select({ id: outboundMessages.id, channel: outboundMessages.channel, event: outboundMessages.event, attempts: outboundMessages.attempts, lastError: outboundMessages.lastError, deadLetteredAt: outboundMessages.deadLetteredAt }).from(outboundMessages).where(eq(outboundMessages.status, 'FAILED')).orderBy(desc(outboundMessages.createdAt)).limit(20) : [];
   return (
     <div className="space-y-4">
       <PageHeader title="صحة التشغيل" description="فحص عميق للبيئة والمهام المجدولة والرسائل وسلامة الدفتر ومزودي الخدمات. للقراءة فقط — مفيش أي حاجة هنا بتحرك فلوس." />
@@ -73,6 +80,27 @@ export default async function OpsHealth() {
           ]}
         />
       </section>
+      {canRequeue && dead.length > 0 && (
+        <section className="card p-4" data-testid="ops-dead-letters">
+          <h2 className="mb-2 font-bold">رسائل فشلت نهائيًا (آخر 20)</h2>
+          <p className="mb-2 text-xs text-muted">الرسائل الأمنية (رموز وروابط) محتواها اتمسح ومش بترجع للطابور — المستخدم يطلب رمز جديد.</p>
+          <ul className="space-y-2 text-sm">
+            {dead.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                <span className="ltr text-xs">{m.channel} · {m.event} · {m.attempts}×</span>
+                <span className="ltr min-w-0 flex-1 break-all text-xs text-muted">{m.lastError}</span>
+                {!SECRET_EVENTS.includes(m.event ?? '') && (
+                  <ActionForm action={requeueDeadLetterAction} className="flex items-center gap-2">
+                    <input type="hidden" name="id" value={m.id} /><input type="hidden" name="back" value="/admin/ops" />
+                    <Input name="reason" required minLength={3} placeholder="السبب" className="w-32" aria-label="سبب إعادة الإرسال" />
+                    <SubmitButton size="sm" variant="outline">إعادة للطابور</SubmitButton>
+                  </ActionForm>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="card p-4" data-testid="ops-ledger">
         <h2 className="mb-2 font-bold">سلامة دفتر الأستاذ (قراءة فقط)</h2>
         {h.ledger ? (

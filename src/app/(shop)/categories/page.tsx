@@ -6,7 +6,7 @@ import { db } from '@/server/db/client';
 import { categoryTree } from '@/server/modules/catalog/taxonomy';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 
-export const metadata: Metadata = { title: 'كل التصنيفات', alternates: { canonical: '/categories' } };
+export const metadata: Metadata = { title: 'كل التصنيفات', description: 'تصفّح كل تصنيفات المنتجات على اضمن.', alternates: { canonical: '/categories' } };
 
 export default async function CategoriesPage() {
   const tree = await categoryTree(db, { activeOnly: true });

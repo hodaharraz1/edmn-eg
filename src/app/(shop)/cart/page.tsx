@@ -30,7 +30,7 @@ export default async function CartPage() {
   if (!cart || cart.groups.length === 0) {
     return (
       <div className="container-page py-10">
-        <EmptyState icon={ShoppingCart} title="السلة فاضية" description="شوف آلاف المنتجات من بائعين موثّقين وضيف اللي يعجبك." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
+        <EmptyState icon={ShoppingCart} title="السلة فاضية" description="تصفّح منتجات البائعين الموثّقين وضيف اللي يعجبك." action={<LinkButton href="/">ابدأ التسوق</LinkButton>} />
       </div>
     );
   }

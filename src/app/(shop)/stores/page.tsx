@@ -7,7 +7,7 @@ import { SellerCard } from '@/ui/commerce';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { EmptyState } from '@/ui/feedback';
 
-export const metadata: Metadata = { title: 'المتاجر الموثّقة', alternates: { canonical: '/stores' } };
+export const metadata: Metadata = { title: 'المتاجر الموثّقة', description: 'متاجر مصرية تمت مراجعتها على اضمن: منتجات جديدة ومستعملة.', alternates: { canonical: '/stores' } };
 
 export default async function StoresPage() {
   const rows = await db

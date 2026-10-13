@@ -1,29 +1,18 @@
 import Link from '@/ui/link';
 import type { Metadata } from 'next';
 import { BadgeCheck, BarChart3, ShieldCheck, Truck, Wallet } from 'lucide-react';
-import { asc, eq, isNotNull } from 'drizzle-orm';
 import { startSellerAction } from '@/app/_actions/seller-onboarding';
-import { db } from '@/server/db/client';
-import { categories, commissionRules } from '@/server/db/schema';
 import { currentUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
-import { bpsToPercentString } from '@/server/core/money';
 import { LinkButton } from '@/ui/button';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { Radio } from '@/ui/form';
 
-export const metadata: Metadata = { title: 'بيع على اضمن', description: 'افتح متجرك على اضمن ووصّل لعملاء في كل محافظات مصر.' };
+export const metadata: Metadata = { title: 'بيع على اضمن', description: 'افتح متجرك على اضمن ووصّل لعملاء في كل محافظات مصر.', alternates: { canonical: '/sell' } };
 
 export default async function SellLanding() {
   const user = await currentUser();
   const seller = user ? await sellerContextForUser(user.id) : null;
-  const rules = await db
-    .select({ name: categories.nameAr, bps: commissionRules.percentBps })
-    .from(commissionRules)
-    .innerJoin(categories, eq(categories.id, commissionRules.categoryId))
-    .where(isNotNull(commissionRules.categoryId))
-    .orderBy(asc(commissionRules.percentBps))
-    .limit(12);
   return (
     <div className="container-page space-y-10 py-8">
       <section className="grid items-center gap-8 rounded-3xl bg-brand-900 p-8 text-white sm:p-12 lg:grid-cols-2">
@@ -79,11 +68,9 @@ export default async function SellLanding() {
           <p className="mt-3 flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بيانات الهوية متشفّرة، ومحدش بيشوفها غير فريق المراجعة المختص.</p>
         </div>
         <div className="card p-6">
-          <h2 className="mb-3 text-lg font-bold">العمولات حسب التصنيف</h2>
-          <p className="mb-3 text-xs text-muted">العمولة على قيمة المنتجات بس، وبتتحسب وقت البيع ومش بتتغير على الطلبات اللي فاتت. النسب الحالية ممكن الإدارة تحدّثها — <Link href="/legal/fees" className="underline">التفاصيل</Link>.</p>
-          <ul className="grid grid-cols-2 gap-2 text-sm">
-            {rules.map((r) => <li key={r.name} className="flex justify-between rounded-lg bg-page px-3 py-2"><span>{r.name}</span><span className="font-semibold">{bpsToPercentString(r.bps)}%</span></li>)}
-          </ul>
+          <h2 className="mb-3 text-lg font-bold">الرسوم والعمولات</h2>
+          {/* Fees come from the published pricing version (fee engine); the legacy commission table no longer prices anything. */}
+          <p className="text-sm text-muted">الرسوم بتتحسب وقت البيع حسب نسخة التسعير المعتمدة، ومش بتتغير على الطلبات اللي فاتت. التفاصيل في صفحة <Link href="/legal/fees" className="text-brand-700 underline">الرسوم والعمولات</Link>.</p>
         </div>
       </section>
     </div>

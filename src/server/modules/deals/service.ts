@@ -10,7 +10,6 @@ import { randomUUID } from 'node:crypto';
 import { enforce, hit } from '@/server/auth/rate-limit';
 import { deliveryCodeHash, deliveryCodeMatches, deliveryOtpTestMode, generateDeliveryCode } from './delivery-otp';
 import { formatDate } from '@/lib/format';
-import { env } from '@/server/core/env';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { normalizeEgyptMobile } from '@/server/core/text';
@@ -201,6 +200,8 @@ export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: bo
   if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_INVITATION');
+  const { assertTransactionsOpen } = await import('@/server/ops/commerce-gate');
+  await assertTransactionsOpen(db);
   const { assertPilotAllowed } = await import('@/server/ops/pilot');
   await assertPilotAllowed(db, requireUser(actor), 'DEAL');
   return db.transaction(async (tx) => {
@@ -677,6 +678,8 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
   return db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (deal.status !== 'PAYMENT_PENDING') throw invalidState('الصفقة مش مستنية دفع');
+    const { assertTransactionsOpen } = await import('@/server/ops/commerce-gate');
+    await assertTransactionsOpen(tx);
     const { assertPilotAllowed } = await import('@/server/ops/pilot');
     await assertPilotAllowed(tx, deal.buyerId, 'DEAL', deal.buyerPays);
     const [existing] = await tx.select().from(payments).where(eq(payments.dealId, deal.id)).for('update');
