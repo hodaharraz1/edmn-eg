@@ -3,6 +3,7 @@ import { payoutMethodAction, sellerTotpAction, staffAction } from '@/app/_action
 import { db } from '@/server/db/client';
 import { sellerMembers, sellerPayoutMethods, users } from '@/server/db/schema';
 import { requireSellerActor, requireUser } from '@/server/web/session';
+import { splitInvitations, staffInvitationsForSeller } from '@/server/modules/sellers/service';
 import { formatDate } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
 import { SELLER_MEMBER_ROLES } from '@/domain/machines';
@@ -18,11 +19,14 @@ export default async function SellerSettings() {
   const actor = await requireSellerActor('/seller/settings');
   const user = await requireUser('/seller');
   const isOwner = actor.sellerPermissions?.has('staff.manage');
-  const [methods, members] = await Promise.all([
+  const [methods, members, invitations] = await Promise.all([
     // Payout methods (masked) and the staff list are only for members allowed to manage them.
     actor.sellerPermissions?.has('payout.manage') || actor.sellerPermissions?.has('finance.view') ? db.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.sellerId, actor.sellerId!)).orderBy(desc(sellerPayoutMethods.createdAt)) : Promise.resolve([]),
     isOwner ? db.select({ m: sellerMembers, name: users.fullName, email: users.email }).from(sellerMembers).innerJoin(users, eq(users.id, sellerMembers.userId)).where(and(eq(sellerMembers.sellerId, actor.sellerId!), eq(sellerMembers.isActive, true))) : Promise.resolve([]),
+    isOwner ? staffInvitationsForSeller(actor) : Promise.resolve([]),
   ]);
+  const { open: openInvitations, past } = splitInvitations(invitations);
+  const pastInvitations = past.slice(0, 10);
   return (
     <div className="space-y-5">
       <PageHeader title="الإعدادات" />
@@ -54,7 +58,7 @@ export default async function SellerSettings() {
         {user.totpEnabledAt ? <p className="text-sm text-emerald-700">مفعّلة منذ {formatDate(user.totpEnabledAt)}</p> : <TotpSecret action={sellerTotpAction} />}
       </FormSection>
       {isOwner && (
-        <FormSection title="فريق المتجر" description="أضف موظفين بصلاحيات محددة. يجب أن يكون لديهم حساب على اضمن.">
+        <FormSection title="فريق المتجر" description="ادعُ أعضاء بصلاحيات محددة (لازم يكون عندهم حساب على اضمن). الصلاحية مش بتتفعّل غير لما الشخص يقبل الدعوة بنفسه، والدعوة بتنتهي بعد 7 أيام.">
           <ul className="divide-y divide-line text-sm">
             {members.map(({ m, name, email }) => (
               <li key={m.userId} className="flex items-center justify-between py-2">
@@ -62,12 +66,35 @@ export default async function SellerSettings() {
                 <ActionForm action={staffAction}><input type="hidden" name="op" value="remove" /><input type="hidden" name="userId" value={m.userId} /><SubmitButton size="sm" variant="ghost">إزالة</SubmitButton></ActionForm>
               </li>
             ))}
-            {members.length === 0 && <li className="py-2 text-muted">لا يوجد موظفون</li>}
+            {members.length === 0 && <li className="py-2 text-muted">لسه مفيش أعضاء في الفريق</li>}
           </ul>
+          {openInvitations.length > 0 && (
+            <div data-testid="pending-invitations">
+              <h3 className="mb-1 text-sm font-semibold">دعوات مستنية رد</h3>
+              <ul className="divide-y divide-line text-sm">
+                {openInvitations.map(({ inv, name, email }) => (
+                  <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span>{name} <span className="text-xs text-muted ltr">{email}</span> · {label('sellerRole', inv.role)} · <span className="text-xs text-muted">لحد {formatDate(inv.expiresAt)}</span></span>
+                    <ActionForm action={staffAction}><input type="hidden" name="op" value="revoke" /><input type="hidden" name="invitationId" value={inv.id} /><SubmitButton size="sm" variant="ghost">إلغاء الدعوة</SubmitButton></ActionForm>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {pastInvitations.length > 0 && (
+            <details className="text-sm">
+              <summary className="cursor-pointer text-muted">دعوات سابقة</summary>
+              <ul className="divide-y divide-line">
+                {pastInvitations.map(({ inv, name }) => (
+                  <li key={inv.id} className="flex items-center justify-between py-2"><span>{name} · {label('sellerRole', inv.role)}</span><span className="text-xs text-muted">{label('storeInvitation', inv.status === 'PENDING' ? 'EXPIRED' : inv.status)}</span></li>
+                ))}
+              </ul>
+            </details>
+          )}
           <ActionForm action={staffAction} className="flex flex-wrap items-end gap-2" resetOnSuccess>
             <Field label="البريد الإلكتروني" htmlFor="email"><Input id="email" name="email" type="email" dir="ltr" required /></Field>
             <Field label="الدور" htmlFor="role"><Select id="role" name="role">{SELLER_MEMBER_ROLES.filter((r) => r !== 'STORE_OWNER').map((r) => <option key={r} value={r}>{label('sellerRole', r)}</option>)}</Select></Field>
-            <SubmitButton>إضافة</SubmitButton>
+            <SubmitButton>إرسال دعوة</SubmitButton>
           </ActionForm>
         </FormSection>
       )}

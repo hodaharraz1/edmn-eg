@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
@@ -12,7 +13,8 @@ const TARGETS = { cancellation: 0.025, returns: 0.1, onTime: 0.9, rating: 4 };
 
 export default async function HealthPage() {
   const user = await requireUser('/seller');
-  const ctx = (await sellerContextForUser(user.id))!;
+  const ctx = await sellerContextForUser(user.id);
+  if (!ctx) redirect('/seller/register');
   const d = await sellerDashboard(ctx.seller.id, rangeFromPreset('90d'));
   // Risk flags are internal Operations notes and are never shown to the seller.
   const rows = [

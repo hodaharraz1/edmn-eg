@@ -84,6 +84,41 @@ export const sellerMembers = pgTable(
   ],
 );
 
+/**
+ * Store team invitations (F-6). A membership row exists only after the invited user explicitly accepts:
+ * PENDING → ACCEPTED | DECLINED | REVOKED | EXPIRED. Acceptance is bound to `invitedUserId` (no bearer token).
+ */
+export const SELLER_INVITATION_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED', 'REVOKED', 'EXPIRED'] as const;
+export type SellerInvitationStatus = (typeof SELLER_INVITATION_STATUSES)[number];
+export const sellerMemberInvitations = pgTable(
+  'seller_member_invitations',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    sellerId: uuid()
+      .notNull()
+      .references(() => sellers.id, { onDelete: 'cascade' }),
+    invitedUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: text({ enum: SELLER_MEMBER_ROLES }).notNull(),
+    status: text({ enum: SELLER_INVITATION_STATUSES }).notNull().default('PENDING'),
+    invitedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    expiresAt: ts().notNull(),
+    respondedAt: ts(),
+    revokedBy: uuid().references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    // At most one open invitation per (store, user).
+    uniqueIndex('seller_member_invitations_open_uq').on(t.sellerId, t.invitedUserId).where(sql`${t.status} = 'PENDING'`),
+    index('seller_member_invitations_user_idx').on(t.invitedUserId, t.status),
+    enumCheck('seller_member_invitations_status_chk', t.status, SELLER_INVITATION_STATUSES),
+    enumCheck('seller_member_invitations_role_chk', t.role, SELLER_MEMBER_ROLES),
+  ],
+);
+
 export const SELLER_DOC_STATUSES = ['SUBMITTED', 'ACCEPTED', 'REJECTED'] as const;
 export const sellerDocuments = pgTable(
   'seller_documents',

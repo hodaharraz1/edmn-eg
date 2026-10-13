@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { Wallet } from 'lucide-react';
 import { cancelWithdrawalAction, requestWithdrawalAction } from '@/app/_actions/seller';
@@ -24,7 +25,8 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
   const actor = await requireSellerActor('/seller/withdrawals');
   if (!actor.sellerPermissions?.has('finance.view')) return <SellerForbidden />;
   const user = await requireUser('/seller');
-  const ctx = (await sellerContextForUser(user.id))!;
+  const ctx = await sellerContextForUser(user.id);
+  if (!ctx) redirect('/seller/register');
   const [b, list, pm, min, mode, days, sla] = await Promise.all([
     sellerBalances(db, actor.sellerId!),
     sellerWithdrawals(actor.sellerId!),

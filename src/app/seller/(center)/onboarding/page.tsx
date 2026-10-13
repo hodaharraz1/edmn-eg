@@ -24,7 +24,8 @@ const STEPS = ['الهوية والعنوان', 'بيانات النشاط', 'ا
 
 export default async function OnboardingPage(props: PageProps<'/seller/onboarding'>) {
   const user = await requireUser('/seller');
-  const ctx = (await sellerContextForUser(user.id))!;
+  const ctx = await sellerContextForUser(user.id);
+  if (!ctx) redirect('/seller/register');
   const s = ctx.seller;
   if (!['DRAFT', 'MORE_INFO_REQUIRED'].includes(s.status)) redirect('/seller');
   const sp = await props.searchParams;

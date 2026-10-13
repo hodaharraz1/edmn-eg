@@ -1,11 +1,11 @@
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { RETURN_CONDITION_KEYS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
 import { decryptJson, encrypt, encryptJson, mask, sha256 } from '@/server/core/crypto';
-import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
+import { conflict, DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { isValidEgyptNationalId, normalizeEgyptMobile, slugify } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
 import {
@@ -13,6 +13,7 @@ import {
   legalAcceptances,
   legalDocuments,
   sellerDocuments,
+  sellerMemberInvitations,
   sellerMembers,
   sellerPayoutMethods,
   sellerShippingRates,
@@ -25,7 +26,7 @@ import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
-import { statusLabel } from '@/lib/i18n/labels';
+import { label, statusLabel } from '@/lib/i18n/labels';
 import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { SELLER_ROLE_PERMISSIONS, type SellerPermission } from '@/server/rbac/permissions';
 
@@ -561,27 +562,144 @@ export async function updateStoreSettings(
 
 /* ─────────────────────────── Seller staff ─────────────────────────── */
 
-export async function addStaffMember(actor: Actor, email: string, role: string) {
+/* ─────────────────────────── Store team invitations (F-6) ───────────────────────────
+ * Nobody becomes a store member without explicitly accepting. An invitation is bound to the invited account
+ * (no bearer token to leak or forward); store permissions exist only once a seller_members row is written,
+ * which happens solely inside acceptStaffInvitation. Accept/decline/revoke are row-locked and idempotent. */
+
+export const STAFF_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const STAFF_INVITATIONS_PATH = '/account/store-invitations';
+
+/** Checks that keep one Seller Center identity per person; re-run at acceptance time (things change while pending). */
+async function assertInvitable(tx: DbOrTx, sellerId: string, userId: string) {
+  const [u] = await tx.select().from(users).where(eq(users.id, userId));
+  if (!u) throw notFound('الحساب');
+  // Staff of EDMN can never be made members of a store (their access must stay separate from any seller).
+  if (u.isStaff) throw validation('الحساب ده تابع لفريق عمل اضمن ومينفعش يتضاف لمتجر');
+  const [owner] = await tx.select({ id: sellers.id }).from(sellers).where(eq(sellers.ownerUserId, u.id));
+  if (owner) throw validation('صاحب الحساب ده عنده متجر بالفعل');
+  const [member] = await tx.select({ sellerId: sellerMembers.sellerId }).from(sellerMembers).where(and(eq(sellerMembers.userId, u.id), eq(sellerMembers.isActive, true)));
+  if (member) throw validation(member.sellerId === sellerId ? 'صاحب الحساب ده عضو بالفعل في فريق المتجر' : 'صاحب الحساب ده عضو بالفعل في متجر تاني');
+}
+
+/** New team access only for a store in good standing (not suspended, restricted, rejected or still in review). */
+async function assertStoreAcceptsTeam(tx: DbOrTx, sellerId: string) {
+  const [s] = await tx.select({ status: sellers.status }).from(sellers).where(eq(sellers.id, sellerId)).for('update');
+  if (!s) throw notFound('المتجر');
+  if (s.status !== 'APPROVED') throw invalidState('المتجر مش مفعّل حاليًا، فمينفعش يضيف أعضاء جداد لفريقه');
+}
+
+export async function inviteStaffMember(actor: Actor, email: string, role: string) {
   const sellerId = requireSeller(actor, 'staff.manage');
   if (!(role in SELLER_ROLE_PERMISSIONS) || role === 'STORE_OWNER') throw validation('دور غير صالح');
-  await db.transaction(async (tx) => {
-    const [u] = await tx.select().from(users).where(eq(users.email, email.trim().toLowerCase()));
-    if (!u) throw validation('لا يوجد مستخدم مسجل بهذا البريد. اطلب منه إنشاء حساب أولاً');
-    // Staff of EDMN can never be made members of a store (their access must stay separate from any seller).
-    if (u.isStaff) throw validation('الحساب ده تابع لفريق عمل اضمن ومينفعش يتضاف لمتجر');
-    const [owner] = await tx.select().from(sellers).where(eq(sellers.ownerUserId, u.id));
-    if (owner) throw validation('هذا المستخدم يملك متجراً بالفعل');
-    // One active store per member: the Seller Center identity must never flip between stores.
-    const [other] = await tx.select({ id: sellerMembers.sellerId }).from(sellerMembers).where(and(eq(sellerMembers.userId, u.id), eq(sellerMembers.isActive, true), ne(sellerMembers.sellerId, sellerId)));
-    if (other) throw validation('المستخدم ده عضو بالفعل في متجر تاني');
+  return db.transaction(async (tx) => {
+    await assertStoreAcceptsTeam(tx, sellerId);
+    const [u] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email.trim().toLowerCase()));
+    if (!u) throw validation('مفيش حساب على اضمن بالبريد ده. اطلب منه يعمل حساب الأول');
+    if (u.id === actor.userId) throw validation('مينفعش تدعو نفسك');
+    await assertInvitable(tx, sellerId, u.id);
+    const now = new Date();
+    // A stale open invitation for the same person is closed as EXPIRED before a fresh one is issued.
     await tx
-      .insert(sellerMembers)
-      .values({ sellerId, userId: u.id, role: role as 'STORE_MANAGER' })
-      .onConflictDoUpdate({ target: [sellerMembers.sellerId, sellerMembers.userId], set: { role: role as 'STORE_MANAGER', isActive: true } });
-    await audit(tx, actor, { action: 'seller.staff_added', entityType: 'seller', entityId: sellerId, newValues: { userId: u.id, role } });
-    // The added person is always told (security notice): nobody becomes a store member silently.
-    await notify(tx, { event: 'ACCOUNT_SECURITY', userIds: [u.id], vars: { message: 'اتضفت كعضو في فريق متجر على اضمن. لو مش متوقع ده، كلّم الدعم فورًا.' }, link: '/seller', dedupeKey: `store-member:${sellerId}:${u.id}:${Date.now()}` });
+      .update(sellerMemberInvitations)
+      .set({ status: 'EXPIRED', respondedAt: now })
+      .where(and(eq(sellerMemberInvitations.sellerId, sellerId), eq(sellerMemberInvitations.invitedUserId, u.id), eq(sellerMemberInvitations.status, 'PENDING'), lt(sellerMemberInvitations.expiresAt, now)));
+    const [inv] = await tx
+      .insert(sellerMemberInvitations)
+      .values({ sellerId, invitedUserId: u.id, role: role as 'STORE_MANAGER', invitedBy: actor.userId!, expiresAt: new Date(now.getTime() + STAFF_INVITATION_TTL_MS) })
+      .onConflictDoNothing()
+      .returning();
+    if (!inv) throw conflict('فيه دعوة مفتوحة بالفعل للشخص ده');
+    await audit(tx, actor, { action: 'seller.staff_invited', entityType: 'seller_member_invitation', entityId: inv.id, newValues: { sellerId, userId: u.id, role } });
+    const [store] = await tx.select({ name: stores.name }).from(stores).where(eq(stores.sellerId, sellerId));
+    await notify(tx, {
+      event: 'ACCOUNT_SECURITY',
+      userIds: [u.id],
+      vars: { message: `متجر «${store?.name ?? 'على اضمن'}» بيدعوك تنضم لفريقه بدور ${label('sellerRole', role)}. مفيش أي صلاحية هتتفعّل غير لما توافق بنفسك من صفحة دعوات المتاجر. لو مش متوقع الدعوة دي، ارفضها.` },
+      link: STAFF_INVITATIONS_PATH,
+      dedupeKey: `store-invite:${inv.id}`,
+    });
+    return inv;
   });
+}
+
+export async function revokeStaffInvitation(actor: Actor, invitationId: string) {
+  const sellerId = requireSeller(actor, 'staff.manage');
+  if (!z.string().uuid().safeParse(invitationId).success) throw notFound('الدعوة');
+  return db.transaction(async (tx) => {
+    const [inv] = await tx.select().from(sellerMemberInvitations).where(and(eq(sellerMemberInvitations.id, invitationId), eq(sellerMemberInvitations.sellerId, sellerId))).for('update');
+    if (!inv) throw notFound('الدعوة');
+    if (inv.status === 'REVOKED') return inv; // idempotent retry
+    if (inv.status !== 'PENDING') throw invalidState('الدعوة دي اتردّ عليها بالفعل ومينفعش تتلغي. لو العضو اتضاف، تقدر تشيله من الفريق.');
+    const [row] = await tx.update(sellerMemberInvitations).set({ status: 'REVOKED', revokedBy: actor.userId!, respondedAt: new Date() }).where(and(eq(sellerMemberInvitations.id, inv.id), eq(sellerMemberInvitations.status, 'PENDING'))).returning();
+    await audit(tx, actor, { action: 'seller.staff_invitation_revoked', entityType: 'seller_member_invitation', entityId: inv.id, oldValues: { status: 'PENDING' }, newValues: { status: 'REVOKED', sellerId, userId: inv.invitedUserId } });
+    return row;
+  });
+}
+
+/** The invited user (and only them) accepts or declines. Unknown and foreign invitations look the same (404). */
+export async function respondToStaffInvitation(actor: Actor, invitationId: string, decision: 'ACCEPT' | 'DECLINE') {
+  const userId = requireUser(actor);
+  if (actor.type === 'ADMIN') throw forbidden();
+  if (!z.string().uuid().safeParse(invitationId).success) throw notFound('الدعوة');
+  const target = decision === 'ACCEPT' ? 'ACCEPTED' : 'DECLINED';
+  const result = await db.transaction(async (tx) => {
+    const [inv] = await tx.select().from(sellerMemberInvitations).where(eq(sellerMemberInvitations.id, invitationId)).for('update');
+    if (!inv || inv.invitedUserId !== userId) throw notFound('الدعوة');
+    if (inv.status === target) return { inv, expired: false }; // idempotent retry
+    if (inv.status === 'REVOKED') throw invalidState('صاحب المتجر لغى الدعوة دي');
+    if (inv.status !== 'PENDING') throw invalidState('الدعوة دي اتردّ عليها أو انتهت');
+    const now = new Date();
+    if (inv.expiresAt.getTime() <= now.getTime()) {
+      await tx.update(sellerMemberInvitations).set({ status: 'EXPIRED', respondedAt: now }).where(eq(sellerMemberInvitations.id, inv.id));
+      await audit(tx, actor, { action: 'seller.staff_invitation_expired', entityType: 'seller_member_invitation', entityId: inv.id, newValues: { sellerId: inv.sellerId, userId } });
+      return { inv, expired: true };
+    }
+    if (decision === 'ACCEPT') {
+      await assertStoreAcceptsTeam(tx, inv.sellerId);
+      await assertInvitable(tx, inv.sellerId, userId);
+      // The only place a membership is written: permissions start now, never before.
+      await tx
+        .insert(sellerMembers)
+        .values({ sellerId: inv.sellerId, userId, role: inv.role })
+        .onConflictDoUpdate({ target: [sellerMembers.sellerId, sellerMembers.userId], set: { role: inv.role, isActive: true } });
+    }
+    const [row] = await tx.update(sellerMemberInvitations).set({ status: target, respondedAt: now }).where(and(eq(sellerMemberInvitations.id, inv.id), eq(sellerMemberInvitations.status, 'PENDING'))).returning();
+    await audit(tx, actor, { action: decision === 'ACCEPT' ? 'seller.staff_invitation_accepted' : 'seller.staff_invitation_declined', entityType: 'seller_member_invitation', entityId: inv.id, oldValues: { status: 'PENDING' }, newValues: { status: target, sellerId: inv.sellerId, userId, role: inv.role } });
+    const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, inv.sellerId));
+    const [u] = await tx.select({ fullName: users.fullName }).from(users).where(eq(users.id, userId));
+    if (s) await notify(tx, { event: 'ACCOUNT_SECURITY', userIds: [s.ownerUserId], vars: { message: decision === 'ACCEPT' ? `${u?.fullName ?? 'العضو'} قبل الدعوة وانضم لفريق متجرك.` : `${u?.fullName ?? 'الشخص'} رفض الدعوة للانضمام لفريق متجرك.` }, link: '/seller/settings', dedupeKey: `store-invite-${target}:${inv.id}` });
+    return { inv: row, expired: false };
+  });
+  if (result.expired) throw invalidState('الدعوة دي انتهت صلاحيتها. اطلب من صاحب المتجر يبعت دعوة جديدة.');
+  return result.inv;
+}
+
+/** Open = still PENDING and not past its expiry (an unanswered expired invitation is shown as expired). */
+export function splitInvitations<T extends { inv: { status: string; expiresAt: Date } }>(rows: T[], now = Date.now()) {
+  const isOpen = (r: T) => r.inv.status === 'PENDING' && r.inv.expiresAt.getTime() > now;
+  return { open: rows.filter(isOpen), past: rows.filter((r) => !isOpen(r)) };
+}
+
+export async function staffInvitationsForUser(userId: string) {
+  return db
+    .select({ inv: sellerMemberInvitations, storeName: stores.name })
+    .from(sellerMemberInvitations)
+    .leftJoin(stores, eq(stores.sellerId, sellerMemberInvitations.sellerId))
+    .where(eq(sellerMemberInvitations.invitedUserId, userId))
+    .orderBy(desc(sellerMemberInvitations.createdAt))
+    .limit(50);
+}
+
+export async function staffInvitationsForSeller(actor: Actor) {
+  const sellerId = requireSeller(actor, 'staff.manage');
+  return db
+    .select({ inv: sellerMemberInvitations, name: users.fullName, email: users.email })
+    .from(sellerMemberInvitations)
+    .innerJoin(users, eq(users.id, sellerMemberInvitations.invitedUserId))
+    .where(eq(sellerMemberInvitations.sellerId, sellerId))
+    .orderBy(desc(sellerMemberInvitations.createdAt))
+    .limit(50);
 }
 
 export async function removeStaffMember(actor: Actor, userId: string) {

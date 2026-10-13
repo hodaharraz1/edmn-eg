@@ -120,6 +120,13 @@
       "when": 1791818178919,
       "tag": "0016_batch2_infrastructure_reliability",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791914931697,
+      "tag": "0017_batch_final_seller_invitations",
+      "breakpoints": true
     }
   ]
 }

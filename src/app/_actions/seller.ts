@@ -8,7 +8,7 @@ import { addTrackingEvent, advanceSellerOrder, cancelSellerOrder, confirmSellerO
 import { acceptReturnRefund, approveReturn, escalateReturn, markReturnReceived, rejectReturn, startInspection } from '@/server/modules/postpurchase/returns';
 import { respondToReview } from '@/server/modules/reviews/service';
 import { cancelWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
-import { addPayoutMethod, addStaffMember, removeStaffMember, setShippingRates, updateStoreSettings } from '@/server/modules/sellers/service';
+import { addPayoutMethod, inviteStaffMember, removeStaffMember, revokeStaffInvitation, setShippingRates, updateStoreSettings } from '@/server/modules/sellers/service';
 import { openTicket, replyToTicket } from '@/server/modules/support/service';
 import { addDisputeMessage } from '@/server/modules/postpurchase/disputes';
 import { beginTotpEnrollment, verifyTotpForUser } from '@/server/auth/service';
@@ -357,9 +357,17 @@ export async function payoutMethodAction(_p: ActionState, fd: FormData): Promise
 export async function staffAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireSellerActor('/seller/settings');
   const res = await runAction(async () => {
-    if (str(fd, 'op') === 'remove') await removeStaffMember(actor, str(fd, 'userId'));
-    else await addStaffMember(actor, str(fd, 'email'), str(fd, 'role'));
-    return { message: 'تم التحديث' };
+    const op = str(fd, 'op');
+    if (op === 'remove') {
+      await removeStaffMember(actor, str(fd, 'userId'));
+      return { message: 'العضو اتشال من الفريق' };
+    }
+    if (op === 'revoke') {
+      await revokeStaffInvitation(actor, str(fd, 'invitationId'));
+      return { message: 'الدعوة اتلغت' };
+    }
+    await inviteStaffMember(actor, str(fd, 'email'), str(fd, 'role'));
+    return { message: 'الدعوة اتبعتت. مفيش أي صلاحية هتتفعّل غير لما الشخص يوافق بنفسه.' };
   });
   revalidatePath('/seller/settings');
   return res;

@@ -10,6 +10,7 @@ import { addDisputeMessage, openDispute } from '@/server/modules/postpurchase/di
 import { customerShipsReturn, escalateReturn, requestReturn } from '@/server/modules/postpurchase/returns';
 import { createProductReview, createSellerReview, reportReview } from '@/server/modules/reviews/service';
 import { openTicket, replyToTicket } from '@/server/modules/support/service';
+import { respondToStaffInvitation } from '@/server/modules/sellers/service';
 import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -218,5 +219,17 @@ export async function confirmCodeAction(_p: ActionState, fd: FormData): Promise<
   revalidatePath('/account/security');
   revalidatePath('/seller/onboarding');
   revalidatePath('/account/deals/[id]', 'page');
+  return res;
+}
+
+/** Store team invitation (F-6): only the invited, signed-in account can accept or decline it. */
+export async function respondStoreInvitationAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/store-invitations');
+  const decision = str(fd, 'decision') === 'ACCEPT' ? 'ACCEPT' : 'DECLINE';
+  const res = await runAction(async () => {
+    await respondToStaffInvitation(actor, str(fd, 'invitationId'), decision);
+    return { message: decision === 'ACCEPT' ? 'انضميت لفريق المتجر. تقدر تدخل مركز البائع دلوقتي.' : 'رفضت الدعوة.' };
+  });
+  revalidatePath('/account/store-invitations');
   return res;
 }

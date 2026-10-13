@@ -53,13 +53,13 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
         <div className="grid gap-4 md:grid-cols-2">
           <ActionForm action={sellerReturnAction} className="card space-y-3 p-5">
             <input type="hidden" name="returnId" value={r.id} /><input type="hidden" name="op" value="refund" />
-            <h2 className="font-bold">قبول الاسترداد</h2>
+            <h2 className="font-bold">قبول الإرجاع وطلب الاسترداد</h2>
             <Field label="مبلغ الاسترداد (ج.م)" htmlFor="amount" hint={`قيمة المنتجات ${formatEGP(ceiling.items)} — الحد الأقصى ${formatEGP(ceiling.max)}`}><Input id="amount" name="amount" defaultValue={toInputAmount(ceiling.items)} dir="ltr" /></Field>
             <Checkbox name="includeShipping" label="يشمل مصاريف الشحن" />
             <Checkbox name="restock" defaultChecked label="إعادة المنتج للمخزون (صالح للبيع)" />
             <Field label="ملاحظات الفحص" htmlFor="note"><Textarea id="note" name="note" rows={2} /></Field>
-            <SubmitButton variant="success">تأكيد الاسترداد</SubmitButton>
-            <p className="text-xs text-muted">سيتم خصم المبلغ (ناقص حصة رسوم خدمة اضمن) من رصيدك، ويحوّل فريق اضمن المبلغ للعميل بعد اعتماد الإدارة.</p>
+            <SubmitButton variant="success">قبول الإرجاع وتسجيل طلب الاسترداد</SubmitButton>
+            <p className="text-xs text-muted">سيُسجَّل طلب استرداد للعميل. بعد اعتماد الإدارة يُخصم المبلغ (ناقص حصة رسوم خدمة اضمن) من رصيدك، ثم يحوّل فريق اضمن المبلغ للعميل.</p>
           </ActionForm>
           {r.status === 'INSPECTION' && (
             <ActionForm action={sellerReturnAction} className="card space-y-2 p-5">

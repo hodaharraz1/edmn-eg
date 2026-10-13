@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createProductAction } from '@/app/_actions/seller';
 import { SellerStatusGate } from '@/app/_components/seller-gate';
 import { db } from '@/server/db/client';
@@ -15,7 +16,8 @@ export const metadata = { title: 'إضافة منتج' };
 
 export default async function NewProductPage() {
   const user = await requireUser('/seller');
-  const ctx = (await sellerContextForUser(user.id))!;
+  const ctx = await sellerContextForUser(user.id);
+  if (!ctx) redirect('/seller/register');
   const tree = await categoryTree(db, { activeOnly: true });
   type N = (typeof tree)[number];
   const flat: { id: string; label: string; restricted: boolean }[] = [];
@@ -40,7 +42,7 @@ export default async function NewProductPage() {
       <PageHeader title="إضافة منتج جديد" description="لن يظهر المنتج للعملاء قبل مراجعته والموافقة عليه من فريق اضمن." />
       <Stepper steps={PRODUCT_STEPS} current={1} />
       <ActionForm action={createProductAction} className="card space-y-4 p-5">
-        <Field label="التصنيف" htmlFor="categoryId" required hint="اختر أدق تصنيف مناسب — يحدد المواصفات المطلوبة والعمولة">
+        <Field label="التصنيف" htmlFor="categoryId" required hint="اختر أدق تصنيف مناسب — يحدد المواصفات المطلوبة وفئة رسوم خدمة اضمن">
           <Select id="categoryId" name="categoryId" required defaultValue="">
             <option value="" disabled>اختر التصنيف</option>
             {flat.map((c) => <option key={c.id} value={c.id}>{c.label}{c.restricted ? ' (مراجعة خاصة)' : ''}</option>)}

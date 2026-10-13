@@ -14,7 +14,9 @@ const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%
 
 export default async function SellerDashboard(props: PageProps<'/seller'>) {
   const user = await requireUser('/seller');
-  const ctx = (await sellerContextForUser(user.id))!;
+  const ctx = await sellerContextForUser(user.id);
+  // Layout and page render concurrently: an account with no store is redirected here too (never a null crash).
+  if (!ctx) redirect('/seller/register');
   if (ctx.seller.status === 'DRAFT') redirect('/seller/onboarding');
   const sp = await props.searchParams;
   const preset = typeof sp.range === 'string' ? sp.range : '30d';
