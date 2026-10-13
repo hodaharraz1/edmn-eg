@@ -50,14 +50,14 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
   return (
     <div className="space-y-5">
       {!(await realMoneyEnabled()) && <TestMoneyNotice kind="payout" />}
-      <PageHeader title="السحوبات" description={`الهدف تنفيذ طلبات السحب خلال ${sla} ساعة عمل. ${mode !== 'ON_REQUEST' ? `كما تتم تسوية دورية تلقائية يوم ${days.join(' و ')} من كل شهر.` : ''}`} />
+      <PageHeader title="السحوبات" description={`الهدف تنفيذ طلبات السحب خلال ${sla} ساعة عمل. ${mode !== 'ON_REQUEST' ? `كما يُنشأ طلب سحب دوري تلقائيًا يوم ${days.join(' و ')} من كل شهر (يحتاج اعتماد الإدارة قبل التحويل).` : ''}`} />
       <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
         <div className="card space-y-3 p-5">
-          <p className="text-sm text-muted">الرصيد المتاح للسحب</p>
+          <p className="text-sm text-muted">رصيد متاح</p>
           <p className="text-3xl font-bold text-emerald-700">{formatEGP(b.available)}</p>
-          <p className="text-xs text-muted">وسيلة السحب: {pm ? pm.maskedLabel : 'لا توجد وسيلة معتمدة'} · الحد الأدنى {formatEGP(min)}</p>
-          {!pm && <LinkButton href="/seller/settings" size="sm" variant="outline">إضافة وسيلة سحب</LinkButton>}
-          {hold && <Alert tone="warning">تم تعديل بيانات السحب مؤخراً. لحمايتك، السحب متاح بعد {formatDate(ctx.seller.payoutHoldUntil, true)}.</Alert>}
+          <p className="text-xs text-muted">بيانات استلام الأموال: {pm ? pm.maskedLabel : 'لا توجد بيانات معتمدة'} · الحد الأدنى {formatEGP(min)}</p>
+          {!pm && <LinkButton href="/seller/settings" size="sm" variant="outline">إضافة بيانات استلام الأموال</LinkButton>}
+          {hold && <Alert tone="warning">تم تعديل بيانات استلام الأموال مؤخرًا. لحمايتك، السحب متاح بعد {formatDate(ctx.seller.payoutHoldUntil, true)}.</Alert>}
         </div>
         {canWithdraw ? (
           <div className="card space-y-3 p-5">
@@ -73,7 +73,7 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
                   <div><dt className="text-xs text-muted">رسوم التحويل</dt><dd data-testid="transfer-cost">−{formatEGP(preview.transferCost)}</dd></div>
                   <div><dt className="text-xs text-muted">صافي المتوقع تحويله</dt><dd className="font-bold" data-testid="transfer-net">{formatEGP(preview.net)}</dd></div>
                 </dl>
-                <p className="text-[11px] text-muted">رسوم التحويل تخص قناة التحويل ({preview.channel}) ومنفصلة عن رسوم خدمة اضمن اللي اتحسبت مرة واحدة على مبيعاتك ومش بتتخصم تاني هنا.</p>
+                <p className="text-[11px] text-muted">رسوم التحويل تخص قناة التحويل ({label('payoutChannel', preview.channel)}) ومنفصلة عن رسوم خدمة اضمن اللي اتحسبت مرة واحدة على مبيعاتك ومش بتتخصم تاني هنا.</p>
                 {preview.violations.length > 0 && <Alert tone="danger">{preview.violations.join('، ')}</Alert>}
                 {preview.warnings.length > 0 && <Alert tone="warning">{preview.warnings.join('، ')}</Alert>}
                 <ActionForm action={requestWithdrawalAction} className="space-y-2">

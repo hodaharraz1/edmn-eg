@@ -99,7 +99,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         breadcrumbs={<Breadcrumbs items={[{ label: 'الصفقات المحمية', href: '/account/deals' }, { label: g.ref }]} />}
         title={deal.title}
         description={`صفقة محمية · ${g.ref}`}
-        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} />{canMessage && <MessageCtaLink href={`/account/messages/open?deal=${deal.id}`} label={isBuyer ? 'تواصل مع البائع' : 'تواصل مع المشتري'} unread={unreadMsgs} />}</>}
+        actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} kind="deal" />{canMessage && <MessageCtaLink href={`/account/messages/open?deal=${deal.id}`} label={isBuyer ? 'تواصل مع البائع' : 'تواصل مع المشتري'} unread={unreadMsgs} />}</>}
       />
 
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}
@@ -149,7 +149,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
           { label: 'التسليم المتوقع', value: `${deal.deliveryMethod ?? '—'} · قبل ${formatDate(deal.deliveryDeadline)}` },
           { label: 'مدة الفحص', value: `${deal.inspectionDays} يوم` },
           { label: 'شروط خاصة', value: deal.customTerms ?? 'مفيش' },
-          ...(isSeller && deal.sellerPayoutMasked ? [{ label: 'وسيلة استلام مستحقاتك', value: deal.sellerPayoutMasked }] : []),
+          ...(isSeller && deal.sellerPayoutMasked ? [{ label: 'بيانات استلام الأموال', value: deal.sellerPayoutMasked }] : []),
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{deal.description}</p>
       </section>
@@ -453,13 +453,13 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       )}
       {dispute && <LinkButton href={`/account/disputes/${dispute.id}`} variant="secondary">متابعة النزاع #{dispute.number}</LinkButton>}
       {(deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') && (
-        <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{deal.status === 'BUYER_CONFIRMED_RECEIPT' ? 'المشتري أكد الاستلام.' : 'انتهت مهلة المشتري بدون اعتراض.'} المبلغ لسه محجوز لحد ما الإدارة توافق على التسوية. {isBuyer ? 'لو ظهرت مشكلة قبل الإتاحة تقدر تبلّغ.' : ''}</Alert>
+        <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{deal.status === 'BUYER_CONFIRMED_RECEIPT' ? 'المشتري أكد الاستلام.' : 'انتهت مهلة المشتري بدون اعتراض.'} المبلغ لسه عند اضمن لحد ما الإدارة توافق على الإتاحة. {isBuyer ? 'لو ظهرت مشكلة قبل الإتاحة تقدر تبلّغ.' : ''}</Alert>
       )}
       {(deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') && isBuyer && !dispute && (
         <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> ظهرت مشكلة؟ بلّغ قبل الإتاحة</LinkButton>
       )}
       {deal.status === 'REFUND_PENDING' && <Alert tone="warning" title="استرداد قيد الاعتماد">قرار النزاع استرداد كامل للمشتري، والإدارة بتراجع وتعتمد الاسترداد قبل التحويل.</Alert>}
-      {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} هيتحوّل على ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'اتحوّل' : 'جاري التحويل'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
+      {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} هيتحوّل على ${deal.sellerPayoutMasked}. الحالة: ${g.payout?.status === 'PAID' ? 'تم التحويل' : 'مستحق — لم يُحوَّل بعد'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
 
       {versions.length > 0 && (
         <details className="card p-4" data-testid="terms-history">
@@ -556,7 +556,7 @@ function OfferFields({ condition, defaults, request }: { condition: string | nul
 function PayoutFields({ holder }: { holder: string }) {
   return (
     <fieldset className="space-y-3 rounded-xl border border-line p-4">
-      <legend className="px-1 text-sm font-bold">وسيلة استلام مستحقاتك</legend>
+      <legend className="px-1 text-sm font-bold">بيانات استلام الأموال</legend>
       <Field label="الوسيلة" htmlFor="payoutType"><Select id="payoutType" name="payoutType" defaultValue="INSTAPAY"><option value="INSTAPAY">إنستاباي</option><option value="MOBILE_WALLET">محفظة موبايل</option><option value="BANK_ACCOUNT">حساب بنكي</option></Select></Field>
       <Field label="اسم صاحب الحساب" htmlFor="holderName" required><Input id="holderName" name="holderName" defaultValue={holder} required /></Field>
       <Field label="عنوان إنستاباي (لإنستاباي)" htmlFor="instapayAddress"><Input id="instapayAddress" name="instapayAddress" dir="ltr" /></Field>

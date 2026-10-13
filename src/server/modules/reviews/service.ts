@@ -5,6 +5,7 @@ import { requirePermission, requireSeller, requireUser, type Actor } from '@/ser
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { orderItems, orders, productReviews, products, reviewReports, sellerOrders, sellerReviews, sellers, users } from '@/server/db/schema';
+import { enforce } from '@/server/auth/rate-limit';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason } from '../_shared';
@@ -117,6 +118,12 @@ export async function respondToReview(actor: Actor, type: 'PRODUCT' | 'SELLER', 
 export async function reportReview(actor: Actor, type: 'PRODUCT' | 'SELLER', reviewId: string, reason: string) {
   const userId = requireUser(actor);
   const why = requireReason(reason);
+  await enforce(`review-report:${userId}`, 20, 3600);
+  // Only an existing, published review can be reported (F-13).
+  const exists = type === 'PRODUCT'
+    ? await db.select({ id: productReviews.id }).from(productReviews).where(eq(productReviews.id, reviewId)).limit(1)
+    : await db.select({ id: sellerReviews.id }).from(sellerReviews).where(eq(sellerReviews.id, reviewId)).limit(1);
+  if (!exists.length) throw notFound('التقييم');
   await db.insert(reviewReports).values({ reviewType: type, reviewId, reporterUserId: userId, reason: why }).onConflictDoNothing();
 }
 

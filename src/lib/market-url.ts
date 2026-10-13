@@ -5,6 +5,6 @@
  * Server components only (reads server environment).
  */
 export function marketHref(path: string): string {
-  if (process.env.ENFORCE_HOSTS !== 'true' || !process.env.APP_URL) return path;
+  if ((process.env.ENFORCE_HOSTS !== 'true' && process.env.ENFORCE_ADMIN_HOST !== 'true') || !process.env.APP_URL) return path;
   return new URL(path, process.env.APP_URL).toString();
 }

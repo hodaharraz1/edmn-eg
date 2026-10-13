@@ -113,7 +113,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
               {so.status === 'CANCELLED' && <Alert tone="danger" title="الشحنة دي اتلغت">السبب: {so.cancelReason ?? '—'}. لو كنت دفعت، طلب استرداد المبلغ اتسجل ومتابعته تحت.</Alert>}
               {so.status === 'DELIVERY_FAILED' && <Alert tone="danger" title="التوصيل فشل">الشحنة رجعت للبائع أو اتفقدت. طلب استرداد المبلغ اتسجل ومتابعته تحت.</Alert>}
               {so.status === 'AWAITING_BUYER_RESPONSE' && so.buyerResponseDueAt && (
-                <Alert tone="info" title="الطلب اتسلّم حسب شركة الشحن — عندك 24 ساعة">لو وصلك تمام أكّد الاستلام. لو ماوصلكش أو فيه مشكلة بلّغنا قبل <b>{formatDate(so.buyerResponseDueAt, true)}</b>. بعد المهلة بدون اعتراض المبلغ يفضل محجوز لحد موافقة الإدارة، وحقك في الإرجاع/النزاع حسب السياسة لسه قائم.</Alert>
+                <Alert tone="info" title="الطلب اتسلّم حسب شركة الشحن — عندك 24 ساعة">لو وصلك تمام أكّد الاستلام. لو ماوصلكش أو فيه مشكلة بلّغنا قبل <b>{formatDate(so.buyerResponseDueAt, true)}</b>. بعد المهلة بدون اعتراض المبلغ يفضل عند اضمن لحد موافقة الإدارة، وحقك في الإرجاع/النزاع حسب السياسة لسه قائم.</Alert>
               )}
               {pendingCancel && <Alert tone="warning">طلب الإلغاء بتاعك مستني رد البائع أو فريق اضمن، والشحن موقوف.</Alert>}
               {soRefunds.map((r) => (
@@ -163,7 +163,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                     <p className="text-sm font-semibold">ماستلمتش الطلب أو فيه مشكلة؟</p>
                     <select name="kind" className="rounded-lg border border-line bg-white p-2 text-sm" aria-label="نوع المشكلة"><option value="NOT_RECEIVED">ماستلمتش الطلب</option><option value="PRODUCT_PROBLEM">استلمت بس فيه مشكلة</option></select>
                     <textarea name="description" required minLength={20} rows={2} className="block w-full rounded-lg border border-line bg-white p-2 text-sm" placeholder="اشرح المشكلة (20 حرف على الأقل)" aria-label="وصف المشكلة" />
-                    <SubmitButton variant="outline" size="sm">بلّغ فريق اضمن (المبلغ يتجمد)</SubmitButton>
+                    <SubmitButton variant="outline" size="sm">بلّغ فريق اضمن (المبلغ يتوقّف عند اضمن)</SubmitButton>
                   </ActionForm>
                 )}
                 {PRE_SHIP.includes(so.status) && !pendingCancel && (
@@ -193,7 +193,7 @@ export default async function OrderDetail(props: PageProps<'/account/orders/[id]
                 <div><dt className="text-xs text-muted">الشحن</dt><dd>{formatEGP(so.shippingFee)}</dd></div>
                 {so.buyerFeeTotal > 0 && <div><dt className="text-xs text-muted">رسوم خدمة وحماية اضمن</dt><dd>{formatEGP(so.buyerFeeTotal)}</dd></div>}
                 <div><dt className="text-xs text-muted">الإجمالي</dt><dd className="font-semibold">{formatEGP(so.grossTotal)}</dd></div>
-                {so.refundedTotal > 0 && <div><dt className="text-xs text-muted">المسترد</dt><dd className="text-emerald-700">{formatEGP(so.refundedTotal)}</dd></div>}
+                {so.refundedTotal > 0 && <div><dt className="text-xs text-muted">استرداد معتمد</dt><dd>{formatEGP(so.refundedTotal)}</dd></div>}
               </dl>
             </div>
           </section>

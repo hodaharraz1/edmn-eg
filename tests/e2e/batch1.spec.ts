@@ -50,7 +50,6 @@ test('C2: creating a SUPER_ADMIN without the explicit privileged confirmation is
   await form.locator('input[name="fullName"]').fill('محاولة إنشاء مدير عام');
   await form.locator('input[name="email"]').fill(email);
   await form.locator('input[name="phone"]').fill('01099999999');
-  await form.locator('input[name="password"]').fill('Strong#Pass2026x');
   await form.locator('select[name="role"]').selectOption('SUPER_ADMIN');
   await form.getByRole('button', { name: 'إضافة' }).click();
   await expect(admin.getByText(/أكّد الإجراء صراحةً/)).toBeVisible();

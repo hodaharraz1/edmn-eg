@@ -6,6 +6,8 @@ import { audit } from '@/server/audit/audit';
 import type { Actor } from '@/server/core/actor';
 import { decrypt, encrypt, hmac, randomToken, sha256 } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
+import { absoluteUrl } from '@/server/core/urls';
+import { smsAvailable } from '@/server/core/runtime-env';
 import { DomainError, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db } from '@/server/db/client';
@@ -242,8 +244,8 @@ export async function requestPasswordReset(identifier: string, meta: RequestMeta
       tokenHash: sha256(token),
       expiresAt: new Date(Date.now() + 30 * 60_000),
     });
-    const link = `${env().APP_URL}/reset-password?token=${token}`;
-    await sendDirect(tx, 'ACCOUNT_SECURITY', { email: user.email }, { message: `عشان تغيّر كلمة المرور، افتح الرابط ده خلال 30 دقيقة: ${link}` });
+    const link = absoluteUrl(`/reset-password?token=${token}`);
+    await sendDirect(tx, 'ACCOUNT_SECURITY', { email: user.email }, { message: `عشان تغيّر كلمة المرور، افتح الرابط ده خلال 30 دقيقة: ${link}\nلو مش انت اللي طلبت تغيير كلمة المرور، تجاهل الرسالة دي وحسابك هيفضل زي ما هو.` }, { subject: 'تغيير كلمة المرور في اضمن' });
   });
 }
 
@@ -289,6 +291,8 @@ export async function changePassword(userId: string, current: string, next: stri
 
 /** 6-digit verification code for email/phone (delivered through the notification adapters). */
 export async function sendVerificationCode(userId: string, channel: 'EMAIL' | 'PHONE'): Promise<void> {
+  // Without a real SMS provider a code would never arrive: say so instead of pretending it was sent.
+  if (channel === 'PHONE' && !smsAvailable()) throw validation('تأكيد رقم الموبايل برسالة SMS هيتفعّل قريبًا. الخدمة مش متاحة دلوقتي.');
   await enforce(`verify-send:${userId}:${channel}`, 5, 3600);
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   if (!user) return;
@@ -299,7 +303,7 @@ export async function sendVerificationCode(userId: string, channel: 'EMAIL' | 'P
     await tx.insert(authTokens).values({ userId, purpose, tokenHash: codeHash(userId, purpose, code), expiresAt: new Date(Date.now() + 15 * 60_000) });
     await sendDirect(tx, 'ACCOUNT_SECURITY', channel === 'EMAIL' ? { email: user.email } : { phone: user.phone }, {
       message: `رمز التحقق بتاعك في اضمن: ${code}. صالح لمدة 15 دقيقة. ما تشاركوش مع حد.`,
-    });
+    }, { subject: 'رمز التحقق من اضمن' });
   });
 }
 

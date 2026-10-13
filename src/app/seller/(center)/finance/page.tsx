@@ -41,13 +41,13 @@ export default async function SellerFinance() {
         <StatCard label="رسوم خدمة اضمن عليك" value={formatEGP(Number(t.fees))} tone="neutral" />
         <StatCard label="المستردات" value={formatEGP(Number(t.refunds))} tone="warning" />
         <StatCard label="التسويات" value={formatEGP(Number(adj.total))} tone="neutral" />
-        <StatCard label="معلق (لحين الاستلام)" value={formatEGP(balances.pending - ent)} tone="warning" />
-        <StatCard label="مستحق بانتظار اعتماد الإدارة" value={formatEGP(ent)} tone="warning" />
-        <StatCard label="المتاح للسحب" value={formatEGP(balances.available)} tone="success" />
-        <StatCard label="محجوز لطلبات سحب" value={formatEGP(balances.reserved)} tone="brand" />
-        <StatCard label="تم صرفه" value={formatEGP(Number(paid.rows[0].s))} tone="success" hint={`رسوم تحويل تحملتها: ${formatEGP(Number(paid.rows[0].c))}`} />
+        <StatCard label="رصيد معلّق" value={formatEGP(balances.pending - ent)} tone="warning" />
+        <StatCard label="مستحق — بانتظار موافقة الإدارة" value={formatEGP(ent)} tone="warning" />
+        <StatCard label="رصيد متاح" value={formatEGP(balances.available)} tone="success" hint="متاح للسحب" />
+        <StatCard label="رصيد محجوز (لسحب معتمد)" value={formatEGP(balances.reserved)} tone="brand" />
+        <StatCard label="تم تحويله لك" value={formatEGP(Number(paid.rows[0].s))} tone="success" hint={`رسوم تحويل تحملتها: ${formatEGP(Number(paid.rows[0].c))}`} />
       </div>
-      {balances.available < 0 && <Alert tone="danger" title="التزام سالب">عليك مديونية {formatEGP(-balances.available)} بعد استرداد لاحق للإتاحة. تتم تسويتها من مبيعاتك القادمة، ولا يمكن صرف أي سحب قبل تسويتها.</Alert>}
+      {balances.available < 0 && <Alert tone="danger" title="عليك مديونية">عليك مديونية {formatEGP(-balances.available)} بعد استرداد لاحق للإتاحة. تتم تسويتها من مبيعاتك القادمة، ولا يمكن صرف أي سحب قبل تسويتها.</Alert>}
       <h2 className="font-bold">كشف الحساب</h2>
       <DataTable
         rows={statement.rows}

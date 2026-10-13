@@ -4,6 +4,12 @@ import { notificationTemplates, notifications, outboundMessages, users } from '@
 import { enqueueJob } from '@/server/jobs/queue';
 import { EVENT_TEMPLATES, render, type EventName } from './events';
 import { protectOutboxRow } from './outbox';
+import { absoluteUrl } from '@/server/core/urls';
+
+/** Plain-text footer of every notification email: brand, where to manage notifications, where to get help. */
+export function emailFooter(): string {
+  return `\n\n—\nاضمن | EDMN\nإعدادات الإشعارات: ${absoluteUrl('/account/notifications/settings')}\nالمساعدة: ${absoluteUrl('/contact')}`;
+}
 
 export interface NotifyInput {
   event: EventName;
@@ -56,7 +62,8 @@ export async function notify(tx: DbOrTx, input: NotifyInput): Promise<void> {
         channel: 'EMAIL',
         recipient: r.email,
         subject: render(email?.subject ?? def.title, vars),
-        body: render(email?.body ?? def.body, vars) + (input.link ? `\n\n${input.link}` : ''),
+        // Email clients cannot resolve relative paths: links are absolute (APP_URL origin).
+        body: render(email?.body ?? def.body, vars) + (input.link ? `\n\n${absoluteUrl(input.link)}` : '') + emailFooter(),
         event: input.event,
       });
     }
@@ -76,10 +83,11 @@ export async function sendDirect(
   event: EventName,
   to: { email?: string | null; phone?: string | null },
   vars: Record<string, string | number | null | undefined>,
+  opts: { subject?: string } = {},
 ): Promise<void> {
   const def = EVENT_TEMPLATES[event];
   const rows: (typeof outboundMessages.$inferInsert)[] = [];
-  if (to.email) rows.push({ channel: 'EMAIL', recipient: to.email, subject: render(def.title, vars), body: render(def.body, vars), event });
+  if (to.email) rows.push({ channel: 'EMAIL', recipient: to.email, subject: opts.subject ?? render(def.title, vars), body: render(def.body, vars), event });
   if (to.phone) rows.push({ channel: 'SMS', recipient: to.phone, body: render(def.body, vars).slice(0, 300), event });
   if (rows.length) {
     await tx.insert(outboundMessages).values(rows.map(protectOutboxRow));

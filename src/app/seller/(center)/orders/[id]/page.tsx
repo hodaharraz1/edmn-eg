@@ -63,7 +63,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
       )}
       {so.status === 'AWAITING_BUYER_RESPONSE' && <Alert tone="info">التسليم اتأكد. المشتري عنده لحد {formatDate(so.buyerResponseDueAt, true)} يأكد الاستلام أو يبلّغ عن مشكلة.</Alert>}
       {so.status === 'DELIVERED' && !so.fundsReleasedAt && <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{label('receiptBasis', so.receiptBasis)}. المبلغ لسه مش متاح للسحب لحد موافقة الإدارة على الإتاحة.</Alert>}
-      {so.deliveryExceptionCode && <Alert tone="danger">الطلب عند فريق العمليات للمراجعة: {label('deliveryException', so.deliveryExceptionCode.replace(/^SHIPMENT_/, ''))}</Alert>}
+      {so.deliveryExceptionCode && <Alert tone="danger">الطلب عند فريق العمليات للمراجعة: {label('deliveryException', so.deliveryExceptionCode)}</Alert>}
       {dispute && <Alert tone="danger" title={`نزاع مفتوح #${dispute.number}`}>{dispute.description}</Alert>}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="card p-5">
@@ -121,7 +121,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           {documents.length > 0 && <p className="text-xs text-emerald-700">تم رفع {documents.length} مستند: {documents.map((d, i) => <a key={d.id} href={`/api/files/${d.fileId}`} target="_blank" className="underline">بوليصة {i + 1}</a>)}</p>}
           {so.status !== 'SHIPPED' && <Checkbox name="markShipped" label="تحديد الطلب كـ «تم الشحن» وإبلاغ العميل الآن" />}
           <SubmitButton>حفظ</SubmitButton>
-          <p className="text-xs text-muted">ملاحظة: رفع البوليصة لا يُتيح أرباحك. بعد التسليم: دليل تسليم خلال 24 ساعة ← مهلة المشتري 24 ساعة ← موافقة الإدارة على الإتاحة.</p>
+          <p className="text-xs text-muted">ملاحظة: رفع البوليصة لا يُتيح مستحقاتك. بعد التسليم: دليل تسليم خلال 24 ساعة ← مهلة المشتري 24 ساعة ← موافقة الإدارة على الإتاحة.</p>
         </ActionForm>
       )}
 

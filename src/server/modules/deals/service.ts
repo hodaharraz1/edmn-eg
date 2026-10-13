@@ -1,3 +1,5 @@
+import { absoluteUrl } from '@/server/core/urls';
+import { smsAvailable } from '@/server/core/runtime-env';
 import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision } from '@/domain/machines';
@@ -72,8 +74,15 @@ export const sellerHintsSchema = z.object({
 /** Public, human-friendly deal reference (never used as a secret). */
 export const dealRef = (n: number | bigint) => `EDMN-${String(n).padStart(8, '0')}`;
 
+/** Protected Deals need SMS (seller mobile verification + delivery OTP): refused, never half-working, without it. */
+function assertDealsAvailable() {
+  if (!smsAvailable()) throw invalidState('الصفقات المحمية هتتفعّل قريبًا — بتحتاج خدمة رسائل SMS لتأكيد الاستلام بالرمز.');
+}
+
 export async function createDeal(actor: Actor, input: z.input<typeof step1Schema>) {
+  assertDealsAvailable();
   const userId = requireUser(actor);
+  await enforce(`deal-create:${userId}`, 20, 24 * 3600);
   const d = parse(step1Schema, input);
   return db.transaction(async (tx) => {
     const [deal] = await tx
@@ -188,6 +197,7 @@ async function issueInvitation(tx: DbOrTx, dealId: string) {
  * never be relayed as a branded SMS. Returns the raw link once; only its hash is stored.
  */
 export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: boolean) {
+  assertDealsAvailable();
   if (!acceptTerms) throw validation('لازم توافق على شروط الصفقات المحمية');
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_INVITATION');
@@ -202,7 +212,7 @@ export async function inviteSeller(actor: Actor, dealId: string, acceptTerms: bo
     await tx.insert(legalAcceptances).values({ userId: deal.buyerId, documentCode: 'EXTERNAL_DEAL_TERMS', version, context: `deal:${deal.id}:buyer`, ip: actor.ip ?? null });
     await moveDeal(tx, actor, deal, 'INVITED', { invitedAt: new Date(), termsVersion: version });
     await audit(tx, actor, { action: 'deal.invitation_created', entityType: 'external_deal', entityId: deal.id, newValues: { termsVersion: version } });
-    return { link: `${env().APP_URL}${invitationPath(token)}`, token };
+    return { link: absoluteUrl(invitationPath(token)), token };
   });
 }
 
@@ -214,7 +224,7 @@ export async function refreshInvitation(actor: Actor, dealId: string) {
     const token = await issueInvitation(tx, deal.id);
     await audit(tx, actor, { action: 'deal.invitation_revoked', entityType: 'external_deal', entityId: deal.id, newValues: { reason: 'replaced' } });
     await audit(tx, actor, { action: 'deal.invitation_created', entityType: 'external_deal', entityId: deal.id });
-    return { link: `${env().APP_URL}${invitationPath(token)}`, token };
+    return { link: absoluteUrl(invitationPath(token)), token };
   });
 }
 
@@ -561,7 +571,7 @@ export async function respondToOffer(actor: Actor, dealId: string, version: numb
       await tx.update(dealInvitations).set({ status: 'REJECTED', respondedAt: new Date() }).where(and(eq(dealInvitations.dealId, deal.id), eq(dealInvitations.status, 'PENDING')));
       await moveDeal(tx, actor, deal, 'CANCELLED', { cancelledAt: new Date(), cancelReason: 'رفض المشتري عرض البائع' });
       await audit(tx, actor, { action: 'deal.offer_rejected_by_buyer', entityType: 'external_deal', entityId: deal.id, newValues: { version } });
-      if (deal.sellerUserId) await notify(tx, { event: 'EXTERNAL_DEAL_REJECTED', userIds: [deal.sellerUserId], vars: { deal: dealRef(deal.number), reason: 'رفض المشتري العرض' }, link: `/account/deals/${deal.id}` });
+      if (deal.sellerUserId) await notify(tx, { event: 'EXTERNAL_DEAL_OFFER_REJECTED', userIds: [deal.sellerUserId], vars: { deal: dealRef(deal.number), reason: 'رفض المشتري العرض' }, link: `/account/deals/${deal.id}` });
       return { status: 'CANCELLED' };
     }
     const policy = parse(returnPolicySchema, change?.returnPolicy);
@@ -779,6 +789,13 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
   return { otpId: id, expiresAt };
 }
 
+/** Total wrong-or-right guesses ever made on a deal's delivery codes. A security bound, not a business value. */
+const DEAL_OTP_LIFETIME_GUESSES = 30;
+async function dealOtpGuesses(tx: DbOrTx, dealId: string): Promise<number> {
+  const r = await tx.execute<{ n: string }>(sql`select coalesce(sum(attempts), 0)::text n from deal_delivery_otps where deal_id = ${dealId}`);
+  return Number(r.rows[0]?.n ?? 0);
+}
+
 /** Buyer (or the bound seller, on the buyer's behalf) asks for a new code; it is always sent to the BUYER. */
 export async function regenerateDeliveryOtp(actor: Actor, dealId: string) {
   const userId = requireUser(actor);
@@ -789,6 +806,7 @@ export async function regenerateDeliveryOtp(actor: Actor, dealId: string) {
     if (!deal) throw notFound('الصفقة');
     if (deal.buyerId !== userId && deal.sellerUserId !== userId) throw forbidden();
     if (deal.status !== 'DELIVERED') throw invalidState('رمز الاستلام بيبقى متاح بس بعد الشحن وقبل التحقق من التسليم');
+    if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) throw invalidState('عدد محاولات إدخال رمز الاستلام للصفقة دي خلص. كلّم الدعم لمراجعة التسليم.');
     const r = await issueDeliveryOtpTx(tx, actor, deal, 'deal.delivery_otp_regenerated');
     return { expiresAt: r.expiresAt };
   });
@@ -814,6 +832,8 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
     if (!deal) return { ok: false, error: notFound('الصفقة') };
     if (deal.sellerUserId !== userId) return { ok: false, error: forbidden('إدخال رمز الاستلام متاح لبائع الصفقة فقط') };
     if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'التسليم اتأكد مسبقًا' : 'مينفعش تتحقق من التسليم في حالة الصفقة دي') };
+    // Lifetime guess budget per deal across ALL codes (F-10): regenerating never resets it.
+    if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) return { ok: false, error: invalidState('عدد محاولات إدخال رمز الاستلام للصفقة دي خلص. كلّم الدعم لمراجعة التسليم.') };
     const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id)).for('update');
     if (!otp || otp.buyerId !== deal.buyerId) return { ok: false, error: invalidState('لا يوجد رمز صالح. اطلب من المشتري رمزًا جديدًا') };
     const now = new Date();

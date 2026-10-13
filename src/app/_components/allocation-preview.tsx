@@ -20,14 +20,14 @@ export function AccountWithdrawalForm({ preview, request, destinations, clientKe
     <div className="space-y-3" data-testid="account-withdrawal">
       <ActionForm action={preview} className="flex flex-wrap items-end gap-2">
         <Input name="amount" required inputMode="decimal" className="ltr w-full sm:w-36" placeholder="المبلغ" aria-label="مبلغ السحب للمعاينة" />
-        <Select name="destination" aria-label="وجهة الصرف للمعاينة" className="w-full min-w-0 max-w-full sm:w-auto">{destinations.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</Select>
+        <Select name="destination" aria-label="بيانات استلام الأموال للمعاينة" className="w-full min-w-0 max-w-full sm:w-auto">{destinations.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</Select>
         <SubmitButton variant="outline" size="sm">احسب التوزيع</SubmitButton>
         <Plan />
       </ActionForm>
       <ActionForm action={request} className="flex flex-wrap items-end gap-2" resetOnSuccess>
         <input type="hidden" name="clientKey" value={clientKey} />
         <Input name="amount" required inputMode="decimal" className="ltr w-full sm:w-36" placeholder="المبلغ" aria-label="مبلغ السحب" />
-        <Select name="destination" aria-label="وجهة الصرف" className="w-full min-w-0 max-w-full sm:w-auto">{destinations.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</Select>
+        <Select name="destination" aria-label="بيانات استلام الأموال" className="w-full min-w-0 max-w-full sm:w-auto">{destinations.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}</Select>
         <SubmitButton>طلب سحب</SubmitButton>
       </ActionForm>
     </div>

@@ -44,7 +44,7 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
       </section>
       <section className="card space-y-3 p-5">
         <h2 className="font-bold">المحادثة</h2>
-        {g.messages.length === 0 && <p className="text-sm text-muted">مفيش رسايل لسه.</p>}
+        {g.messages.length === 0 && <p className="text-sm text-muted">مفيش رسائل لسه.</p>}
         {g.messages.map(({ m, author }) => (
           <div key={m.id} className={`rounded-xl p-3 text-sm ${m.authorRole === 'ADMIN' ? 'bg-brand-50' : 'bg-page'}`}>
             <p className="mb-1 flex items-center gap-2 text-xs text-muted"><Badge tone={m.authorRole === 'ADMIN' ? 'brand' : 'neutral'}>{ROLE[m.authorRole]}</Badge> {author} · {formatDate(m.createdAt, true)}</p>

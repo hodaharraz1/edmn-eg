@@ -372,7 +372,7 @@ describe('marketplace return policy snapshot', () => {
   it('a product cannot be submitted before its return policy is set', async () => {
     const s = await makeSeller(admin);
     const { productId } = await makeProduct(s.actor, admin, { approve: false, setReturnPolicy: false });
-    await expect(submitForReview(s.actor, productId)).rejects.toThrow(/سياسة الاسترجاع/);
+    await expect(submitForReview(s.actor, productId)).rejects.toThrow(/سياسة الإرجاع/);
   });
 
   it('order items snapshot the policy; later store changes do not alter history; protected reasons survive "no voluntary returns"', async () => {

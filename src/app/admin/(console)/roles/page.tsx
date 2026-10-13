@@ -59,7 +59,7 @@ export default async function Roles(props: PageProps<'/admin/roles'>) {
             <Field label="الاسم" required><Input name="fullName" required /></Field>
             <Field label="البريد" required><Input name="email" type="email" required className="ltr" /></Field>
             <Field label="الموبايل" required><Input name="phone" required className="ltr" /></Field>
-            <Field label="كلمة مرور مؤقتة" required hint="12 حرفاً على الأقل مع أرقام ورموز؛ سيُطلب منه تفعيل 2FA عند أول دخول."><Input name="password" type="password" required minLength={12} autoComplete="new-password" /></Field>
+            <p className="text-xs text-muted sm:col-span-2">مفيش كلمة مرور بيحددها اللي بيضيف الحساب: الموظف بيوصله رابط دعوة على بريده (صالح 72 ساعة) يحدد بيه كلمة المرور بنفسه، ويفعّل التحقق بخطوتين عند أول دخول. الأدوار اللي فيها صلاحيات مالية أو إدارة صلاحيات يمنحها المدير العام فقط.</p>
             <Field label="الدور" required><Select name="role">{roleList.map((r) => <option key={r.code} value={r.code}>{r.nameAr}</option>)}</Select></Field>
             <div className="md:col-span-2"><SubmitButton>إضافة</SubmitButton></div>
           </ActionForm>

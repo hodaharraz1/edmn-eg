@@ -70,8 +70,7 @@ export function unsafeProductionConfig(e: Env, raw: Record<string, string | unde
     // Demo/E2E fixtures and their credentials never belong to production (fail closed at boot).
     for (const k of ['STAGING_DEMO_PASSWORD', 'STAGING_ADMIN_PASSWORD', 'STAGING_TOTP_SECRET']) if (raw[k]) problems.push(`${k} must not be set in production`);
     if (/^(true|1)$/i.test(raw.SEED_DEMO ?? '')) problems.push('SEED_DEMO must not be enabled in production');
-    // Real customers must receive verification codes and delivery OTPs.
-    if (e.SMS_DRIVER !== 'http') problems.push('SMS_DRIVER=http is required in production (delivery OTP and phone verification)');
+    // SMS is optional to boot (SMS-dependent flows are refused without it — see smsAvailable()).
     if (e.MAIL_DRIVER !== 'smtp') problems.push('MAIL_DRIVER=smtp is required in production');
   }
   return problems;

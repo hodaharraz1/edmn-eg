@@ -104,7 +104,7 @@ export default async function CartPage() {
             <LinkButton href={user ? '/checkout' : '/login?next=/checkout'} size="lg" className={`w-full ${blocking ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={blocking}>
               كمّل الشراء
             </LinkButton>
-            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> البائع ما بياخدش فلوسه غير بعد ما تأكّد إنك استلمت.</p>
+            <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> البائع ما بياخدش فلوسه قبل ما الطلب يتسلّم وتعدّي مهلة الاعتراض وتوافق الإدارة.</p>
           </div>
         </aside>
       </div>

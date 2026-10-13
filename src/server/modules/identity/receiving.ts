@@ -24,7 +24,7 @@ export type ReceivingDestination = typeof receivingDestinations.$inferSelect;
 export const DESTINATION_STATUS_LABELS: Record<ReceivingDestinationStatus, string> = {
   PENDING_REVIEW: 'قيد المراجعة',
   APPROVED: 'معتمدة',
-  MORE_INFO_REQUIRED: 'مطلوب استكمال',
+  MORE_INFO_REQUIRED: 'مطلوب معلومات إضافية',
   REJECTED: 'مرفوضة',
   REVERIFICATION_REQUIRED: 'مطلوب إعادة التحقق',
   ARCHIVED: 'مؤرشفة',
@@ -92,7 +92,7 @@ export async function submitReceivingDestination(actor: Actor, input: ReceivingD
     let supersedesId: string | null = null;
     if (opts.replacesId) {
       const [old] = await tx.select().from(receivingDestinations).where(eq(receivingDestinations.id, opts.replacesId)).for('update');
-      if (!old || old.userId !== uid) throw notFound('بيانات الاستلام');
+      if (!old || old.userId !== uid) throw notFound('بيانات استلام الأموال');
       if (old.status === 'ARCHIVED') throw invalidState('النسخة دي مؤرشفة بالفعل');
       // Material change: the old version can never be used again for NEW refunds (existing snapshots keep it).
       await tx.update(receivingDestinations).set({ status: 'ARCHIVED' }).where(eq(receivingDestinations.id, old.id));
@@ -118,7 +118,7 @@ export async function archiveReceivingDestination(actor: Actor, id: string) {
   const uid = requireUser(actor);
   await db.transaction(async (tx) => {
     const [d] = await tx.select().from(receivingDestinations).where(eq(receivingDestinations.id, id)).for('update');
-    if (!d || d.userId !== uid) throw notFound('بيانات الاستلام');
+    if (!d || d.userId !== uid) throw notFound('بيانات استلام الأموال');
     if (d.status === 'ARCHIVED') return;
     await tx.update(receivingDestinations).set({ status: 'ARCHIVED' }).where(eq(receivingDestinations.id, d.id));
     await event(tx, d.id, uid, 'ARCHIVED', d.status, 'ARCHIVED');
@@ -149,7 +149,7 @@ export async function reviewReceivingDestination(actor: Actor, id: string, decis
   if (decision !== 'APPROVE' && (!reason || reason.length < 5)) throw validation('اكتب سبب القرار');
   return db.transaction(async (tx) => {
     const [d] = await tx.select().from(receivingDestinations).where(eq(receivingDestinations.id, id)).for('update');
-    if (!d) throw notFound('بيانات الاستلام');
+    if (!d) throw notFound('بيانات استلام الأموال');
     if (d.userId === actor.userId) throw forbidden('لا يمكنك مراجعة بيانات استلام خاصة بك');
     const to = TO[decision];
     if (decision === 'REVERIFICATION_REQUIRED') {
@@ -183,7 +183,7 @@ export async function revealReceivingDestination(actor: Actor, id: string) {
   requirePermission(actor, 'destinations.view_full');
   requireStepUp(actor);
   const [d] = await db.select().from(receivingDestinations).where(eq(receivingDestinations.id, id));
-  if (!d) throw notFound('بيانات الاستلام');
+  if (!d) throw notFound('بيانات استلام الأموال');
   await audit(db, actor, { action: 'receiving_destination.revealed', entityType: 'receiving_destination', entityId: d.id });
   return decryptJson<Record<string, string>>(d.detailsEnc);
 }

@@ -44,7 +44,7 @@ export async function reportProblemAction(_p: ActionState, fd: FormData): Promis
   const res = await runAction(async () => {
     const kind = str(fd, 'kind') === 'NOT_RECEIVED' ? 'NOT_RECEIVED' : 'PRODUCT_PROBLEM';
     await reportOrderProblem(actor, str(fd, 'sellerOrderId'), kind, str(fd, 'description'));
-    return { message: 'البلاغ وصل. المبلغ محجوز ومش هيتحول للبائع لحد ما فريق اضمن يراجع.' };
+    return { message: 'البلاغ وصل. المبلغ متوقّف عند اضمن ومش هيتحوّل للبائع لحد ما فريق اضمن يراجع.' };
   });
   revalidatePath(`/account/orders/${str(fd, 'orderId')}`);
   return res;

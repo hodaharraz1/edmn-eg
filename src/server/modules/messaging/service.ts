@@ -695,7 +695,10 @@ export async function grantMessageAccess(actor: Actor, conversationId: string, i
     const linked =
       input.purpose === 'DISPUTE'
         ? await db.execute(sql`select 1 from disputes d where d.id = ${caseId} and ((d.seller_order_id is not null and d.seller_order_id = ${conv.sellerOrderId}) or (d.deal_id is not null and d.deal_id = ${conv.dealId}))`)
-        : await db.execute(sql`select 1 from support_tickets t where t.id = ${caseId} and t.related_id is not null and t.related_id in (${conv.orderId ?? ''}, ${conv.sellerOrderId ?? ''}, ${conv.dealId ?? ''})`);
+        : // The ticket must concern this conversation AND be opened by one of its parties (F-7).
+          await db.execute(sql`select 1 from support_tickets t where t.id = ${caseId} and t.related_id is not null and t.related_id in (${conv.orderId ?? ''}, ${conv.sellerOrderId ?? ''}, ${conv.dealId ?? ''})
+            and (t.requester_user_id in (${conv.buyerUserId ?? null}, ${conv.sellerUserId ?? null})
+              or exists (select 1 from sellers s where s.id = ${conv.sellerId ?? null} and s.owner_user_id = t.requester_user_id))`);
     if (!linked.rows.length) throw forbidden('الحالة المذكورة لا تخص هذه المحادثة');
     caseType = input.purpose === 'DISPUTE' ? 'dispute' : 'support_ticket';
   }

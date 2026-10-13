@@ -348,7 +348,7 @@ export async function payoutMethodAction(_p: ActionState, fd: FormData): Promise
           : { type: 'INSTAPAY', holderName: str(fd, 'holderName'), instapayAddress: str(fd, 'instapayAddress') },
     );
     revalidatePath('/seller/settings');
-    return { message: 'تمت إضافة وسيلة السحب. لحمايتك يتم مراجعتها وتعليق السحب مؤقتاً.' };
+    return { message: 'تمت إضافة بيانات استلام الأموال. لحمايتك بتتراجع، والسحب بيتجمّد مؤقتًا.' };
   });
 }
 
@@ -366,6 +366,9 @@ export async function staffAction(_p: ActionState, fd: FormData): Promise<Action
 export async function sellerTotpAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireSellerActor('/seller/settings');
   const res = await runAction(async () => {
+    // Staff accounts enroll 2FA only through the admin console (never from a web/seller session) — F-5.
+    const [me] = await db.select({ isStaff: users.isStaff }).from(users).where(eq(users.id, actor.userId!));
+    if (me?.isStaff) return { ok: false, error: 'حسابات فريق العمل بتفعّل التحقق بخطوتين من لوحة الإدارة فقط' };
     if (str(fd, 'op') === 'begin') {
       const secret = await beginTotpEnrollment(actor.userId!);
       return { message: 'أضف هذا المفتاح لتطبيق المصادقة ثم أدخل الرمز للتأكيد', data: { secret } };

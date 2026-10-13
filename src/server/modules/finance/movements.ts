@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import { hasPermission, requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import type { Permission } from '@/server/rbac/permissions';
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { financialMovementRequests, users, type MovementKind } from '@/server/db/schema';
@@ -22,7 +23,7 @@ import { notify } from '@/server/modules/notifications/notify';
  */
 
 export const MOVEMENT_LABELS: Record<MovementKind, string> = {
-  SELLER_RELEASE: 'إتاحة أرباح بائع (السوق)',
+  SELLER_RELEASE: 'إتاحة مستحقات بائع (السوق)',
   DEAL_RELEASE: 'تسوية صفقة محمية',
   REFUND_APPROVAL: 'اعتماد استرداد',
   REFUND_REVOCATION: 'إلغاء استرداد معتمد قبل التحويل',
@@ -93,7 +94,17 @@ export async function completeMovementRequest(tx: DbOrTx, actor: Actor, req: Mov
   await audit(tx, actor, { action: 'finance.movement_executed', entityType: req.entityType, entityId: req.entityId, newValues: { requestId: req.id, kind: req.kind, amount: req.amount, maker: req.requestedBy, approvalId } });
 }
 
-/** Checker declines a request (nothing moves). */
+/** Who may decide (approve or decline) each kind of request: the same permission the Checker step needs. */
+export const CHECKER_PERMISSIONS: Record<MovementKind, Permission[]> = {
+  SELLER_RELEASE: ['finance.release'],
+  DEAL_RELEASE: ['finance.release'],
+  REFUND_APPROVAL: ['refunds.approve'],
+  REFUND_REVOCATION: ['refunds.approve'],
+  WITHDRAWAL_REVERSAL: ['withdrawals.approve'],
+  WITHDRAWAL_RETURN: ['withdrawals.approve', 'withdrawals.pay'],
+};
+
+/** Checker declines a request (nothing moves). Only someone who could be its Checker may decline it. */
 export async function rejectMovementRequest(actor: Actor, requestId: string, reason: string) {
   requirePermission(actor, 'finance.view');
   requireStepUp(actor);
@@ -101,6 +112,7 @@ export async function rejectMovementRequest(actor: Actor, requestId: string, rea
   await db.transaction(async (tx) => {
     const [req] = await tx.select().from(financialMovementRequests).where(eq(financialMovementRequests.id, requestId)).for('update');
     if (!req) throw notFound('الطلب');
+    if (!CHECKER_PERMISSIONS[req.kind].some((p) => hasPermission(actor, p))) throw forbidden('رفض الطلب متاح لصاحب صلاحية الاعتماد لنفس نوع الحركة فقط');
     if (req.status !== 'PENDING') throw invalidState('تم البت في الطلب بالفعل');
     if (req.requestedBy === actor.userId) throw forbidden('المنشئ يلغي طلبه ولا يرفضه');
     await tx.update(financialMovementRequests).set({ status: 'REJECTED', decidedBy: actor.userId, decidedAt: new Date(), decisionReason: reason.trim() }).where(eq(financialMovementRequests.id, req.id));

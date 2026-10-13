@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { RETURN_CONDITION_KEYS, RETURN_SHIPPING_PAYERS } from '@/domain/return-policy';
 import { sellerMachine, type SellerStatus, type SellerType, type SellerDocumentKind } from '@/domain/machines';
@@ -25,6 +25,7 @@ import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
+import { statusLabel } from '@/lib/i18n/labels';
 import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { SELLER_ROLE_PERMISSIONS, type SellerPermission } from '@/server/rbac/permissions';
 
@@ -45,7 +46,9 @@ export async function sellerContextForUser(userId: string, conn: DbOrTx = db): P
     .select({ seller: sellers, role: sellerMembers.role })
     .from(sellerMembers)
     .innerJoin(sellers, eq(sellers.id, sellerMembers.sellerId))
-    .where(and(eq(sellerMembers.userId, userId), eq(sellerMembers.isActive, true)));
+    .where(and(eq(sellerMembers.userId, userId), eq(sellerMembers.isActive, true)))
+    .orderBy(asc(sellerMembers.createdAt))
+    .limit(1);
   if (!m) return null;
   return { seller: m.seller, role: m.role, permissions: new Set(SELLER_ROLE_PERMISSIONS[m.role] ?? []) };
 }
@@ -309,7 +312,7 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
     const [pm] = await tx.select().from(sellerPayoutMethods).where(eq(sellerPayoutMethods.id, payoutMethodId)).for('update');
     if (!pm) throw notFound('وسيلة السحب');
     const [owner] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, pm.sellerId));
-    if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد وسيلة سحب خاصة بمتجرك');
+    if (owner?.ownerUserId === actor.userId) throw forbidden('لا يمكنك اعتماد بيانات استلام أموال خاصة بمتجرك');
     await assertNotSelfDealing(tx, actor, pm.sellerId);
     if (pm.status !== 'PENDING_VERIFICATION') throw invalidState('تمت مراجعة وسيلة السحب بالفعل');
     const [seller] = await tx.select({ status: sellers.status }).from(sellers).where(eq(sellers.id, pm.sellerId));
@@ -339,7 +342,7 @@ export async function verifyPayoutMethod(actor: Actor, payoutMethodId: string, a
  * the details that were verified. Fail closed for anything else.
  */
 export function assertVerifiedDestination(pm: typeof sellerPayoutMethods.$inferSelect | null | undefined): asserts pm is typeof sellerPayoutMethods.$inferSelect {
-  if (!pm || pm.status !== 'ACTIVE' || !pm.verifiedAt || !pm.verifiedBy) throw invalidState('وسيلة السحب غير معتمدة من مراجع بيانات السحب');
+  if (!pm || pm.status !== 'ACTIVE' || !pm.verifiedAt || !pm.verifiedBy) throw invalidState('بيانات استلام الأموال غير معتمدة بعد');
   if (pm.verifiedFingerprint && pm.verifiedFingerprint !== payoutFingerprint(pm)) throw invalidState('بيانات وسيلة السحب لا تطابق ما تم اعتماده — يلزم اعتماد جديد');
 }
 
@@ -390,7 +393,7 @@ export async function applicationChecklist(conn: DbOrTx, seller: Seller) {
     { key: 'id_front', label: 'صورة البطاقة (الوجه)', ok: kinds.has('NATIONAL_ID_FRONT') },
     { key: 'id_back', label: 'صورة البطاقة (الظهر)', ok: kinds.has('NATIONAL_ID_BACK') },
     ...businessDocs.map((k) => ({ key: k, label: k === 'COMMERCIAL_REGISTRATION' ? 'السجل التجاري' : k === 'TAX_CARD' ? 'البطاقة الضريبية' : 'خطاب التفويض', ok: kinds.has(k) })),
-    { key: 'payout', label: 'وسيلة استلام الأرباح', ok: !!payout },
+    { key: 'payout', label: 'بيانات استلام الأموال', ok: !!payout },
   ];
   return items;
 }
@@ -462,7 +465,7 @@ export async function decideSeller(actor: Actor, sellerId: string, decision: Sel
     const [store] = await tx.select({ name: stores.name }).from(stores).where(eq(stores.sellerId, s.id));
     const event =
       decision === 'APPROVE' ? 'SELLER_APPROVED' : decision === 'REJECT' ? 'SELLER_REJECTED' : decision === 'REQUEST_MORE_INFORMATION' ? 'SELLER_MORE_INFO_REQUIRED' : 'SELLER_STATUS_CHANGED';
-    await notify(tx, { event, userIds: [s.ownerUserId], vars: { store: store?.name, reason: why, status: to }, link: '/seller' });
+    await notify(tx, { event, userIds: [s.ownerUserId], vars: { store: store?.name, reason: why, status: statusLabel(to) }, link: '/seller' });
     return to;
   });
 }
@@ -564,13 +567,20 @@ export async function addStaffMember(actor: Actor, email: string, role: string) 
   await db.transaction(async (tx) => {
     const [u] = await tx.select().from(users).where(eq(users.email, email.trim().toLowerCase()));
     if (!u) throw validation('لا يوجد مستخدم مسجل بهذا البريد. اطلب منه إنشاء حساب أولاً');
+    // Staff of EDMN can never be made members of a store (their access must stay separate from any seller).
+    if (u.isStaff) throw validation('الحساب ده تابع لفريق عمل اضمن ومينفعش يتضاف لمتجر');
     const [owner] = await tx.select().from(sellers).where(eq(sellers.ownerUserId, u.id));
     if (owner) throw validation('هذا المستخدم يملك متجراً بالفعل');
+    // One active store per member: the Seller Center identity must never flip between stores.
+    const [other] = await tx.select({ id: sellerMembers.sellerId }).from(sellerMembers).where(and(eq(sellerMembers.userId, u.id), eq(sellerMembers.isActive, true), ne(sellerMembers.sellerId, sellerId)));
+    if (other) throw validation('المستخدم ده عضو بالفعل في متجر تاني');
     await tx
       .insert(sellerMembers)
       .values({ sellerId, userId: u.id, role: role as 'STORE_MANAGER' })
       .onConflictDoUpdate({ target: [sellerMembers.sellerId, sellerMembers.userId], set: { role: role as 'STORE_MANAGER', isActive: true } });
     await audit(tx, actor, { action: 'seller.staff_added', entityType: 'seller', entityId: sellerId, newValues: { userId: u.id, role } });
+    // The added person is always told (security notice): nobody becomes a store member silently.
+    await notify(tx, { event: 'ACCOUNT_SECURITY', userIds: [u.id], vars: { message: 'اتضفت كعضو في فريق متجر على اضمن. لو مش متوقع ده، كلّم الدعم فورًا.' }, link: '/seller', dedupeKey: `store-member:${sellerId}:${u.id}:${Date.now()}` });
   });
 }
 

@@ -73,6 +73,10 @@ export async function providerFor(channel: string): Promise<OutboundProvider> {
   if (override) return override(channel);
   const e = env();
   if (channel === 'EMAIL') return e.MAIL_DRIVER === 'smtp' ? smtpProvider() : logProvider('EMAIL');
+  // Production never "delivers" through the log driver: the message fails visibly instead of being faked as SENT.
+  if (process.env.EDMN_ENVIRONMENT === 'production' && ((channel === 'SMS' && e.SMS_DRIVER !== 'http') || (channel === 'EMAIL' && e.MAIL_DRIVER !== 'smtp'))) {
+    throw new Error(`${channel} provider not configured in production`);
+  }
   if (channel === 'SMS') return e.SMS_DRIVER === 'http' ? httpSms() : logProvider('SMS');
   throw new Error(`unknown channel ${channel}`);
 }

@@ -29,7 +29,7 @@ export async function NotificationSettings({ userId, crumbs }: { userId: string;
           <Switch name="messagesEmail" defaultChecked={prefs.messagesEmail} label="تنبيهات البريد الإلكتروني (لو الرسالة فضلت مش مقروءة — مرة واحدة لكل محادثة كل فترة)" data-testid="pref-email" />
           <SubmitButton>حفظ</SubmitButton>
         </ActionForm>
-        <p className="text-xs text-muted">عدّادات الرسائل غير المقروءة بتفضل ظاهرة دايمًا. التنبيهات الأمنية (زي تسجيل الدخول وتغيير بيانات السحب) ليها سياسة منفصلة وبتوصلك في كل الأحوال.</p>
+        <p className="text-xs text-muted">عدّادات الرسائل غير المقروءة بتفضل ظاهرة دايمًا. التنبيهات الأمنية (زي تسجيل الدخول وتغيير بيانات استلام الأموال) ليها سياسة منفصلة وبتوصلك في كل الأحوال.</p>
       </section>
       <PushOptIn vapidKey={vapidPublicKey()} />
       <section className="card space-y-3 p-4" aria-labelledby="devices">

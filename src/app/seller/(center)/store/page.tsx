@@ -45,7 +45,7 @@ export default async function StoreSettings() {
           <Checkbox name="acceptsVoluntaryReturns" defaultChecked={s.acceptsVoluntaryReturns} label="أقبل الإرجاع الاختياري" />
           <Field label="مدة الإرجاع الاختياري (أيام)" htmlFor="voluntaryReturnDays"><Input id="voluntaryReturnDays" name="voluntaryReturnDays" type="number" min={1} max={365} defaultValue={s.voluntaryReturnDays ?? ''} /></Field>
           <div className="space-y-1">
-            <p className="text-sm font-medium">شروط الاسترجاع الافتراضية</p>
+            <p className="text-sm font-medium">شروط الإرجاع الافتراضية</p>
             {RETURN_CONDITION_KEYS.map((k) => <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" name="rp_conditions" value={k} defaultChecked={(s.returnConditionKeys ?? []).includes(k)} /> {RETURN_CONDITION_LABELS[k]}</label>)}
           </div>
           <Field label="مسؤولية شحن الإرجاع" htmlFor="rp_shippingPayer"><Select id="rp_shippingPayer" name="rp_shippingPayer" defaultValue={s.returnShippingPayer ?? 'BY_REASON'}>{RETURN_SHIPPING_PAYERS.map((x) => <option key={x} value={x}>{RETURN_SHIPPING_LABELS[x]}</option>)}</Select></Field>

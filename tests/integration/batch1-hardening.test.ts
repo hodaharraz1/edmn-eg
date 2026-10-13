@@ -181,7 +181,7 @@ describe('C2 — roles.manage alone can never mint SUPER_ADMIN (or any privilege
 
   it('a non-super roles.manage holder cannot create a SUPER_ADMIN account — nothing is written', async () => {
     const e = email();
-    await expect(createStaffUser(manager, { email: e, phone: phone(), fullName: 'محاولة تصعيد', password: pw, role: 'SUPER_ADMIN', reason: 'محاولة إنشاء مدير عام', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط/);
+    await expect(createStaffUser(manager, { email: e, phone: phone(), fullName: 'محاولة تصعيد', role: 'SUPER_ADMIN', reason: 'محاولة إنشاء مدير عام', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط/);
     expect(await db.select().from(users).where(eq(users.email, e))).toHaveLength(0);
   });
 
@@ -195,15 +195,15 @@ describe('C2 — roles.manage alone can never mint SUPER_ADMIN (or any privilege
 
   it('ordinary staff creation still works for the manager (transactional, role validated first)', async () => {
     const e = email();
-    await createStaffUser(manager, { email: e, phone: phone(), fullName: 'مراجع منتجات', password: pw, role: 'CATALOG_REVIEWER' });
+    await createStaffUser(manager, { email: e, phone: phone(), fullName: 'مراجع منتجات', role: 'CATALOG_REVIEWER' });
     expect(await db.select().from(users).where(eq(users.email, e))).toHaveLength(1);
     const bad = email();
-    await expect(createStaffUser(manager, { email: bad, phone: phone(), fullName: 'دور غير موجود', password: pw, role: 'NO_SUCH_ROLE' })).rejects.toThrow(/دور غير صالح/);
+    await expect(createStaffUser(manager, { email: bad, phone: phone(), fullName: 'دور غير موجود', role: 'NO_SUCH_ROLE' })).rejects.toThrow(/دور غير صالح/);
     expect(await db.select().from(users).where(eq(users.email, bad))).toHaveLength(0); // no orphan staff account
   });
 
   it('a SUPER_ADMIN creates another SUPER_ADMIN only with fresh 2FA, explicit confirmation and a reason (audited)', async () => {
-    const base = { phone: phone(), fullName: 'مدير عام جديد', password: pw, role: 'SUPER_ADMIN' };
+    const base = { phone: phone(), fullName: 'مدير عام جديد', role: 'SUPER_ADMIN' };
     await expect(createStaffUser(await noStepUp(superAdmin), { ...base, email: email(), reason: 'سبب إنشاء مدير عام جديد', confirmPrivileged: true })).rejects.toThrow(/تأكيد هويتك/);
     await expect(createStaffUser(superAdmin, { ...base, email: email(), reason: 'سبب إنشاء مدير عام جديد' })).rejects.toThrow(/أكّد/);
     await expect(createStaffUser(superAdmin, { ...base, email: email(), reason: 'قصير', confirmPrivileged: true })).rejects.toThrow(/سبب/);
@@ -655,7 +655,7 @@ describe('operator wording — money states are never ambiguous', async () => {
     expect(statusLabel('COMPLETED', 'refund')).toMatch(/تم تحويل/);
     expect(statusLabel('FAILED', 'refund')).toMatch(/تعذّر تحويل الاسترداد/);
     expect(statusLabel('FAILED', 'refund')).not.toMatch(/التسليم/);
-    expect(statusLabel('PROCESSING', 'withdrawal')).toMatch(/لم يُصرف/);
+    expect(statusLabel('PROCESSING', 'withdrawal')).toMatch(/لم يكتمل/);
     expect(statusLabel('APPROVED', 'withdrawal')).toMatch(/لم يُحوَّل/);
     expect(statusLabel('DELIVERED')).not.toBe('تم الاستلام');
     expect(sellerOrderStatusLabel('DELIVERED', 'BUYER_CONFIRMED')).toMatch(/أكّد المشتري/);

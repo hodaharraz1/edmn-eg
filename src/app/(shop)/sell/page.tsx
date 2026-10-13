@@ -29,7 +29,7 @@ export default async function SellLanding() {
       <section className="grid items-center gap-8 rounded-3xl bg-brand-900 p-8 text-white sm:p-12 lg:grid-cols-2">
         <div className="space-y-4">
           <h1 className="text-3xl font-bold leading-tight sm:text-4xl">بيع منتجاتك الجديدة والمستعملة لعملاء في كل مصر</h1>
-          <p className="text-white/80">سجّل كفرد أو شركة، وبعد مراجعة بياناتك تقدر تضيف منتجاتك، تحدد مصاريف الشحن لكل محافظة، وتسحب أرباحك بعد ما العميل يأكّد الاستلام.</p>
+          <p className="text-white/80">سجّل كفرد أو شركة، وبعد مراجعة بياناتك تقدر تضيف منتجاتك، تحدد مصاريف الشحن لكل محافظة، وتسحب مستحقاتك بعد استلام العميل وموافقة الإدارة.</p>
           {seller ? (
             <LinkButton href="/seller" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">روح لمركز البائع</LinkButton>
           ) : user ? (
@@ -52,7 +52,7 @@ export default async function SellLanding() {
           {[
             [BadgeCheck, 'شارة البائع الموثّق', 'بعد مراجعة هويتك، متجرك بيظهر كمتجر موثّق.'],
             [Truck, 'تحكم كامل في الشحن', 'حدد السعر ومدة التوصيل لكل محافظة.'],
-            [Wallet, 'سحب سريع للأرباح', 'رصيدك بيبقى متاح أول ما العميل يأكّد الاستلام.'],
+            [Wallet, 'مستحقات واضحة', 'رصيدك بيبقى متاح للسحب بعد استلام العميل وموافقة الإدارة على الإتاحة.'],
             [BarChart3, 'لوحة تحكم واضحة', 'مبيعاتك، طلباتك، مخزونك ورصيدك في مكان واحد.'],
           ].map(([I, t, b]) => {
             const Icon = I as typeof BadgeCheck;
@@ -73,7 +73,7 @@ export default async function SellLanding() {
             <li>بيانات الهوية والعنوان (الرقم القومي وصورة البطاقة).</li>
             <li>بيانات النشاط للشركات (السجل التجاري والبطاقة الضريبية حسب السياسة).</li>
             <li>بيانات المتجر وعنوان الإرجاع.</li>
-            <li>وسيلة استلام الأرباح (حساب بنكي / إنستاباي / محفظة).</li>
+            <li>بيانات استلام الأموال (حساب بنكي / إنستاباي / محفظة).</li>
             <li>الموافقة على اتفاقية البائع وإرسال الطلب للمراجعة.</li>
           </ol>
           <p className="mt-3 flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بيانات الهوية متشفّرة، ومحدش بيشوفها غير فريق المراجعة المختص.</p>

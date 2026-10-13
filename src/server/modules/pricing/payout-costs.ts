@@ -50,7 +50,7 @@ const fmt = (m: number) => `${(m / 100).toLocaleString('en-US', { minimumFractio
  */
 export async function quoteTransfer(conn: DbOrTx, input: { payoutType: string; amount: number; sellerId: string; payoutMethodId: string | null; excludeWithdrawalId?: string }): Promise<TransferQuote> {
   const channel = PAYOUT_TYPE_CHANNEL[input.payoutType];
-  if (!channel) throw validation('وسيلة سحب غير مدعومة');
+  if (!channel) throw validation('نوع بيانات استلام الأموال غير مدعوم');
   const cfg = await activeChannelConfig(conn, channel);
   if (!cfg) throw new DomainError('INVALID_STATE', 'قناة التحويل دي غير مضبوطة حاليًا من الإدارة (التكلفة/الحدود). السحب متوقف عليها لحين ضبطها.');
   const cost = transferCostFor(cfg, input.amount);

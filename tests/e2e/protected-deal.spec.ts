@@ -319,7 +319,7 @@ test('buyer explicitly confirms "received and as described" → payout payable e
   const seller = await sellerPage(browser);
   await seller.goto('/account/earnings');
   await expect(seller.getByTestId('balance-protected-deal')).toContainText('رصيد الصفقات المحمية');
-  await expect(seller.getByText(/مفيش وجهة صرف متحقق منها/)).toBeVisible(); // unverified → no withdrawal possible
+  await expect(seller.getByText(/مفيش بيانات استلام أموال متحقق منها/)).toBeVisible(); // unverified → no withdrawal possible
   await seller.goto('/account/receiving');
   const f = seller.getByTestId('receiving-instapay-form');
   await f.locator('input[name=holderName]').fill('كريم البائع الخارجي محمد');

@@ -9,6 +9,7 @@ import type { DbOrTx } from '@/server/db/client';
 import { files, type FilePurpose } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
 import { initialScanStatus } from './scanning';
+import { enforce } from '@/server/auth/rate-limit';
 import { storage } from './storage';
 
 type Kind = 'jpeg' | 'png' | 'webp' | 'pdf';
@@ -63,6 +64,12 @@ export async function fileFromForm(value: FormDataEntryValue | null): Promise<{ 
  */
 export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput): Promise<StoredFile> {
   const userId = requireUser(actor);
+  // Per-user upload budget (F-13): catalog images are numerous by nature, every other purpose is occasional.
+  // Counted on the shared connection (a rate-limit row is not part of the business transaction).
+  if (actor.type !== 'SYSTEM') {
+    const catalog = PUBLIC_PURPOSES.has(input.purpose);
+    await enforce(`upload:${catalog ? 'catalog' : 'private'}:${userId}`, catalog ? 400 : 60, 3600);
+  }
   const kind = sniff(input.data);
   if (!kind) throw validation('نوع الملف غير مدعوم. الأنواع المسموح بها: JPG, PNG, WEBP, PDF');
   if (input.originalName && !ALLOWED_EXT.test(input.originalName)) throw validation('امتداد الملف غير مسموح');

@@ -62,7 +62,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
           {step === 3 && (
             <>
               <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك بس. البائع هو اللي بيحدد طريقة ومدة التوصيل ومصاريف الشحن في عرضه، وانت توافق أو تطلب تعديل قبل أي دفع.</p>
-              <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم يد بيد في…" required /></Field>
+              <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم إيد بإيد في…" required /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="آخر موعد تحب تستلم قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
                 <Field label="مدة الفحص بعد الاستلام (أيام)" htmlFor="inspectionDays"><Input id="inspectionDays" name="inspectionDays" type="number" min={1} max={14} defaultValue={deal?.inspectionDays ?? 2} /></Field>

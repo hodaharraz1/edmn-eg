@@ -24,7 +24,7 @@ export default async function IdentityPage() {
         <span className="flex items-center gap-2"><ShieldCheck className="size-5 text-brand-700" aria-hidden /> حالة التحقق</span>
         <Badge tone={TONE[me.status]}>{IDENTITY_LABELS[me.status]}</Badge>
       </section>
-      {me.status === 'APPROVED' && <Alert tone="success" title="تم التحقق من هويتك">تقدر تشتري وتبيع وتعمل صفقات محمية. التحقق من الهوية لا يعني اعتماد متجر ولا اعتماد وسيلة سحب — كل واحدة لها مراجعتها.</Alert>}
+      {me.status === 'APPROVED' && <Alert tone="success" title="تم التحقق من هويتك">تقدر تشتري وتبيع وتعمل صفقات محمية. التحقق من الهوية لا يعني اعتماد متجر ولا اعتماد بيانات استلام الأموال — كل واحدة لها مراجعتها.</Alert>}
       {me.status === 'PENDING_REVIEW' && <Alert tone="info" title="بياناتك قيد المراجعة">هنبلغك أول ما يتم القرار. لحد كده تقدر تتابع طلباتك والدعم والنزاعات واستلام أي مبالغ مستحقة لك عادي.</Alert>}
       {me.reason && <Alert tone="warning" title="ملاحظة فريق المراجعة">{me.reason}</Alert>}
       {me.legalName && (

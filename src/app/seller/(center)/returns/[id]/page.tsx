@@ -59,7 +59,7 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
             <Checkbox name="restock" defaultChecked label="إعادة المنتج للمخزون (صالح للبيع)" />
             <Field label="ملاحظات الفحص" htmlFor="note"><Textarea id="note" name="note" rows={2} /></Field>
             <SubmitButton variant="success">تأكيد الاسترداد</SubmitButton>
-            <p className="text-xs text-muted">سيتم خصم المبلغ (ناقص حصة العمولة) من رصيدك، ويحوّل فريق اضمن المبلغ للعميل.</p>
+            <p className="text-xs text-muted">سيتم خصم المبلغ (ناقص حصة رسوم خدمة اضمن) من رصيدك، ويحوّل فريق اضمن المبلغ للعميل بعد اعتماد الإدارة.</p>
           </ActionForm>
           {r.status === 'INSPECTION' && (
             <ActionForm action={sellerReturnAction} className="card space-y-2 p-5">

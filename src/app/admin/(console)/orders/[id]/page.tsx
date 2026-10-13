@@ -71,7 +71,7 @@ export default async function AdminOrder(props: PageProps<'/admin/orders/[id]'>)
                 { label: 'مهلة رد المشتري (24 ساعة)', value: so.buyerResponseDueAt ? formatDate(so.buyerResponseDueAt, true) : '—' },
                 { label: 'أساس الاستحقاق', value: so.receiptBasis ? `${label('receiptBasis', so.receiptBasis)} · ${formatDate(so.entitledAt, true)}` : '—' },
                 { label: 'الإتاحة', value: so.fundsReleasedAt ? `${formatDate(so.fundsReleasedAt, true)}${so.releaseApprovalId ? ' · بموافقة إدارة' : ' · تلقائية قديمة (قبل التحصين)'}` : 'لم تتم' },
-                ...(so.deliveryExceptionCode ? [{ label: 'استثناء تسليم', value: <Badge tone="danger">{label('deliveryException', so.deliveryExceptionCode.replace(/^SHIPMENT_/, ''))}</Badge> }] : []),
+                ...(so.deliveryExceptionCode ? [{ label: 'استثناء تسليم', value: <Badge tone="danger">{label('deliveryException', so.deliveryExceptionCode)}</Badge> }] : []),
                 ...(so.cancelReasonCode ? [{ label: 'سبب الإلغاء', value: `${label('cancelReason', so.cancelReasonCode)} — ${so.cancelReason ?? ''}` }] : []),
               ]}
             />

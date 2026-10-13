@@ -4,12 +4,12 @@ import { formatEGP } from '@/lib/format';
 import Link from '@/ui/link';
 
 const ROWS: { key: keyof SourceBalances; label: string; hint: string }[] = [
-  { key: 'available', label: 'رصيد متاح', hint: 'اتفرج عنه بموافقة شخصين في الإدارة. في السوق: متاح لطلب السحب. في الصفقات المحمية: مستحق يُصرف لوسيلة الاستلام المسجلة في الصفقة.' },
+  { key: 'available', label: 'رصيد متاح', hint: 'اتاحته الإدارة بعد موافقتها. في السوق: متاح لطلب السحب. في الصفقات المحمية: مستحق يتحوّل على بيانات استلام الأموال المسجلة في الصفقة.' },
   { key: 'pending', label: 'رصيد معلّق', hint: 'مدفوع من المشتري ولسه في التسليم أو مهلة رد المشتري.' },
-  { key: 'entitledAwaitingRelease', label: 'مبالغ قيد الإفراج', hint: 'المشتري أكد الاستلام أو انتهت مهلته. لسه محتاج موافقة الإدارة (منشئ + معتمد مختلف). التأكيد أو انتهاء المهلة لا يحرك فلوس لوحده.' },
-  { key: 'held', label: 'محجوز بسبب نزاع أو تجميد', hint: 'لا يتحرك لحد ما يتحسم النزاع أو يترفع التجميد.' },
+  { key: 'entitledAwaitingRelease', label: 'مستحق — بانتظار موافقة الإدارة', hint: 'المشتري أكد الاستلام أو انتهت مهلته. لسه محتاج موافقة الإدارة. التأكيد أو انتهاء المهلة لا يحرك فلوس لوحده.' },
+  { key: 'held', label: 'مجمّد بسبب نزاع أو تجميد إداري', hint: 'لا يتحرك لحد ما يتحسم النزاع أو يترفع التجميد.' },
   { key: 'reserved', label: 'رصيد محجوز', hint: 'محجوز لطلب سحب معتمد قيد التحويل.' },
-  { key: 'liability', label: 'التزامات مالية', hint: 'مبالغ عليك (مثلاً استرداد بعد الإفراج أكبر من المتاح). أي سحب موقوف لحد تسويتها.' },
+  { key: 'liability', label: 'مديونية', hint: 'مبالغ عليك (مثلاً استرداد بعد الإتاحة أكبر من المتاح). أي سحب موقوف لحد تسويتها.' },
 ];
 
 function Column({ title, b, testid, children }: { title: string; b: SourceBalances; testid: string; children?: React.ReactNode }) {
@@ -37,7 +37,7 @@ function Column({ title, b, testid, children }: { title: string; b: SourceBalanc
  */
 export function SellerFinanceSummary({ view, showProtectedDeal = true }: { view: SellerFinancialView; showProtectedDeal?: boolean }) {
   const label = { MARKETPLACE: 'السوق', PROTECTED_DEAL: 'صفقة محمية' } as const;
-  const bucket = { pending: 'معلّق', held: 'محجوز (نزاع/تجميد)', entitledAwaitingRelease: 'قيد الإفراج', available: 'متاح' } as const;
+  const bucket = { pending: 'معلّق', held: 'مجمّد (نزاع/تجميد)', entitledAwaitingRelease: 'بانتظار موافقة الإدارة', available: 'متاح' } as const;
   const items = view.items.filter((i) => showProtectedDeal || i.sourceType === 'MARKETPLACE');
   return (
     <div className="space-y-4">
@@ -49,7 +49,7 @@ export function SellerFinanceSummary({ view, showProtectedDeal = true }: { view:
         )}
         {showProtectedDeal && view.protectedDeal && (
           <Column title="رصيد الصفقات المحمية" b={view.protectedDeal} testid="balance-protected-deal">
-            <p className="text-xs text-muted">مستحقات كل صفقة تُصرف لوسيلة الاستلام اللي سجلتها في عرضك على نفس الصفقة. مش محتاج متجر.</p>
+            <p className="text-xs text-muted">مستحقات كل صفقة تتحوّل على بيانات استلام الأموال اللي سجلتها في عرضك على نفس الصفقة. مش محتاج متجر.</p>
           </Column>
         )}
         {showProtectedDeal && view.marketplace && view.protectedDeal && (

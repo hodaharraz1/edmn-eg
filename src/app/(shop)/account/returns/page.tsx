@@ -22,7 +22,7 @@ export default async function ReturnsPage() {
           {list.map((r) => (
             <li key={r.id}>
               <Link href={`/account/returns/${r.id}`} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm hover:bg-page/50">
-                <span>مرتجع #{r.number} · {label('returnReason', r.reason)} · {formatDate(r.createdAt)}</span>
+                <span>طلب إرجاع #{r.number} · {label('returnReason', r.reason)} · {formatDate(r.createdAt)}</span>
                 <StatusChip status={r.status} />
               </Link>
             </li>

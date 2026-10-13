@@ -59,7 +59,7 @@ describe('B2-A environment model and policy', () => {
       APP_URL: 'http://x', STAGING_DEMO_PASSWORD: secret, SEED_DEMO: 'true', E2E_DATABASE_URL: 'postgres://e2e', MAIL_DRIVER: 'log', SMS_DRIVER: 'log', VERCEL: '1',
     });
     const all = r.errors.join('\n');
-    for (const want of ['STAGING_DEMO_PASSWORD', 'SEED_DEMO', 'E2E_DATABASE_URL', 'MAIL_DRIVER=smtp', 'SMS_DRIVER=http', 'CRON_SECRET', 'must be different', 'APP_URL must be https', 'STORAGE_DRIVER=local is ephemeral']) expect(all).toContain(want);
+    for (const want of ['STAGING_DEMO_PASSWORD', 'SEED_DEMO', 'E2E_DATABASE_URL', 'MAIL_DRIVER=smtp', 'MAIL_FROM', 'ENFORCE_ADMIN_HOST', 'CRON_SECRET', 'must be different', 'APP_URL must be https', 'STORAGE_DRIVER=local is ephemeral']) expect(all).toContain(want);
     expect(JSON.stringify(r)).not.toContain(secret);
     expect(r.variables.find((v) => v.name === 'SESSION_SECRET')).toMatchObject({ secret: true, present: true });
   });

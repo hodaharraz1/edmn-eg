@@ -17,33 +17,42 @@ export function proxy(req: NextRequest) {
   const headers = new Headers(req.headers);
   headers.set('x-request-id', requestId);
 
-  const enforce = process.env.ENFORCE_HOSTS === 'true';
+  // Host routing. ENFORCE_HOSTS=true: seller.* and admin.* each on their own host. ENFORCE_ADMIN_HOST=true (final
+  // audit): ONLY the admin console on its own host (its own origin, isolated from public pages), while the Seller
+  // Center stays on www under /seller (one login, one service worker for buyers and sellers).
+  const enforceSeller = process.env.ENFORCE_HOSTS === 'true';
+  const enforceAdmin = enforceSeller || process.env.ENFORCE_ADMIN_HOST === 'true';
   const host = (req.headers.get('host') ?? '').split(':')[0].toLowerCase();
   const sellerHost = (process.env.SELLER_HOST ?? 'seller.edmneg.com').toLowerCase();
   const adminHost = (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase();
   const { pathname } = req.nextUrl;
   // Batch 2: the admin surface (money approvals, KYC documents) gets a strict nonce CSP — no inline script runs
   // unless Next.js stamped it with this request's nonce. Next reads the nonce from the request CSP header.
-  const adminSurface = pathname.startsWith('/admin') || (enforce && host === adminHost);
+  const onAdminHost = enforceAdmin && host === adminHost;
+  const onSellerHost = enforceSeller && host === sellerHost;
+  const adminSurface = pathname.startsWith('/admin') || onAdminHost;
   const csp = adminSurface && !pathname.startsWith('/api/') ? adminCsp(btoa(crypto.randomUUID())) : null;
   if (csp) headers.set('content-security-policy', csp);
-  const shared = pathname.startsWith('/_next') || pathname.startsWith('/media/') || pathname.startsWith('/api/') || pathname.startsWith('/brand/') || pathname === '/favicon.ico' || pathname === '/icon.png';
+  const shared =
+    pathname.startsWith('/_next') || pathname.startsWith('/media/') || pathname.startsWith('/api/') || pathname.startsWith('/brand/') ||
+    ['/favicon.ico', '/icon.png', '/sw.js', '/robots.txt', '/sitemap.xml', '/manifest.webmanifest'].includes(pathname);
 
   let res: NextResponse;
-  if (enforce && !shared && (host === sellerHost || host === adminHost)) {
-    const prefix = host === sellerHost ? '/seller' : '/admin';
+  if (!shared && (onSellerHost || onAdminHost)) {
+    const prefix = onSellerHost ? '/seller' : '/admin';
     if (pathname.startsWith(prefix)) {
       res = NextResponse.next({ request: { headers } });
-    } else if (host === sellerHost && ['/forgot-password', '/reset-password', '/logout'].includes(pathname)) {
+    } else if (onSellerHost && ['/forgot-password', '/reset-password'].includes(pathname)) {
       res = NextResponse.next({ request: { headers } }); // shared auth pages
     } else {
       const url = req.nextUrl.clone();
       url.pathname = `${prefix}${pathname === '/' ? '' : pathname}`;
       res = NextResponse.rewrite(url, { request: { headers } });
     }
-  } else if (enforce && !shared && (pathname.startsWith('/admin') || pathname.startsWith('/seller'))) {
+  } else if (!shared && ((enforceAdmin && pathname.startsWith('/admin')) || (enforceSeller && pathname.startsWith('/seller')))) {
     const url = req.nextUrl.clone();
     url.host = pathname.startsWith('/admin') ? adminHost : sellerHost;
+    url.port = '';
     url.pathname = pathname.replace(/^\/(admin|seller)/, '') || '/';
     res = NextResponse.redirect(url);
   } else {
@@ -51,7 +60,7 @@ export function proxy(req: NextRequest) {
   }
   res.headers.set('x-request-id', requestId);
   if (csp) res.headers.set('content-security-policy', csp);
-  if (pathname.startsWith('/admin') || host === adminHost) {
+  if (adminSurface) {
     res.headers.set('x-robots-tag', 'noindex, nofollow');
     res.headers.set('cache-control', 'no-store');
   }

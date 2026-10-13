@@ -317,10 +317,12 @@ export async function rejectRefund(actor: Actor, refundId: string, reason: strin
 /** Payout attempt failed / bounced: nothing is reversed — the customer liability stays until paid. */
 export async function markRefundFailed(actor: Actor, refundId: string, reason: string) {
   requirePermission(actor, 'refunds.pay');
+  requireStepUp(actor);
   if (!reason || reason.trim().length < 3) throw validation('اكتب سبب الفشل');
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك تعديل استرداد يخصك');
     await transition(tx, actor, refundMachine, r.id, r.status, 'FAILED', reason);
     await tx.update(refunds).set({ status: 'FAILED', failureReason: reason }).where(eq(refunds.id, r.id));
     await audit(tx, actor, { action: 'refund.payout_failed', entityType: 'refund', entityId: r.id, reason });
@@ -406,9 +408,9 @@ export async function recordRefundPayout(actor: Actor, refundId: string, referen
     if (snapDest.source === 'RECEIVING_DESTINATION') {
       const { receivingDestinations } = await import('@/server/db/schema');
       const [d] = await tx.select({ fingerprint: receivingDestinations.fingerprint, userId: receivingDestinations.userId, status: receivingDestinations.status }).from(receivingDestinations).where(eq(receivingDestinations.id, snapDest.destinationId ?? ''));
-      if (!d || d.fingerprint !== snapDest.fingerprint || d.userId !== r.customerId) throw invalidState('بيانات الاستلام المعتمدة لهذا الاسترداد لم تعد مطابقة. لا يمكن الصرف');
+      if (!d || d.fingerprint !== snapDest.fingerprint || d.userId !== r.customerId) throw invalidState('بيانات استلام الأموال المعتمدة لهذا الاسترداد لم تعد مطابقة. لا يمكن الصرف');
       // Archived by the customer / sent back for re-verification / rejected since approval → never pay there.
-      if (d.status !== 'APPROVED') throw invalidState('بيانات الاستلام دي لم تعد معتمدة (اتأرشفت أو مطلوب إعادة التحقق). يلزم اختيار وجهة معتمدة واعتمادها من جديد');
+      if (d.status !== 'APPROVED') throw invalidState('بيانات استلام الأموال دي لم تعد معتمدة (اتأرشفت أو مطلوب إعادة التحقق). يلزم اختيار وجهة معتمدة واعتمادها من جديد');
     }
     // Owner rule: always two-person — the refund approver is the Maker, the payer must be someone else.
     const maker = r.approvedBy;
@@ -462,7 +464,7 @@ export async function useReceivingDestinationForRefund(actor: Actor, refundId: s
   const uid = actor.userId;
   if (!uid) throw forbidden();
   const why = reason?.trim();
-  if (!why || why.length < 5) throw validation('اكتب سبب استخدام بيانات الاستلام بدل وسيلة الدفع الأصلية');
+  if (!why || why.length < 5) throw validation('اكتب سبب استخدام بيانات استلام الأموال بدل وسيلة الدفع الأصلية');
   const staff = actor.type === 'ADMIN';
   if (staff) {
     requirePermission(actor, 'refunds.destination.override');
@@ -476,8 +478,8 @@ export async function useReceivingDestinationForRefund(actor: Actor, refundId: s
     if (!staff && r.approvalId) throw invalidState('الاسترداد اتعتمد بالفعل. تغيير الوجهة بعد الاعتماد يتم عن طريق فريق اضمن فقط');
     const { approvedDestinationOf, destinationIntact } = await import('@/server/modules/identity/receiving');
     const d = await approvedDestinationOf(tx, r.customerId, destinationId);
-    if (!d) throw invalidState('بيانات الاستلام غير معتمدة أو لا تخص صاحب الاسترداد');
-    if (!destinationIntact(d)) throw invalidState('بيانات الاستلام لا تطابق النسخة المعتمدة');
+    if (!d) throw invalidState('بيانات استلام الأموال غير معتمدة أو لا تخص صاحب الاسترداد');
+    if (!destinationIntact(d)) throw invalidState('بيانات استلام الأموال لا تطابق النسخة المعتمدة');
     const snapshot = { source: 'RECEIVING_DESTINATION', destinationId: d.id, version: d.version, type: d.type, holderName: d.holderName, masked: d.maskedLabel, fingerprint: d.fingerprint, selectionReason: why, selectedBy: uid, selectedAt: new Date().toISOString() };
     const approved = !!r.approvalId;
     await tx
@@ -509,7 +511,7 @@ export async function revealRefundDestination(actor: Actor, refundId: string) {
     const { receivingDestinations } = await import('@/server/db/schema');
     const { decryptJson } = await import('@/server/core/crypto');
     const [d] = await db.select().from(receivingDestinations).where(eq(receivingDestinations.id, snap.destinationId));
-    if (!d || d.fingerprint !== snap.fingerprint) throw invalidState('نسخة بيانات الاستلام لا تطابق اللقطة المعتمدة');
+    if (!d || d.fingerprint !== snap.fingerprint) throw invalidState('نسخة بيانات استلام الأموال لا تطابق اللقطة المعتمدة');
     details = { ...decryptJson<Record<string, unknown>>(d.detailsEnc), masked: d.maskedLabel };
   }
   await audit(db, actor, { action: 'refund.destination_revealed', entityType: 'refund', entityId: r.id });

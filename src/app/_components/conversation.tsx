@@ -29,7 +29,7 @@ export function ConversationContextCard({ ctx, side, context, href }: { ctx: Con
         </p>
       </div>
       <div className="flex flex-col items-end gap-2">
-        <StatusChip status={ctx.status} />
+        <StatusChip status={context === 'DEAL' && ctx.status === 'DELIVERED' ? 'DEAL_SHIPPED' : ctx.status} kind={context === 'DEAL' ? 'deal' : undefined} />
         <Link href={href} className="text-sm font-semibold text-brand-700 hover:underline">
           {context === 'DEAL' ? 'تفاصيل الصفقة' : 'تفاصيل الطلب'}
         </Link>
@@ -183,7 +183,7 @@ export function ConversationList({ items, basePath, emptyTitle = 'مفيش رس�
                     <span className="sr-only"> {c.unread === 1 ? 'رسالة جديدة' : 'رسائل جديدة'}</span>
                   </span>
                 )}
-                <StatusChip status={c.status} />
+                <StatusChip status={c.context === 'DEAL' && c.status === 'DELIVERED' ? 'DEAL_SHIPPED' : c.status} kind={c.context === 'DEAL' ? 'deal' : undefined} />
               </div>
             </Link>
           </li>

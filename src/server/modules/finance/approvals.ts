@@ -1,8 +1,8 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requireStepUp, type Actor } from '@/server/core/actor';
+import { requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
 import { enforce } from '@/server/auth/rate-limit';
-import { forbidden, invalidState } from '@/server/core/errors';
+import { forbidden, invalidState, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { financialApprovals, type FinancialAction } from '@/server/db/schema';
 
@@ -123,10 +123,13 @@ export async function grantApproval(tx: DbOrTx, actor: Actor, req: ApprovalReque
 /** Revoke an approval that has not been executed yet (e.g. superseded, wrong amount). Audited. */
 export async function revokeApproval(actor: Actor, approvalId: string, reason: string) {
   if (actor.type !== 'ADMIN' || !actor.userId) throw forbidden();
+  requirePermission(actor, 'finance.controls');
   requireStepUp(actor);
+  if (!reason || reason.trim().length < 10) throw validation('اكتب سبب إلغاء الموافقة (10 أحرف على الأقل)');
   await db.transaction(async (tx) => {
     const [a] = await tx.select().from(financialApprovals).where(eq(financialApprovals.id, approvalId)).for('update');
     if (!a) throw invalidState('الموافقة غير موجودة');
+    if (a.approvedBy === actor.userId) throw forbidden('لا يمكنك إلغاء موافقة أنت اللي أصدرتها — يلغيها شخص تاني');
     if (a.status !== 'APPROVED' && a.status !== 'PENDING_CHECKER') throw invalidState('لا يمكن إلغاء موافقة تم تنفيذها');
     await tx.update(financialApprovals).set({ status: 'REVOKED', revokedBy: actor.userId, revokedAt: new Date(), revokeReason: reason }).where(eq(financialApprovals.id, a.id));
     await audit(tx, actor, { action: 'financial_approval.revoked', entityType: a.entityType, entityId: a.entityId, newValues: { approvalId: a.id }, reason });

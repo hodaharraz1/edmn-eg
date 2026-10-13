@@ -96,7 +96,7 @@ export async function dealConfirmAction(_p: ActionState, fd: FormData): Promise<
   const actor = await requireCustomer('/account/deals');
   const res = await runAction(async () => {
     await confirmDealReceipt(actor, str(fd, 'dealId'));
-    return { message: 'أكدت الاستلام وإن المنتج مطابق، والصفقة خلصت.' };
+    return { message: 'أكدت الاستلام وإن المنتج مطابق. مستحقات البائع هتتحوّل بس بعد مراجعة وموافقة الإدارة.' };
   });
   revalidatePath(`/account/deals/${str(fd, 'dealId')}`);
   return res;
@@ -231,7 +231,7 @@ export async function reportNotReceivedAction(_p: ActionState, fd: FormData): Pr
   const dealId = str(fd, 'dealId');
   const res = await runAction(async () => {
     const r = await reportNotReceived(actor, dealId, str(fd, 'description'));
-    return { message: r.conflict ? 'البلاغ اتسجل، والصفقة اتحولت لمراجعة فريق العمليات. المبلغ محجوز لحد القرار.' : 'نزاع عدم الاستلام اتفتح. المبلغ محجوز لحد القرار.' };
+    return { message: r.conflict ? 'البلاغ اتسجل، والصفقة اتحولت لمراجعة فريق العمليات. المبلغ متوقّف عند اضمن لحد القرار.' : 'نزاع عدم الاستلام اتفتح. المبلغ متوقّف عند اضمن لحد القرار.' };
   });
   revalidatePath(`/account/deals/${dealId}`);
   return res;

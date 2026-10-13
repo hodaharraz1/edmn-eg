@@ -20,7 +20,7 @@ import { marketHref } from '@/lib/market-url';
 import { redirect } from 'next/navigation';
 
 export const metadata = { title: 'طلب الانضمام كبائع' };
-const STEPS = ['الهوية والعنوان', 'بيانات النشاط', 'المتجر', 'الوثائق', 'استلام الأرباح', 'المراجعة والإرسال'];
+const STEPS = ['الهوية والعنوان', 'بيانات النشاط', 'المتجر', 'الوثائق', 'بيانات استلام الأموال', 'المراجعة والإرسال'];
 
 export default async function OnboardingPage(props: PageProps<'/seller/onboarding'>) {
   const user = await requireUser('/seller');
@@ -112,7 +112,7 @@ export default async function OnboardingPage(props: PageProps<'/seller/onboardin
         {step === 5 && (
           <>
             {payout && <Alert tone="success">الوسيلة الحالية: {payout.maskedLabel}. يمكنك استبدالها بإدخال بيانات جديدة.</Alert>}
-            <Field label="وسيلة استلام الأرباح" htmlFor="payoutType"><Select id="payoutType" name="payoutType" defaultValue={payout?.type ?? 'INSTAPAY'}><option value="INSTAPAY">إنستاباي</option><option value="MOBILE_WALLET">محفظة موبايل</option><option value="BANK_ACCOUNT">حساب بنكي</option></Select></Field>
+            <Field label="بيانات استلام الأموال" htmlFor="payoutType"><Select id="payoutType" name="payoutType" defaultValue={payout?.type ?? 'INSTAPAY'}><option value="INSTAPAY">إنستاباي</option><option value="MOBILE_WALLET">محفظة موبايل</option><option value="BANK_ACCOUNT">حساب بنكي</option></Select></Field>
             <Field label="اسم صاحب الحساب" htmlFor="holderName" required><Input id="holderName" name="holderName" defaultValue={s.legalName ?? ''} required /></Field>
             <Field label="عنوان إنستاباي" htmlFor="instapayAddress" hint="مطلوب لإنستاباي"><Input id="instapayAddress" name="instapayAddress" dir="ltr" /></Field>
             <div className="grid gap-3 sm:grid-cols-2">

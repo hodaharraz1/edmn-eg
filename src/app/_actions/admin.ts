@@ -369,7 +369,7 @@ export async function staffUserAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const op = str(fd, 'op');
     const privileged = { reason: str(fd, 'reason') || null, confirmPrivileged: bool(fd, 'confirmPrivileged') };
-    if (op === 'create') await createStaffUser(a, { email: str(fd, 'email'), phone: str(fd, 'phone'), fullName: str(fd, 'fullName'), password: str(fd, 'password'), role: str(fd, 'role'), ...privileged });
+    if (op === 'create') await createStaffUser(a, { email: str(fd, 'email'), phone: str(fd, 'phone'), fullName: str(fd, 'fullName'), role: str(fd, 'role'), ...privileged });
     else if (op === 'grant' || op === 'revoke') await setStaffRole(a, op, { userId: str(fd, 'userId'), role: str(fd, 'role'), ...privileged });
     else if (op === 'disable') await setStaffStatus(a, { userId: str(fd, 'userId'), status: str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED', ...privileged });
     else throw validation('إجراء غير معروف');

@@ -19,7 +19,7 @@ export default async function ProtectedDealLanding() {
     { icon: FileText, title: 'اكتب تفاصيل الصفقة', body: 'المنتج، السعر، موعد التسليم، وأي شروط خاصة اتفقتوا عليها.' },
     { icon: Handshake, title: 'ابعت للبائع', body: 'هتاخد رابط آمن تبعته للبائع، يراجع منه الشروط ويوافق.' },
     { icon: Wallet, title: 'ادفع لاضمن', body: 'بتحوّل المبلغ لحساب اضمن، وفريقنا بيراجع التحويل يدويًا.' },
-    { icon: PackageCheck, title: 'استلم وأكّد', body: 'بعد ما تفحص المنتج، أكّد الاستلام والمبلغ يتصرف للبائع. لو فيه مشكلة افتح نزاع.' },
+    { icon: PackageCheck, title: 'استلم وأكّد', body: 'بعد ما تفحص المنتج، أكّد الاستلام، وبعد موافقة الإدارة المبلغ يتحوّل للبائع. لو فيه مشكلة افتح نزاع.' },
   ];
   return (
     <div className="container-page space-y-10 py-8">

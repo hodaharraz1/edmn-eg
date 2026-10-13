@@ -69,7 +69,7 @@ export async function releaseSellerOrderFunds(tx: DbOrTx, actor: Actor, so: Sell
       sourceType: 'seller_order',
       sourceId: so.id,
       idempotencyKey: `release:${so.id}`,
-      description: `إتاحة أرباح الطلب الفرعي ${so.suffix} بموافقة الإدارة`,
+      description: `إتاحة مستحقات الطلب الفرعي ${so.suffix} بموافقة الإدارة`,
       approvalId,
       lines: [
         { account: { code: 'SELLER_PENDING', sellerId: so.sellerId }, debit: pos.pending },

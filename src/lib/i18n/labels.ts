@@ -1,6 +1,6 @@
 /**
- * Arabic labels for enumerations (statuses, reasons, methods). English equivalents live in
- * `en.ts`; `label()` falls back to the raw code so a missing translation never breaks the UI.
+ * Arabic labels for enumerations (statuses, reasons, methods). This is the single source of
+ * enum wording; `label()` falls back to the raw code so a missing translation never breaks the UI.
  */
 export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'brand' | 'accent';
 
@@ -20,9 +20,9 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   ARCHIVED: { ar: 'مؤرشف', tone: 'neutral' },
   // Orders
   PENDING_PAYMENT: { ar: 'بانتظار الدفع', tone: 'warning' },
-  PAYMENT_UNDER_REVIEW: { ar: 'الدفع قيد التحقق', tone: 'info' },
-  PAID: { ar: 'مدفوع', tone: 'brand' },
-  SELLER_CONFIRMED: { ar: 'أكده البائع', tone: 'brand' },
+  PAYMENT_UNDER_REVIEW: { ar: 'الدفع قيد المراجعة', tone: 'info' },
+  PAID: { ar: 'تم تأكيد الدفع', tone: 'brand' },
+  SELLER_CONFIRMED: { ar: 'أكّده البائع', tone: 'brand' },
   PROCESSING: { ar: 'قيد التجهيز', tone: 'info' },
   READY_TO_SHIP: { ar: 'جاهز للشحن', tone: 'info' },
   SHIPPED: { ar: 'تم الشحن', tone: 'info' },
@@ -32,12 +32,12 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   COMPLETED: { ar: 'مكتمل', tone: 'success' },
   PARTIALLY_COMPLETED: { ar: 'مكتمل جزئيًا', tone: 'warning' },
   CLOSED_UNFULFILLED: { ar: 'مغلق بدون تسليم', tone: 'neutral' },
-  DELIVERY_FAILED: { ar: 'فشل التوصيل', tone: 'danger' },
+  DELIVERY_FAILED: { ar: 'تعذّر التسليم', tone: 'danger' },
   CANCELLED: { ar: 'ملغي', tone: 'neutral' },
   // Payment
   AWAITING_PAYMENT: { ar: 'بانتظار الدفع', tone: 'warning' },
   PAYMENT_SUBMITTED: { ar: 'تم رفع الإثبات', tone: 'info' },
-  CONFIRMED: { ar: 'مؤكد', tone: 'success' },
+  CONFIRMED: { ar: 'تم تأكيد الدفع', tone: 'success' },
   EXPIRED: { ar: 'منتهي', tone: 'neutral' },
   ACCEPTED: { ar: 'مقبول', tone: 'success' },
   NEW_PROOF_REQUESTED: { ar: 'مطلوب إثبات جديد', tone: 'warning' },
@@ -71,14 +71,14 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   DEAL_SHIPPED: { ar: 'تم الشحن — بانتظار التسليم', tone: 'info' },
   DELIVERY_HANDOVER_VERIFIED: { ar: 'تم التحقق من التسليم', tone: 'brand' },
   BUYER_CONFIRMED_RECEIPT: { ar: 'أكد المشتري الاستلام', tone: 'success' },
-  ENTITLED_AWAITING_RELEASE: { ar: 'مستحق — في انتظار موافقة الإدارة', tone: 'warning' },
+  ENTITLED_AWAITING_RELEASE: { ar: 'مستحق — بانتظار موافقة الإدارة على الإتاحة', tone: 'warning' },
   // Disputes
   OPEN: { ar: 'مفتوح', tone: 'warning' },
   AWAITING_INFORMATION: { ar: 'بانتظار معلومات', tone: 'warning' },
   RESOLVED: { ar: 'تم الحل', tone: 'success' },
   CLOSED: { ar: 'مغلق', tone: 'neutral' },
   // Withdrawals / refunds / payouts
-  PENDING: { ar: 'معلق', tone: 'warning' },
+  PENDING: { ar: 'معلّق', tone: 'warning' },
   PENDING_CHECKER: { ar: 'بانتظار المعتمد الثاني', tone: 'warning' },
   CONSUMED: { ar: 'نُفذت', tone: 'success' },
   UNMATCHED: { ar: 'غير متطابقة', tone: 'warning' },
@@ -98,14 +98,59 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   PUBLISHED: { ar: 'منشور', tone: 'success' },
   HIDDEN: { ar: 'مخفي', tone: 'neutral' },
   REMOVED: { ar: 'محذوف', tone: 'danger' },
+  // Identity / receiving destinations
+  INCOMPLETE: { ar: 'لم يكتمل', tone: 'neutral' },
+  REVERIFICATION_REQUIRED: { ar: 'مطلوب إعادة التحقق', tone: 'warning' },
+  // Movements / deal terms
+  EXECUTED: { ar: 'نُفذت', tone: 'success' },
+  PROPOSED: { ar: 'بانتظار الرد', tone: 'warning' },
+  // Accounts / conversations
+  LOCKED: { ar: 'مقفول', tone: 'danger' },
+  DISABLED: { ar: 'معطّل', tone: 'neutral' },
+  // Withdrawal allocations
+  RESERVED: { ar: 'محجوز', tone: 'warning' },
+  RELEASED: { ar: 'رجع للمصدر', tone: 'neutral' },
+  RETURNED: { ar: 'ارتد', tone: 'danger' },
+  // Withdrawals (same wording as kind 'withdrawal', so a chip without `kind` never leaks a code)
+  TRANSFER_UNCERTAIN: { ar: 'نتيجة التحويل غير مؤكدة — المبلغ محجوز', tone: 'danger' },
+  FAILED_BEFORE_TRANSFER: { ar: 'فشل قبل التحويل — أُعيد للرصيد', tone: 'neutral' },
+  // Admin-only enums (inventory, pricing, legal, reports, files, jobs, notifications, ledger health)
+  COMMITTED: { ar: 'مُثبّت', tone: 'success' },
+  VALIDATED: { ar: 'تم التحقق', tone: 'info' },
+  RETIRED: { ar: 'متوقف العمل به', tone: 'neutral' },
+  ACTIONED: { ar: 'تم اتخاذ إجراء', tone: 'success' },
+  DISMISSED: { ar: 'مرفوض البلاغ', tone: 'neutral' },
+  UNSCANNED: { ar: 'لم يُفحص', tone: 'neutral' },
+  QUARANTINED: { ar: 'معزول', tone: 'warning' },
+  SCANNING: { ar: 'جارٍ الفحص', tone: 'info' },
+  CLEAN: { ar: 'سليم', tone: 'success' },
+  INFECTED: { ar: 'مصاب', tone: 'danger' },
+  SCAN_FAILED: { ar: 'تعذّر الفحص', tone: 'danger' },
+  RUNNING: { ar: 'قيد التشغيل', tone: 'info' },
+  DONE: { ar: 'تم', tone: 'success' },
+  SUCCEEDED: { ar: 'نجح', tone: 'success' },
+  ABANDONED: { ar: 'متروك', tone: 'neutral' },
+  QUEUED: { ar: 'في الانتظار', tone: 'neutral' },
+  SENDING: { ar: 'جارٍ الإرسال', tone: 'info' },
+  SENT: { ar: 'تم الإرسال', tone: 'success' },
+  SUPPRESSED: { ar: 'تم الحجب', tone: 'neutral' },
+  OPENED: { ar: 'تم الفتح', tone: 'success' },
+  BOUNCED: { ar: 'ارتد', tone: 'danger' },
+  OK: { ar: 'سليم', tone: 'success' },
+  WARNING: { ar: 'تحذير', tone: 'warning' },
+  CRITICAL: { ar: 'حرج', tone: 'danger' },
 };
 
 /**
  * Entity-specific wording where the shared label would be financially ambiguous (operator safety):
  * an APPROVED refund/withdrawal is NOT paid, PROCESSING is NOT paid, a FAILED refund is a failed transfer.
  */
-export type StatusKind = 'refund' | 'withdrawal' | 'payout';
+export type StatusKind = 'refund' | 'withdrawal' | 'payout' | 'deal';
 const STATUS_BY_KIND: Record<StatusKind, Record<string, { ar: string; tone: Tone }>> = {
+  // A deal reaches REFUNDED when the refund is APPROVED, before any transfer (returns keep «تم الاسترداد»).
+  deal: {
+    REFUNDED: { ar: 'تم اعتماد الاسترداد — راجع حالة التحويل', tone: 'warning' },
+  },
   refund: {
     REQUESTED: { ar: 'طلب استرداد — قيد المراجعة', tone: 'warning' },
     APPROVED: { ar: 'تم اعتماد الاسترداد — لم يُحوَّل بعد', tone: 'warning' },
@@ -113,21 +158,21 @@ const STATUS_BY_KIND: Record<StatusKind, Record<string, { ar: string; tone: Tone
     FAILED: { ar: 'تعذّر تحويل الاسترداد — المبلغ ما زال مستحقًا', tone: 'danger' },
     COMPLETED: { ar: 'تم تحويل الاسترداد', tone: 'success' },
     PAID: { ar: 'تم تحويل الاسترداد', tone: 'success' },
-    PENDING: { ar: 'استرداد معلق — لم يُحوَّل بعد', tone: 'warning' },
+    PENDING: { ar: 'استرداد معلّق — لم يُحوَّل بعد', tone: 'warning' },
     REJECTED: { ar: 'رُفض الاسترداد', tone: 'danger' },
   },
   withdrawal: {
     REQUESTED: { ar: 'طلب سحب — لم يُحجز مبلغ', tone: 'warning' },
     APPROVED: { ar: 'معتمد ومحجوز — لم يُحوَّل بعد', tone: 'warning' },
-    PROCESSING: { ar: 'جارٍ التحويل — لم يُصرف بعد', tone: 'info' },
+    PROCESSING: { ar: 'جارٍ التحويل — لم يكتمل بعد', tone: 'info' },
     TRANSFER_UNCERTAIN: { ar: 'نتيجة التحويل غير مؤكدة — المبلغ محجوز', tone: 'danger' },
     PAID: { ar: 'تم التحويل', tone: 'success' },
     FAILED_BEFORE_TRANSFER: { ar: 'فشل قبل التحويل — أُعيد للرصيد', tone: 'neutral' },
     RETURNED: { ar: 'ارتد التحويل — أُعيد للرصيد', tone: 'danger' },
   },
   payout: {
-    PENDING: { ar: 'مستحق — لم يُصرف بعد', tone: 'warning' },
-    PAID: { ar: 'تم الصرف', tone: 'success' },
+    PENDING: { ar: 'مستحق — لم يُحوَّل بعد', tone: 'warning' },
+    PAID: { ar: 'تم التحويل', tone: 'success' },
   },
 };
 
@@ -142,9 +187,9 @@ export function statusTone(code: string | null | undefined, kind?: StatusKind): 
 /** Seller-order status that names the actual basis: delivery recorded ≠ buyer confirmed ≠ timeout ≠ dispute decision. */
 export function sellerOrderStatusLabel(status: string | null | undefined, receiptBasis?: string | null): string {
   if (status === 'DELIVERED') {
-    if (receiptBasis === 'BUYER_CONFIRMED') return 'أكّد المشتري الاستلام — بانتظار إتاحة الإدارة';
-    if (receiptBasis === 'TIMEOUT_ENTITLEMENT') return 'مستحق بانتهاء مهلة المشتري — بانتظار إتاحة الإدارة';
-    if (receiptBasis === 'DISPUTE_DECISION') return 'مستحق بقرار نزاع — بانتظار إتاحة الإدارة';
+    if (receiptBasis === 'BUYER_CONFIRMED') return 'أكّد المشتري الاستلام — بانتظار موافقة الإدارة على الإتاحة';
+    if (receiptBasis === 'TIMEOUT_ENTITLEMENT') return 'مستحق بانتهاء مهلة المشتري — بانتظار موافقة الإدارة على الإتاحة';
+    if (receiptBasis === 'DISPUTE_DECISION') return 'مستحق بقرار نزاع — بانتظار موافقة الإدارة على الإتاحة';
     return 'تم تسجيل التسليم';
   }
   return statusLabel(status);
@@ -155,7 +200,21 @@ export const LABELS = {
   payoutType: { BANK_ACCOUNT: 'حساب بنكي', INSTAPAY: 'إنستاباي', MOBILE_WALLET: 'محفظة موبايل' } as Record<string, string>,
   condition: { NEW: 'جديد', USED: 'مستعمل' } as Record<string, string>,
   usedGrade: { LIKE_NEW: 'زي الجديد', VERY_GOOD: 'جيد جداً', GOOD: 'جيد', ACCEPTABLE: 'مقبول' } as Record<string, string>,
-  disputeDecision: { FULL_REFUND: 'استرداد كامل للعميل', PARTIAL_REFUND: 'استرداد جزئي', RETURN_REQUIRED: 'يلزم إرجاع المنتج أولاً', REPLACEMENT: 'استبدال المنتج', RELEASE_TO_SELLER: 'إتاحة المستحقات للبائع', REJECT_CLAIM: 'رفض المطالبة' } as Record<string, string>,
+  /** Single source for dispute-decision wording (also used by postpurchase/disputes.ts DECISION_LABELS). */
+  disputeDecision: { FULL_REFUND: 'استرداد كامل للمشتري', PARTIAL_REFUND: 'استرداد جزئي', RETURN_REQUIRED: 'يلزم إرجاع المنتج أولاً', REPLACEMENT: 'استبدال المنتج', RELEASE_TO_SELLER: 'إتاحة المستحقات للبائع بعد اعتماد الإدارة', REJECT_CLAIM: 'رفض الشكوى' } as Record<string, string>,
+  payoutChannel: { INSTAPAY: 'إنستاباي', BANK_TRANSFER: 'تحويل بنكي', MOBILE_WALLET: 'محفظة موبايل', FUTURE_PSP: 'مزود دفع', OTHER: 'أخرى' } as Record<string, string>,
+  moderationAction: {
+    SUBMIT: 'أُرسل للمراجعة',
+    START_REVIEW: 'بدأت المراجعة',
+    APPROVE: 'تمت الموافقة',
+    REJECT: 'مرفوض',
+    REQUEST_CHANGES: 'مطلوب تعديلات',
+    SUSPEND: 'إيقاف',
+    REINSTATE: 'إعادة تفعيل',
+    REVISION_SUBMIT: 'تعديل أُرسل للمراجعة',
+    REVISION_APPROVE: 'اعتماد التعديل',
+    REVISION_REJECT: 'رفض التعديل',
+  } as Record<string, string>,
   sellerType: { INDIVIDUAL: 'فرد', BUSINESS: 'شركة / نشاط تجاري' } as Record<string, string>,
   returnReason: {
     CHANGED_MIND: 'غيّرت رأيي',
@@ -167,7 +226,7 @@ export const LABELS = {
     COUNTERFEIT_SUSPECTED: 'شاكك إنه مش أصلي',
     OTHER: 'سبب آخر',
   } as Record<string, string>,
-  ticketType: { ORDER: 'طلب', PAYMENT: 'دفع', SHIPPING: 'شحن', RETURN: 'إرجاع', PRODUCT: 'منتج', SELLER: 'بائع', EXTERNAL_DEAL: 'صفقة محمية', ACCOUNT: 'الحساب', IDENTITY: 'التحقق من الهوية', RECEIVING_DESTINATION: 'بيانات استلام الأموال', REFUND: 'استرداد', DISPUTE: 'نزاع', SELLER_FINANCE: 'مستحقات البائع', WITHDRAWAL: 'سحب', TECHNICAL: 'مشكلة تقنية' } as Record<string, string>,
+  ticketType: { ORDER: 'طلب', PAYMENT: 'دفع', SHIPPING: 'شحن', RETURN: 'مرتجع', PRODUCT: 'منتج', SELLER: 'بائع', EXTERNAL_DEAL: 'صفقة محمية', ACCOUNT: 'الحساب', IDENTITY: 'التحقق من الهوية', RECEIVING_DESTINATION: 'بيانات استلام الأموال', REFUND: 'استرداد', DISPUTE: 'نزاع', SELLER_FINANCE: 'مستحقات البائع', WITHDRAWAL: 'سحب', TECHNICAL: 'مشكلة تقنية' } as Record<string, string>,
   priority: { LOW: 'منخفضة', NORMAL: 'عادية', HIGH: 'مرتفعة', URGENT: 'عاجلة' } as Record<string, string>,
   docKind: {
     NATIONAL_ID_FRONT: 'البطاقة (وجه)',
@@ -209,11 +268,20 @@ export const LABELS = {
     SELLER_EVIDENCE_MISSING: 'البائع لم يرسل دليل التسليم خلال 24 ساعة',
     DELIVERY_EVENT_MISSING: 'لا يوجد حدث تسليم موثق بعد الموعد المتوقع',
     TIMEOUT_BLOCKED: 'انتهت مهلة المشتري لكن يوجد مانع',
+    // Shipment exceptions are raised as `SHIPMENT_${code}` (fulfilment.ts); same wording as `shipmentException`.
+    SHIPMENT_DELIVERY_ATTEMPT_FAILED: 'فشلت محاولة التوصيل',
+    SHIPMENT_BUYER_UNAVAILABLE: 'المشتري غير متاح',
+    SHIPMENT_BUYER_REFUSED: 'المشتري رفض الاستلام',
+    SHIPMENT_WRONG_ADDRESS: 'عنوان غير صحيح',
+    SHIPMENT_RETURN_TO_SELLER: 'راجع للبائع',
+    SHIPMENT_LOST_IN_TRANSIT: 'مفقود أثناء الشحن',
+    SHIPMENT_DAMAGED_IN_TRANSIT: 'تلف أثناء الشحن',
+    SHIPMENT_CARRIER_EXCEPTION: 'مشكلة عند شركة الشحن',
   } as Record<string, string>,
-  refundSource: { ORDER_CANCELLATION: 'إلغاء قبل الشحن', RETURN: 'إرجاع', DISPUTE: 'قرار نزاع', DEAL: 'صفقة محمية', DELIVERY_FAILURE: 'فشل التوصيل', ADMIN: 'قرار إداري' } as Record<string, string>,
+  refundSource: { ORDER_CANCELLATION: 'إلغاء قبل الشحن', RETURN: 'مرتجع', DISPUTE: 'قرار نزاع', DEAL: 'صفقة محمية', DELIVERY_FAILURE: 'تعذّر التسليم', ADMIN: 'قرار إداري' } as Record<string, string>,
   financialAction: {
     PAYMENT_CONFIRMATION: 'تأكيد دفع',
-    SELLER_RELEASE: 'إتاحة أرباح بائع',
+    SELLER_RELEASE: 'إتاحة مستحقات بائع',
     REFUND_APPROVAL: 'اعتماد استرداد',
     REFUND_PAYOUT: 'صرف استرداد',
     WITHDRAWAL_RESERVATION: 'اعتماد وحجز سحب',

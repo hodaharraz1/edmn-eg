@@ -24,7 +24,7 @@ export default async function ReceivingPage(props: PageProps<'/account/receiving
     <div className="space-y-5">
       <PageHeader title="بيانات استلام الأموال" description="الحساب اللي نحوّلك عليه أي مبلغ مستحق لك: الاسترداد لما يتعذر الرجوع لنفس وسيلة الدفع الأصلية، ومستحقاتك كبائع في الصفقات المحمية (من غير ما تحتاج متجر). دي مش محفظة على اضمن: مفيش رصيد ولا إيداع ولا سحب منها." />
       {idStatus !== 'APPROVED' && <Alert tone="warning" action={<Link className="text-brand-700 underline" href="/account/identity">التحقق من الهوية</Link>}>البيانات تتراجع وتتعتمد بعد التحقق من هويتك، وصاحب الحساب لازم يكون أنت.</Alert>}
-      {visible.length === 0 ? <EmptyState icon={Landmark} title="مفيش بيانات استلام محفوظة" description="مش لازم تضيف حاجة إلا لو احتجنا نرجّعلك مبلغ ووسيلة الدفع الأصلية مش متاحة." /> : (
+      {visible.length === 0 ? <EmptyState icon={Landmark} title="مفيش بيانات استلام أموال محفوظة" description="مش لازم تضيف حاجة إلا لو احتجنا نرجّعلك مبلغ ووسيلة الدفع الأصلية مش متاحة." /> : (
         <ul className="grid gap-3 sm:grid-cols-2" data-testid="receiving-list">
           {visible.map((d) => (
             <li key={d.id} className="card space-y-1 p-4 text-sm">

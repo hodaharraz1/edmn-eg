@@ -36,7 +36,7 @@ export async function NotificationCenter({ userId, base, filter, crumbs }: { use
       <PageHeader
         breadcrumbs={<Breadcrumbs items={crumbs} />}
         title="الإشعارات"
-        description="تحديثات طلباتك وصفقاتك ورسايلك. عدّاد الجرس للتحديثات، وعدّاد «الرسائل» للرسائل غير المقروءة."
+        description="تحديثات طلباتك وصفقاتك ورسائلك. عدّاد الجرس للتحديثات، وعدّاد «الرسائل» للرسائل غير المقروءة."
         className="mb-2"
         actions={
           <>

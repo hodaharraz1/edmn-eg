@@ -198,7 +198,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             ) : null}
             <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
               <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته غير بعد ما تأكّد إنك استلمت الطلب. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
+              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته قبل استلامك للطلب وانتهاء مهلة الاعتراض وموافقة الإدارة. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
             </div>
           </div>
           <div className="card space-y-3 p-4 text-sm">
@@ -214,14 +214,14 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
               {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
               {d.seller.approvedAt && <span>على اضمن من {formatDate(d.seller.approvedAt)}</span>}
             </div>
-            <p className="flex items-start gap-2 text-xs">
+            <div className="flex items-start gap-2 text-xs">
               <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
-              <span className="space-y-1" data-testid="pdp-return-policy">
+              <div className="space-y-1" data-testid="pdp-return-policy">
                 <span className="block font-semibold">سياسة الإرجاع</span>
                 <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
                 <span className="block">وتقدر دايماً تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
-              </span>
-            </p>
+              </div>
+            </div>
             <p className="flex items-start gap-2 text-xs">
               <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> البائع بيجهّز الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
             </p>

@@ -52,15 +52,21 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'SMTP_HOST', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'Email provider host' },
   { name: 'SMTP_USER', classification: 'OPTIONAL', secret: true, purpose: 'Email provider user' },
   { name: 'SMTP_PASSWORD', classification: 'OPTIONAL', secret: true, purpose: 'Email provider password / API key' },
-  { name: 'SMS_DRIVER', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'http in production (OTP / verification)' },
-  { name: 'SMS_HTTP_URL', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'SMS provider endpoint' },
-  { name: 'SMS_HTTP_TOKEN', classification: 'REQUIRED', secret: true, requiredIn: ['PRODUCTION'], purpose: 'SMS provider token' },
+  // SMS is NOT required to boot: without it, the SMS-dependent flows (mobile verification → seller onboarding,
+  // Protected Deals and their delivery OTP) are refused with a clear message, and no SMS is ever faked as sent.
+  { name: 'SMS_DRIVER', classification: 'OPTIONAL', secret: false, purpose: 'http enables mobile verification + Protected Deal delivery OTP' },
+  { name: 'SMS_HTTP_URL', classification: 'OPTIONAL', secret: false, purpose: 'SMS provider endpoint (required when SMS_DRIVER=http)' },
+  { name: 'SMS_HTTP_TOKEN', classification: 'OPTIONAL', secret: true, purpose: 'SMS provider token' },
   { name: 'PAYMENT_WEBHOOK_SECRET', classification: 'OPTIONAL', secret: true, purpose: 'Provider webhook signature (required by the real-money gate, not by boot)' },
   { name: 'VAPID_PUBLIC_KEY', classification: 'OPTIONAL', secret: false, purpose: 'Web Push (reported NOT CONFIGURED when absent)' },
   { name: 'VAPID_PRIVATE_KEY', classification: 'OPTIONAL', secret: true, purpose: 'Web Push signing key' },
   { name: 'VAPID_SUBJECT', classification: 'OPTIONAL', secret: false, purpose: 'Web Push contact' },
   { name: 'ERROR_TRACKING_DSN', classification: 'OPTIONAL', secret: true, purpose: 'Provider-neutral error tracking endpoint (NOT CONFIGURED when absent)' },
   { name: 'MALWARE_SCANNER_URL', classification: 'OPTIONAL', secret: false, purpose: 'Malware scanner endpoint (MALWARE SCANNER ACTIVE: NO when absent)' },
+  { name: 'ENFORCE_ADMIN_HOST', classification: 'OPTIONAL', secret: false, purpose: 'Admin console only on ADMIN_HOST (own origin); Seller Center stays on www/seller' },
+  { name: 'ENFORCE_HOSTS', classification: 'OPTIONAL', secret: false, purpose: 'Seller and admin each on their own host' },
+  { name: 'ADMIN_HOST', classification: 'OPTIONAL', secret: false, purpose: 'Admin console host (default admin.edmneg.com)' },
+  { name: 'MAIL_FROM', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'Sender of every email (real domain, never example.com)' },
   { name: 'TRUSTED_PROXY', classification: 'OPTIONAL', secret: false, purpose: 'Self-hosted only: trust X-Real-IP / X-Forwarded-For from our own reverse proxy' },
   { name: 'ADMIN_IDLE_TIMEOUT_MINUTES', classification: 'OPTIONAL', secret: false, purpose: 'Staff session idle timeout (default 30, max 240)' },
   { name: 'MALWARE_SCAN_REQUIRED', classification: 'OPTIONAL', secret: false, purpose: 'Gate private files on a scan outside production (always on in production)' },
@@ -118,7 +124,11 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
   }
   if (kind === 'PRODUCTION') {
     if (raw.MAIL_DRIVER !== 'smtp') errors.push('MAIL_DRIVER=smtp is required in PRODUCTION');
-    if (raw.SMS_DRIVER !== 'http') errors.push('SMS_DRIVER=http is required in PRODUCTION');
+    if (!raw.MAIL_FROM || /example\.(com|org|net)|\.local\b/i.test(raw.MAIL_FROM)) errors.push('MAIL_FROM must be the real sender address in PRODUCTION');
+    // The admin console must not share an origin with public pages (their CSP allows inline scripts).
+    if (raw.ENFORCE_HOSTS !== 'true' && raw.ENFORCE_ADMIN_HOST !== 'true') errors.push('ENFORCE_ADMIN_HOST=true (admin on its own host) or ENFORCE_HOSTS=true is required in PRODUCTION');
+    if (raw.SMS_DRIVER !== 'http') warnings.push('SMS not configured: mobile verification, seller onboarding and Protected Deals stay disabled');
+    if (raw.SMS_DRIVER === 'http' && (!raw.SMS_HTTP_URL || !raw.SMS_HTTP_TOKEN)) errors.push('SMS_DRIVER=http needs SMS_HTTP_URL and SMS_HTTP_TOKEN');
     if (!raw.VERCEL && raw.TRUSTED_PROXY !== 'true') warnings.push('Self-hosted without TRUSTED_PROXY=true: client IPs are unknown (per-IP rate limits share one bucket)');
     if (raw.INLINE_WORKER !== 'true' && !raw.WORKER_DEDICATED) warnings.push('No dedicated worker declared (WORKER_DEDICATED) and INLINE_WORKER is off: jobs only run on the daily cron');
   }
@@ -126,6 +136,11 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
   if (present('DATA_ENCRYPTION_KEYS_PREVIOUS') && !/^([a-z0-9_-]{1,16}:[A-Za-z0-9+/=]{20,})(,[a-z0-9_-]{1,16}:[A-Za-z0-9+/=]{20,})*$/i.test(raw.DATA_ENCRYPTION_KEYS_PREVIOUS!)) errors.push('DATA_ENCRYPTION_KEYS_PREVIOUS must be "kid:base64,kid:base64"');
   if (present('DATA_ENCRYPTION_KEY_ID') && !/^[a-z0-9_-]{1,16}$/i.test(raw.DATA_ENCRYPTION_KEY_ID!)) errors.push('DATA_ENCRYPTION_KEY_ID must be 1-16 chars [a-z0-9_-]');
   return { environment: kind, errors, warnings, variables };
+}
+
+/** SMS can really be delivered: an HTTP provider, or a non-production environment (log driver for testing). */
+export function smsAvailable(raw: Record<string, string | undefined> = process.env): boolean {
+  return raw.SMS_DRIVER === 'http' || runtimeEnvironment(raw) !== 'PRODUCTION';
 }
 
 /* ═══════════════ Database / storage fingerprint compatibility ═══════════════ */

@@ -301,7 +301,11 @@ export const BUYER_RESPONSE_HOURS = 24;
  * reference. Starts the seller's 24-hour evidence deadline. A seller statement is never such an event.
  */
 export async function recordDeliveryEvent(actor: Actor, soId: string, input: { reference: string; source?: 'OPERATIONS_CARRIER_CHECK' | 'CARRIER_INTEGRATION' }) {
-  if (actor.type !== 'SYSTEM') requirePermission(actor, 'delivery.verify');
+  if (actor.type !== 'SYSTEM') {
+    requirePermission(actor, 'delivery.verify');
+    // Establishing delivery starts the buyer timeout that leads to entitlement: fresh 2FA (F-11).
+    requireStepUp(actor);
+  }
   const ref = input.reference?.trim();
   if (!ref || ref.length < 3) throw validation('اكتب مرجع التحقق من شركة الشحن (رقم التتبع/حالة الشحنة)');
   return db.transaction(async (tx) => {
@@ -385,6 +389,7 @@ export async function raiseDeliveryException(tx: DbOrTx, actor: Actor, so: Pick<
  */
 export async function reviewDeliveryException(actor: Actor, soId: string, decision: 'ESTABLISH' | 'KEEP_OPEN', reason: string) {
   requirePermission(actor, 'delivery.verify');
+  if (decision === 'ESTABLISH') requireStepUp(actor);
   const why = requireReason(reason);
   return db.transaction(async (tx) => {
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, soId)).for('update');

@@ -32,7 +32,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
       <div className="rounded-2xl bg-gradient-to-l from-accent-600 to-brand-900 p-5 text-white">
         <p className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-5" aria-hidden /> طلب صفقة محمية على اضمن</p>
         <h1 className="mt-2 text-xl font-bold sm:text-2xl">مشترٍ يريد شراء «{s.title}» منك</h1>
-        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري بيدفع لاضمن الأول، وبعد التسليم وتأكيد المشتري بيتحوّل لك مستحقك.</p>
+        <p className="mt-1 text-sm text-white/85">رقم الصفقة: <span className="ltr">{s.ref}</span>. المشتري بيدفع لاضمن الأول، وبعد التسليم وتأكيد المشتري (أو انتهاء مهلته بدون اعتراض) وموافقة الإدارة بيتحوّل لك مستحقك.</p>
       </div>
 
       {inv.isBuyer && <Alert tone="info">ده رابط الدعوة بتاع صفقتك (انت المشتري). ابعته للبائع.</Alert>}
@@ -56,7 +56,7 @@ export default async function DealInvitePage(props: { params: Promise<{ token: s
           { label: 'شروط خاصة', value: s.customTerms ?? 'مفيش' },
         ]} />
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{s.description}</p>
-        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان استلام الشحنة منك، وسيلة استلام مستحقاتك)، وتحدد السعر النهائي ومصاريف وطريقة ومدة الشحن وسياسة الإرجاع. والمشتري هيراجع عرضك قبل أي دفع.</p>
+        <p className="mt-3 text-xs text-muted">بعد القبول هتضيف بياناتك (الاسم، موبايل مؤكد، عنوان استلام الشحنة منك، بيانات استلام الأموال)، وتحدد السعر النهائي ومصاريف وطريقة ومدة الشحن وسياسة الإرجاع. والمشتري هيراجع عرضك قبل أي دفع.</p>
       </section>
 
       {inv.usable && !inv.isBuyer && !inv.boundToViewer && (

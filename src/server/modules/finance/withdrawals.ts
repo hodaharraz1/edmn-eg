@@ -67,7 +67,7 @@ export async function requestWithdrawal(
     const closing = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${seller.ownerUserId} and status = 'PENDING' limit 1`);
     if (closing.rows.length) throw invalidState('فيه طلب إغلاق حساب قيد التنفيذ');
     if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) {
-      throw invalidState(`تم تغيير بيانات السحب مؤخراً. السحب متاح بعد ${seller.payoutHoldUntil.toLocaleString('ar-EG-u-nu-latn')}`);
+      throw invalidState(`تم تغيير بيانات استلام الأموال مؤخراً. السحب متاح بعد ${seller.payoutHoldUntil.toLocaleString('ar-EG-u-nu-latn')}`);
     }
     const min = await getSetting('withdrawals.minimumAmount', tx);
     if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
@@ -75,7 +75,7 @@ export async function requestWithdrawal(
     // Early, friendly check only — the authoritative check runs at approval under the account lock.
     if (amount > available) throw new DomainError('INSUFFICIENT_BALANCE', 'المبلغ أكبر من رصيدك المتاح');
     const pm = await activePayoutMethod(tx, sellerId);
-    if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة. أضف وسيلة سحب وانتظر اعتمادها');
+    if (!pm) throw invalidState('لا توجد بيانات استلام أموال معتمدة. أضف بيانات استلام الأموال وانتظر اعتمادها');
     // Transfer cost quoted BEFORE the request (frozen at approval). This is never the EDMN sale fee:
     // seller fees were assessed once on each sale and are not charged again here.
     const quote = await quoteTransfer(tx, { payoutType: pm.type, amount, sellerId, payoutMethodId: pm.id });
@@ -142,9 +142,9 @@ async function resolveAccountDestination(tx: DbOrTx, userId: string, dest: Accou
   if (dest.kind === 'STORE_PAYOUT_METHOD') {
     const store = await ownedStore(tx, userId);
     if (!store || !['APPROVED', 'RESTRICTED'].includes(store.status)) throw invalidState('لا يوجد متجر معتمد مرتبط بحسابك');
-    if (store.payoutHoldUntil && store.payoutHoldUntil > new Date()) throw invalidState('تم تغيير بيانات السحب مؤخراً. السحب متاح بعد انتهاء فترة التجميد');
+    if (store.payoutHoldUntil && store.payoutHoldUntil > new Date()) throw invalidState('تم تغيير بيانات استلام الأموال مؤخراً. السحب متاح بعد انتهاء فترة التجميد');
     const pm = await activePayoutMethod(tx, store.id);
-    if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة للمتجر');
+    if (!pm) throw invalidState('لا توجد بيانات استلام أموال معتمدة للمتجر');
     assertVerifiedDestination(pm);
     return { sellerId: store.id, scope: 'ALL_FOR_STORE_DESTINATION' as Scope, payoutMethodId: pm.id, receivingDestinationId: null, type: pm.type, masked: pm.maskedLabel, recipientKey: pm.id };
   }
@@ -245,7 +245,7 @@ export async function previewWithdrawal(actor: Actor, amountInput: string | numb
     throw validation('المبلغ غير صحيح');
   }
   const pm = await activePayoutMethod(db, sellerId);
-  if (!pm) throw invalidState('لا توجد وسيلة سحب معتمدة');
+  if (!pm) throw invalidState('لا توجد بيانات استلام أموال معتمدة');
   const q = await quoteTransfer(db, { payoutType: pm.type, amount, sellerId, payoutMethodId: pm.id });
   return { amount, transferCost: q.payer === 'SELLER_PAYS' ? q.cost : 0, payer: q.payer, net: q.net, channel: q.channel, warnings: q.warnings, violations: q.violations };
 }
@@ -705,7 +705,7 @@ export async function recordWithdrawalReturned(actor: Actor, id: string, input: 
       await tx.update(sellerPayoutMethods).set({ status: 'PENDING_VERIFICATION', isDefault: false }).where(and(eq(sellerPayoutMethods.id, w.payoutMethodId), eq(sellerPayoutMethods.status, 'ACTIVE')));
     }
     await audit(tx, actor, { action: 'withdrawal.payout_returned', entityType: 'withdrawal', entityId: w.id, oldValues: { status: w.status }, newValues: { status: 'RETURNED', amount: input.amount, reference: ref, approvalId: approval.id, destinationReverification: !!(w.payoutMethodId || w.receivingDestinationId), restored: parts.map(({ a, part }) => ({ seq: a.seq, source: a.sourceType, amount: part })) }, reason: why });
-    await notifySeller(tx, w, 'ارتد التحويل — أُعيد المبلغ لرصيدك المتاح ويلزم إعادة اعتماد وسيلة السحب', 'returned');
+    await notifySeller(tx, w, 'ارتد التحويل — أُعيد المبلغ لرصيدك المتاح ويلزم إعادة اعتماد بيانات استلام الأموال', 'returned');
   });
 }
 

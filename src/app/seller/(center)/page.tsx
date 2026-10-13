@@ -55,7 +55,7 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
           <h2 className="font-bold">ملخص الفترة</h2>
           <dl className="space-y-2">
             <div className="flex justify-between"><dt className="text-muted">إجمالي المبيعات</dt><dd className="font-semibold">{formatEGP(d.gross)}</dd></div>
-            <div className="flex justify-between"><dt className="text-muted">عمولة اضمن</dt><dd>-{formatEGP(d.commission)}</dd></div>
+            <div className="flex justify-between"><dt className="text-muted">رسوم خدمة اضمن</dt><dd>-{formatEGP(d.commission)}</dd></div>
             <div className="flex justify-between"><dt className="text-muted">المستردات</dt><dd>-{formatEGP(d.refunds)}</dd></div>
             <div className="flex justify-between border-t border-line pt-2"><dt>صافي المبيعات</dt><dd className="font-bold">{formatEGP(d.net)}</dd></div>
           </dl>
@@ -80,7 +80,7 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
           <p className="flex items-center gap-2"><Boxes className="size-4 text-amber-600" /> {d.lowStock} منتج بمخزون منخفض</p>
           <p className="flex items-center gap-2"><Boxes className="size-4 text-red-700" /> {d.outOfStock} منتج نفدت كميته</p>
           <Link href="/seller/inventory" className="text-brand-700 hover:underline">إدارة المخزون</Link>
-          <p className="pt-2 text-xs text-muted">طلبات سحب قيد التنفيذ: {d.withdrawalsOpen} · إجمالي ما تم صرفه: {formatEGP(d.paidOut)}</p>
+          <p className="pt-2 text-xs text-muted">طلبات سحب قيد التنفيذ: {d.withdrawalsOpen} · إجمالي ما تم تحويله: {formatEGP(d.paidOut)}</p>
         </section>
       </div>
     </div>

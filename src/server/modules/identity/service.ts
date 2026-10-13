@@ -20,7 +20,7 @@ export type Identity = typeof userIdentityVerifications.$inferSelect;
 export const IDENTITY_LABELS: Record<IdentityStatus, string> = {
   INCOMPLETE: 'لم يكتمل',
   PENDING_REVIEW: 'قيد المراجعة',
-  MORE_INFO_REQUIRED: 'مطلوب استكمال',
+  MORE_INFO_REQUIRED: 'مطلوب معلومات إضافية',
   APPROVED: 'تم التحقق',
   REJECTED: 'مرفوض',
   REVERIFICATION_REQUIRED: 'مطلوب إعادة التحقق',

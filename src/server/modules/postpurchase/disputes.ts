@@ -6,6 +6,7 @@ import { hasPermission, requirePermission, requireStepUp, requireUser, type Acto
 import { assertNotSelfDealing } from '@/server/modules/finance/self-dealing';
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
+import { LABELS } from '@/lib/i18n/labels';
 import { db, type DbOrTx } from '@/server/db/client';
 import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerOrders, sellers, users } from '@/server/db/schema';
 import { requestRefundTx } from '@/server/modules/finance/refunds';
@@ -112,7 +113,8 @@ function partyRole(actor: Actor, d: Dispute): 'CLAIMANT' | 'RESPONDENT' | 'ADMIN
   if (actor.type === 'ADMIN' && hasPermission(actor, 'disputes.manage')) return 'ADMIN';
   if (actor.userId === d.claimantUserId) return 'CLAIMANT';
   if (actor.userId === d.respondentUserId) return 'RESPONDENT';
-  if (actor.type === 'SELLER' && d.respondentSellerId && actor.sellerId === d.respondentSellerId) return 'RESPONDENT';
+  // Store members act for the store only with an order/returns role (F-9): a catalog or finance member is no party.
+  if (actor.type === 'SELLER' && d.respondentSellerId && actor.sellerId === d.respondentSellerId && (actor.sellerPermissions?.has('orders.manage') || actor.sellerPermissions?.has('returns.manage'))) return 'RESPONDENT';
   return null;
 }
 
@@ -223,14 +225,8 @@ export async function resolveDispute(actor: Actor, disputeId: string, input: z.i
   });
 }
 
-export const DECISION_LABELS: Record<DisputeDecision, string> = {
-  FULL_REFUND: 'استرداد كامل للمشتري',
-  PARTIAL_REFUND: 'استرداد جزئي',
-  RETURN_REQUIRED: 'إرجاع المنتج مطلوب',
-  REPLACEMENT: 'استبدال المنتج',
-  RELEASE_TO_SELLER: 'صرف المستحقات للبائع',
-  REJECT_CLAIM: 'رفض الشكوى',
-};
+/** Wording lives in one place: `LABELS.disputeDecision` (src/lib/i18n/labels.ts). */
+export const DECISION_LABELS = LABELS.disputeDecision as Record<DisputeDecision, string>;
 
 async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, decision: DisputeDecision, amount: number | null, note: string) {
   const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, dispute.sellerOrderId!)).for('update');

@@ -117,7 +117,7 @@ test('seller: one financial view with Marketplace and Protected Deal attribution
   await seller.goto('/account/earnings');
   await expect(seller.getByTestId('balance-marketplace')).toContainText('رصيد مبيعات المتجر');
   await expect(seller.getByTestId('balance-marketplace')).toContainText('رصيد متاح');
-  await expect(seller.getByTestId('balance-marketplace')).toContainText('مبالغ قيد الإفراج');
+  await expect(seller.getByTestId('balance-marketplace')).toContainText('مستحق — بانتظار موافقة الإدارة');
   await expect(seller.getByText('محفظة', { exact: true })).toHaveCount(0);
   await seller.context().close();
 });

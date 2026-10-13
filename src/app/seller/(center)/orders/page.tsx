@@ -16,7 +16,7 @@ const TABS: [string, string, SellerOrderStatus[]][] = [
   ['processing', 'قيد التجهيز', ['SELLER_CONFIRMED', 'PROCESSING']],
   ['ready', 'جاهزة للشحن', ['READY_TO_SHIP']],
   ['shipped', 'تم الشحن', ['SHIPPED']],
-  ['delivered', 'تم الاستلام', ['DELIVERED', 'COMPLETED']],
+  ['delivered', 'تم التسليم / مكتمل', ['DELIVERED', 'COMPLETED']],
   ['cancelled', 'ملغاة', ['CANCELLED']],
 ];
 

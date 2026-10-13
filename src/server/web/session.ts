@@ -86,7 +86,7 @@ export async function requireSellerActor(next = '/seller'): Promise<Actor> {
 
 export const getAdminSession = cache(async () => {
   // With host routing on, admin sessions are only honoured on the admin host — never on www./seller.
-  if (process.env.ENFORCE_HOSTS === 'true') {
+  if (process.env.ENFORCE_HOSTS === 'true' || process.env.ENFORCE_ADMIN_HOST === 'true') {
     const host = ((await headers()).get('host') ?? '').split(':')[0].toLowerCase();
     if (host !== (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase()) return null;
   }

@@ -30,7 +30,7 @@ export default async function SellerRegisterPage() {
     <>
       <h2 className="mb-1 text-xl font-bold">التسجيل كبائع على اضمن</h2>
       <p className="mb-6 text-sm text-muted">
-        بعد التسجيل ستكمل بيانات الهوية، المتجر، عنوان المرتجعات، المستندات وطريقة استلام الأرباح، ثم نراجع طلبك.
+        بعد التسجيل ستكمل بيانات الهوية، المتجر، عنوان المرتجعات، المستندات وبيانات استلام الأموال، ثم نراجع طلبك.
       </p>
       {user ? (
         <ActionForm action={startSellerAction} className="space-y-4">

@@ -18,7 +18,7 @@ export default function SellerAuthLayout({ children }: { children: React.ReactNo
         <div className="space-y-2">
           <p className="text-sm font-semibold tracking-wide text-amber-300" dir="ltr">EDMN Seller Center</p>
           <h1 className="text-2xl font-bold leading-tight sm:text-3xl">مركز بائعي اضمن</h1>
-          <p className="max-w-md text-sm text-white/75">أدر متجرك، منتجاتك، طلباتك، شحناتك وأرباحك من مكان واحد.</p>
+          <p className="max-w-md text-sm text-white/75">أدر متجرك، منتجاتك، طلباتك، شحناتك ومستحقاتك من مكان واحد.</p>
         </div>
         <ul className="hidden max-w-md gap-3 text-sm lg:grid">
           {[

@@ -25,7 +25,7 @@ export default async function ReturnDetail(props: PageProps<'/account/returns/[i
       <PageHeader breadcrumbs={<Breadcrumbs items={[{ label: 'طلبات الإرجاع', href: '/account/returns' }, { label: `#${r.number}` }]} />} title={`طلب إرجاع #${r.number}`} description={`على الطلب ${g.orderLabel}`} actions={<StatusChip status={r.status} />} />
       {r.status === 'APPROVED' && <Alert tone="success" title="طلب الإرجاع اتقبل">ابعت المنتج على عنوان الإرجاع بتاع البائع، وبعدها سجّل بيانات الشحن تحت.</Alert>}
       {r.status === 'REJECTED' && <Alert tone="danger" title="طلب الإرجاع اترفض">السبب: {r.decisionReason}. لو شايف إن القرار مش عادل، تقدر تفتح نزاع وفريق اضمن يراجع الموضوع.</Alert>}
-      {r.status === 'REFUND_PENDING' && <Alert tone="info">استرداد {formatEGP(r.refundAmount)} اتقبل، وفريق اضمن المالي هيحوّله لك.</Alert>}
+      {r.status === 'REFUND_PENDING' && <Alert tone="info">طلب الإرجاع اتقبل. استرداد {formatEGP(r.refundAmount)} قيد مراجعة واعتماد الإدارة قبل التحويل — لسه ما وصلكش.</Alert>}
       {r.status === 'REFUNDED' && <Alert tone="success">مبلغ {formatEGP(r.refundAmount)} اترد لك.</Alert>}
       <section className="card p-5">
         <DefinitionList items={[

@@ -229,8 +229,8 @@ export const ALERT_RULES: AlertRule[] = [
   {
     code: 'SELLER_LIABILITY',
     category: 'SELLER_FINANCE',
-    title: 'التزام مالي على حسابك',
-    body: 'يوجد التزام مالي على حساب البائع {{ref}} بعد استرداد. السحب متوقف لحين التسوية.',
+    title: 'عليك مديونية',
+    body: 'على متجرك {{ref}} مديونية بعد استرداد. السحب متوقف لحين التسوية.',
     severity: 'HIGH',
     defaults: { preHours: 0, cooldownHours: 72, agingHours: 0 },
     candidates: async (c) => toCandidates(await q<Row>(c, sql`select a.seller_id id, a.updated_at::text due, coalesce(st.name, 'المتجر') ref, s.owner_user_id uid from ledger_accounts a join sellers s on s.id = a.seller_id left join stores st on st.seller_id = s.id where a.code = 'SELLER_AVAILABLE' and a.balance < 0`), 'seller', () => '/seller/balance'),
@@ -295,7 +295,7 @@ export const ALERT_RULES: AlertRule[] = [
     code: 'DEAL_PAYOUT_PENDING',
     category: 'PROTECTED_DEAL',
     title: 'مستحقاتك من صفقة محمية جاهزة للسحب',
-    body: 'مستحقاتك من الصفقة {{ref}} متاحة. اطلب سحب لوجهة صرف متحقق منها من «مستحقاتي من البيع».',
+    body: 'مستحقاتك من الصفقة {{ref}} متاحة. اطلب سحب على بيانات استلام أموال متحقق منها من «مستحقاتي من البيع».',
     severity: 'NORMAL',
     defaults: { preHours: 0, cooldownHours: 72, agingHours: 24 },
     // Payable and not yet reserved by any withdrawal → the seller (payee) is told to request it.

@@ -385,7 +385,7 @@ export async function submissionProblems(conn: DbOrTx, p: Product): Promise<stri
   if (!variants.length) problems.push('أضف السعر والكمية');
   const shipsTo = await conn.select({ g: sellerShippingRates.governorateId }).from(sellerShippingRates).where(and(eq(sellerShippingRates.sellerId, p.sellerId), eq(sellerShippingRates.enabled, true))).limit(1);
   if (!shipsTo.length) problems.push('فعّل الشحن لمحافظة واحدة على الأقل من صفحة الشحن');
-  if (!p.returnPolicyConfirmed) problems.push('حدد سياسة الاسترجاع للمنتج (خطوة الشحن والإرجاع)');
+  if (!p.returnPolicyConfirmed) problems.push('حدد سياسة الإرجاع للمنتج (خطوة الشحن والإرجاع)');
   if (p.categoryId) {
     const schema = await effectiveAttributes(conn, p.categoryId);
     const values = await attributeMap(conn, p.id);

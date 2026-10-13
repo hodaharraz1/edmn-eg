@@ -38,7 +38,7 @@ export default async function PaymentsPage() {
       />
       {myRefunds.length > 0 && (
         <section>
-          <h2 className="mb-2 font-bold">المبالغ المستردة</h2>
+          <h2 className="mb-2 font-bold">طلبات الاسترداد</h2>
           <DataTable
             rows={myRefunds}
             rowKey={(r) => r.id}
@@ -46,7 +46,7 @@ export default async function PaymentsPage() {
               { key: 'n', header: 'رقم', cell: (r) => `#${r.number}` },
               { key: 'a', header: 'المبلغ', cell: (r) => formatEGP(r.amount) },
               { key: 'r', header: 'السبب', cell: (r) => r.reason },
-              { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.status} /> },
+              { key: 's', header: 'الحالة', cell: (r) => <StatusChip status={r.status} kind="refund" /> },
               { key: 'ref', header: 'مرجع التحويل', cell: (r) => r.paidReference ?? '—' },
             ]}
           />

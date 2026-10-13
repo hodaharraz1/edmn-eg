@@ -26,7 +26,7 @@ export default async function SellerSettings() {
   return (
     <div className="space-y-5">
       <PageHeader title="الإعدادات" />
-      <FormSection title="وسائل استلام الأرباح" description="البيانات الكاملة مشفرة ولا تظهر إلا مقنّعة. أي تغيير يُراجع ويوقف السحب مؤقتاً لحمايتك.">
+      <FormSection title="بيانات استلام الأموال (المتجر)" description="البيانات الكاملة مشفرة ولا تظهر إلا مقنّعة. أي تغيير يُراجع ويوقف السحب مؤقتاً لحمايتك.">
         <ul className="divide-y divide-line text-sm">
           {methods.map((m) => (
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -50,7 +50,7 @@ export default async function SellerSettings() {
           </ActionForm>
         )}
       </FormSection>
-      <FormSection title="المصادقة الثنائية (2FA)" description="موصى بها لحماية أرباحك. عند التفعيل تُطلب عند تغيير وسائل السحب.">
+      <FormSection title="المصادقة الثنائية (2FA)" description="موصى بها لحماية مستحقاتك. عند التفعيل تُطلب عند تغيير بيانات استلام الأموال.">
         {user.totpEnabledAt ? <p className="text-sm text-emerald-700">مفعّلة منذ {formatDate(user.totpEnabledAt)}</p> : <TotpSecret action={sellerTotpAction} />}
       </FormSection>
       {isOwner && (

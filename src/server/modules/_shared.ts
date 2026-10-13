@@ -5,6 +5,10 @@ import { validation } from '@/server/core/errors';
 import type { DbOrTx } from '@/server/db/client';
 import type { StateMachine } from '@/domain/state-machine';
 
+// Validators without a custom message must never surface Zod's English defaults to users.
+z.config(z.locales.ar());
+const GENERIC_ZOD_MESSAGES = new Set(['Invalid input', 'مدخل غير مقبول']);
+
 /** Assert a state-machine transition and append it to status_history. Callers then write the row. */
 export async function transition<S extends string>(
   tx: DbOrTx,
@@ -25,7 +29,7 @@ export function parse<T extends z.ZodType>(schema: T, input: unknown, message = 
   if (!r.success) {
     const fe = z.flattenError(r.error).fieldErrors as Record<string, string[]>;
     const first = Object.values(fe).flat()[0] ?? r.error.issues[0]?.message;
-    throw validation(first && first !== 'Invalid input' ? first : message, fe);
+    throw validation(first && !GENERIC_ZOD_MESSAGES.has(first) ? first : message, fe);
   }
   return r.data;
 }

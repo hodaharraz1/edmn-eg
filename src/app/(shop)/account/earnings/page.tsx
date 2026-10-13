@@ -30,7 +30,7 @@ export default async function EarningsPage() {
   const dests = await db.select().from(receivingDestinations).where(and(eq(receivingDestinations.userId, user.id), eq(receivingDestinations.status, 'APPROVED')));
   const verified = (await identityStatus(db, user.id)) === 'APPROVED';
   const options = [
-    ...(pm ? [{ value: 'store', label: `وسيلة سحب المتجر ${pm.maskedLabel} (المتجر + الصفقات)` }] : []),
+    ...(pm ? [{ value: 'store', label: `بيانات استلام أموال المتجر ${pm.maskedLabel} (المتجر + الصفقات)` }] : []),
     ...dests.map((d) => ({ value: `rd:${d.id}`, label: `${d.maskedLabel} (الصفقات المحمية فقط)` })),
   ];
   const mine = await accountWithdrawals(user.id);
@@ -40,11 +40,11 @@ export default async function EarningsPage() {
       {!view.marketplace && !view.protectedDeal ? <EmptyState icon={Wallet} title="مفيش مستحقات بيع لحد دلوقتي" description="لما تبيع في السوق أو كبائع في صفقة محمية هتلاقي مستحقاتك هنا." /> : <SellerFinanceSummary view={view} />}
       <section className="card space-y-3 p-5">
         <h2 className="font-bold">طلب سحب</h2>
-        <p className="text-sm text-muted">بنحسب المبلغ من مصادرك بترتيب ثابت: مستحقات الصفقات المحمية الأقدم أولاً، وبعدها رصيد مبيعات المتجر. كل جزء بيفضل مسجل بمصدره. رصيد المتجر بيتحوّل بس على وسيلة سحب المتجر المتحقق منها.</p>
+        <p className="text-sm text-muted">بنحسب المبلغ من مصادرك بترتيب ثابت: مستحقات الصفقات المحمية الأقدم أولاً، وبعدها رصيد مبيعات المتجر. كل جزء بيفضل مسجل بمصدره. رصيد المتجر بيتحوّل بس على بيانات استلام أموال المتجر المتحقق منها.</p>
         {!verified ? (
           <Alert tone="warning" action={<Link className="text-brand-700 underline" href="/account/identity">التحقق من الهوية</Link>}>لازم تتحقق من هويتك قبل طلب أي سحب.</Alert>
         ) : options.length === 0 ? (
-          <Alert tone="warning" action={<Link className="text-brand-700 underline" href="/account/receiving">إضافة وجهة صرف</Link>}>مفيش وجهة صرف متحقق منها. أضف «بيانات استلام الأموال» واستنى التحقق منها قبل السحب.</Alert>
+          <Alert tone="warning" action={<Link className="text-brand-700 underline" href="/account/receiving">إضافة بيانات استلام الأموال</Link>}>مفيش بيانات استلام أموال متحقق منها. أضف «بيانات استلام الأموال» واستنى التحقق منها قبل السحب.</Alert>
         ) : (
           <AccountWithdrawalForm preview={previewAccountWithdrawalAction} request={requestAccountWithdrawalAction} destinations={options} clientKey={randomUUID()} />
         )}

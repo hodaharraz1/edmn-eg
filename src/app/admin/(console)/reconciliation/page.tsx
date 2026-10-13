@@ -29,7 +29,7 @@ export default async function Reconciliation(props: PageProps<'/admin/reconcilia
   return (
     <div className="space-y-4">
       <PageHeader title="المطابقة مع كشوف الحسابات" description="كشف البنك / إنستاباي / فودافون كاش ↔ الدفعة أو الصرف ↔ القيد. أي مطابقة تحتاج تأكيدًا يدويًا مسجلًا — لا مطابقة تلقائية للحالات الملتبسة." />
-      <Alert tone="info">مزودو الدفع غير مربوطين؛ الاستيراد بملف CSV: <span className="ltr">externalRef,direction(IN|OUT),amount,occurredAt,counterparty</span></Alert>
+      <Alert tone="info">مزودو الدفع غير مربوطين؛ الاستيراد بملف CSV: <span className="ltr break-all">externalRef,direction(IN|OUT),amount,occurredAt,counterparty</span></Alert>
       {can && (
         <ActionForm action={reconciliationAction} className="card grid gap-2 p-4 sm:grid-cols-[auto_1fr_auto] sm:items-end">
           <input type="hidden" name="op" value="import" /><input type="hidden" name="back" value={back} />

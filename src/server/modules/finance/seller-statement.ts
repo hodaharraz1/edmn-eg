@@ -38,6 +38,15 @@ const DESCRIPTIONS: Record<string, string> = {
   WITHDRAWAL_PAID: 'تحويل مبلغ السحب (رسوم التحويل موضحة منفصلة)',
 };
 
+/** Typed reference when the row has no order/withdrawal number (never a raw id fragment). */
+const REFERENCE_FALLBACK: Record<string, string> = {
+  external_deal: 'صفقة محمية',
+  ledger_adjustment: 'تسوية',
+  refund: 'استرداد',
+  withdrawal: 'سحب',
+  seller_order: 'طلب',
+};
+
 export async function sellerStatement(sellerId: string, limit = 300): Promise<{ rows: StatementRow[]; totals: { pending: number; available: number; reserved: number; liability: number } }> {
   const r = await db.execute<{
     entry_id: string; created_at: string; entry_type: string; source_type: string; source_id: string; description: string;
@@ -83,7 +92,7 @@ export async function sellerStatement(sellerId: string, limit = 300): Promise<{ 
       date: x.created_at,
       type: x.entry_type,
       description: DESCRIPTIONS[x.entry_type] ?? x.description,
-      reference: x.wd_number ? `سحب #${x.wd_number}` : x.so_ref ? `طلب ${x.so_ref}` : x.source_id.slice(0, 8),
+      reference: x.wd_number ? `سحب #${x.wd_number}` : x.so_ref ? `طلب ${x.so_ref}` : (REFERENCE_FALLBACK[x.source_type] ?? '—'),
       orderRef: x.so_ref,
       grossSale: gross,
       sellerFee,

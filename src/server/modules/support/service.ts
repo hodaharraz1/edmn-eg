@@ -6,6 +6,7 @@ import { hasPermission, requirePermission, requireStepUp, requireUser, type Acto
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { supportMessages, supportSlaCycles, supportTickets, users } from '@/server/db/schema';
+import { enforce } from '@/server/auth/rate-limit';
 import { getSetting } from '@/server/modules/settings';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
@@ -19,9 +20,29 @@ export const ticketSchema = z.object({
   relatedId: z.string().trim().max(60).optional().default(''),
 });
 
+/**
+ * A ticket may reference an order / seller order / deal / payment / withdrawal ONLY when the requester is a party to it
+ * (F-7): a forged reference could otherwise justify staff opening a stranger's private conversation.
+ */
+async function assertRelatedOwned(conn: DbOrTx, userId: string, relatedId: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(relatedId)) throw validation('رقم الطلب/الصفقة المرتبط غير صحيح');
+  const r = await conn.execute(sql`select 1 where
+    exists (select 1 from orders o where o.id = ${relatedId}::uuid and o.customer_id = ${userId})
+    or exists (select 1 from seller_orders so join orders o on o.id = so.order_id left join sellers s on s.id = so.seller_id
+               left join seller_members m on m.seller_id = so.seller_id and m.user_id = ${userId} and m.is_active
+               where so.id = ${relatedId}::uuid and (o.customer_id = ${userId} or s.owner_user_id = ${userId} or m.user_id is not null))
+    or exists (select 1 from external_deals d where d.id = ${relatedId}::uuid and (d.buyer_id = ${userId} or d.seller_user_id = ${userId}))
+    or exists (select 1 from payments p join orders o on o.id = p.order_id where p.id = ${relatedId}::uuid and o.customer_id = ${userId})
+    or exists (select 1 from payments p join external_deals d on d.id = p.deal_id where p.id = ${relatedId}::uuid and d.buyer_id = ${userId})
+    or exists (select 1 from withdrawal_requests w left join sellers s on s.id = w.seller_id where w.id = ${relatedId}::uuid and (w.user_id = ${userId} or s.owner_user_id = ${userId}))`);
+  if (!r.rows.length) throw validation('الطلب أو الصفقة المرتبطة بالتذكرة مش تابعة لحسابك');
+}
+
 export async function openTicket(actor: Actor, input: z.input<typeof ticketSchema>, attachment?: { data: Buffer; name: string } | null) {
   const userId = requireUser(actor);
   const d = parse(ticketSchema, input);
+  await enforce(`ticket-open:${userId}`, 10, 3600);
+  if (d.relatedId) await assertRelatedOwned(db, userId, d.relatedId);
   return db.transaction(async (tx) => {
     const [t] = await tx
       .insert(supportTickets)
