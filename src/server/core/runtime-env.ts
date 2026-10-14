@@ -1,4 +1,4 @@
-import { NONPROD_DATA_KEY_KCVS, NONPROD_DB_ENDPOINT_HASHES, NONPROD_SECRET_KCVS, dataKeyCheckValue, databaseEndpointHash, secretCheckValue } from './known-nonprod';
+import { NONPROD_DATA_KEY_KCVS, NONPROD_DB_ENDPOINT_HASHES, NONPROD_SECRET_KCVS, dataKeyCheckValue, databaseEndpointHash, matchesFingerprint, secretCheckValue } from './known-nonprod';
 
 /**
  * ENVIRONMENT MODEL (Batch 2).
@@ -173,9 +173,11 @@ const DENY: NonProdDenylist = { dataKeys: NONPROD_DATA_KEY_KCVS, secrets: NONPRO
 export function productionIsolationErrors(raw: Raw, deny: NonProdDenylist = DENY): string[] {
   const errors: string[] = [];
   const present = (n: string) => typeof raw[n] === 'string' && raw[n] !== '';
+  // Fail closed if the protection itself is missing (an emptied denylist must never silently accept staging values).
+  if (!deny.dataKeys.length || deny.secrets.length < 2 || !deny.dbEndpoints.length) errors.push('Non-production fingerprint protection is missing (known-nonprod lists are empty)');
   // Secrets: never a known staging/test value, never shared between purposes, a deliberate key id.
-  if (present('DATA_ENCRYPTION_KEY') && deny.dataKeys.includes(dataKeyCheckValue(raw.DATA_ENCRYPTION_KEY!))) errors.push('DATA_ENCRYPTION_KEY is a known staging/test key');
-  for (const n of ['SESSION_SECRET', 'CRON_SECRET']) if (present(n) && deny.secrets.includes(secretCheckValue(n, raw[n]!))) errors.push(`${n} is a known staging/test secret`);
+  if (present('DATA_ENCRYPTION_KEY') && matchesFingerprint(deny.dataKeys, dataKeyCheckValue(raw.DATA_ENCRYPTION_KEY!))) errors.push('DATA_ENCRYPTION_KEY is a known staging/test key');
+  for (const n of ['SESSION_SECRET', 'CRON_SECRET']) if (present(n) && matchesFingerprint(deny.secrets, secretCheckValue(n, raw[n]!))) errors.push(`${n} is a known staging/test secret`);
   if (!present('DATA_ENCRYPTION_KEY_ID') || raw.DATA_ENCRYPTION_KEY_ID === 'default') errors.push('DATA_ENCRYPTION_KEY_ID must be set to a production key id (not "default")');
   const secrets = ['SESSION_SECRET', 'DATA_ENCRYPTION_KEY', 'CRON_SECRET'].filter(present).map((n) => raw[n]);
   if (new Set(secrets).size !== secrets.length) errors.push('SESSION_SECRET, DATA_ENCRYPTION_KEY and CRON_SECRET must all be different secrets');
@@ -184,7 +186,7 @@ export function productionIsolationErrors(raw: Raw, deny: NonProdDenylist = DENY
     if (!present(n)) continue;
     const url = raw[n]!;
     const h = databaseEndpointHash(url);
-    if (h && deny.dbEndpoints.includes(h)) errors.push(`${n} points at the staging database`);
+    if (h && matchesFingerprint(deny.dbEndpoints, h)) errors.push(`${n} points at the staging database`);
     if (/@(localhost|127\.0\.0\.1|\[::1\])[:/]/i.test(url)) errors.push(`${n} points at a local database`);
     const dbName = url.match(/\/([^/?]+)(\?|$)/)?.[1] ?? '';
     if (/(^|[_-])(test|e2e|staging|demo)([_-]|$)/i.test(dbName)) errors.push(`${n} names a test/staging database`);

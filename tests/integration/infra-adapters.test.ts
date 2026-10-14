@@ -62,7 +62,7 @@ describe('error tracking adapter', () => {
   const SECRET_ERROR = () =>
     new Error(
       'boom password=Hunter2pass otp: 482913 user ali@example.org national id 29001011234567 iban EG380019000500000000263180002 ' +
-        'postgres://edmn:SuperSecretPw@ep-x.neon.tech/db Bearer abcdefghijklmnopqrstuvwx cookie edmn_session=deadbeefcafe0123456789abcdef0123456789 ' +
+        'postgres://edmn:SuperSecretPw@db.example.com/db Bearer abcdefghijklmnopqrstuvwx cookie edmn_session=deadbeefcafe0123456789abcdef0123456789 ' +
         'key=whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw at /deal/invite/9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e?token=xyz',
     );
 
@@ -374,6 +374,33 @@ describe('production environment isolation', () => {
     expect(validateEnvironment({ ...g, PUSH_ALLOW_ANY_ENDPOINT: 'true' }).errors.join()).toContain('PUSH_ALLOW_ANY_ENDPOINT must not be set');
   });
 
+  it('staging SESSION_SECRET / CRON_SECRET reuse is refused through one-way check values compared in constant time', async () => {
+    const { NONPROD_SECRET_KCVS, NONPROD_DATA_KEY_KCVS, NONPROD_DB_ENDPOINT_HASHES, matchesFingerprint } = await import('@/server/core/known-nonprod');
+    // The shipped denylist holds check values only (32 hex chars each): staging's session + cron secret, key, endpoint.
+    expect(NONPROD_SECRET_KCVS.length).toBe(2);
+    for (const v of [...NONPROD_SECRET_KCVS, ...NONPROD_DATA_KEY_KCVS, ...NONPROD_DB_ENDPOINT_HASHES]) expect(v).toMatch(/^[0-9a-f]{32}$/);
+    expect(matchesFingerprint(['a'.repeat(32), 'b'.repeat(32)], 'b'.repeat(32))).toBe(true);
+    expect(matchesFingerprint(['a'.repeat(32)], 'a'.repeat(31))).toBe(false);
+    // A production env whose secrets match the denylisted check values is refused, each secret separately.
+    const g = good();
+    const deny = (secrets: string[]) => ({ dataKeys: NONPROD_DATA_KEY_KCVS, secrets, dbEndpoints: NONPROD_DB_ENDPOINT_HASHES });
+    const reusedSession = productionIsolationErrors(g, deny([secretCheckValue('SESSION_SECRET', g.SESSION_SECRET), 'f'.repeat(32)])).join('\n');
+    expect(reusedSession).toContain('SESSION_SECRET is a known staging/test secret');
+    expect(reusedSession).not.toContain('CRON_SECRET is a known');
+    const reusedCron = productionIsolationErrors(g, deny(['f'.repeat(32), secretCheckValue('CRON_SECRET', g.CRON_SECRET)])).join('\n');
+    expect(reusedCron).toContain('CRON_SECRET is a known staging/test secret');
+    // A check value is bound to the variable name: the same value used as the other secret is a different fingerprint.
+    expect(secretCheckValue('SESSION_SECRET', 'x'.repeat(40))).not.toBe(secretCheckValue('CRON_SECRET', 'x'.repeat(40)));
+    // The real (shipped) denylist does not refuse fresh production secrets.
+    expect(validateEnvironment(g).errors).toEqual([]);
+  });
+
+  it('missing fingerprint protection fails closed (an emptied denylist never silently accepts staging values)', () => {
+    const g = good();
+    for (const deny of [{ dataKeys: [], secrets: ['a'.repeat(32), 'b'.repeat(32)], dbEndpoints: ['c'.repeat(32)] }, { dataKeys: ['a'.repeat(32)], secrets: [], dbEndpoints: ['c'.repeat(32)] }, { dataKeys: ['a'.repeat(32)], secrets: ['a'.repeat(32), 'b'.repeat(32)], dbEndpoints: [] }])
+      expect(productionIsolationErrors(g, deny).join()).toContain('fingerprint protection is missing');
+  });
+
   it('the denylist uses exactly the key check value staging records (same derivation as the runtime)', async () => {
     const { keyCheckValue } = await import('@/server/core/crypto');
     expect(dataKeyCheckValue(process.env.DATA_ENCRYPTION_KEY!)).toBe(keyCheckValue());
@@ -389,6 +416,11 @@ describe('production environment isolation', () => {
     await recordSecretCheckValues(db, 'STAGING', raw);
     await expect(recordSecretCheckValues(db, 'STAGING', raw)).resolves.toBeUndefined(); // second boot: no UPDATE attempted
     await expect(recordSecretCheckValues(db, 'STAGING', { SESSION_SECRET: 'x'.repeat(44) })).resolves.toBeUndefined();
+    // Concurrent boots / checks: many instances recording at once never raise (no UPDATE ever reaches the trigger).
+    await expect(Promise.all(Array.from({ length: 8 }, () => recordSecretCheckValues(db, 'STAGING', raw)))).resolves.toHaveLength(8);
+    // The trigger that caused the degraded incident is still there and still blocks any in-place edit.
+    const err = await db.execute(sql`update secret_fingerprints set kcv = 'tampered' where name = 'SESSION_SECRET'`).then(() => null, (e: Error & { cause?: Error }) => e);
+    expect(String(err?.cause?.message ?? err?.message)).toMatch(/append-only/);
     const rows = await db.execute<{ name: string; kcv: string }>(sql`select name, kcv from secret_fingerprints where name in ('SESSION_SECRET', 'CRON_SECRET') order by name`);
     expect(rows.rows.map((r) => r.name).sort()).toEqual(names.sort());
     expect(rows.rows.find((r) => r.name === 'SESSION_SECRET')!.kcv).toBe(secretCheckValue('SESSION_SECRET', 's'.repeat(44)));
