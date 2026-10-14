@@ -27,7 +27,7 @@ Older production texts (`PRODUCTION_DEPLOYMENT.md`, `docs/DEPLOYMENT.md`, the Ve
 | 3 | **Install infrastructure** for the chosen profile (dry run first, then `--apply`). | [SERVER_INSTALL_PROFILES.md](SERVER_INSTALL_PROFILES.md) | yes (approved) |
 | 4 | **Legacy safety gate.** It must PASS; it STOPs otherwise. | `sudo deploy/scripts/preflight-legacy.sh` | no |
 | 5 | **Insert production secrets** into `/etc/edmn/*.env`. Generate them on the server; never in chat. | [PRODUCTION_SECRETS_MANIFEST.md](PRODUCTION_SECRETS_MANIFEST.md) | yes |
-| 6 | **Validate the configuration** (prints names only). | `docker run --rm --env-file /etc/edmn/production.env edmn-app:<sha> node --import tsx scripts/check-production-env.ts`, or `--file` with the repo checkout | no |
+| 6 | **Validate the configuration** (prints names only). | `docker compose -f deploy/compose/docker-compose.prod.yml --env-file /etc/edmn/compose.env run --rm --no-deps -T web node --import tsx scripts/check-production-env.ts` (exactly the environment the app will see), or `npx tsx scripts/check-production-env.ts --file /etc/edmn/production.env --migrate-file /etc/edmn/migrate.env` on a checkout | no |
 | 7 | **Database** (local PostgreSQL 16, or external). | [PRODUCTION_DATABASE_PLAN.md](PRODUCTION_DATABASE_PLAN.md) | yes |
 | 8 | **First deploy** (empty DB → migrate → reference seed → web/worker → acceptance). | `sudo -E deploy/scripts/deploy.sh first --tag <sha>` ([SELF_HOSTED_DEPLOYMENT.md](SELF_HOSTED_DEPLOYMENT.md) §4) | yes |
 | 9 | **First SUPERADMIN** (interactive, one-time). | §6 below: `scripts/create-admin.ts` | DB only |

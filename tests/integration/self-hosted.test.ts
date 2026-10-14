@@ -302,7 +302,7 @@ describe('.env.production.example', () => {
     expect(vars.get('ADMIN_APP_URL')).toBe('https://admin.edmneg.com');
     expect(vars.get('ADMIN_HOST')).toBe('admin.edmneg.com');
     expect(vars.get('ENFORCE_ADMIN_HOST')).toBe('true');
-    expect(vars.get('MAIL_FROM')).toBe('"اضمن إي جي <info@edmneg.com>"');
+    expect(vars.get('MAIL_FROM')).toBe('اضمن إي جي <info@edmneg.com>');
     expect(vars.get('VAPID_SUBJECT')).toBe('mailto:info@edmneg.com');
     expect(vars.get('EDMN_ENVIRONMENT')).toBe('production');
   });

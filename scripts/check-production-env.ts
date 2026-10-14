@@ -2,7 +2,9 @@
  * PRODUCTION CONFIG CHECKER — validates a future production.env WITHOUT printing any value.
  *
  *   npx tsx scripts/check-production-env.ts --file /etc/edmn/production.env [--migrate-file /etc/edmn/migrate.env] [--json]
- *   (in the release image:  docker run --rm --env-file /etc/edmn/production.env edmn-app:<sha> node --import tsx scripts/check-production-env.ts)
+ *   (in the release image, with exactly the environment the app sees:
+ *    docker compose -f deploy/compose/docker-compose.prod.yml --env-file /etc/edmn/compose.env run --rm --no-deps -T web \
+ *      node --import tsx scripts/check-production-env.ts)
  *
  * Runs the application's own policy (validateEnvironment + productionIsolationErrors: staging fingerprints, staging /
  * local / test databases, http URLs, host layout, sender domain, shared secrets …) plus deployment checks: wrong
