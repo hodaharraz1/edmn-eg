@@ -1,5 +1,7 @@
 > **Superseded by Batch 2:** see `docs/runbooks/DATABASE_BACKUP.md`, `docs/runbooks/DATABASE_RESTORE.md` and `docs/runbooks/STORAGE_OUTAGE.md` (scripted isolated drill `scripts/restore-drill.ts`, storage verifier `scripts/storage-verify.ts`). The production/provider drill is still NOT performed.
 
+> For **self-hosted production** the authoritative backup/restore procedure is `docs/runbooks/SELF_HOSTED_DEPLOYMENT.md` §6, `restore-drill.sh` and `restore-database.sh` (see `DISASTER_RECOVERY.md`). This page is kept for the verification checklists and audit history.
+
 # Backup and Restore Runbook
 
 ## Current state

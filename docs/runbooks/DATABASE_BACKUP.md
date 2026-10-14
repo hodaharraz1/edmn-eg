@@ -1,5 +1,7 @@
 # Database & Private Storage Backup
 
+> For **self-hosted production** the authoritative backup/restore procedure is `docs/runbooks/SELF_HOSTED_DEPLOYMENT.md` §6, `restore-drill.sh` and `restore-database.sh` (see `DISASTER_RECOVERY.md`). This page is kept for the verification checklists and audit history.
+
 ## Current reality (staging)
 - Database: Neon Postgres. Neon point-in-time restore (history retention depends on the Neon plan — OWNER to confirm the plan's window). **Not drilled on Neon yet.**
 - Files: `STORAGE_DRIVER=database` on staging → every object (incl. National ID scans, payment proofs, dispute/shipping evidence) lives in `stored_objects` inside the same database, so database backups include private storage. With a future object store, the bucket needs its own versioned backup.

@@ -1,5 +1,7 @@
 # Production Infrastructure — connecting providers
 
+> **Production is self-hosted** — start at [`PRODUCTION_GO_LIVE.md`](PRODUCTION_GO_LIVE.md). This page stays valid for **provider wiring** (§3 email + webhook, §4 error tracking, §5 scanner, §6 Web Push). Its Vercel project / region / Vercel Cron / Neon instructions (§0–§2) are **SUPERSEDED for production** by the self-hosted worker and `PRODUCTION_DATABASE_PLAN.md`.
+
 Everything below is **configuration only**: the adapters, validation and health reporting are in the code. Each step that needs an account, a credential, a DNS record or a dashboard change is marked **OWNER ACTION**. No secret value is ever written here, into the repository, into CI logs or into chat. Values go directly into the Vercel project's **Production** environment (never Preview).
 
 **Status model.** `/admin/ops` → "صحة المزودين" shows each provider's status:

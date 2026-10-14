@@ -1,5 +1,7 @@
 # Production Deployment
 
+> **SUPERSEDED for production** (kept as audit history): production is self-hosted on the existing EDMN server — start at [`docs/runbooks/PRODUCTION_GO_LIVE.md`](PRODUCTION_GO_LIVE.md). Vercel is staging only.
+
 > There is **no production environment yet**. This runbook is the contract for creating and deploying it. Never point a staging build at a production database, never copy staging data, passwords, OTP/TOTP seeds or secrets.
 
 ## 1. One-time creation (OWNER ACTIONS)

@@ -1,5 +1,7 @@
 # Database Restore (isolated) + Post-Restore Financial Verification
 
+> For **self-hosted production** the authoritative backup/restore procedure is `docs/runbooks/SELF_HOSTED_DEPLOYMENT.md` §6, `restore-drill.sh` and `restore-database.sh` (see `DISASTER_RECOVERY.md`). This page is kept for the verification checklists and audit history.
+
 ## Rule
 A restore **always** targets a NEW, ISOLATED database (provider branch or a local `edmn_restore_drill_*`). Never restore over staging or production. Never run the app with real messaging/payout drivers against a restored copy.
 

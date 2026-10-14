@@ -1,5 +1,7 @@
 # EDMN Runbooks (Batch 2)
 
+> **Production starts here: [PRODUCTION_GO_LIVE.md](PRODUCTION_GO_LIVE.md)** — the single ordered path (discovery → install profile → secrets → config check → database → deploy → first admin → acceptance → DNS → stage gates). Sub-runbooks: SERVER_INSTALL_PROFILES, PRODUCTION_SECRETS_MANIFEST, PRODUCTION_DATABASE_PLAN, PRODUCTION_PROVIDER_MATRIX, GO_LIVE_ACCEPTANCE_MATRIX, REAL_MONEY_ACTIVATION_GATE, DISASTER_RECOVERY, SELF_HOSTED_DEPLOYMENT, SELF_HOSTED_DNS_CUTOVER.
+
 | Runbook | When |
 |---|---|
 | [INCIDENT_RESPONSE](INCIDENT_RESPONSE.md) | Any incident: severity model (SEV-1..4, PROPOSED), roles, audited critical actions |

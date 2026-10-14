@@ -33,8 +33,8 @@ DATABASE ROLLBACK IS A MANUAL, APPROVED OPERATION — nothing was changed.
   2. Put the site in maintenance (Admin → global kill switch; stop the worker: docker compose … stop worker).
   3. Take a FINAL backup of the current database (backup.sh --reason pre-restore) — never skip.
   4. restore-drill.sh <chosen backup> --identity <offline key> --tag <sha>   → must PASS.
-  5. Create a NEW empty database (e.g. edmn_restored_<date>) owned by edmn_owner and pg_restore into it
-     (docs/runbooks/SELF_HOSTED_DEPLOYMENT.md §Database restore). Never restore over the live database.
+  5. deploy/scripts/restore-database.sh <backup> --identity <key> --target-db edmn_restored_<date> --confirm-owner-approved
+     (creates a NEW database, restores, re-grants, verifies). Never restore over the live database.
   6. Point DATABASE_URL (production.env + migrate.env) at the new database, run the APP image that matches the
      backup's migration count (rollback.sh app <sha>), then prod-acceptance (--db-only) must PASS.
   7. Keep the old database untouched for forensics until the owner releases it.

@@ -1,5 +1,7 @@
 # Deployment
 
+> **SUPERSEDED for production** (kept as audit history): production is self-hosted on the existing EDMN server — start at [`docs/runbooks/PRODUCTION_GO_LIVE.md`](runbooks/PRODUCTION_GO_LIVE.md). Vercel is staging only.
+
 The codebase is deployment-ready; it has **not** been deployed to any external account (no hosting
 credentials were provided). This guide describes a conventional single-region setup: one or more
 Node.js app instances behind a TLS reverse proxy, one worker process, PostgreSQL, and persistent

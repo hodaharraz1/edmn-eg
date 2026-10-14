@@ -1,5 +1,7 @@
 # DNS cutover runbook (document only — nothing here has been executed)
 
+Part of [PRODUCTION_GO_LIVE.md](PRODUCTION_GO_LIVE.md), step 12. Four checklists: PRE-CUTOVER, CUTOVER, POST-CUTOVER, ROLLBACK.
+
 **Scope.** Only these three records may ever change, and only after written owner approval on the cutover day:
 
 | Name | Today | After cutover |
@@ -10,17 +12,18 @@
 
 **Never touched:**
 - `api.edmneg.com`
+- `server.edmneg.com` (the hosting server's own name)
 - MX
 - SPF (`TXT v=spf1 …`)
 - DKIM (`*._domainkey`)
 - `_dmarc`
 - `mail.` / `webmail.` / `cpanel.` / `autodiscover.` / `autoconfig.` / `ftp.` and every other record
-- nameservers
+- nameservers: **no nameserver change by default**; only A/AAAA records of the three names above, at the current DNS host
 - registrar settings
 
 The transactional sender's DKIM, and the SPF `include:` merge, are a separate, owner-approved email change; see `PRODUCTION_INFRASTRUCTURE.md` §3.
 
-## 1. Pre-checks (T-7 days → T-1 day)
+## 1. PRE-CUTOVER CHECKLIST (T-7 days → T-1 day)
 1. Export the complete current zone from the DNS host (the panel export, or `dig` of every known name), with today's date, and store it with the owner. This is the rollback source.
 2. Record the current answers for the protected names:
 
@@ -42,12 +45,12 @@ The transactional sender's DKIM, and the SPF `include:` merge, are a separate, o
 6. The proxy is installed with **port-80 blocks only**, ready for ACME.
 7. CAA: if a CAA record exists, it must include `letsencrypt.org` (or the cPanel AutoSSL CA). Otherwise certificate issuance fails.
 
-## 2. TTL strategy
+## 2. PRE-CUTOVER CHECKLIST — TTL strategy
 - **T-48 h:** lower the TTL of only `www`, `admin` (if it exists) and the apex A/AAAA to **300 s**. Do not lower any other record.
 - Wait at least the **old** TTL before cutting over, so caches hold the short TTL.
 - **After a stable 48 h on EDMN:** raise the TTL back to 3600 s.
 
-## 3. Cutover (maintenance window, owner present)
+## 3. CUTOVER CHECKLIST (maintenance window, owner present)
 1. Final checks:
    - `deploy/scripts/watch.sh` shows HEALTHY
    - the latest backup is off-server
@@ -60,7 +63,7 @@ The transactional sender's DKIM, and the SPF `include:` merge, are a separate, o
 5. Enable the 443 blocks, run `nginx -t` / `apachectl -t`, then reload.
 6. Do **not** touch `api.edmneg.com`.
 
-## 4. Verification (T+0 → T+48 h)
+## 4. POST-CUTOVER CHECKLIST (T+0 → T+48 h)
 
 ```bash
 dig +short www.edmneg.com; dig +short admin.edmneg.com; dig +short edmneg.com     # → EDMN IP
@@ -77,7 +80,7 @@ Then:
 - Check that `api.edmneg.com` answers exactly as before (same status and same content as recorded in §1).
 - The external uptime monitor on `/api/ready` is green.
 
-## 5. Rollback
+## 5. ROLLBACK CHECKLIST
 - **Trigger:** any failed check in §4 that is not fixed within 30 minutes, or any mail or `api` regression (immediate).
 - **Action:** restore the A/AAAA values of `www`, apex and `admin` from the §1 export. TTL is 300 s, so this takes effect within minutes.
 - The EDMN server keeps running. No data is lost: the database is not involved in DNS.
