@@ -5,9 +5,17 @@ process.env.DATABASE_LOCK_TIMEOUT_MS = '0';
 process.env.DATABASE_IDLE_TX_TIMEOUT_MS = '0';
 process.env.DATABASE_QUERY_TIMEOUT_MS = '0';
 import { closeDb } from '../src/server/db/client';
-import { runMigrations } from '../src/server/db/migrations';
+import { preflight, runMigrations } from '../src/server/db/migrations';
 
 async function main() {
+  // `--preflight`: report pending migrations and preflight problems WITHOUT applying anything (deploy step 5).
+  if (process.argv.includes('--preflight')) {
+    const pf = await preflight();
+    console.log(`• pending: ${pf.pending.join(', ') || 'none'}`);
+    for (const p of pf.problems) console.error(`✗ ${p}`);
+    await closeDb();
+    process.exit(pf.problems.length ? 1 : 0);
+  }
   const started = Date.now();
   // Preflight (environment marker + destructive-statement scan) and the advisory lock live in runMigrations.
   // Fail closed: a PRODUCTION database is permanently marked and refuses any other deployment kind.

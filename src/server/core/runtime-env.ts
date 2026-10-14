@@ -80,6 +80,7 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'EDMN_RELEASE', classification: 'OPTIONAL', secret: false, purpose: 'Release tag for error tracking (defaults to the Vercel git SHA)' },
   { name: 'EMAIL_WEBHOOK_SECRET', classification: 'OPTIONAL', secret: true, purpose: 'Signing secret of the email delivery webhook (DELIVERED/BOUNCED evidence)' },
   { name: 'MALWARE_SCANNER_TOKEN', classification: 'OPTIONAL', secret: true, purpose: 'Bearer token of the private scanner wrapper' },
+  { name: 'MALWARE_SCANNER_PRIVATE_NETWORK', classification: 'OPTIONAL', secret: false, purpose: 'true = the scanner is on a private network (allows http://<service-name or private IP> only)' },
   { name: 'MALWARE_SCANNER_TIMEOUT_MS', classification: 'OPTIONAL', secret: false, purpose: 'Scanner request timeout (default 30000; a timeout is a scan failure)' },
   { name: 'PUSH_ALLOW_ANY_ENDPOINT', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'Test tooling: accept non-standard push endpoints' },
   { name: 'STAGING_DEMO_PASSWORD', classification: 'STAGING_ONLY', secret: true, purpose: 'Staging demo accounts password' },
@@ -207,10 +208,41 @@ export function productionIsolationErrors(raw: Raw, deny: NonProdDenylist = DENY
   // Optional providers: when configured, configured safely.
   if (present('VAPID_PUBLIC_KEY') && !/^(mailto:[^@\s]+@[^@\s]+|https:\/\/)/.test(raw.VAPID_SUBJECT ?? '')) errors.push('VAPID_SUBJECT must be mailto:<official address> or an https URL');
   if (/example\.(com|org|net)|\.local\b/i.test(raw.VAPID_SUBJECT ?? '')) errors.push('VAPID_SUBJECT must be the real contact');
-  for (const n of ['MALWARE_SCANNER_URL', 'ERROR_TRACKING_DSN']) if (present(n) && !raw[n]!.startsWith('https://')) errors.push(`${n} must be https in PRODUCTION`);
+  if (present('ERROR_TRACKING_DSN') && !raw.ERROR_TRACKING_DSN!.startsWith('https://')) errors.push('ERROR_TRACKING_DSN must be https in PRODUCTION');
+  if (present('MALWARE_SCANNER_URL') && !scannerUrlAllowed(raw)) errors.push('MALWARE_SCANNER_URL must be https in PRODUCTION (plain http only for a private scanner with MALWARE_SCANNER_PRIVATE_NETWORK=true)');
   if (present('MALWARE_SCANNER_URL') && !present('MALWARE_SCANNER_TOKEN')) errors.push('MALWARE_SCANNER_TOKEN is required with MALWARE_SCANNER_URL');
   if (present('EMAIL_WEBHOOK_SECRET') && raw.EMAIL_WEBHOOK_SECRET!.length < 24) errors.push('EMAIL_WEBHOOK_SECRET is too short');
   return errors;
+}
+
+/**
+ * Malware scanner URL rule (self-hosted). HTTPS is always accepted. Plain HTTP is accepted ONLY when the operator
+ * declares MALWARE_SCANNER_PRIVATE_NETWORK=true AND the host can only be private: a single-label name (a Docker
+ * Compose service on the internal network, e.g. `scanner`), `localhost`, or a loopback / RFC 1918 IPv4 address.
+ * Any dotted public hostname or public IP over http is refused — the bytes are identity documents.
+ */
+export function isPrivateScannerHost(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === 'localhost') return true;
+  if (/^[a-z][a-z0-9-]{0,62}$/.test(h)) return true; // single-label service name (no DNS suffix → not publicly resolvable)
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  if ([m[1], m[2], m[3], m[4]].some((x) => Number(x) > 255)) return false;
+  return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
+export function scannerUrlAllowed(raw: Raw): boolean {
+  const url = raw.MALWARE_SCANNER_URL ?? '';
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return false;
+  }
+  if (u.username || u.password) return false; // credentials never travel in the URL (token header only)
+  if (u.protocol === 'https:') return true;
+  return u.protocol === 'http:' && raw.MALWARE_SCANNER_PRIVATE_NETWORK === 'true' && isPrivateScannerHost(u.hostname);
 }
 
 /* ═══════════════ Readiness tiers (public website / controlled pilot / real money) ═══════════════ */

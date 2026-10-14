@@ -1,0 +1,12 @@
+# EDMN — local monitoring (deploy/scripts/watch.sh). Optional external hooks: /etc/edmn/monitor.env.
+[Unit]
+Description=EDMN local health watch
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/edmn/compose.env
+ExecStart=/opt/edmn/deploy/scripts/watch.sh
+TimeoutStartSec=120
+# Non-zero exit (CRITICAL / UNKNOWN) is visible in `systemctl list-units --failed` and the journal.

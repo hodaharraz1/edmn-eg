@@ -3,6 +3,14 @@
 # demo data, then run the background worker and the web server.
 set -e
 
+# PRODUCTION never migrates or seeds implicitly on a (re)start: migrations are an explicit, backed-up deployment step
+# (deploy/scripts/deploy.sh). Production containers run web / worker directly (deploy/compose/docker-compose.prod.yml).
+if [ "$(printf %s "$EDMN_ENVIRONMENT" | tr "[:upper:]" "[:lower:]")" = "production" ]; then
+  echo "✗ scripts/start.sh is not used in PRODUCTION (it would run migrations on every start)." >&2
+  echo "  Use deploy/compose/docker-compose.prod.yml (web/worker commands) and deploy/scripts/deploy.sh (explicit migration)." >&2
+  exit 64
+fi
+
 echo "▶ migrations"
 npm run -s db:migrate
 echo "▶ reference data"

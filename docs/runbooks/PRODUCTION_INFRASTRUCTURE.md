@@ -109,8 +109,10 @@ Never use VirusTotal or any public multi-engine service.
 2. **Containers:** `clamav/clamav` (clamd on 3310, signatures auto-updated by freshclam), plus `node:22-alpine` running `ops/scanner/clamd-http.mjs`.
    - Wrapper env: `SCANNER_TOKEN` (≥ 32 random chars), `CLAMD_HOST`, `CLAMD_PORT`, `PORT`, `MAX_BYTES`.
    - The wrapper stores and logs nothing.
-3. **Exposure:** only the wrapper, behind **HTTPS**. clamd must never be public.
-4. **Vercel:** `MALWARE_SCANNER_URL=https://<scanner-host>/scan` and `MALWARE_SCANNER_TOKEN` (same value as `SCANNER_TOKEN`). Production refuses http or a missing token.
+3. **Exposure:** clamd must never be public. Either:
+   - the wrapper behind **HTTPS** (separate host), or
+   - **self-hosted**: the compose profile `scanner` on the internal network, with `MALWARE_SCANNER_URL=http://scanner:8080/scan` plus `MALWARE_SCANNER_PRIVATE_NETWORK=true` (see `SELF_HOSTED_DEPLOYMENT.md` §9).
+4. **App settings:** `MALWARE_SCANNER_URL` and `MALWARE_SCANNER_TOKEN` (same value as `SCANNER_TOKEN`). Production refuses a missing token, credentials in the URL, and plain http, except a private destination (single-label service name, loopback or RFC 1918) with the explicit flag.
 5. **Verification:** upload the EICAR test file as a payment proof on production, before launch, from an owner account. It must become `INFECTED` and stay unopenable, while a normal PDF becomes `CLEAN`, and `MALWARE_SCANNER` shows `HEALTHY`. Then remove the `MALWARE_SCANNING` blocker in a reviewed change citing this evidence.
 
 ## 6. Web Push

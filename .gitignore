@@ -14,6 +14,9 @@ npm-debug.log*
 .env.local
 .env.*.local
 .env.test.local
+# self-hosted secret files (production.env, migrate.env, postgres.env, scanner.env, backup.env …) never belong in git
+*.env
+.sandbox-ca.crt
 *.tsbuildinfo
 next-env.d.ts
 .vercel

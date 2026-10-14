@@ -1,0 +1,10 @@
+[Unit]
+Description=EDMN daily backup (03:15 Africa/Cairo ≈ 00:15/01:15 UTC)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Africa/Cairo
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
