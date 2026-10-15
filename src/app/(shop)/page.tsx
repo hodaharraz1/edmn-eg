@@ -1,14 +1,15 @@
-import { ArrowLeft, BadgeCheck, Camera, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Camera, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import Link from '@/ui/link';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { categories, files, products, sellers, stores } from '@/server/db/schema';
 import { searchProducts, productsByIds, type Sort } from '@/server/modules/catalog/search';
 import { activeBlocks } from '@/server/modules/cms/service';
-import { LinkButton } from '@/ui/button';
-import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
-import { ProductCard, ProductRail, RailItem, SellerCard, mediaUrl } from '@/ui/commerce';
+import { ProductCard, RailItem, SellerCard, mediaUrl } from '@/ui/commerce';
+import { EscrowHowItWorks } from './_home/escrow';
+import { HomeHero, SectionHeading, TrustStrip } from './_home/hero';
+import { SellOnEdmn } from './_home/sell-cta';
 import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
 import { RecentlyViewed } from './recently-viewed';
 import type { Metadata } from 'next';
@@ -40,13 +41,16 @@ async function rail(b: Block, seen: Set<string>) {
   const href = d.source === 'DEALS' ? '/deals' : d.source === 'BEST_SELLERS' ? '/best-sellers' : d.source === 'USED' ? '/search?condition=USED' : d.source === 'NEW_ARRIVALS' ? '/search?sort=newest' : undefined;
   const wished = await wishlistSet(items.map((i) => i.id));
   return (
-    <ProductRail key={b.id} title={b.title} href={href}>
-      {items.map((p) => (
-        <RailItem key={p.id}>
-          <ProductCard p={p} wishlistSlot={<WishlistButton productId={p.id} active={wished.has(p.id)} back="/" />} />
-        </RailItem>
-      ))}
-    </ProductRail>
+    <section key={b.id} aria-labelledby={`rail-${b.id}`} className="space-y-4">
+      <SectionHeading id={`rail-${b.id}`} title={b.title ?? 'منتجات مختارة'} href={href} />
+      <div className="scrollbar-none -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:gap-4 lg:mx-0 lg:px-0">
+        {items.map((p) => (
+          <RailItem key={p.id}>
+            <ProductCard p={p} wishlistSlot={<WishlistButton productId={p.id} active={wished.has(p.id)} back="/" />} />
+          </RailItem>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -58,21 +62,26 @@ async function featuredCategories(b: Block) {
   const ordered = slugs.map((s) => rows.find((r) => r.c.slug === s)).filter(Boolean) as typeof rows;
   if (!ordered.length) return null;
   return (
-    <section key={b.id} className="space-y-3">
-      <h2 className="text-lg font-bold sm:text-xl">{b.title}</h2>
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-12">
+    <section key={b.id} aria-labelledby={`cats-${b.id}`} className="space-y-4">
+      <SectionHeading id={`cats-${b.id}`} title={b.title ?? 'تسوّق حسب التصنيف'} href="/categories" hrefLabel="كل التصنيفات" />
+      <ul className="grid grid-cols-3 gap-2.5 xs:grid-cols-4 sm:grid-cols-6 sm:gap-3">
         {ordered.map(({ c, key }) => {
           const Icon = ((c.icon && (Icons as unknown as Record<string, LucideIcon>)[c.icon]) || Icons.Tag) as LucideIcon;
           return (
-            <Link key={c.id} href={`/category/${c.slug}`} className="group flex flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-white">
-              <span className="grid size-14 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line transition-transform group-hover:-translate-y-0.5 sm:size-16">
-                {key ? <img src={mediaUrl(key, 'thumb')!} alt="" className="size-full object-cover" /> : <Icon className="size-7 text-brand-600" aria-hidden />}
-              </span>
-              <span className="line-clamp-2 text-xs font-medium">{c.nameAr}</span>
-            </Link>
+            <li key={c.id}>
+              <Link
+                href={`/category/${c.slug}`}
+                className="group flex h-full flex-col items-center gap-2.5 rounded-2xl bg-white p-3 text-center shadow-[var(--shadow-card)] ring-1 ring-line transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)] hover:ring-brand-200 sm:p-4"
+              >
+                <span className="grid size-12 place-items-center overflow-hidden rounded-2xl bg-brand-50 text-brand-700 transition-colors group-hover:bg-brand-100 sm:size-14">
+                  {key ? <img src={mediaUrl(key, 'thumb')!} alt="" className="size-full object-cover" /> : <Icon className="size-6 sm:size-7" aria-hidden />}
+                </span>
+                <span className="line-clamp-2 text-xs font-semibold leading-5 sm:text-sm">{c.nameAr}</span>
+              </Link>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </section>
   );
 }
@@ -98,13 +107,8 @@ async function featuredSellers(b: Block) {
     .limit(8);
   if (!rows.length) return null;
   return (
-    <section key={b.id} className="space-y-3">
-      <div className="flex items-end justify-between">
-        <h2 className="text-lg font-bold sm:text-xl">{b.title}</h2>
-        <Link href="/stores" className="text-sm font-semibold text-brand-700 hover:underline">
-          كل المتاجر
-        </Link>
-      </div>
+    <section key={b.id} aria-labelledby={`stores-${b.id}`} className="space-y-4">
+      <SectionHeading id={`stores-${b.id}`} eyebrow="بائعون تمت مراجعة هويتهم ومستنداتهم" title={b.title ?? 'متاجر موثّقة'} href="/stores" hrefLabel="كل المتاجر" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {rows.map((s) => (
           <SellerCard key={s.slug} s={s} />
@@ -114,49 +118,11 @@ async function featuredSellers(b: Block) {
   );
 }
 
-function hero(b: Block) {
-  const d = b.data as { heading: string; subheading?: string; ctaLabel?: string; ctaHref?: string; imageKey?: string };
-  return (
-    <section key={b.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-brand-700 via-brand-800 to-brand-950 text-white md:bg-gradient-to-l">
-      {d.imageKey && <img src={mediaUrl(d.imageKey)!} alt="" className="absolute inset-0 size-full object-cover opacity-30" />}
-      <div className="relative grid gap-6 p-6 sm:p-10 md:grid-cols-[1.4fr_1fr] md:items-center">
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold leading-tight sm:text-4xl">{d.heading}</h1>
-          {d.subheading && <p className="max-w-xl text-sm text-white/85 sm:text-base">{d.subheading}</p>}
-          <div className="flex flex-wrap gap-2">
-            {d.ctaLabel && d.ctaHref && (
-              <LinkButton href={d.ctaHref} size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">
-                {d.ctaLabel}
-              </LinkButton>
-            )}
-            <LinkButton href="/categories" size="lg" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-              تصفح التصنيفات
-            </LinkButton>
-          </div>
-        </div>
-        {/* Brand visual: the official logo, unmodified, sitting directly on the hero background (decorative;
-            the header logo is the accessible one). */}
-        <div className="flex items-center justify-center pt-2 md:pt-0" aria-hidden>
-          <img
-            src={LOGO_SRC}
-            width={LOGO_WIDTH}
-            height={LOGO_HEIGHT}
-            alt=""
-            decoding="async"
-            draggable={false}
-            className="h-auto w-[clamp(120px,36vw,160px)] max-w-full select-none object-contain opacity-[0.92] md:w-[clamp(190px,21vw,300px)]"
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function banner(b: Block) {
   const d = b.data as { heading: string; body?: string; href?: string; tone?: string; imageKey?: string };
   const tone = d.tone === 'accent' ? 'bg-accent-600' : d.tone === 'dark' ? 'bg-brand-950' : 'bg-brand-600';
   const inner = (
-    <div className={`relative overflow-hidden rounded-2xl ${tone} p-6 text-white`}>
+    <div className={`relative overflow-hidden rounded-3xl ${tone} p-6 text-white sm:p-8`}>
       {d.imageKey && <img src={mediaUrl(d.imageKey)!} alt="" className="absolute inset-0 size-full object-cover opacity-25" />}
       <p className="relative text-lg font-bold">{d.heading}</p>
       {d.body && <p className="relative mt-1 text-sm text-white/85">{d.body}</p>}
@@ -165,73 +131,79 @@ function banner(b: Block) {
   return d.href ? <Link key={b.id} href={d.href}>{inner}</Link> : <div key={b.id}>{inner}</div>;
 }
 
-function dealCta(b: Block) {
-  const d = b.data as { heading: string; body?: string; ctaLabel?: string };
+function trust(b: Block) {
+  const d = b.data as { items: { title: string; body: string }[] };
   return (
-    <section key={b.id} className="overflow-hidden rounded-2xl border border-accent-100 bg-gradient-to-l from-accent-50 to-white">
-      <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto] md:items-center">
-        <div className="space-y-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-600 px-3 py-1 text-xs font-bold text-white">
-            <ShieldCheck className="size-4" /> اضمن صفقة خارج السوق
-          </span>
-          <h2 className="text-xl font-bold sm:text-2xl">{d.heading}</h2>
-          {d.body && <p className="max-w-2xl text-sm text-muted sm:text-base">{d.body}</p>}
-          <ol className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs font-medium text-ink">
-            <li>١. اكتب تفاصيل الصفقة</li>
-            <li>٢. ابعت دعوة للبائع</li>
-            <li>٣. ادفع لاضمن</li>
-            <li>٤. استلم وأكّد</li>
-          </ol>
-        </div>
-        <LinkButton href="/protected-deal" variant="accent" size="lg">
-          {d.ctaLabel || 'ابدأ صفقة محمية'} <ArrowLeft className="size-4 ltr:rotate-180" />
-        </LinkButton>
-      </div>
+    <section key={b.id} aria-labelledby={`trust-${b.id}`} className="space-y-4">
+      <SectionHeading id={`trust-${b.id}`} title={b.title ?? 'ليه تشتري من اضمن؟'} />
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {d.items.map((it, i) => {
+          const I = TRUST_ICONS[i % TRUST_ICONS.length];
+          return (
+            <li key={i} className="flex gap-3 rounded-2xl bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-line">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700">
+                <I className="size-5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-bold leading-7">{it.title}</span>
+                <span className="mt-0.5 block text-sm leading-6 text-muted">{it.body}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
 
-function trust(b: Block) {
-  const d = b.data as { items: { title: string; body: string }[] };
-  return (
-    <section key={b.id} className="space-y-3">
-      <h2 className="text-lg font-bold sm:text-xl">{b.title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {d.items.map((it, i) => {
-          const I = TRUST_ICONS[i % TRUST_ICONS.length];
-          return (
-            <div key={i} className="card flex gap-3 p-4">
-              <I className="size-8 shrink-0 text-brand-600" aria-hidden />
-              <div>
-                <p className="font-semibold">{it.title}</p>
-                <p className="mt-0.5 text-sm text-muted">{it.body}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
+/** Top-level categories for the hero quick links (real catalog data, catalog order). */
+async function quickCategories() {
+  return db
+    .select({ slug: categories.slug, name: categories.nameAr })
+    .from(categories)
+    .where(and(isNull(categories.parentId), eq(categories.isActive, true)))
+    .orderBy(asc(categories.sortOrder))
+    .limit(5);
 }
 
 export default async function HomePage() {
   const s = await getAllSettings();
   const blocks = await activeBlocks('HOME');
   const seen = new Set<string>();
+  const heroBlock = blocks.find((b) => b.type === 'HERO');
+  const heroSupport = (heroBlock?.data as { subheading?: string } | undefined)?.subheading;
   const rendered: React.ReactNode[] = [];
-  // Sequential so product rails de-duplicate in page order.
+  let escrowPlaced = false;
+  const placeEscrow = () => {
+    if (escrowPlaced) return;
+    escrowPlaced = true;
+    rendered.push(<EscrowHowItWorks key="escrow" />);
+  };
+  // Sequential so product rails de-duplicate in page order. The hero is rendered once above (CMS supplies its
+  // supporting line); the protected-deal explainer replaces the old DEAL_CTA block and always appears — right
+  // after the first product rail, or before the trust blocks when there are no rails.
   for (const b of blocks) {
-    if (b.type === 'HERO') rendered.push(hero(b));
-    else if (b.type === 'BANNER') rendered.push(banner(b));
+    if (b.type === 'HERO' || b.type === 'DEAL_CTA') continue;
+    if (b.type === 'TRUST') placeEscrow();
+    if (b.type === 'BANNER') rendered.push(banner(b));
     else if (b.type === 'FEATURED_CATEGORIES') rendered.push(await featuredCategories(b));
-    else if (b.type === 'PRODUCT_RAIL') rendered.push(await rail(b, seen));
-    else if (b.type === 'FEATURED_SELLERS') rendered.push(await featuredSellers(b));
-    else if (b.type === 'DEAL_CTA') rendered.push(dealCta(b));
-    else if (b.type === 'TRUST') rendered.push(trust(b));
+    else if (b.type === 'PRODUCT_RAIL') {
+      const r = await rail(b, seen);
+      rendered.push(r);
+      if (r) placeEscrow();
+    } else if (b.type === 'FEATURED_SELLERS') {
+      rendered.push(await featuredSellers(b));
+      rendered.push(<SellOnEdmn key="sell" />);
+    } else if (b.type === 'TRUST') rendered.push(trust(b));
   }
+  placeEscrow();
   return (
-    <div className="container-page space-y-8 py-4 sm:py-6">
+    <div className="container-page space-y-10 py-4 sm:space-y-14 sm:py-6">
       <JsonLd data={siteJsonLd({ legalName: s['company.legalName'] || undefined, email: s['marketplace.supportEmail'] || undefined, phone: s['marketplace.supportPhone'] || undefined, sameAs: s['company.socialLinks'].map((l) => l.href) })} />
+      <div className="space-y-4 sm:space-y-5">
+        <HomeHero support={heroSupport} quickCategories={await quickCategories()} />
+        <TrustStrip />
+      </div>
       {rendered}
       <RecentlyViewed />
     </div>
