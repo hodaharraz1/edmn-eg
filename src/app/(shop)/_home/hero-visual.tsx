@@ -118,7 +118,7 @@ function StatusChip({ className, delay, icon, tone, title, sub }: { className: s
       <span className={`grid size-7 shrink-0 place-items-center rounded-lg ${tone === 'emerald' ? 'bg-emerald-500 text-white' : 'bg-brand-600 text-white'}`}>{icon}</span>
       <span className="min-w-0 leading-tight">
         <span className="block text-xs font-bold text-ink">{title}</span>
-        <span className="block truncate text-[10px] text-muted">{sub}</span>
+        <span className="block truncate text-[10px] text-slate-600">{sub}</span>
       </span>
     </div>
   );
