@@ -166,6 +166,13 @@ async function quickCategories() {
     .limit(5);
 }
 
+/** Live catalog products for the hero storefront mockup: in stock, with an image, verified stores first. */
+async function showcaseProducts() {
+  const { items } = await searchProducts({ sort: 'recommended', pageSize: 24, inStock: true });
+  const withImage = items.filter((p) => p.imageKey);
+  return [...withImage.filter((p) => p.storeVerified), ...withImage.filter((p) => !p.storeVerified)].slice(0, 4);
+}
+
 export default async function HomePage() {
   const s = await getAllSettings();
   const blocks = await activeBlocks('HOME');
@@ -201,7 +208,7 @@ export default async function HomePage() {
     <div className="container-page space-y-10 py-4 sm:space-y-14 sm:py-6">
       <JsonLd data={siteJsonLd({ legalName: s['company.legalName'] || undefined, email: s['marketplace.supportEmail'] || undefined, phone: s['marketplace.supportPhone'] || undefined, sameAs: s['company.socialLinks'].map((l) => l.href) })} />
       <div className="space-y-4 sm:space-y-5">
-        <HomeHero support={heroSupport} quickCategories={await quickCategories()} />
+        <HomeHero support={heroSupport} quickCategories={await quickCategories()} showcase={await showcaseProducts()} />
         <TrustStrip />
       </div>
       {rendered}

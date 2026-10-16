@@ -222,3 +222,55 @@
 #escrow :focus-visible {
   outline-color: #fff;
 }
+
+/* Hero product showcase: a slow device float, a one-time entrance for the shield and status cards, then a gentle
+   float on the cards. Transform/opacity only (compositor-friendly); switched off entirely for reduced motion. */
+.edmn-float {
+  animation: edmn-float 7s ease-in-out infinite;
+}
+.edmn-float-alt {
+  animation-duration: 8s;
+  animation-delay: -3s;
+}
+@keyframes edmn-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.edmn-pop {
+  animation: edmn-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2) var(--d, 0s) both;
+}
+.edmn-chip {
+  animation:
+    edmn-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2) var(--d, 0s) both,
+    edmn-float 6s ease-in-out calc(var(--d, 0s) + 0.6s) infinite;
+}
+@keyframes edmn-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.edmn-shield {
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.2) inset,
+    0 18px 40px -12px rgb(30 102 208 / 0.8),
+    0 0 60px rgb(59 130 246 / 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  .edmn-float,
+  .edmn-pop,
+  .edmn-chip,
+  .edmn-rise,
+  .edmn-pulse {
+    animation: none !important;
+  }
+}

@@ -1,14 +1,15 @@
-import { ArrowLeft, BadgeCheck, Check, Handshake, KeyRound, Landmark, LockKeyhole, PackageCheck, Search, ShieldCheck, Store } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Handshake, KeyRound, Landmark, Search, ShieldCheck, Store } from 'lucide-react';
 import Link from '@/ui/link';
-import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
+import { HeroShowcase, type ShowcaseProduct } from './hero-visual';
 
 /**
  * Homepage hero (premium redesign). States the promise in one glance — "اشتري وبيع بأمان / اضمن تحمي كل صفقة" —
  * puts search first, and offers the three real entry points: shop, sell, create a protected deal.
- * The visual on the end side is an ILLUSTRATION of how a protected payment moves (no amounts, no names, no people,
- * no statistics) so nothing on it can be mistaken for real data.
+ * The visual side sells the idea with the product itself (real storefront, real products, protection states);
+ * the step-by-step process lives in the "كيف تعمل خدمة الضمان؟" section further down.
+ * Mobile order: headline → search → CTAs → compact product visual.
  */
-export function HomeHero({ support, quickCategories }: { support?: string; quickCategories: { slug: string; name: string }[] }) {
+export function HomeHero({ support, quickCategories, showcase }: { support?: string; quickCategories: { slug: string; name: string }[]; showcase: ShowcaseProduct[] }) {
   return (
     <section aria-labelledby="home-hero-title" className="edmn-hero relative isolate overflow-hidden rounded-3xl bg-brand-950 text-white shadow-[var(--shadow-lift)]">
       <div aria-hidden className="edmn-hero-glow pointer-events-none absolute inset-0 -z-10" />
@@ -23,14 +24,14 @@ export function HomeHero({ support, quickCategories }: { support?: string; quick
               اشتري وبيع بأمان
             </h1>
             <p className="text-xl font-bold text-brand-200 sm:text-2xl">اضمن تحمي كل صفقة</p>
-            {support && <p className="max-w-xl text-sm leading-7 text-white/75 sm:text-base">{support}</p>}
+            {support && <p className="hidden max-w-xl text-sm leading-7 sm:block text-white/75 sm:text-base">{support}</p>}
           </div>
 
-          <form action="/search" role="search" aria-label="ابحث في اضمن" className="hidden max-w-xl sm:block">
+          <form action="/search" role="search" aria-label="ابحث في اضمن" className="max-w-xl">
             <label htmlFor="home-search" className="sr-only">
               ابحث عن منتج أو متجر
             </label>
-            <div className="flex items-stretch overflow-hidden rounded-2xl bg-white p-1.5 shadow-[var(--shadow-pop)] ring-1 ring-white/20 focus-within:ring-4 focus-within:ring-brand-400/60">
+            <div className="flex items-stretch overflow-hidden rounded-2xl bg-white p-1.5 shadow-[var(--shadow-pop)] ring-1 ring-white/20 transition-shadow focus-within:ring-4 focus-within:ring-brand-400/60">
               <Search className="ms-3 size-5 shrink-0 self-center text-muted" aria-hidden />
               <input
                 id="home-search"
@@ -41,14 +42,14 @@ export function HomeHero({ support, quickCategories }: { support?: string; quick
                 placeholder="ابحث عن موبايل، لابتوب، أجهزة منزلية…"
                 className="h-12 min-w-0 flex-1 bg-transparent px-3 text-base text-ink placeholder:text-muted focus:outline-none"
               />
-              <button type="submit" className="rounded-xl bg-brand-700 px-5 text-sm font-bold text-white transition-colors hover:bg-brand-800 sm:px-7 sm:text-base">
+              <button type="submit" className="rounded-xl bg-brand-700 px-5 text-sm font-bold text-white transition-[background-color,transform] hover:bg-brand-800 active:scale-[0.97] sm:px-7 sm:text-base">
                 ابحث
               </button>
             </div>
           </form>
 
           {quickCategories.length > 0 && (
-            <nav aria-label="تصنيفات شائعة" className="flex flex-wrap items-center gap-2 text-sm">
+            <nav aria-label="تصنيفات شائعة" className="hidden flex-wrap sm:flex items-center gap-2 text-sm">
               <span className="text-white/60">الأكثر تصفحًا:</span>
               {quickCategories.map((c) => (
                 <Link key={c.slug} href={`/category/${c.slug}`} className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/90 transition-colors hover:border-white/40 hover:bg-white/15">
@@ -58,68 +59,22 @@ export function HomeHero({ support, quickCategories }: { support?: string; quick
             </nav>
           )}
 
-          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap">
+          <div className="grid grid-cols-2 gap-3 pt-1 sm:flex sm:flex-wrap">
             <Link href="/categories" className="edmn-cta inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 font-bold text-brand-900 shadow-sm hover:bg-brand-50">
               تسوق الآن <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
             </Link>
             <Link href="/sell" className="edmn-cta inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 font-bold text-white hover:bg-white/15">
               <Store className="size-4" aria-hidden /> ابدأ البيع
             </Link>
-            <Link href="/account/deals/new" className="edmn-cta inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent-600 px-6 font-bold text-white shadow-sm hover:bg-accent-700">
+            <Link href="/account/deals/new" className="edmn-cta col-span-2 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-accent-600 px-6 font-bold text-white shadow-sm hover:bg-accent-700">
               <Handshake className="size-4" aria-hidden /> أنشئ صفقة ضمان
             </Link>
           </div>
         </div>
 
-        <ProtectionIllustration />
+        <HeroShowcase products={showcase} categories={quickCategories.map((c) => c.name)} />
       </div>
     </section>
-  );
-}
-
-const ILLUSTRATION_STEPS = [
-  { icon: Landmark, label: 'الدفع لحساب اضمن', state: 'done' },
-  { icon: PackageCheck, label: 'البائع يسلّم المنتج', state: 'done' },
-  { icon: KeyRound, label: 'تأكيد التسليم برمز الاستلام', state: 'current' },
-  { icon: BadgeCheck, label: 'تأكيد الاستلام بعد الفحص', state: 'next' },
-  { icon: LockKeyhole, label: 'إتاحة المبلغ للبائع بموافقة الإدارة', state: 'next' },
-] as const;
-
-function ProtectionIllustration() {
-  return (
-    <figure className="edmn-rise edmn-rise-delay relative mx-auto w-full max-w-md" aria-label="رسم توضيحي لمراحل حماية المبلغ في اضمن">
-      <div aria-hidden className="absolute -inset-6 -z-10 rounded-[2rem] bg-brand-500/20 blur-3xl" />
-      <div className="rounded-3xl bg-white p-5 text-ink shadow-[var(--shadow-lift)] ring-1 ring-black/5 sm:p-6">
-        <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
-          <img src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT} alt="" decoding="async" draggable={false} className="h-10 w-auto select-none object-contain" />
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-            <ShieldCheck className="size-4" aria-hidden /> المبلغ محمي
-          </span>
-        </div>
-        <ol className="relative mt-4 space-y-1">
-          {ILLUSTRATION_STEPS.map((s, i) => (
-            <li key={s.label} className="relative flex items-center gap-3 rounded-xl px-2 py-2.5">
-              {i < ILLUSTRATION_STEPS.length - 1 && <span aria-hidden className={`absolute start-[1.65rem] top-11 h-[calc(100%-1.5rem)] w-0.5 ${s.state === 'done' ? 'bg-emerald-300' : 'bg-line'}`} />}
-              <span
-                className={
-                  s.state === 'done'
-                    ? 'relative grid size-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-white'
-                    : s.state === 'current'
-                      ? 'edmn-pulse relative grid size-9 shrink-0 place-items-center rounded-full bg-brand-600 text-white ring-4 ring-brand-100'
-                      : 'relative grid size-9 shrink-0 place-items-center rounded-full bg-page text-muted ring-1 ring-line'
-                }
-              >
-                {s.state === 'done' ? <Check className="size-4" aria-hidden /> : <s.icon className="size-4" aria-hidden />}
-              </span>
-              <span className={s.state === 'next' ? 'text-sm text-muted' : 'text-sm font-semibold'}>{s.label}</span>
-            </li>
-          ))}
-        </ol>
-        <figcaption className="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-xs leading-6 text-brand-900">
-          مثال توضيحي: البائع لا يحصل على المبلغ إلا بعد تأكيد الاستلام وموافقة إدارة اضمن.
-        </figcaption>
-      </div>
-    </figure>
   );
 }
 
