@@ -20,7 +20,7 @@ const OVERLAY_EVENT = 'edmn:header-overlay';
  * down outside it, Escape (focus returns to the trigger), focus leaving it, choosing a category, route
  * changes and browser back/forward, and when another header overlay opens. Listeners exist only while open.
  */
-export function CategoryMenu({ categories, label }: { categories: MenuCategory[]; label: string }) {
+export function CategoryMenu({ categories, label, triggerClassName }: { categories: MenuCategory[]; label: string; triggerClassName?: string }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -84,7 +84,7 @@ export function CategoryMenu({ categories, label }: { categories: MenuCategory[]
         aria-controls={panelId}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
-        className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold hover:bg-white/10"
+        className={triggerClassName ?? 'flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold hover:bg-white/10'}
         data-testid="category-menu-trigger"
       >
         <LayoutGrid className="size-4" aria-hidden /> {label} <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />

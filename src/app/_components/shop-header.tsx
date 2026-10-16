@@ -1,11 +1,11 @@
-import { Heart, Menu, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
+import { Heart, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
 import Link from '@/ui/link';
 import { CategoryMenu } from '@/app/_components/category-menu';
 import { DeliveryLocationPicker } from '@/app/_components/delivery-location';
 import { LiveIconLink } from '@/app/_components/live/live-provider';
 import { t } from '@/lib/i18n';
 import { Logo } from '@/ui/logo';
-import { Drawer } from '@/ui/client';
+import { ShopMenuDrawer } from '@/app/_components/shop-menu';
 import { allGovernorates, deliveryGovernorate, headerState, navCategories } from '@/server/web/context';
 
 export async function ShopHeader({ q }: { q?: string }) {
@@ -15,38 +15,7 @@ export async function ShopHeader({ q }: { q?: string }) {
       {/* Light brand bar: the official logo is transparent and must sit on a light surface. */}
       <div className="border-b border-line bg-white text-ink">
       <div className="container-page flex flex-wrap items-center gap-x-3 gap-y-2 py-2 lg:h-16 lg:flex-nowrap lg:py-0">
-        <Drawer
-          title="القائمة"
-          trigger={
-            <button type="button" className="grid size-10 place-items-center rounded-lg text-brand-900 hover:bg-page lg:hidden" aria-label="القائمة">
-              <Menu className="size-6" />
-            </button>
-          }
-        >
-          <nav className="space-y-1 text-ink">
-            <Link href="/protected-deal" className="flex items-center gap-2 rounded-lg bg-accent-50 p-3 font-semibold text-accent-700">
-              <ShieldCheck className="size-5" /> {t('nav.protectedDeal')}
-            </Link>
-            {[
-              ['/deals', t('nav.deals')],
-              ['/best-sellers', t('nav.bestSellers')],
-              ['/search?condition=USED', 'المستعمل'],
-              ['/account/wishlist', 'المفضلة'],
-              ['/stores', t('nav.stores')],
-              ['/sell', t('nav.sell')],
-            ].map(([href, l]) => (
-              <Link key={href} href={href} className="block rounded-lg p-3 hover:bg-page">
-                {l}
-              </Link>
-            ))}
-            <p className="px-3 pt-4 text-xs font-semibold text-muted">{t('nav.categories')}</p>
-            {cats.map((c) => (
-              <Link key={c.id} href={`/category/${c.slug}`} className="block rounded-lg p-3 hover:bg-page">
-                {c.nameAr}
-              </Link>
-            ))}
-          </nav>
-        </Drawer>
+        <ShopMenuDrawer cats={cats} />
         <Logo variant="header" priority />
 
         {gov && (

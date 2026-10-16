@@ -18,7 +18,7 @@ type Gov = { id: number; nameAr: string };
  *   kept) and is re-keyed on the stored governorate. The popover closes only once the server has stored
  *   the choice and the refreshed header has rendered, so the header always shows server state.
  */
-export function DeliveryLocationPicker({ governorates, current, className }: { governorates: Gov[]; current: Gov; className?: string }) {
+export function DeliveryLocationPicker({ governorates, current, className, tone = 'light' }: { governorates: Gov[]; current: Gov; className?: string; tone?: 'light' | 'dark' }) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const popId = `delivery-location-${uid}`;
   const popRef = useRef<HTMLDivElement>(null);
@@ -56,13 +56,13 @@ export function DeliveryLocationPicker({ governorates, current, className }: { g
       <button
         type="button"
         popoverTarget={popId}
-        className={cn('flex min-w-0 shrink items-center gap-1 rounded-lg px-1.5 py-1 text-start text-xs hover:bg-page', className)}
+        className={cn('flex min-w-0 shrink items-center gap-1 rounded-lg px-1.5 py-1 text-start text-xs', tone === 'dark' ? 'text-white hover:bg-white/10' : 'hover:bg-page', className)}
         data-testid="delivery-location"
         aria-label={`التوصيل إلى ${current.nameAr} – غيّر محافظة التوصيل`}
       >
-        <MapPin className="size-4 shrink-0 text-brand-700" aria-hidden />
+        <MapPin className={cn('size-4 shrink-0', tone === 'dark' ? 'text-brand-300' : 'text-brand-700')} aria-hidden />
         <span className="min-w-0 leading-tight">
-          <span className="block text-[10px] text-muted">التوصيل إلى</span>
+          <span className={cn('block text-[10px]', tone === 'dark' ? 'text-brand-100' : 'text-muted')}>التوصيل إلى</span>
           <span className="block truncate font-semibold" data-testid="delivery-location-name">{current.nameAr}</span>
         </span>
       </button>

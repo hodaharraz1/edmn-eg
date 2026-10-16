@@ -19,8 +19,9 @@ async function expectClosed(page: Page) {
   await expect(panel(page)).toBeHidden();
   await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
 }
+// The standard marketplace header (the homepage has its own header; its «المنتجات» menu is covered in homepage.spec).
 async function home(page: Page) {
-  await page.goto('/');
+  await page.goto('/search');
   await page.waitForLoadState('networkidle');
 }
 
@@ -52,6 +53,7 @@ test('desktop: open, toggle close, no flicker, inside click stays open, ESC retu
 });
 
 test('desktop: closes on outside / page content / search / header actions / other nav items (3-10)', async ({ browser }) => {
+  test.setTimeout(300_000); // 17 cases, each reloading the (heavier) search listing
   const page = await customerLogin(browser, BUYER);
   await page.setViewportSize({ width: 1440, height: 900 });
   await home(page);

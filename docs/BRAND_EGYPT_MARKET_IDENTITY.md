@@ -56,9 +56,11 @@ Any new photo or illustration must be added here with a one-line justification c
 | Path | Content | Justification |
 |---|---|---|
 | `public/brand/edmn-logo.png` | EDMN logo | Brand mark; no people |
+| `public/brand/home/egyptian-seller-700.webp` | Mobile size of the image below | Same image, responsive size |
+| `public/brand/home/egyptian-seller.webp` | Homepage seller banner: a modern Egyptian merchant (about 30s, light-blue smart-casual shirt) working on a laptop in a small online-shop stockroom with parcels | Owner-approved person image (2026-10-16, §1 "approved separately"). Contemporary Egyptian business-casual clothing, no national costume, no Gulf architecture or skyline. AI-generated for EDMN (no stock licence); the banner also works without it |
 
 ## 6. Audit status (2026-10-15)
-- No human imagery anywhere in the product. Product placeholders are generated abstract icons (`src/server/db/seed/demo-images.ts`).
+- No human imagery anywhere in the product, except the owner-approved Egyptian seller in the homepage seller banner (2026-10-16, listed in §5). Product placeholders are generated abstract icons (`src/server/db/seed/demo-images.ts`).
 - All prices use `formatEGP` (EGP, `ج.م`).
 - Governorates come from the database (27 Egyptian governorates).
 - No Gulf currencies, places or expressions were found in the source.
