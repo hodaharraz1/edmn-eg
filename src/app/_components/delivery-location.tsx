@@ -37,6 +37,22 @@ export function DeliveryLocationPicker({ governorates, current, className, tone 
     }
   }, [pending]);
 
+  // Re-opening always starts from the stored governorate, never from an abandoned choice. This runs on
+  // `beforetoggle`, which fires synchronously BEFORE the popover is shown: resetting on the (asynchronous)
+  // `toggle` event raced a quick choice on busy pages — the reset landed after the user had already picked,
+  // and the old governorate was submitted.
+  useEffect(() => {
+    const pop = popRef.current;
+    if (!pop) return;
+    const onBeforeToggle = (e: Event) => {
+      if ((e as ToggleEvent).newState !== 'open') return;
+      if (selectRef.current) selectRef.current.value = String(current.id);
+      setError(null);
+    };
+    pop.addEventListener('beforetoggle', onBeforeToggle);
+    return () => pop.removeEventListener('beforetoggle', onBeforeToggle);
+  }, [current.id]);
+
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -72,13 +88,6 @@ export function DeliveryLocationPicker({ governorates, current, className, tone 
         popover="auto"
         role="dialog"
         aria-labelledby={`${popId}-title`}
-        onToggle={(e) => {
-          // Re-opening always starts from the stored governorate, never from an abandoned choice.
-          if ((e as unknown as ToggleEvent).newState === 'open') {
-            if (selectRef.current) selectRef.current.value = String(current.id);
-            setError(null);
-          }
-        }}
         className="fixed inset-0 m-auto h-fit w-[min(92vw,360px)] rounded-2xl bg-white p-4 text-ink shadow-[var(--shadow-pop)] backdrop:bg-black/40"
         data-testid="delivery-location-dialog"
       >

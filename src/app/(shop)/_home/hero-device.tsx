@@ -91,7 +91,7 @@ function Phone({ featured, categories }: { featured: DeviceProduct | null; categ
             <img src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT} alt="" draggable={false} className="h-7 w-auto object-contain" />
             <Bell className="size-4 text-brand-900" />
           </div>
-          <div className="mt-2 flex h-8 items-center gap-1.5 rounded-full bg-[#f1f4f9] px-3 text-[10px] text-slate-400 ring-1 ring-slate-200">
+          <div className="mt-2 flex h-8 items-center gap-1.5 rounded-full bg-[#f1f4f9] px-3 text-[10px] text-slate-600 ring-1 ring-slate-200">
             <Search className="size-3.5" /> ابحث في اضمن…
           </div>
         </div>
@@ -121,7 +121,7 @@ function Phone({ featured, categories }: { featured: DeviceProduct | null; categ
           <div className="space-y-1 p-2.5">
             <p className="line-clamp-1 text-[11px] font-bold text-ink">{featured?.titleAr ?? 'منتجات من متاجر موثّقة'}</p>
             {featured && (
-              <p className="flex items-center gap-1 text-[9px] text-slate-500">
+              <p className="flex items-center gap-1 text-[9px] text-slate-600">
                 <span className="truncate">{featured.storeName}</span>
                 {featured.storeVerified && <BadgeCheck className="size-3 shrink-0 text-brand-600" />}
               </p>

@@ -59,7 +59,8 @@ test('desktop: closes on outside / page content / search / header actions / othe
   await home(page);
   const cases: [string, (p: Page) => Promise<void>][] = [
     ['outside (blank page area)', async (p) => p.mouse.click(1400, 860)],
-    ['page content (a product card)', async (p) => p.locator('main a[href^="/product/"]').first().click({ trial: false, modifiers: [] })],
+    // the last card: on the search listing the first cards sit directly under the open panel
+    ['page content (a product card)', async (p) => p.locator('main a[href^="/product/"]').last().click({ trial: false, modifiers: [] })],
     ['search input', async (p) => p.locator('#site-search').click()],
     ['search button', async (p) => p.getByRole('button', { name: 'بحث' }).first().click()],
     ['messages', async (p) => p.getByTestId('header-messages').click()],
@@ -100,7 +101,7 @@ test('desktop: category link closes and navigates; route change and back/forward
   // Back/forward: open on the category page, go back → closed
   await openMenu(page);
   await page.goBack();
-  await page.waitForURL((u) => u.pathname === '/');
+  await page.waitForURL((u) => u.pathname === '/search');
   await expectClosed(page);
   await openMenu(page);
   await page.goForward();
