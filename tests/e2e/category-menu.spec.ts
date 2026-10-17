@@ -148,11 +148,12 @@ for (const width of [390, 768, 1440]) {
     expect(await page.evaluate(() => document.documentElement.dir)).toBe('rtl');
     if (width >= 1024) {
       await openMenu(page);
-      // RTL: the panel opens from the inline-start (right) edge of the trigger
-      const t = (await trigger(page).boundingBox())!;
+      // The panel opens below the whole header (never over the search row) and stays inside the viewport.
+      const search = (await page.locator('#site-search').boundingBox())!;
       const pnl = (await panel(page).boundingBox())!;
-      expect(Math.abs(pnl.x + pnl.width - (t.x + t.width))).toBeLessThanOrEqual(2);
+      expect(pnl.y).toBeGreaterThanOrEqual(search.y + search.height);
       expect(pnl.x).toBeGreaterThanOrEqual(0);
+      expect(pnl.x + pnl.width).toBeLessThanOrEqual(width);
     } else {
       await expect(trigger(page)).toBeHidden(); // desktop menu not used on small screens
       await page.getByRole('button', { name: 'القائمة' }).click();
