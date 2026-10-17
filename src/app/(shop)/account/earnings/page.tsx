@@ -54,7 +54,7 @@ export default async function EarningsPage() {
           <h2 className="mb-2 font-bold">طلبات السحب</h2>
           <ul className="space-y-3" data-testid="account-withdrawals">
             {mine.map(({ w, allocations }) => (
-              <li key={w.id} className="rounded-lg border border-line p-3 text-sm">
+              <li key={w.id} className="rounded-xl border border-line p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>#{w.number} · {formatDate(w.createdAt, true)} · <span className="ltr">{w.payoutMasked}</span></span>
                   <span className="flex items-center gap-2"><b>{formatEGP(w.amount)}</b><StatusChip status={w.status} kind="withdrawal" /></span>

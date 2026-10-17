@@ -99,7 +99,7 @@ export default async function PayPage(props: PageProps<'/account/orders/[id]/pay
               <p className="mb-2 text-sm font-semibold">الإثباتات اللي رفعتها قبل كده</p>
               <ul className="space-y-2 text-xs">
                 {subs.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-page p-2">
+                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-page p-2">
                     <span>{formatDate(s.createdAt, true)} · {formatEGP(s.claimedAmount)} {s.reference && <span className="ltr">· {s.reference}</span>}</span>
                     <span className="flex items-center gap-2"><StatusChip status={s.status} /> <a href={`/api/files/${s.proofFileId}`} target="_blank" className="text-brand-700 underline">الإثبات</a></span>
                   </li>

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ConversationList, InboxFilters } from '@/app/_components/conversation';
+import { ConversationList, InboxFilters, MessagesWorkspace } from '@/app/_components/conversation';
 import { InboxAutoRefresh } from '@/app/_components/live/live-provider';
 import { PushOptIn } from '@/app/_components/live/push-optin';
 import { listForSeller, type InboxFilter } from '@/server/modules/messaging/service';
@@ -31,12 +31,23 @@ export default async function SellerMessagesPage(props: PageProps<'/seller/messa
       />
       <InboxAutoRefresh />
       <PushOptIn vapidKey={vapidPublicKey()} variant="banner" />
-      <InboxFilters basePath="/seller/messages" active={f} q={q} withDeals={false} />
-      <ConversationList
-        items={items}
-        basePath="/seller/messages"
-        emptyTitle={filtered ? 'مفيش محادثات مطابقة' : 'مفيش رسائل لسه'}
-        emptyText={filtered ? 'جرّب فلتر تاني أو امسح البحث.' : 'لما مشتري يبعتلك على طلب مدفوع هتلاقي المحادثة هنا. وتقدر تبدأ من صفحة الطلب: «تواصل مع المشتري».'}
+      <MessagesWorkspace
+        hasActive={false}
+        empty={items.length === 0 && !filtered}
+        list={
+          <div className="space-y-3 lg:space-y-0">
+            <div className="lg:border-b lg:border-line lg:p-3">
+              <InboxFilters basePath="/seller/messages" active={f} q={q} withDeals={false} />
+            </div>
+            <ConversationList
+              compact
+              items={items}
+              basePath="/seller/messages"
+              emptyTitle={filtered ? 'مفيش محادثات مطابقة' : 'مفيش رسائل لسه'}
+              emptyText={filtered ? 'جرّب فلتر تاني أو امسح البحث.' : 'لما مشتري يبعتلك على طلب مدفوع هتلاقي المحادثة هنا. وتقدر تبدأ من صفحة الطلب: «تواصل مع المشتري».'}
+            />
+          </div>
+        }
       />
     </div>
   );

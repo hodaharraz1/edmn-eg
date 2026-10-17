@@ -53,7 +53,7 @@ export default async function CartPage() {
             <section key={g.sellerId} className="card overflow-hidden">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-soft/50 px-4 py-3">
                 <Link href={`/store/${g.storeSlug}`} className="flex min-h-10 items-center gap-2 font-bold text-brand-950 hover:text-brand-700">
-                  <span className="grid size-8 place-items-center rounded-lg bg-white text-brand-700 ring-1 ring-line"><Store className="size-4" aria-hidden /></span>
+                  <span className="grid size-8 place-items-center rounded-xl bg-white text-brand-700 ring-1 ring-line"><Store className="size-4" aria-hidden /></span>
                   من متجر {g.storeName} {g.storeVerified && <BadgeCheck className="size-4 text-brand-600" aria-label="متجر موثّق" />}
                 </Link>
                 <DeliveryLine fee={g.shippingFee} min={g.etaMinDays !== null ? g.etaMinDays + g.processingDays : null} max={g.etaMaxDays !== null ? g.etaMaxDays + g.processingDays : null} />

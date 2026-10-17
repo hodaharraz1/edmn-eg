@@ -12,7 +12,7 @@ export function ContactVerification({ user, only }: { user: U; only?: ('PHONE' |
       {(only ?? (['PHONE', 'EMAIL'] as const)).map((ch) => {
         const verified = ch === 'PHONE' ? user.phoneVerifiedAt : user.emailVerifiedAt;
         return (
-          <div key={ch} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line p-3 text-sm">
+          <div key={ch} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-3 text-sm">
             <span>
               {ch === 'PHONE' ? 'رقم الموبايل' : 'البريد الإلكتروني'}: <span className="ltr">{ch === 'PHONE' ? user.phone : user.email}</span>{' '}
               {verified ? <Badge tone="success">مؤكد</Badge> : <Badge tone="warning">غير مؤكد</Badge>}

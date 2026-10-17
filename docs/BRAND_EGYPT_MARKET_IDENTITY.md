@@ -58,6 +58,11 @@ Any new photo or illustration must be added here with a one-line justification c
 | `public/brand/edmn-logo.png` | EDMN logo | Brand mark; no people |
 | `public/brand/home/egyptian-seller-700.webp` | Mobile size of the image below | Same image, responsive size |
 | `public/brand/home/egyptian-seller.webp` | Homepage seller banner: a modern Egyptian merchant (about 30s, light-blue smart-casual shirt) working on a laptop in a small online-shop stockroom with parcels | Owner-approved person image (2026-10-16, §1 "approved separately"). Contemporary Egyptian business-casual clothing, no national costume, no Gulf architecture or skyline. AI-generated for EDMN (no stock licence); the banner also works without it |
+| `public/brand/home/seller-banner-source.png` | Owner-approved FINAL homepage seller banner (2000×667): Egyptian merchant in a grey t-shirt carrying an EDMN parcel beside a delivery van and a stockroom; painted headline «ابدأ البيع على اضمن» and CTA «افتح متجرك الآن» | Owner-supplied 2026-10-17 as the final approved artwork; stored losslessly, never regenerated or edited. Egyptian everyday clothing, no national costume, no Gulf architecture or skyline |
+| `public/brand/home/seller-banner-2000.webp` | Desktop size of the approved seller banner | Same artwork, resized only |
+| `public/brand/home/seller-banner-1280.webp` | Desktop/tablet size of the approved seller banner | Same artwork, resized only |
+| `public/brand/home/seller-banner-mobile-900.webp` | Mobile crop of the approved seller banner (merchant side; the text is real HTML underneath) | Same artwork, cropped and resized only |
+| `public/brand/home/seller-banner-mobile-600.webp` | Smaller mobile crop of the approved seller banner | Same artwork, cropped and resized only |
 
 ## 6. Audit status (2026-10-15)
 - No human imagery anywhere in the product, except the owner-approved Egyptian seller in the homepage seller banner (2026-10-16, listed in §5). Product placeholders are generated abstract icons (`src/server/db/seed/demo-images.ts`).

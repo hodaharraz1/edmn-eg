@@ -42,7 +42,7 @@ export default async function ReturnDetail(props: PageProps<'/account/returns/[i
         {g.evidence.length > 0 && (
           <div className="mt-3 flex gap-2">
             {g.evidence.map((e) => (
-              <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="size-16 overflow-hidden rounded-lg border border-line">
+              <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="size-16 overflow-hidden rounded-xl border border-line">
                 <img src={`/api/files/${e.fileId}`} alt="دليل" className="size-full object-cover" />
               </a>
             ))}

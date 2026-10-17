@@ -32,7 +32,7 @@ export function MessageBubble({
     <li className={cn('flex', staff ? (m.side === 'BUYER' ? 'justify-start' : 'justify-end') : mine ? 'justify-start' : 'justify-end')} data-testid="message" data-side={m.side} data-id={m.id} data-pending={m.pending ?? undefined}>
       <div
         className={cn(
-          'max-w-[85%] space-y-1 rounded-2xl px-3 py-2 text-sm shadow-sm sm:max-w-[70%]',
+          'max-w-[85%] space-y-1 rounded-2xl px-3 py-2 text-sm shadow-[var(--shadow-card)] sm:max-w-[70%]',
           dark ? 'rounded-ss-sm bg-brand-700 text-white' : 'rounded-se-sm bg-white text-ink ring-1 ring-line',
           m.hidden && !staff && 'bg-page text-muted ring-1 ring-line',
           m.pending === 'failed' && 'ring-2 ring-red-400',
@@ -57,12 +57,12 @@ export function MessageBubble({
             {m.attachments.map((a) => (
               <li key={a.fileId}>
                 {a.mimeType.startsWith('image/') ? (
-                  <a href={`/api/files/${a.fileId}`} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg bg-white ring-1 ring-line">
+                  <a href={`/api/files/${a.fileId}`} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl bg-white ring-1 ring-line">
                     {/* private, authorization-checked file (served by /api/files) */}
                     <img src={`/api/files/${a.fileId}`} alt="صورة مرفقة" loading="lazy" className="h-32 w-auto max-w-[220px] object-contain" />
                   </a>
                 ) : (
-                  <a href={`/api/files/${a.fileId}?download`} className={cn('inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs underline', mine ? 'bg-white/15' : 'bg-page')}>
+                  <a href={`/api/files/${a.fileId}?download`} className={cn('inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs underline', mine ? 'bg-white/15' : 'bg-page')}>
                     <FileText className="size-4" aria-hidden /> ملف PDF مرفق
                   </a>
                 )}
@@ -105,7 +105,7 @@ export function MessageBubble({
             <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-muted hover:text-ink">
               <Flag className="size-3" aria-hidden /> الإبلاغ عن الرسالة
             </summary>
-            <ActionForm action={reportMessageAction} className="mt-2 space-y-2 rounded-lg bg-page p-2 text-ink" successMessage="البلاغ وصلنا">
+            <ActionForm action={reportMessageAction} className="mt-2 space-y-2 rounded-xl bg-page p-2 text-ink" successMessage="البلاغ وصلنا">
               <input type="hidden" name="messageId" value={m.id} />
               <input type="hidden" name="surface" value={surface} />
               <Select name="reason" required defaultValue="" aria-label="سبب البلاغ" className="h-9 text-xs">

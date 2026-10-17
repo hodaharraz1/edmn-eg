@@ -54,7 +54,7 @@ export default async function SellerProducts(props: PageProps<'/seller/products'
             header: 'المنتج',
             cell: (r) => (
               <Link href={`/seller/products/${r.p.id}`} className="flex items-center gap-3 hover:text-brand-700">
-                <span className="size-12 shrink-0 overflow-hidden rounded-lg border border-line bg-white">{r.imageKey && <img src={mediaUrl(r.imageKey, 'thumb')!} alt="" className="size-full object-contain" />}</span>
+                <span className="size-12 shrink-0 overflow-hidden rounded-xl border border-line bg-white">{r.imageKey && <img src={mediaUrl(r.imageKey, 'thumb')!} alt="" className="size-full object-contain" />}</span>
                 <span className="min-w-0">
                   <span className="line-clamp-1 font-medium">{r.p.titleAr}</span>
                   <span className="text-xs text-muted">{label('condition', r.p.condition)}{r.pendingRevision ? ' · ' : ''}{r.pendingRevision && <Badge tone="warning">تعديل قيد المراجعة</Badge>}</span>
@@ -88,7 +88,7 @@ function ControlButton({ id, op, label: l }: { id: string; op: string; label: st
     <form action={productControlAction}>
       <input type="hidden" name="productId" value={id} />
       <input type="hidden" name="op" value={op} />
-      <button className="rounded-md border border-line bg-white px-2 py-1 text-xs hover:bg-page">{l}</button>
+      <button className="rounded-lg border border-line bg-white px-2 py-1 text-xs hover:bg-page">{l}</button>
     </form>
   );
 }

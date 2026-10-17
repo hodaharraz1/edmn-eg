@@ -34,7 +34,7 @@ export default async function SellerRegisterPage() {
       </p>
       {user ? (
         <ActionForm action={startSellerAction} className="space-y-4">
-          <p className="rounded-lg bg-page p-3 text-sm">
+          <p className="rounded-xl bg-page p-3 text-sm">
             مسجّل الدخول باسم <span className="font-semibold">{user.fullName}</span>. سيُربط المتجر بهذا الحساب.
           </p>
           <AccountType />

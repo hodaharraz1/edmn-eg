@@ -1,3 +1,4 @@
+import { FileInput } from '@/ui/client';
 import { desc, eq } from 'drizzle-orm';
 import { sellerTicketAction } from '@/app/_actions/seller';
 import { db } from '@/server/db/client';
@@ -54,7 +55,7 @@ export default async function SellerSupport(props: PageProps<'/seller/support'>)
             <Field label="النوع" htmlFor="type"><Select id="type" name="type" defaultValue="SELLER">{TICKET_TYPES.map((t) => <option key={t} value={t}>{label('ticketType', t)}</option>)}</Select></Field>
             <Field label="العنوان" htmlFor="subject" required><Input id="subject" name="subject" required minLength={5} /></Field>
             <Field label="التفاصيل" htmlFor="body" required><Textarea id="body" name="body" rows={5} required minLength={10} /></Field>
-            <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
+            <FileInput name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" label="مرفق (اختياري): صورة أو PDF" />
             <SubmitButton>إرسال</SubmitButton>
           </ActionForm>
         )}

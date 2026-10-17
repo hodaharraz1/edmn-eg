@@ -29,7 +29,7 @@ export default async function SellerReturnDetail(props: PageProps<'/seller/retur
       <section className="card p-5">
         <DefinitionList items={[{ label: 'السبب', value: label('returnReason', r.reason) }, { label: 'التاريخ', value: formatDate(r.createdAt, true) }, { label: 'وصف العميل', value: r.description }, { label: 'شحن المرتجع', value: r.returnCarrier ? `${r.returnCarrier} ${r.returnTracking ?? ''}` : '—' }]} />
         <ul className="mt-3 divide-y divide-line text-sm">{g.items.map(({ ri, item }) => <li key={ri.id} className="flex justify-between py-2"><span>{item.titleSnapshot} × {ri.quantity}</span><span>{formatEGP(item.unitPrice * ri.quantity)}</span></li>)}</ul>
-        {g.evidence.length > 0 && <div className="mt-3 flex gap-2">{g.evidence.map((e) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="size-16 overflow-hidden rounded-lg border border-line"><img src={`/api/files/${e.fileId}`} alt="دليل" className="size-full object-cover" /></a>)}</div>}
+        {g.evidence.length > 0 && <div className="mt-3 flex gap-2">{g.evidence.map((e) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="size-16 overflow-hidden rounded-xl border border-line"><img src={`/api/files/${e.fileId}`} alt="دليل" className="size-full object-cover" /></a>)}</div>}
       </section>
       {['REQUESTED', 'UNDER_REVIEW'].includes(r.status) && (
         <div className="grid gap-4 md:grid-cols-2">

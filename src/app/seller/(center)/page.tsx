@@ -64,10 +64,10 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
           </dl>
           <h3 className="pt-2 font-bold">مؤشرات الأداء</h3>
           <dl className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg bg-page p-2"><dt className="text-muted">التقييم</dt><dd className="flex items-center gap-1 text-base font-bold"><Star className="size-4 fill-amber-400 text-amber-400" /> {d.rating.toFixed(1)} <span className="text-xs font-normal text-muted">({d.ratingCount})</span></dd></div>
-            <div className="rounded-lg bg-page p-2"><dt className="text-muted">الشحن في الموعد</dt><dd className="text-base font-bold">{pct(d.onTimeRate)}</dd></div>
-            <div className="rounded-lg bg-page p-2"><dt className="text-muted">نسبة الإلغاء</dt><dd className="text-base font-bold">{pct(d.cancellationRate)}</dd></div>
-            <div className="rounded-lg bg-page p-2"><dt className="text-muted">نسبة الإرجاع</dt><dd className="text-base font-bold">{pct(d.returnRate)}</dd></div>
+            <div className="rounded-xl bg-page p-2"><dt className="text-muted">التقييم</dt><dd className="flex items-center gap-1 text-base font-bold"><Star className="size-4 fill-amber-400 text-amber-400" /> {d.rating.toFixed(1)} <span className="text-xs font-normal text-muted">({d.ratingCount})</span></dd></div>
+            <div className="rounded-xl bg-page p-2"><dt className="text-muted">الشحن في الموعد</dt><dd className="text-base font-bold">{pct(d.onTimeRate)}</dd></div>
+            <div className="rounded-xl bg-page p-2"><dt className="text-muted">نسبة الإلغاء</dt><dd className="text-base font-bold">{pct(d.cancellationRate)}</dd></div>
+            <div className="rounded-xl bg-page p-2"><dt className="text-muted">نسبة الإرجاع</dt><dd className="text-base font-bold">{pct(d.returnRate)}</dd></div>
           </dl>
         </section>
       </div>

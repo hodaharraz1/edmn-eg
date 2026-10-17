@@ -254,7 +254,7 @@ export function LiveThread({
               data-testid="message-input"
             />
             <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-2 text-sm hover:bg-page focus-within:ring-2 focus-within:ring-brand-300">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-line bg-white px-3 py-2 text-sm hover:bg-page focus-within:ring-2 focus-within:ring-brand-300">
                 <Paperclip className="size-4" aria-hidden />
                 <span>{fileCount ? `${fileCount} مرفق` : 'إرفاق صورة أو PDF'}</span>
                 <input

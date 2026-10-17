@@ -57,7 +57,7 @@ export default async function OrdersPage(props: PageProps<'/account/orders'>) {
                   {subs.filter((x) => x.so.orderId === o.id).map((x) => (
                     <li key={x.so.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm sm:px-5">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700"><Store className="size-3.5" aria-hidden /></span>
+                        <span className="grid size-7 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Store className="size-3.5" aria-hidden /></span>
                         <span className="truncate font-medium">{x.store}</span>
                         <span className="text-xs text-muted ltr">{o.number}-{x.so.suffix}</span>
                       </span>

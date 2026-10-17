@@ -1,3 +1,4 @@
+import { FileInput } from '@/ui/client';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { Star } from 'lucide-react';
 import { productReviewAction, sellerReviewAction } from '@/app/_actions/account';
@@ -56,7 +57,7 @@ export default async function MyReviewsPage(props: PageProps<'/account/reviews'>
             <RatingSelect name="rating" label="تقييمك" required />
             <Field label="عنوان قصير" htmlFor={`t-${it.id}`}><Input id={`t-${it.id}`} name="title" /></Field>
             <Field label="رأيك في المنتج" htmlFor={`b-${it.id}`} className="sm:col-span-2"><Textarea id={`b-${it.id}`} name="body" rows={3} /></Field>
-            <div className="sm:col-span-2 space-y-2"><input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp" className="text-xs" aria-label="صور" /><SubmitButton size="sm">انشر التقييم</SubmitButton></div>
+            <div className="sm:col-span-2 space-y-2"><FileInput name="photos" multiple label="صور المنتج (اختياري)" /><SubmitButton size="sm">انشر التقييم</SubmitButton></div>
           </ActionForm>
         </details>
       ))}

@@ -38,7 +38,7 @@ export default async function SellerLayout({ children }: { children: React.React
           <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : label('sellerRole', ctx.role)}</span></div>
         </div>
         <div className="flex-1 overflow-y-auto"><SellerNav unreadMessages={unread} canMessage={canMessage} /></div>
-        <form action={logoutAction}><button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10"><LogOut className="size-4" /> خروج</button></form>
+        <form action={logoutAction}><button className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/10"><LogOut className="size-4" /> خروج</button></form>
       </aside>
       <div className="min-w-0">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line bg-white/95 px-4 backdrop-blur sm:gap-3">
@@ -58,7 +58,7 @@ export default async function SellerLayout({ children }: { children: React.React
               fallback={unread}
               showLabel
               testId="seller-header-messages"
-              className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:font-semibold aria-[current=page]:text-brand-800 [&>span:last-child]:hidden sm:[&>span:last-child]:inline"
+              className="inline-flex items-center gap-2 rounded-xl px-2 py-2 text-sm hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:font-semibold aria-[current=page]:text-brand-800 [&>span:last-child]:hidden sm:[&>span:last-child]:inline"
             />
           )}
           <LiveIconLink href="/seller/notifications" kind="notifications" fallback={unreadNotifs} testId="seller-header-notifications" className="grid size-11 place-items-center rounded-xl hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-800" />

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ArrowRight, Info, Lock, MessagesSquare, Paperclip, ShieldAlert } from 'lucide-react';
 import Link from '@/ui/link';
 import { LiveThread } from '@/app/_components/live/live-thread';
@@ -95,7 +96,7 @@ export function ParticipantConversation({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {/* Back is a real link (never history manipulation): conversation → inbox. */}
-          <Link href={backHref} className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-line hover:bg-page" aria-label="رجوع لكل الرسائل" data-testid="conversation-back">
+          <Link href={backHref} className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-line hover:bg-page" aria-label="رجوع لكل الرسائل" data-testid="conversation-back">
             <ArrowRight className="size-4" aria-hidden />
           </Link>
           <h1 className="truncate text-xl font-bold">{side === 'BUYER' ? 'تواصل مع البائع' : 'تواصل مع المشتري'}</h1>
@@ -133,18 +134,20 @@ export function ParticipantConversation({
 }
 
 /** Conversation list (account / Seller Center). Not a social inbox: every row is an order or a deal. */
-export function ConversationList({ items, basePath, emptyTitle = 'مفيش رسائل لسه', emptyText }: { items: ConversationListItem[]; basePath: string; emptyTitle?: string; emptyText: string }) {
+export function ConversationList({ items, basePath, emptyTitle = 'مفيش رسائل لسه', emptyText, activeId, compact }: { items: ConversationListItem[]; basePath: string; emptyTitle?: string; emptyText: string; activeId?: string; compact?: boolean }) {
   if (!items.length) return <EmptyState icon={MessagesSquare} title={emptyTitle} description={emptyText} />;
   const now = new Date();
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line" data-testid="conversation-list">
+    <ul className={cn('divide-y divide-line overflow-hidden rounded-2xl bg-white shadow-[var(--shadow-card)] ring-1 ring-line', compact && 'lg:rounded-none lg:shadow-none lg:ring-0')} data-testid="conversation-list">
       {items.map((c) => {
         const unread = c.unread > 0;
+        const active = c.id === activeId;
         return (
           <li key={c.id}>
             <Link
               href={`${basePath}/${c.id}`}
-              className={cn('flex gap-3 p-4 hover:bg-page focus-visible:bg-page', unread && 'bg-brand-50/60')}
+              aria-current={active ? 'page' : undefined}
+              className={cn('flex gap-3 border-s-4 p-4 transition-colors hover:bg-soft/60 focus-visible:bg-soft/60', active ? 'border-brand-600 bg-brand-50' : 'border-transparent', !active && unread && 'bg-brand-50/50')}
               data-testid="conversation-row"
               data-unread={unread ? c.unread : 0}
               aria-label={`${c.side === 'BUYER' ? c.otherParty : `المشتري ${c.otherParty}`}، ${c.ref}${unread ? `، ${c.unread === 1 ? 'رسالة جديدة' : `${c.unread} رسائل جديدة`}` : ''}`}
@@ -155,7 +158,7 @@ export function ConversationList({ items, basePath, emptyTitle = 'مفيش رس�
                   <span className={cn('truncate', unread ? 'font-bold' : 'font-semibold')} dir="auto">
                     {c.side === 'BUYER' ? c.otherParty : `المشتري: ${c.otherParty}`}
                   </span>
-                  <span className="rounded-full bg-page px-2 py-0.5 text-[11px] text-muted">{c.context === 'DEAL' ? 'صفقة محمية' : 'طلب من السوق'}</span>
+                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold', c.context === 'DEAL' ? 'bg-brand-950 text-white' : 'bg-soft text-brand-800')}>{c.context === 'DEAL' ? 'صفقة محمية' : 'طلب من السوق'}</span>
                 </div>
                 <p className="text-xs text-muted" dir="auto">
                   {c.ref}
@@ -229,6 +232,34 @@ export function InboxFilters({ basePath, active, q, withDeals }: { basePath: str
         <input id="inbox-q" name="q" defaultValue={q} maxLength={60} placeholder="ابحث برقم الطلب أو الصفقة أو الاسم" className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" data-testid="inbox-search" />
         <button className="h-10 rounded-xl bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">بحث</button>
       </form>
+    </div>
+  );
+}
+
+/**
+ * Messaging workspace. Desktop / tablet landscape (lg+): the conversation list (with its filters) beside the active
+ * conversation — in RTL the list sits on the right. Phones and portrait tablets keep list → conversation as two
+ * separate screens: the list pane is hidden on a conversation page, the conversation pane on the inbox page.
+ */
+export function MessagesWorkspace({ list, children, hasActive, empty }: { list: ReactNode; children?: ReactNode; hasActive: boolean; empty?: boolean }) {
+  // No conversations at all: just the list's empty state, full width (no "pick a conversation" pane).
+  if (empty && !hasActive) return <>{list}</>;
+  return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <section aria-label="المحادثات" className={cn('min-w-0 lg:sticky lg:top-36 lg:block lg:max-h-[calc(100dvh-10rem)] lg:overflow-y-auto lg:rounded-2xl lg:bg-white lg:shadow-[var(--shadow-card)] lg:ring-1 lg:ring-line', hasActive && 'hidden')}>
+        {list}
+      </section>
+      <div className={cn('min-w-0', !hasActive && 'hidden lg:block')}>
+        {children ?? (
+          <div className="grid min-h-[24rem] place-items-center rounded-2xl border border-dashed border-line bg-white/60 p-8 text-center">
+            <div className="space-y-2">
+              <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-50 text-brand-600"><MessagesSquare className="size-6" aria-hidden /></span>
+              <p className="font-bold text-brand-950">اختار محادثة</p>
+              <p className="text-sm text-muted">اختار محادثة من القائمة علشان تشوف الرسائل وترد.</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

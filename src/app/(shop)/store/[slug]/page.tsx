@@ -139,7 +139,7 @@ async function StoreReviews({ sellerId }: { sellerId: string }) {
             {r.accuracyRating && <span>مطابقة الوصف {r.accuracyRating}/5</span>}
           </div>
           {r.body && <p>{r.body}</p>}
-          {r.sellerResponse && <p className="rounded-lg bg-page p-2 text-xs"><b>رد البائع:</b> {r.sellerResponse}</p>}
+          {r.sellerResponse && <p className="rounded-xl bg-page p-2 text-xs"><b>رد البائع:</b> {r.sellerResponse}</p>}
         </article>
       ))}
     </div>

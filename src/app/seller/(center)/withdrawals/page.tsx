@@ -65,12 +65,12 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
           <div className="card space-y-3 p-5">
             <form method="get" className="flex flex-wrap items-end gap-2">
               <Field label="المبلغ المطلوب (ج.م)" htmlFor="preview" required><Input id="preview" name="preview" inputMode="decimal" dir="ltr" defaultValue={previewAmount || toInputAmount(b.available)} required /></Field>
-              <button type="submit" className="h-10 rounded-lg border border-line px-4 text-sm font-semibold">احسب رسوم التحويل</button>
+              <button type="submit" className="h-10 rounded-xl border border-line px-4 text-sm font-semibold">احسب رسوم التحويل</button>
             </form>
             {previewError && <Alert tone="danger">{previewError}</Alert>}
             {preview && (
               <div className="space-y-2" data-testid="withdrawal-preview">
-                <dl className="grid grid-cols-3 gap-2 rounded-lg bg-page p-3 text-sm">
+                <dl className="grid grid-cols-3 gap-2 rounded-xl bg-page p-3 text-sm">
                   <div><dt className="text-xs text-muted">مبلغ السحب</dt><dd>{formatEGP(preview.amount)}</dd></div>
                   <div><dt className="text-xs text-muted">رسوم التحويل</dt><dd data-testid="transfer-cost">−{formatEGP(preview.transferCost)}</dd></div>
                   <div><dt className="text-xs text-muted">صافي المتوقع تحويله</dt><dd className="font-bold" data-testid="transfer-net">{formatEGP(preview.net)}</dd></div>

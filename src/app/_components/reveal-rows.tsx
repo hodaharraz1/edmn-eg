@@ -7,7 +7,7 @@ function Rows() {
   const rows = s.data?.rows as { label: string; value: string }[] | undefined;
   if (!rows) return null;
   return (
-    <dl className="mt-2 grid w-full gap-1 rounded-lg bg-amber-50 p-3 text-sm sm:grid-cols-2">
+    <dl className="mt-2 grid w-full gap-1 rounded-xl bg-amber-50 p-3 text-sm sm:grid-cols-2">
       {rows.map((r) => (
         <div key={r.label}>
           <dt className="text-xs text-muted">{r.label}</dt>

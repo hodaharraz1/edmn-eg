@@ -41,7 +41,7 @@ export function DealTimer({ deadline, serverNow, label, overdueLabel, actions, t
       </div>
       {actions && actions.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {actions.map((a) => <a key={a.href} href={a.href} className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50">{a.label}</a>)}
+          {actions.map((a) => <a key={a.href} href={a.href} className="rounded-xl border border-line bg-white px-3 py-1.5 text-sm text-brand-700 hover:bg-brand-50">{a.label}</a>)}
         </div>
       )}
     </section>

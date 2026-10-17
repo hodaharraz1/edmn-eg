@@ -37,7 +37,7 @@ function LegalBody({ body }: { body: string }) {
     flush();
     if (!line) continue;
     if (line.startsWith('## ')) blocks.push(<h2 key={`h${blocks.length}`} className="pt-3 text-base font-bold text-ink">{line.slice(3)}</h2>);
-    else if (line.startsWith('> ')) blocks.push(<p key={`n${blocks.length}`} className="rounded-lg border-s-4 border-amber-400 bg-amber-50 px-3 py-2 text-amber-900">{line.slice(2)}</p>);
+    else if (line.startsWith('> ')) blocks.push(<p key={`n${blocks.length}`} className="rounded-xl border-s-4 border-amber-400 bg-amber-50 px-3 py-2 text-amber-900">{line.slice(2)}</p>);
     else blocks.push(<p key={`p${blocks.length}`}>{line}</p>);
   }
   flush();

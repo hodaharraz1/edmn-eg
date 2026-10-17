@@ -10,13 +10,13 @@ export function ShopMenuDrawer({ cats, triggerClassName }: { cats: { id: string;
     <Drawer
       title="القائمة"
       trigger={
-        <button type="button" className={cn('grid size-10 place-items-center rounded-lg text-brand-900 hover:bg-page lg:hidden', triggerClassName)} aria-label="القائمة">
+        <button type="button" className={cn('grid size-10 place-items-center rounded-xl text-brand-900 hover:bg-page lg:hidden', triggerClassName)} aria-label="القائمة">
           <Menu className="size-6" />
         </button>
       }
     >
       <nav className="space-y-1 text-ink">
-        <Link href="/protected-deal" className="flex items-center gap-2 rounded-lg bg-accent-50 p-3 font-semibold text-accent-700">
+        <Link href="/protected-deal" className="flex items-center gap-2 rounded-xl bg-brand-950 p-3 font-semibold text-white">
           <ShieldCheck className="size-5" /> {t('nav.protectedDeal')}
         </Link>
         {[
@@ -27,13 +27,13 @@ export function ShopMenuDrawer({ cats, triggerClassName }: { cats: { id: string;
           ['/stores', t('nav.stores')],
           ['/sell', t('nav.sell')],
         ].map(([href, l]) => (
-          <Link key={href} href={href} className="block rounded-lg p-3 hover:bg-page">
+          <Link key={href} href={href} className="block rounded-xl p-3 hover:bg-page">
             {l}
           </Link>
         ))}
         <p className="px-3 pt-4 text-xs font-semibold text-muted">{t('nav.categories')}</p>
         {cats.map((c) => (
-          <Link key={c.id} href={`/category/${c.slug}`} className="block rounded-lg p-3 hover:bg-page">
+          <Link key={c.id} href={`/category/${c.slug}`} className="block rounded-xl p-3 hover:bg-page">
             {c.nameAr}
           </Link>
         ))}

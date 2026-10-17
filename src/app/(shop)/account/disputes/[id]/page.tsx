@@ -1,3 +1,4 @@
+import { FileInput } from '@/ui/client';
 import { notFound } from 'next/navigation';
 import { disputeMessageAction } from '@/app/_actions/account';
 import { disputeGraph, DECISION_LABELS } from '@/server/modules/postpurchase/disputes';
@@ -37,7 +38,7 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
         {g.evidence.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {g.evidence.map((e) => (
-              <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="rounded-lg border border-line px-2 py-1 text-xs text-brand-700 underline">دليل مرفق</a>
+              <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="rounded-xl border border-line px-2 py-1 text-xs text-brand-700 underline">دليل مرفق</a>
             ))}
           </div>
         )}
@@ -55,7 +56,7 @@ export default async function DisputeDetail(props: PageProps<'/account/disputes/
           <ActionForm action={disputeMessageAction} className="space-y-2" resetOnSuccess encType="multipart/form-data">
             <input type="hidden" name="disputeId" value={d.id} />
             <Textarea name="body" required rows={3} placeholder="اكتب ردك أو أي معلومات زيادة…" aria-label="الرسالة" />
-            <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
+            <FileInput name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" label="مرفق (اختياري): صورة أو PDF" />
             <SubmitButton size="sm">ابعت</SubmitButton>
           </ActionForm>
         )}

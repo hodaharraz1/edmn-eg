@@ -18,7 +18,7 @@ export function MetricsStrip() {
       <ul className="grid grid-cols-2 lg:grid-cols-4">
         {items.map((it, i) => (
           <li key={it.key} className={`flex items-center justify-center gap-3 px-3 py-5 sm:gap-4 sm:py-6 ${i % 2 === 1 ? 'border-s border-brand-100' : ''} ${i >= 2 ? 'border-t border-brand-100 lg:border-t-0' : ''} ${i === 2 ? 'lg:border-s' : ''}`}>
-            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white text-brand-600 shadow-sm ring-1 ring-brand-100 sm:size-14">
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-white text-brand-600 shadow-[var(--shadow-card)] ring-1 ring-brand-100 sm:size-14">
               <it.icon className="size-6 sm:size-7" aria-hidden />
             </span>
             <span className="leading-tight">

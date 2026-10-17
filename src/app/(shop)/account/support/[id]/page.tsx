@@ -1,3 +1,4 @@
+import { FileInput } from '@/ui/client';
 import { notFound } from 'next/navigation';
 import { replyTicketAction } from '@/app/_actions/account';
 import { rateTicketAction, reopenTicketAction } from '@/app/_actions/identity';
@@ -56,7 +57,7 @@ export default async function TicketPage(props: PageProps<'/account/support/[id]
         <ActionForm action={replyTicketAction} className="card space-y-2 p-4" resetOnSuccess encType="multipart/form-data">
           <input type="hidden" name="ticketId" value={t.id} />
           <Textarea name="body" required rows={3} placeholder="اكتب ردك…" aria-label="الرد" />
-          <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
+          <FileInput name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" label="مرفق (اختياري): صورة أو PDF" />
           <SubmitButton size="sm">ابعت</SubmitButton>
         </ActionForm>
       )}

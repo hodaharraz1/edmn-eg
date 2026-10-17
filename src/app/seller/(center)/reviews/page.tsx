@@ -32,7 +32,7 @@ export default async function SellerReviewsPage(props: PageProps<'/seller/review
               <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{title}</span><StatusChip status={r.status} /></div>
               <p className="flex items-center gap-2"><Stars value={r.rating} showValue={false} /> <span className="text-xs text-muted">{reviewerDisplayName(author)} · {formatDate(r.createdAt)}</span></p>
               {r.body && <p>{r.body}</p>}
-              {r.sellerResponse ? <p className="rounded-lg bg-page p-2 text-xs"><b>ردك:</b> {r.sellerResponse}</p> : (
+              {r.sellerResponse ? <p className="rounded-xl bg-page p-2 text-xs"><b>ردك:</b> {r.sellerResponse}</p> : (
                 <ActionForm action={respondReviewAction} className="space-y-2">
                   <input type="hidden" name="reviewId" value={r.id} /><input type="hidden" name="type" value={type} />
                   <Textarea name="response" rows={2} placeholder="اكتب ردك…" aria-label="الرد" required />

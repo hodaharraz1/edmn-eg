@@ -41,7 +41,7 @@ export default async function NewReturnPage(props: PageProps<'/account/returns/n
           {items.map((it) => {
             const max = it.quantity - it.returnedQuantity;
             return (
-              <label key={it.id} className={`flex items-center gap-3 rounded-lg border border-line p-3 text-sm ${max <= 0 ? 'opacity-50' : ''}`}>
+              <label key={it.id} className={`flex items-center gap-3 rounded-xl border border-line p-3 text-sm ${max <= 0 ? 'opacity-50' : ''}`}>
                 <input type="checkbox" name="item" value={it.id} disabled={max <= 0} className="size-4 accent-brand-700" />
                 <span className="flex-1">{it.titleSnapshot} <span className="text-xs text-muted">{it.variantLabel} · {formatEGP(it.unitPrice)}</span></span>
                 <select name={`qty_${it.id}`} disabled={max <= 0} className="h-8 rounded border border-line px-1" aria-label="الكمية">

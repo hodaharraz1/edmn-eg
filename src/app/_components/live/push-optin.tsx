@@ -124,7 +124,7 @@ export function PushOptIn({ vapidKey, variant = 'card' }: { vapidKey: string | n
           ) : state === 'enabled' ? (
             <div className="space-y-2">
               <p data-testid="push-status">الإشعارات مفعّلة على الجهاز ده.</p>
-              <button type="button" onClick={disable} disabled={busy} className="h-9 rounded-lg px-3 text-sm text-red-700 ring-1 ring-line hover:bg-page">
+              <button type="button" onClick={disable} disabled={busy} className="h-9 rounded-xl px-3 text-sm text-red-700 ring-1 ring-line hover:bg-page">
                 إيقاف على الجهاز ده
               </button>
             </div>

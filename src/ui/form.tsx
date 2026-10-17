@@ -1,3 +1,4 @@
+import type { LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
@@ -77,12 +78,19 @@ export function Switch({ label, className, ...props }: ComponentProps<'input'> &
   );
 }
 
-export function FormSection({ title, description, children, className }: { title: ReactNode; description?: ReactNode; children: ReactNode; className?: string }) {
+export function FormSection({ title, description, children, className, icon: Icon, tone = 'default', id }: { title: ReactNode; description?: ReactNode; children: ReactNode; className?: string; icon?: LucideIcon; tone?: 'default' | 'danger'; id?: string }) {
   return (
-    <section className={cn('card p-5 sm:p-6', className)}>
-      <header className="mb-4 border-b border-line pb-3">
-        <h2 className="text-base font-bold text-brand-950">{title}</h2>
-        {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+    <section id={id} className={cn('card p-5 sm:p-6', tone === 'danger' && 'border-red-200', className)}>
+      <header className="mb-4 flex items-start gap-3 border-b border-line pb-3">
+        {Icon && (
+          <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', tone === 'danger' ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-700')}>
+            <Icon className="size-5" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h2 className={cn('text-base font-bold', tone === 'danger' ? 'text-red-800' : 'text-brand-950')}>{title}</h2>
+          {description && <p className="mt-1 text-sm leading-6 text-muted">{description}</p>}
+        </div>
       </header>
       <div className="space-y-4">{children}</div>
     </section>

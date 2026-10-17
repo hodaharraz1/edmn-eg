@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, Handshake, Home, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
+import { ArrowLeft, BarChart3, Clock, Handshake, Home, Package, Search, ShieldCheck, ShoppingCart, Store, User } from 'lucide-react';
 import Link from '@/ui/link';
 import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
 import { mediaUrl } from '@/ui/commerce';
@@ -34,14 +34,16 @@ function ApprovedSellerBanner() {
   const b = SELLER_BANNER;
   return (
     <div>
-      <div className="relative hidden overflow-hidden rounded-2xl bg-brand-950 shadow-[var(--shadow-card)] md:block" style={{ aspectRatio: `${b.width} / ${b.height}` }}>
+      <div className="relative hidden overflow-hidden rounded-2xl bg-brand-950 shadow-[var(--shadow-card)] lg:block" style={{ aspectRatio: `${b.width} / ${b.height}` }}>
+        {/* The headline is painted in the artwork; screen readers get it as a real heading. */}
+        <h2 className="sr-only">ابدأ البيع على اضمن</h2>
         <img
           src={b.desktop[b.desktop.length - 1].src}
           srcSet={b.desktop.map((s) => `${s.src} ${s.w}w`).join(', ')}
           sizes="(min-width: 1320px) 1272px, 100vw"
           width={b.width}
           height={b.height}
-          alt={b.alt}
+          alt={`${b.alt}. ابدأ البيع على اضمن: وصل لعملاء أكتر وبيع بأمان وثقة`}
           loading="lazy"
           decoding="async"
           className="size-full object-cover"
@@ -53,9 +55,9 @@ function ApprovedSellerBanner() {
           style={{ left: `${b.cta.left}%`, top: `${b.cta.top}%`, width: `${b.cta.width}%`, height: `${b.cta.height}%` }}
         />
       </div>
-      <div className="overflow-hidden rounded-2xl bg-brand-950 text-white shadow-[var(--shadow-card)] md:hidden">
-        <img src={b.mobile[b.mobile.length - 1].src} srcSet={b.mobile.map((s) => `${s.src} ${s.w}w`).join(', ')} sizes="100vw" width={b.mobileWidth} height={b.mobileHeight} alt={b.alt} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
-        <SellerCopy />
+      <div className="overflow-hidden rounded-2xl bg-brand-950 text-white shadow-[var(--shadow-card)] md:grid md:grid-cols-2 md:items-center lg:hidden">
+        <img src={b.mobile[b.mobile.length - 1].src} srcSet={b.mobile.map((s) => `${s.src} ${s.w}w`).join(', ')} sizes="(min-width: 768px) 50vw, 100vw" width={b.mobileWidth} height={b.mobileHeight} alt={b.alt} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover md:h-full" />
+        <SellerCopy points />
       </div>
     </div>
   );
@@ -84,13 +86,30 @@ function InterimSellerBanner() {
   );
 }
 
-function SellerCopy() {
+/** The three promises painted on the approved artwork (all existing seller features), repeated as real text. */
+const SELLER_POINTS = [
+  { icon: ShieldCheck, title: 'دفع آمن ومحمي', text: 'حتى استلام العميل للمنتج' },
+  { icon: Package, title: 'إدارة المنتجات', text: 'بسهولة ومرونة' },
+  { icon: BarChart3, title: 'تحليلات مبيعات', text: 'لمتابعة نمو متجرك' },
+];
+
+function SellerCopy({ points }: { points?: boolean }) {
   return (
     <div className="space-y-3 p-5 sm:p-8">
       <h2 className="text-2xl font-bold leading-tight sm:text-[1.75rem]">
         ابدأ البيع على <span className="text-sky-300">اضمن</span>
       </h2>
       <p className="text-base leading-7 text-white/85">وصل لعملاء أكتر وبيع بأمان وثقة</p>
+      {points && (
+        <ul className="grid gap-2 py-1">
+          {SELLER_POINTS.map((pt) => (
+            <li key={pt.title} className="flex items-center gap-3 text-sm">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15"><pt.icon className="size-4 text-sky-300" aria-hidden /></span>
+              <span><span className="font-bold">{pt.title}</span> <span className="text-white/70">{pt.text}</span></span>
+            </li>
+          ))}
+        </ul>
+      )}
       <Link href={SELLER_ONBOARDING} className="edmn-cta flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 text-base font-bold text-white shadow-[0_12px_28px_-12px_rgb(37_99_235/0.9)] hover:bg-brand-500 sm:w-fit">
         <Store className="size-5" aria-hidden /> افتح متجرك الآن
       </Link>
@@ -152,7 +171,7 @@ function MiniPhone({ className, products }: { className?: string; products: { im
         </div>
         <div className="grid grid-cols-2 gap-1 p-1.5">
           {products.map((p, i) => (
-            <div key={i} className="overflow-hidden rounded-md bg-white ring-1 ring-slate-100">
+            <div key={i} className="overflow-hidden rounded-lg bg-white ring-1 ring-slate-100">
               <SafeImg src={mediaUrl(p.imageKey, 'thumb')} className="aspect-square w-full p-0.5" />
               <span className="m-0.5 block h-1 w-3/4 rounded bg-slate-200" />
             </div>

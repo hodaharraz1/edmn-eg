@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ParticipantConversation } from '@/app/_components/conversation';
+import { ConversationList, MessagesWorkspace, ParticipantConversation } from '@/app/_components/conversation';
 import { isDomainError } from '@/server/core/errors';
-import { participantThread } from '@/server/modules/messaging/service';
+import { listForSeller, participantThread } from '@/server/modules/messaging/service';
 import { requireSellerActor } from '@/server/web/session';
 
 export const metadata: Metadata = { title: 'الرسائل' };
@@ -17,8 +17,9 @@ export default async function SellerConversationPage(props: PageProps<'/seller/m
     if (isDomainError(e)) notFound();
     throw e;
   }
+  const items = actor.sellerPermissions?.has('orders.communicate') ? await listForSeller(actor, { filter: 'all', q: '' }) : [];
   return (
-    <div className="mx-auto max-w-3xl">
+    <MessagesWorkspace hasActive list={<ConversationList compact items={items} basePath="/seller/messages" activeId={t.conv.id} emptyText="" />}>
       <ParticipantConversation
         conversationId={t.conv.id}
         context={t.conv.context}
@@ -26,10 +27,10 @@ export default async function SellerConversationPage(props: PageProps<'/seller/m
         side={t.side}
         surface="seller"
         messages={t.messages}
-      cursor={t.cursor}
+        cursor={t.cursor}
         write={t.write}
         backHref="/seller/messages"
       />
-    </div>
+    </MessagesWorkspace>
   );
 }

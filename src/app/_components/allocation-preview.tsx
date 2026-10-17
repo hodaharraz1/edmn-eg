@@ -8,7 +8,7 @@ function Plan() {
   const plan = s.data?.plan as { source: string; amount: string }[] | undefined;
   if (!plan?.length) return null;
   return (
-    <ul className="w-full space-y-1 rounded-lg bg-page p-3 text-sm" data-testid="allocation-preview">
+    <ul className="w-full space-y-1 rounded-xl bg-page p-3 text-sm" data-testid="allocation-preview">
       {plan.map((p, i) => <li key={i} className="flex justify-between gap-2"><span>{p.source}</span><b className="tabular-nums">{p.amount}</b></li>)}
     </ul>
   );

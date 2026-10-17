@@ -140,7 +140,7 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
           {p.condition === 'USED' && <Alert tone="warning">المنتجات المستعملة تتطلب صوراً حقيقية للقطعة نفسها (لا تُقبل صور الكتالوج وحدها). حدد خيار «صور حقيقية» عند الرفع.</Alert>}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {g.images.map(({ img, key }) => (
-              <div key={img.id} className="relative overflow-hidden rounded-lg border border-line bg-white">
+              <div key={img.id} className="relative overflow-hidden rounded-xl border border-line bg-white">
                 <img src={mediaUrl(key, 'thumb')!} alt="" className="aspect-square w-full object-contain" />
                 {img.isActualItem && <span className="absolute top-1 start-1 rounded bg-amber-400 px-1 text-[10px] font-bold text-amber-950">حقيقية</span>}
                 {!locked && (
@@ -281,7 +281,7 @@ function Control({ id, op, label: l }: { id: string; op: string; label: string }
     <form action={productControlAction}>
       <input type="hidden" name="productId" value={id} />
       <input type="hidden" name="op" value={op} />
-      <button className="rounded-lg border border-line bg-white px-3 py-1.5 text-sm hover:bg-page">{l}</button>
+      <button className="rounded-xl border border-line bg-white px-3 py-1.5 text-sm hover:bg-page">{l}</button>
     </form>
   );
 }

@@ -37,7 +37,7 @@ export function DealShare({ url, dealRef }: { url: string; dealRef: string }) {
         <p className="mt-1 text-sm">رقم الصفقة: <span className="font-bold ltr" data-testid="deal-ref">{dealRef}</span></p>
       </div>
       <p className="text-sm text-muted">ابعت الرابط ده للبائع، وهو هيسجّل بياناته ويراجع الصفقة بنفسه. الرابط بيظهر هنا مرة واحدة بس، فاحتفظ بيه، أو اعمل رابط جديد بعدين.</p>
-      <input readOnly value={url} aria-label="رابط الدعوة" data-testid="invite-link" className="w-full rounded-lg border border-line bg-page px-3 py-2 text-xs ltr" onFocus={(e) => e.currentTarget.select()} />
+      <input readOnly value={url} aria-label="رابط الدعوة" data-testid="invite-link" className="w-full rounded-xl border border-line bg-page px-3 py-2 text-xs ltr" onFocus={(e) => e.currentTarget.select()} />
       <div className="flex flex-col gap-2 sm:flex-row">
         <button type="button" onClick={copy} className={`${btn} border border-line bg-white hover:bg-page`}>
           {copied ? <Check className="size-4 text-emerald-600" aria-hidden /> : <Copy className="size-4" aria-hidden />} {copied ? 'اتنسخ' : 'انسخ رابط الدعوة'}

@@ -72,7 +72,7 @@ export function DeliveryLocationPicker({ governorates, current, className, tone 
       <button
         type="button"
         popoverTarget={popId}
-        className={cn('flex min-w-0 shrink items-center gap-1 rounded-lg px-1.5 py-1 text-start text-xs', tone === 'dark' ? 'text-white hover:bg-white/10' : 'hover:bg-page', className)}
+        className={cn('flex min-w-0 shrink items-center gap-1 rounded-xl px-1.5 py-1 text-start text-xs', tone === 'dark' ? 'text-white hover:bg-white/10' : 'hover:bg-page', className)}
         data-testid="delivery-location"
         aria-label={`التوصيل إلى ${current.nameAr} – غيّر محافظة التوصيل`}
       >
@@ -106,7 +106,7 @@ export function DeliveryLocationPicker({ governorates, current, className, tone 
             name="governorateId"
             defaultValue={String(current.id)}
             aria-disabled={pending}
-            className="h-11 w-full rounded-lg border border-line bg-white px-2 text-sm"
+            className="h-11 w-full rounded-xl border border-line bg-white px-2 text-sm"
             data-testid="delivery-location-select"
           >
             {governorates.map((g) => (
@@ -124,12 +124,12 @@ export function DeliveryLocationPicker({ governorates, current, className, tone 
             {/* Default (submit) button without an explicit type attribute, like the header search button. */}
             <button
               disabled={pending}
-              className="h-11 flex-1 rounded-lg bg-brand-700 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
+              className="h-11 flex-1 rounded-xl bg-brand-700 text-sm font-semibold text-white hover:bg-brand-800 disabled:opacity-60"
               data-testid="delivery-location-apply"
             >
               {pending ? 'جارٍ الحفظ…' : 'احفظ'}
             </button>
-            <button type="button" popoverTarget={popId} popoverTargetAction="hide" className="h-11 rounded-lg border border-line px-4 text-sm">
+            <button type="button" popoverTarget={popId} popoverTargetAction="hide" className="h-11 rounded-xl border border-line px-4 text-sm">
               إلغاء
             </button>
           </div>

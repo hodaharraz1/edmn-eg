@@ -424,11 +424,11 @@ function ToastCard({ t, surface, onClose }: { t: Toast & { count?: number }; sur
               )}
             </p>
           )}
-          <Link href={t.href} onClick={onClose} className="mt-2 inline-flex h-9 items-center rounded-lg bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800" data-testid="toast-open">
+          <Link href={t.href} onClick={onClose} className="mt-2 inline-flex h-9 items-center rounded-xl bg-brand-700 px-3 text-sm font-semibold text-white hover:bg-brand-800" data-testid="toast-open">
             عرض الرسالة
           </Link>
         </div>
-        <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-page" aria-label="إغلاق التنبيه">
+        <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-xl text-muted hover:bg-page" aria-label="إغلاق التنبيه">
           <X className="size-4" />
         </button>
       </div>

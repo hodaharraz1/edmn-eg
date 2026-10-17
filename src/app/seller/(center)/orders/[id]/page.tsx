@@ -88,7 +88,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           ) : (
             <p className="mt-1 text-[11px] text-muted">طلب بنظام الرسوم السابق — القيم كما سُجلت وقت الشراء.</p>
           )}
-          {order.customerNote && <p className="mt-3 rounded-lg bg-page p-3 text-sm">ملاحظة العميل: {order.customerNote}</p>}
+          {order.customerNote && <p className="mt-3 rounded-xl bg-page p-3 text-sm">ملاحظة العميل: {order.customerNote}</p>}
         </section>
         <section className="card space-y-1 p-5 text-sm">
           <h2 className="mb-2 font-bold">الشحن إلى</h2>
@@ -166,7 +166,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
       {thread && (
         <section className="card space-y-3 p-5 text-sm" data-testid="seller-dispute-thread">
           <h2 className="font-bold">النزاع #{thread.dispute.number} <StatusChip status={thread.dispute.status} /></h2>
-          <p className="whitespace-pre-line rounded-lg bg-page p-3">{thread.dispute.description}</p>
+          <p className="whitespace-pre-line rounded-xl bg-page p-3">{thread.dispute.description}</p>
           {thread.evidence.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {thread.evidence.map((e, i) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" rel="noopener noreferrer" className="text-brand-700 underline">دليل {i + 1}</a>)}
@@ -174,7 +174,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           )}
           <ul className="space-y-2">
             {thread.messages.map(({ m, author }) => (
-              <li key={m.id} className={`rounded-lg border p-2 ${m.authorRole === 'ADMIN' ? 'border-brand-200 bg-brand-50' : 'border-line'}`}>
+              <li key={m.id} className={`rounded-xl border p-2 ${m.authorRole === 'ADMIN' ? 'border-brand-200 bg-brand-50' : 'border-line'}`}>
                 <p className="text-xs text-muted">{m.authorRole === 'ADMIN' ? 'فريق اضمن' : author} · {formatDate(m.createdAt, true)}</p>
                 <p className="whitespace-pre-line">{m.body}</p>
               </li>
@@ -189,7 +189,7 @@ export default async function SellerOrderDetail(props: PageProps<'/seller/orders
           <h2 className="font-bold">ردك على النزاع</h2>
           <input type="hidden" name="disputeId" value={dispute.id} />
           <Textarea name="body" required rows={3} aria-label="الرد" />
-          <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" className="text-xs" aria-label="مرفق" />
+          <FileInput name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf" label="مرفق (اختياري): صورة أو PDF" />
           <SubmitButton size="sm">إرسال لفريق اضمن</SubmitButton>
         </ActionForm>
       )}

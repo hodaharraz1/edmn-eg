@@ -209,7 +209,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isBuyer && deal.status === 'OFFER_PENDING_BUYER' && open && openTerms && (
         <section className="card space-y-4 border-brand-200 p-5" data-testid="offer-review">
           <h2 className="text-lg font-bold">عرض البائع (نسخة {open.version})</h2>
-          {open.message && <p className="rounded-lg bg-page p-2 text-sm">{open.message}</p>}
+          {open.message && <p className="rounded-xl bg-page p-2 text-sm">{open.message}</p>}
           <TermsTable t={openTerms} />
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={buyerOfferResponseAction} className="sm:flex-1">
@@ -246,7 +246,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {isSeller && deal.status === 'CHANGE_REQUESTED' && open && openTerms && (
         <section className="card space-y-4 border-amber-200 p-5" data-testid="change-request">
           <h2 className="text-lg font-bold">المشتري طلب تعديل (نسخة {open.version})</h2>
-          {open.message && <p className="rounded-lg bg-amber-50 p-2 text-sm">{open.message}</p>}
+          {open.message && <p className="rounded-xl bg-amber-50 p-2 text-sm">{open.message}</p>}
           <div><p className="text-sm font-semibold">سياسة الإرجاع المطلوبة</p><ReturnPolicyView policy={openTerms.returnPolicy} mandatoryNotice={openTerms.mandatoryRightsNotice} /></div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={sellerChangeResponseAction} className="sm:flex-1">
@@ -351,18 +351,18 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
                   <p className="text-[11px] text-amber-900">في النسخة الحقيقية الرمز بيوصلك في رسالة SMS بس.</p>
                 </div>
               ) : (
-                <p className="rounded-lg bg-page p-2 text-sm">بعتنالك الرمز في رسالة SMS على رقم موبايلك.</p>
+                <p className="rounded-xl bg-page p-2 text-sm">بعتنالك الرمز في رسالة SMS على رقم موبايلك.</p>
               )}
               <p className="text-xs text-muted">صالح لحد {formatDate(otpView.expiresAt ?? null, true)} · المحاولات الباقية: {otpView.attemptsLeft}</p>
             </>
           ) : (
-            <p className="rounded-lg bg-amber-50 p-2 text-sm">مفيش رمز صالح دلوقتي (صلاحيته خلصت أو المحاولات خلصت). اطلب رمز جديد.</p>
+            <p className="rounded-xl bg-amber-50 p-2 text-sm">مفيش رمز صالح دلوقتي (صلاحيته خلصت أو المحاولات خلصت). اطلب رمز جديد.</p>
           )}
           <ActionForm action={regenerateDeliveryOtpAction}>
             <input type="hidden" name="dealId" value={deal.id} />
             <SubmitButton variant="outline" size="sm">ابعت رمز جديد</SubmitButton>
           </ActionForm>
-          <details className="rounded-lg border border-line p-3 text-sm">
+          <details className="rounded-xl border border-line p-3 text-sm">
             <summary className="cursor-pointer font-semibold">المنتج موصلش / مشكلة في التسليم</summary>
             <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
@@ -401,7 +401,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <SubmitButton variant="ghost" size="sm">ابعت رمز جديد للمشتري</SubmitButton>
             </ActionForm>
           </div>
-          <details className="rounded-lg border border-line p-3 text-sm">
+          <details className="rounded-xl border border-line p-3 text-sm">
             <summary className="cursor-pointer font-semibold">مش قادر تتحقق بالرمز؟</summary>
             <ActionForm action={reportDeliveryExceptionAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
@@ -428,7 +428,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
             </ActionForm>
             <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت بس فيه مشكلة</LinkButton>
           </div>
-          <details className="rounded-lg border border-line bg-white p-3 text-sm">
+          <details className="rounded-xl border border-line bg-white p-3 text-sm">
             <summary className="cursor-pointer font-semibold">لم أستلم المنتج فعليًا</summary>
             <ActionForm action={reportNotReceivedAction} className="mt-2 space-y-2">
               <input type="hidden" name="dealId" value={deal.id} />
@@ -472,7 +472,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
             {versions.map((v) => {
               const t = v.terms as Terms;
               return (
-                <li key={v.id} className="rounded-lg border border-line p-2">
+                <li key={v.id} className="rounded-xl border border-line p-2">
                   <span className="font-semibold">نسخة {v.version}</span> · {v.proposedBy === 'SELLER' ? 'عرض البائع' : 'طلب تعديل من المشتري'} · {VERSION_STATUS[v.status] ?? v.status} · {formatDate(v.createdAt, true)}
                   <div className="text-xs text-muted">الإجمالي {formatEGP(t.price.buyerPays)} · <ReturnPolicyView policy={t.returnPolicy} compact /></div>
                   {v.message && <p className="text-xs">{v.message}</p>}

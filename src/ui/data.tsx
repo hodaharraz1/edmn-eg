@@ -137,11 +137,12 @@ export function Tabs({ tabs, active, className }: { tabs: { key: string; label: 
 export function StatCard({ label, value, hint, icon, tone = 'brand', href }: { label: ReactNode; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; href?: string }) {
   const tones = { brand: 'bg-brand-50 text-brand-700', success: 'bg-emerald-50 text-emerald-700', warning: 'bg-amber-50 text-amber-700', danger: 'bg-red-50 text-red-700', neutral: 'bg-slate-100 text-slate-700' };
   const body = (
-    <div className="card flex h-full items-start gap-3 p-4 sm:p-5">
-      {icon && <span className={cn('grid size-11 shrink-0 place-items-center rounded-xl', tones[tone])}>{icon}</span>}
+    <div className="card flex h-full flex-col items-start gap-2.5 p-4 min-[480px]:flex-row min-[480px]:gap-3 sm:p-5">
+      {icon && <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl sm:size-11', tones[tone])}>{icon}</span>}
       <div className="min-w-0">
         <p className="text-xs font-medium text-muted">{label}</p>
-        <p className="mt-1 truncate text-xl font-bold text-brand-950">{value}</p>
+        {/* Never truncate amounts: on narrow phones the value wraps instead of losing digits. */}
+        <p className="mt-1 text-lg font-bold tabular-nums text-brand-950 [overflow-wrap:anywhere] sm:text-xl">{value}</p>
         {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
       </div>
     </div>

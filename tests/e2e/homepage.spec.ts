@@ -29,7 +29,7 @@ test('desktop homepage: header, hero, sections in the approved order, search rou
   const text = await page.locator('main').innerText();
   expect(text).toContain('ج.م');
   expect(text).not.toMatch(/ر\.س|SAR|App Store|Google Play/);
-  const seller = page.locator('img[src="/brand/home/egyptian-seller.webp"]');
+  const seller = page.locator('img[src="/brand/home/seller-banner-2000.webp"]'); // the owner-approved artwork
   await seller.scrollIntoViewIfNeeded();
   await expect.poll(() => seller.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
 
@@ -62,3 +62,26 @@ test('mobile homepage: compact header search, no horizontal scroll, reduced hero
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.context().close();
 });
+
+for (const width of [1440, 390]) {
+  test(`approved seller banner at ${width}px: seller onboarding and protected deal stay two separate CTAs`, async ({ browser }) => {
+    const page = await (await browser.newContext({ locale: 'ar-EG', viewport: { width, height: 900 } })).newPage();
+    await page.goto('/');
+    const section = page.locator('section[aria-label="ابدأ مع اضمن"]');
+    await section.scrollIntoViewIfNeeded();
+    // The approved artwork itself (desktop: full composition; mobile: merchant crop + real text), never a stand-in.
+    const img = section.locator('img').filter({ visible: true }).first();
+    await expect(img).toHaveAttribute('src', /\/brand\/home\/seller-banner-(2000|mobile-900)\.webp$/);
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
+    const seller = section.getByRole('link', { name: 'افتح متجرك الآن' }).filter({ visible: true });
+    await expect(seller).toHaveCount(1);
+    await expect(seller).toHaveAttribute('href', '/seller/register');
+    const box = (await seller.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    const deal = section.getByRole('link', { name: 'أنشئ صفقة ضمان' }).filter({ visible: true });
+    await expect(deal).toHaveAttribute('href', '/account/deals/new');
+    await expect(section.getByText('بتشتري أو بتبيع مع شخص خارج اضمن؟')).toBeVisible();
+    await page.context().close();
+  });
+}

@@ -97,7 +97,7 @@ export function SectionHeading({ id, title, href, hrefLabel = 'عرض الكل' 
         {title}
       </h2>
       {href && (
-        <Link href={href} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-600 hover:bg-brand-50 hover:text-brand-700">
+        <Link href={href} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-semibold text-brand-600 hover:bg-brand-50 hover:text-brand-700">
           {hrefLabel} <ArrowLeft className="size-4 ltr:rotate-180" aria-hidden />
         </Link>
       )}

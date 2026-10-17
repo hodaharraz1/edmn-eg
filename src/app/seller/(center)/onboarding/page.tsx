@@ -138,7 +138,7 @@ export default async function OnboardingPage(props: PageProps<'/seller/onboardin
           </>
         )}
         <div className="flex gap-2">
-          {step > 1 && <Link href={`/seller/onboarding?step=${step === 3 && s.type !== 'BUSINESS' ? 1 : step - 1}`} className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm">السابق</Link>}
+          {step > 1 && <Link href={`/seller/onboarding?step=${step === 3 && s.type !== 'BUSINESS' ? 1 : step - 1}`} className="inline-flex h-10 items-center rounded-xl border border-line px-4 text-sm">السابق</Link>}
           <SubmitButton>{step === 6 ? 'إرسال الطلب للمراجعة' : 'حفظ والتالي'}</SubmitButton>
         </div>
       </ActionForm>

@@ -11,7 +11,7 @@ export function ErrorView({ reset, digest }: { reset: () => void; digest?: strin
         <h1 className="text-lg font-bold">حصلت مشكلة غير متوقعة</h1>
         <p className="text-sm text-muted">معلش، جرّب تاني. لو المشكلة فضلت موجودة، تواصل معانا.</p>
         {digest && <p className="text-xs text-muted ltr">ref: {digest}</p>}
-        <button onClick={reset} className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white">
+        <button onClick={reset} className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white">
           <RefreshCw className="size-4" /> جرّب تاني
         </button>
       </div>

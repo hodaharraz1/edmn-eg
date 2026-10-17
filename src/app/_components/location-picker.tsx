@@ -57,7 +57,7 @@ export function LocationPicker({ prefix = 'loc_', governorates, defaults, title 
     <fieldset className="space-y-3 rounded-xl border border-line p-4" data-testid="location-picker">
       <legend className="px-1 text-sm font-bold">{title}</legend>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={useMyLocation} disabled={state.kind === 'asking'} className="inline-flex h-10 items-center gap-2 rounded-lg border border-brand-300 bg-brand-50 px-3 text-sm font-semibold text-brand-800 hover:bg-brand-100 disabled:opacity-60">
+        <button type="button" onClick={useMyLocation} disabled={state.kind === 'asking'} className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-300 bg-brand-50 px-3 text-sm font-semibold text-brand-800 hover:bg-brand-100 disabled:opacity-60">
           <Crosshair className="size-4" aria-hidden /> {state.kind === 'asking' ? 'بنحدد موقعك…' : 'استخدم موقعي الحالي'}
         </button>
         <span className="inline-flex items-center gap-1 text-xs text-muted"><PenLine className="size-3.5" aria-hidden /> أو اكتب العنوان بنفسك تحت</span>
@@ -65,18 +65,18 @@ export function LocationPicker({ prefix = 'loc_', governorates, defaults, title 
       <p className="text-xs text-muted">بنطلب الموقع مرة واحدة بس لما تدوس على الزرار وبعد موافقتك، ومش بنتتبعك. الموقع بيظهر بس للطرف التاني في الصفقة في المرحلة المناسبة، ولفريق التشغيل المختص.</p>
       <div role="status" aria-live="polite">
         {gps && (
-          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-900" data-testid="location-ok">
+          <p className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 p-2 text-xs text-emerald-900" data-testid="location-ok">
             <MapPin className="size-4" aria-hidden /> اتحدد موقعك (الدقة حوالي {gps.accuracy} متر). كمّل كتابة العنوان — الموقع مش بديل عن العنوان.
             <button type="button" onClick={() => setState({ kind: 'idle' })} className="inline-flex items-center gap-1 underline"><X className="size-3" aria-hidden /> شيل الموقع</button>
           </p>
         )}
-        {state.kind === 'error' && <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-900" data-testid="location-error">{state.message}</p>}
+        {state.kind === 'error' && <p className="rounded-xl bg-amber-50 p-2 text-xs text-amber-900" data-testid="location-error">{state.message}</p>}
       </div>
       <input type="hidden" name={`${prefix}lat`} value={gps ? String(gps.lat) : ''} />
       <input type="hidden" name={`${prefix}lng`} value={gps ? String(gps.lng) : ''} />
       <input type="hidden" name={`${prefix}accuracy`} value={gps ? String(gps.accuracy) : ''} />
       {mapProvider ? (
-        <div data-map-provider={mapProvider} className="h-48 rounded-lg border border-dashed border-line text-center text-xs text-muted">تحديد الدبوس على الخريطة</div>
+        <div data-map-provider={mapProvider} className="h-48 rounded-xl border border-dashed border-line text-center text-xs text-muted">تحديد الدبوس على الخريطة</div>
       ) : (
         <p className="text-[11px] text-muted">تحديد الدبوس على الخريطة هيبقى متاح لما نفعّل مزوّد خرائط معتمد.</p>
       )}

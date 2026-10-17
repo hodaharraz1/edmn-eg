@@ -15,7 +15,7 @@ export function ReturnPolicyFields({ defaults, mandatoryNotice, title = 'سيا�
       <legend className="px-1 text-sm font-bold">{title}</legend>
       <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={title}>
         {(['VOLUNTARY', 'NONE'] as const).map((t) => (
-          <label key={t} className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm ${type === t ? 'border-brand-500 bg-brand-50' : 'border-line'}`}>
+          <label key={t} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm ${type === t ? 'border-brand-500 bg-brand-50' : 'border-line'}`}>
             <input type="radio" name="rp_type" value={t} checked={type === t} onChange={() => setType(t)} className="mt-1" />
             <span className="font-semibold">{t === 'VOLUNTARY' ? 'يسمح بالإرجاع الاختياري' : 'لا يوفر إرجاعًا اختياريًا'}</span>
           </label>
@@ -41,7 +41,7 @@ export function ReturnPolicyFields({ defaults, mandatoryNotice, title = 'سيا�
           </Field>
         </div>
       ) : (
-        <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-900">{NO_VOLUNTARY_TEXT} {mandatoryNotice}</p>
+        <p className="rounded-xl bg-amber-50 p-2 text-sm text-amber-900">{NO_VOLUNTARY_TEXT} {mandatoryNotice}</p>
       )}
       <Field label="ملاحظات الإرجاع (اختياري)" htmlFor="rp_notes"><Textarea id="rp_notes" name="rp_notes" rows={2} defaultValue={defaults?.notes ?? ''} maxLength={1000} /></Field>
       <p className="text-xs text-muted">في كل الأحوال يحق للمشتري الإبلاغ عن منتج معيب أو مختلف عن الوصف أو تالف أو خاطئ أو لم يصل، ولا تُلغي سياسة الإرجاع ذلك.</p>

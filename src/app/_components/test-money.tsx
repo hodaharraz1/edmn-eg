@@ -19,5 +19,5 @@ export function TestMoneyNotice({ kind = 'payment', className }: { kind?: 'payme
 }
 
 export function TestBadge({ className }: { className?: string }) {
-  return <span className={cn('inline-flex items-center gap-1 rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-800', className)} dir="ltr">TEST</span>;
+  return <span className={cn('inline-flex items-center gap-1 rounded-lg bg-red-100 px-1.5 py-0.5 text-[11px] font-bold text-red-800', className)} dir="ltr">TEST</span>;
 }

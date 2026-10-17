@@ -8,7 +8,7 @@ function SecretView() {
   const secret = s.data?.secret as string | undefined;
   if (!secret) return null;
   return (
-    <p className="rounded-lg bg-page p-3 text-xs">
+    <p className="rounded-xl bg-page p-3 text-xs">
       المفتاح: <code className="ltr select-all font-bold">{secret}</code> — أضفه في Google Authenticator أو Microsoft Authenticator (إدخال يدوي، نوع: على أساس الوقت).
     </p>
   );

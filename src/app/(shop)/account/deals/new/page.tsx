@@ -63,7 +63,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
           )}
           {step === 3 && (
             <>
-              <p className="rounded-lg bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك بس. البائع هو اللي بيحدد طريقة ومدة التوصيل ومصاريف الشحن في عرضه، وانت توافق أو تطلب تعديل قبل أي دفع.</p>
+              <p className="rounded-xl bg-brand-50 p-2 text-xs text-brand-900">دي توقعاتك بس. البائع هو اللي بيحدد طريقة ومدة التوصيل ومصاريف الشحن في عرضه، وانت توافق أو تطلب تعديل قبل أي دفع.</p>
               <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم إيد بإيد في…" required /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="آخر موعد تحب تستلم قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
@@ -79,7 +79,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
               <LocationPicker governorates={govs} title="عنوان الاستلام (عنوانك)" defaults={myLoc ?? undefined} />
               <div className="space-y-3 rounded-xl border border-dashed border-line p-4">
                 <p className="text-sm font-semibold">بيانات البائع (اختياري)</p>
-                <p className="rounded-lg bg-brand-50 p-2 text-sm text-brand-900" data-testid="seller-optional-note">مش لازم تكون عارف بيانات البائع كاملة. بعد ما الطلب يتعمل هتاخد رابط آمن تبعته للبائع، وهو هيسجّل بياناته ويراجع الصفقة بنفسه.</p>
+                <p className="rounded-xl bg-brand-50 p-2 text-sm text-brand-900" data-testid="seller-optional-note">مش لازم تكون عارف بيانات البائع كاملة. بعد ما الطلب يتعمل هتاخد رابط آمن تبعته للبائع، وهو هيسجّل بياناته ويراجع الصفقة بنفسه.</p>
                 <Field label="اسم البائع (للتذكير فقط)" htmlFor="sellerName"><Input id="sellerName" name="sellerName" defaultValue={deal?.sellerName ?? ''} /></Field>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="موبايل البائع" htmlFor="sellerPhone"><Input id="sellerPhone" name="sellerPhone" type="tel" dir="ltr" defaultValue={deal?.sellerPhone?.replace('+20', '0') ?? ''} /></Field>

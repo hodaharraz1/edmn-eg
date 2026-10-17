@@ -86,7 +86,7 @@ function Phone({ featured, categories }: { featured: DeviceProduct | null; categ
       <div className="relative h-full overflow-hidden rounded-[2.35rem] bg-[#f4f7fc]">
         <span className="absolute left-1/2 top-2 z-10 h-[1.35rem] w-[5.5rem] -translate-x-1/2 rounded-full bg-black" />
         {/* app header */}
-        <div className="bg-white px-3 pb-2.5 pt-9 shadow-sm">
+        <div className="bg-white px-3 pb-2.5 pt-9 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-between">
             <img src={LOGO_SRC} width={LOGO_WIDTH} height={LOGO_HEIGHT} alt="" draggable={false} className="h-7 w-auto object-contain" />
             <Bell className="size-4 text-brand-900" />
@@ -101,7 +101,7 @@ function Phone({ featured, categories }: { featured: DeviceProduct | null; categ
             const Icon = ((c.icon && (Icons as unknown as Record<string, LucideIcon>)[c.icon]) || LayoutGrid) as LucideIcon;
             return (
               <div key={c.nameAr} className="flex flex-col items-center gap-1">
-                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-slate-100">
+                <span className="grid size-9 place-items-center rounded-xl bg-white text-brand-600 shadow-[var(--shadow-card)] ring-1 ring-slate-100">
                   <Icon className="size-4" />
                 </span>
                 <span className="w-full truncate text-center text-[8px] font-medium text-slate-600">{c.nameAr}</span>
@@ -128,7 +128,7 @@ function Phone({ featured, categories }: { featured: DeviceProduct | null; categ
             )}
             <div className="flex items-center justify-between gap-2 pt-0.5">
               {featured && <span className="text-[13px] font-extrabold text-ink">{formatEGP(featured.minPrice)}</span>}
-              <span className="inline-flex h-7 items-center gap-1 rounded-lg bg-brand-600 px-2.5 text-[9px] font-bold text-white">
+              <span className="inline-flex h-7 items-center gap-1 rounded-xl bg-brand-600 px-2.5 text-[9px] font-bold text-white">
                 <ShoppingCart className="size-3" /> أضف للسلة
               </span>
             </div>

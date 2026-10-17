@@ -315,7 +315,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
               </div>
               <p className="mt-1 text-xs text-muted">{reviewerDisplayName(author)} · {formatDate(r.createdAt)} · <Badge tone="success">شراء مؤكد</Badge></p>
               {r.body && <p className="mt-2 text-sm">{r.body}</p>}
-              {r.sellerResponse && <p className="mt-2 rounded-lg bg-page p-3 text-xs"><span className="font-semibold">رد البائع: </span>{r.sellerResponse}</p>}
+              {r.sellerResponse && <p className="mt-2 rounded-xl bg-page p-3 text-xs"><span className="font-semibold">رد البائع: </span>{r.sellerResponse}</p>}
             </article>
           ))}
           {sellerReviews.length > 0 && (

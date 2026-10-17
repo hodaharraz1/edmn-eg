@@ -2,6 +2,7 @@
 
 import Link from '@/ui/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { Bell, CreditCard, Heart, IdCard, Landmark, LayoutDashboard, LifeBuoy, Lock, type LucideIcon, MapPin, MessageCircle, Package, Scale, ShieldCheck, Star, Undo2, User, Wallet } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { CountBadge, messagesLabel, useCount } from './live/live-provider';
@@ -51,8 +52,16 @@ const GROUPS: { title: string; items: Item[] }[] = [
 export function AccountNav({ unreadMessages = 0 }: { unreadMessages?: number }) {
   const path = usePathname();
   const unread = useCount('messages', unreadMessages);
+  const navRef = useRef<HTMLElement>(null);
+  // Phones: the menu is one horizontal row, so bring the current page's pill into view (no page scroll).
+  useEffect(() => {
+    const nav = navRef.current;
+    const a = nav?.querySelector<HTMLElement>('a[aria-current="page"]');
+    if (!nav || !a || nav.scrollWidth <= nav.clientWidth) return;
+    nav.scrollLeft += a.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - a.offsetWidth) / 2;
+  }, [path]);
   return (
-    <nav aria-label="قائمة الحساب" className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:block lg:space-y-4 lg:overflow-visible lg:rounded-2xl lg:bg-white lg:p-3 lg:shadow-[var(--shadow-card)] lg:ring-1 lg:ring-line">
+    <nav ref={navRef} aria-label="قائمة الحساب" className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:block lg:space-y-4 lg:overflow-visible lg:rounded-2xl lg:bg-white lg:p-3 lg:shadow-[var(--shadow-card)] lg:ring-1 lg:ring-line">
       {GROUPS.map((g) => (
         <div key={g.title} className="contents lg:block lg:space-y-0.5">
           <p className="hidden px-3 pb-1 text-[11px] font-bold tracking-wide text-muted lg:block">{g.title}</p>

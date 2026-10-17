@@ -84,7 +84,7 @@ export function CategoryMenu({ categories, label, triggerClassName, quickLinks }
         aria-controls={panelId}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
-        className={triggerClassName ?? 'flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold hover:bg-white/10'}
+        className={triggerClassName ?? 'flex cursor-pointer list-none items-center gap-1.5 rounded-lg px-3 py-1.5 font-semibold hover:bg-white/10'}
         data-testid="category-menu-trigger"
       >
         <LayoutGrid className="size-4" aria-hidden /> {label} <ChevronDown className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
