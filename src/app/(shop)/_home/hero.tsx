@@ -1,29 +1,29 @@
 import { ArrowLeft, BadgeCheck, CircleCheck, CreditCard, Headset, ShieldCheck, ShoppingBag, Store } from 'lucide-react';
 import Link from '@/ui/link';
-import { HeroDevice, type DeviceProduct } from './hero-device';
+import { HeroVisual } from './hero-visual';
 
 /**
- * Homepage hero (approved reference): full-bleed cinematic navy. Right (RTL start): the promise, short copy, two
- * CTAs and three trust indicators. Left: the EDMN product composition (phone with the live storefront, protection
- * shield, floating protection card and transaction-status panel).
- * Mobile order: headline → copy → CTAs → compact device visual → trust indicators (search sits in the header).
+ * Homepage hero: full-bleed cinematic navy. Right (RTL start, ~50%): the promise, short copy, two CTAs and three trust
+ * indicators — all real HTML. Left (~50%): the approved campaign artwork (phone with the EDMN storefront, products, EDMN
+ * parcel) blended into the navy, with the «دفع آمن» badge and the protection card as real HTML (see hero-visual.tsx).
+ * Mobile / tablet portrait: headline → copy → CTAs → visual (+ protection card) → trust indicators.
  */
-export function HomeHero({ featured, categories }: { featured: DeviceProduct | null; categories: { nameAr: string; icon: string | null }[] }) {
+export function HomeHero() {
   return (
     <section aria-labelledby="home-hero-title" className="edmn-hero relative isolate overflow-hidden bg-brand-950 text-white">
       <HeroBackdrop />
-      <div className="container-page grid grid-cols-[minmax(0,1fr)] items-center gap-x-10 gap-y-6 pb-10 pt-6 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] lg:grid-rows-[auto_auto] lg:pb-14 lg:pt-8">
+      <div className="container-page grid grid-cols-[minmax(0,1fr)] items-center gap-x-10 gap-y-6 pb-10 pt-6 sm:pt-10 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:grid-rows-[auto_auto] xl:grid-cols-2 lg:pb-12 lg:pt-8">
         <div className="edmn-rise min-w-0 space-y-5 sm:space-y-6 lg:col-start-1 lg:row-start-1 lg:self-end">
           <p className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-brand-100 lg:hidden">
-            <ShieldCheck className="size-4 text-emerald-300" aria-hidden /> المبلغ محفوظ لدى اضمن حتى تستلم وتتأكد
+            <ShieldCheck className="size-4 text-emerald-300" aria-hidden /> دفع آمن — محمي لدى اضمن
           </p>
-          <h1 id="home-hero-title" className="text-[clamp(1.7rem,8.6vw,2.6rem)] font-bold leading-[1.3] tracking-tight sm:text-6xl sm:leading-[1.22] lg:text-[4.1rem]">
+          <h1 id="home-hero-title" className="text-[clamp(1.7rem,8.6vw,2.6rem)] font-bold leading-[1.3] tracking-tight sm:text-6xl sm:leading-[1.22] lg:text-[2.75rem] xl:text-[4.1rem]">
             <span className="block">اشتري وبيع بأمان</span>
             <span className="block">
               <span className="bg-gradient-to-l from-sky-300 to-brand-400 bg-clip-text text-transparent">اضمن</span> تحمي كل صفقة
             </span>
           </h1>
-          <p className="max-w-xl text-[0.95rem] leading-7 text-brand-100/85 sm:text-lg sm:leading-8">سوق إلكتروني مصري موثوق بنظام ضمان يحمي المشتري والبائع؛ المبلغ يبقى محفوظًا لدى اضمن حتى تستلم المنتج وتتأكد منه.</p>
+          <p className="max-w-xl text-[0.95rem] leading-7 text-brand-100/85 sm:text-lg sm:leading-8">سوق إلكتروني مصري موثوق بنظام ضمان يحمي المشتري والبائع؛ المبلغ يظل محفوظًا لدى اضمن حتى تستلم المنتج وتتأكد منه.</p>
           <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
             <Link href="/categories" className="edmn-cta inline-flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand-600 px-3 text-[15px] font-bold sm:px-8 sm:text-base text-white shadow-[0_14px_34px_-12px_rgb(37_99_235/0.9)] hover:bg-brand-500">
               <ShoppingBag className="size-5" aria-hidden /> تسوق الآن
@@ -35,7 +35,7 @@ export function HomeHero({ featured, categories }: { featured: DeviceProduct | n
         </div>
 
         <div className="edmn-rise edmn-rise-delay min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <HeroDevice featured={featured} categories={categories} />
+          <HeroVisual />
         </div>
 
         <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-white/85 lg:col-start-1 lg:row-start-2 lg:self-start">

@@ -85,3 +85,31 @@ for (const width of [1440, 390]) {
     await page.context().close();
   });
 }
+
+for (const [width, height] of [[1440, 900], [1024, 768], [768, 1024], [390, 844], [360, 780], [320, 640]] as const) {
+  test(`hero at ${width}px: one HTML headline and CTA set, the approved artwork for this viewport only, protection message in HTML`, async ({ browser }) => {
+    const page = await (await browser.newContext({ locale: 'ar-EG', viewport: { width, height } })).newPage();
+    const heroAssets: string[] = [];
+    page.on('request', (r) => { if (/\/brand\/home\/hero-visual/.test(r.url())) heroAssets.push(r.url().split('/').pop()!); });
+    await page.goto('/');
+    const hero = page.locator('section[aria-labelledby="home-hero-title"]');
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(hero.locator('h1')).toContainText('اشتري وبيع بأمان');
+    await expect(hero.locator('h1')).toContainText('اضمن تحمي كل صفقة');
+    await expect(hero.getByRole('link', { name: 'تسوق الآن' })).toHaveAttribute('href', '/categories');
+    await expect(hero.getByRole('link', { name: 'ابدأ البيع' })).toHaveAttribute('href', '/sell');
+    for (const cta of await hero.locator('a.edmn-cta').all()) expect((await cta.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // The artwork is decorative (alt=""); the protection message is real, visible HTML at every size.
+    const img = hero.locator('picture img');
+    await expect(img).toHaveAttribute('alt', '');
+    await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
+    await expect(hero.getByText('المبلغ محمي لدى اضمن').filter({ visible: true })).toHaveCount(1);
+    await expect(hero.getByText('تحويل المبلغ للبائع بعد التأكيد').filter({ visible: true })).toHaveCount(1);
+    await expect(hero.getByText('دفع آمن', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+    // Only the crop for this viewport is downloaded (desktop/tablet ≥640px, phone crop below).
+    expect(heroAssets.length).toBeGreaterThan(0);
+    expect(heroAssets.every((a) => (width >= 640 ? /^hero-visual-\d+\./ : /^hero-visual-m-/).test(a))).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await page.context().close();
+  });
+}

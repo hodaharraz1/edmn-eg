@@ -63,6 +63,17 @@ Any new photo or illustration must be added here with a one-line justification c
 | `public/brand/home/seller-banner-1280.webp` | Desktop/tablet size of the approved seller banner | Same artwork, resized only |
 | `public/brand/home/seller-banner-mobile-900.webp` | Mobile crop of the approved seller banner (merchant side; the text is real HTML underneath) | Same artwork, cropped and resized only |
 | `public/brand/home/seller-banner-mobile-600.webp` | Smaller mobile crop of the approved seller banner | Same artwork, cropped and resized only |
+| `public/brand/home/hero-source.webp` | Owner-approved homepage hero campaign artwork (2000×750, 2026-10-17): EDMN storefront on a smartphone, headphones, iPhone, controller, camera, smartwatch, sneaker, laptop and an EDMN-branded parcel on a desk; painted «دفع آمن» badge and protection card | Owner-supplied original, stored unmodified and never served directly. No people, no Gulf imagery; prices in ج.م |
+| `public/brand/home/hero-visual-650.avif` | Hero visual (desktop/tablet crop x0–1300 of the master: product side only, painted headline/buttons removed) | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-650.webp` | Same, WebP fallback | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-975.avif` | Same, 975px | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-975.webp` | Same, WebP fallback | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-1300.avif` | Same, 1300px (high-DPI) | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-1300.webp` | Same, WebP fallback | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-m-420.avif` | Hero visual, phone crop (phone, EDMN parcel, controller, headphones) | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-m-420.webp` | Same, WebP fallback | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-m-785.avif` | Same, 785px (high-DPI phones) | Same artwork, cropped and resized only |
+| `public/brand/home/hero-visual-m-785.webp` | Same, WebP fallback | Same artwork, cropped and resized only |
 
 ## 6. Audit status (2026-10-15)
 - No human imagery anywhere in the product, except the owner-approved Egyptian seller in the homepage seller banner (2026-10-16, listed in §5). Product placeholders are generated abstract icons (`src/server/db/seed/demo-images.ts`).

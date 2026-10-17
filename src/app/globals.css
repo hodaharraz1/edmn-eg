@@ -367,3 +367,11 @@
     animation: none !important;
   }
 }
+
+/* Hero artwork blended into the navy hero: every edge fades out, so the picture never reads as a pasted rectangle. */
+.edmn-hero-art {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 85%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 85%, transparent 100%);
+  mask-composite: intersect;
+}
