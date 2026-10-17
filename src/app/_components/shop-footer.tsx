@@ -2,7 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import Link from '@/ui/link';
 import { activeBlocks, LEGAL_CODES } from '@/server/modules/cms/service';
 import { getAllSettings } from '@/server/modules/settings';
-import { Logo } from '@/ui/logo';
+import { LogoImage } from '@/ui/logo';
 
 export async function ShopFooter() {
   const footer = (await activeBlocks('HOME')).find((b) => b.type === 'FOOTER');
@@ -17,7 +17,7 @@ export async function ShopFooter() {
         <div className="space-y-4">
           {/* The transparent official logo needs a light surface: same white plate as the header. */}
           <Link href="/" aria-label="اضمن — الرئيسية" className="inline-grid h-12 place-items-center rounded-xl bg-white px-2 shadow-[0_6px_20px_-8px_rgb(59_130_246/0.7)]">
-            <Logo variant="sidebar" />
+            <LogoImage variant="sidebar" />
           </Link>
           <p className="text-sm leading-7 text-white/70">
             {data.about || 'اضمن سوق مصري للمنتجات الجديدة والمستعملة من بائعين تمت مراجعتهم. بتدفع لاضمن، ومستحقات البائع مش بتتاح له غير بعد الاستلام وموافقة الإدارة. وتقدر كمان تعمل صفقة محمية لأي حاجة بتشتريها من برّه السوق.'}
