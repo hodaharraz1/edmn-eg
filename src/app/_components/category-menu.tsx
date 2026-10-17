@@ -70,7 +70,7 @@ export function CategoryMenu({ categories, label, triggerClassName, quickLinks }
   return (
     <div
       ref={rootRef}
-      className="group relative"
+      className="group"
       data-testid="category-menu"
       onBlur={(e) => {
         // Keyboard: tabbing out of the trigger/menu closes it.
@@ -93,7 +93,8 @@ export function CategoryMenu({ categories, label, triggerClassName, quickLinks }
         id={panelId}
         hidden={!open}
         aria-label={label}
-        className="absolute top-full start-0 z-50 mt-2 grid w-[760px] grid-cols-3 gap-4 rounded-2xl bg-white p-5 text-ink shadow-[var(--shadow-pop)] ring-1 ring-line"
+        // Anchored to the (sticky) site header, so it opens below the whole header and never covers the search row.
+        className="absolute inset-x-0 top-full z-50 mx-auto mt-2 grid w-[min(760px,calc(100%-2rem))] grid-cols-3 gap-4 rounded-2xl bg-white p-5 text-ink shadow-[var(--shadow-pop)] ring-1 ring-line"
         data-testid="category-menu-panel"
         onClick={(e) => {
           // Choosing a category closes the menu; clicks elsewhere inside it keep it open.
