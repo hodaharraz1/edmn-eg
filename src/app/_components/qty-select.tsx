@@ -9,7 +9,7 @@ export function QtySelect({ value, max, name = 'quantity' }: { value: number; ma
       defaultValue={value}
       aria-label="الكمية"
       onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      className="h-9 rounded-lg border border-line bg-white px-2 text-sm"
+      className="h-11 rounded-xl border border-line bg-white px-3 text-sm font-semibold focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100"
     >
       {opts.map((n) => (
         <option key={n} value={n}>

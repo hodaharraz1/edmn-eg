@@ -19,7 +19,7 @@ async function expectClosed(page: Page) {
   await expect(panel(page)).toBeHidden();
   await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
 }
-// The standard marketplace header (the homepage has its own header; its «المنتجات» menu is covered in homepage.spec).
+// The site header (same on every marketplace page); the mega menu sits under «المنتجات».
 async function home(page: Page) {
   await page.goto('/search');
   await page.waitForLoadState('networkidle');
@@ -62,27 +62,25 @@ test('desktop: closes on outside / page content / search / header actions / othe
     // the last card: on the search listing the first cards sit directly under the open panel
     ['page content (a product card)', async (p) => p.locator('main a[href^="/product/"]').last().click({ trial: false, modifiers: [] })],
     ['search input', async (p) => p.locator('#site-search').click()],
-    ['search button', async (p) => p.getByRole('button', { name: 'بحث' }).first().click()],
+    ['search button', async (p) => p.getByRole('button', { name: 'ابحث', exact: true }).click()],
     ['messages', async (p) => p.getByTestId('header-messages').click()],
     ['notifications', async (p) => p.getByTestId('header-notifications').click()],
     ['account', async (p) => p.locator('header a[href="/account"]').first().click()],
-    ['orders', async (p) => p.locator('header a[href="/account/orders"]').first().click()],
     ['cart', async (p) => p.locator('header a[href="/cart"]').first().click()],
     ['logo', async (p) => p.locator('header a[href="/"]').first().click()],
-    ['wishlist', async (p) => p.getByRole('link', { name: 'المفضلة' }).first().click()],
-    ['other nav item (العروض)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).getByRole('link', { name: 'العروض' }).click()],
-    ['other nav item (الأكثر مبيعًا)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/best-sellers"]').click()],
-    ['other nav item (المستعمل)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/search?condition=USED"]').click()],
+    ['quick link inside the menu (العروض)', async (p) => p.getByTestId('category-menu-panel').locator('a[href="/deals"]').click()],
+    ['other nav item (الرئيسية)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).getByRole('link', { name: 'الرئيسية' }).click()],
     ['other nav item (المتاجر)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/stores"]').click()],
-    ['other nav item (اضمن صفقة)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/protected-deal"]').click()],
-    ['other nav item (بيع على اضمن)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/sell"]').click()],
+    ['other nav item (كيف يعمل الضمان؟)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/protected-deal"]').click()],
+    ['other nav item (مركز البائع)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/sell"]').click()],
+    ['other nav item (المساعدة)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/contact"]').click()],
   ];
   for (const [name, act] of cases) {
     await home(page);
     await openMenu(page);
     await act(page);
     await expect(panel(page), `closes after: ${name}`).toBeHidden();
-    if (name.startsWith('other nav item')) await expect.poll(() => new URL(page.url()).pathname, { message: `navigates after: ${name}` }).not.toBe('/');
+    if (name.startsWith('other nav item') || name.startsWith('quick link')) await expect.poll(() => new URL(page.url()).pathname, { message: `navigates after: ${name}` }).not.toBe('/search');
     await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
   }
   await page.context().close();

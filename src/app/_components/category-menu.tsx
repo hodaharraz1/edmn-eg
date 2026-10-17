@@ -20,7 +20,7 @@ const OVERLAY_EVENT = 'edmn:header-overlay';
  * down outside it, Escape (focus returns to the trigger), focus leaving it, choosing a category, route
  * changes and browser back/forward, and when another header overlay opens. Listeners exist only while open.
  */
-export function CategoryMenu({ categories, label, triggerClassName }: { categories: MenuCategory[]; label: string; triggerClassName?: string }) {
+export function CategoryMenu({ categories, label, triggerClassName, quickLinks }: { categories: MenuCategory[]; label: string; triggerClassName?: string; quickLinks?: { href: string; label: string }[] }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -93,16 +93,25 @@ export function CategoryMenu({ categories, label, triggerClassName }: { categori
         id={panelId}
         hidden={!open}
         aria-label={label}
-        className="absolute top-10 start-0 z-50 grid w-[760px] grid-cols-3 gap-4 rounded-xl bg-white p-5 text-ink shadow-[var(--shadow-pop)]"
+        className="absolute top-full start-0 z-50 mt-2 grid w-[760px] grid-cols-3 gap-4 rounded-2xl bg-white p-5 text-ink shadow-[var(--shadow-pop)] ring-1 ring-line"
         data-testid="category-menu-panel"
         onClick={(e) => {
           // Choosing a category closes the menu; clicks elsewhere inside it keep it open.
           if ((e.target as HTMLElement).closest('a')) setOpen(false);
         }}
       >
+        {quickLinks && quickLinks.length > 0 && (
+          <div className="col-span-3 flex flex-wrap gap-2 border-b border-line pb-4">
+            {quickLinks.map((q) => (
+              <Link key={q.href} href={q.href} className="inline-flex min-h-9 items-center rounded-full bg-brand-50 px-3.5 text-sm font-semibold text-brand-800 hover:bg-brand-100">
+                {q.label}
+              </Link>
+            ))}
+          </div>
+        )}
         {categories.map((c) => (
           <div key={c.id}>
-            <Link href={`/category/${c.slug}`} className="font-bold hover:text-brand-700">
+            <Link href={`/category/${c.slug}`} className="font-bold text-brand-950 hover:text-brand-700">
               {c.nameAr}
             </Link>
             <ul className="mt-1 space-y-0.5">

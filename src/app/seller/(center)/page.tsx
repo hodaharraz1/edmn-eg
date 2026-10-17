@@ -1,6 +1,6 @@
 import Link from '@/ui/link';
 import { redirect } from 'next/navigation';
-import { AlertTriangle, Boxes, CircleDollarSign, Clock, PackageCheck, RotateCcw, ShoppingBag, Star, Truck, Wallet } from 'lucide-react';
+import { AlertTriangle, Boxes, CircleDollarSign, Clock, Landmark, PackageCheck, PackagePlus, RotateCcw, ShoppingBag, Star, Truck, Wallet } from 'lucide-react';
 import { RangeFilter } from '@/app/_components/range-filter';
 import { SellerStatusGate } from '@/app/_components/seller-gate';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
@@ -35,6 +35,7 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
     <div className="space-y-6">
       <PageHeader title="لوحة التحكم" description="نظرة سريعة على أداء متجرك" actions={<RangeFilter path="/seller" active={preset} />} />
       <SellerStatusGate seller={ctx.seller} />
+      <QuickActions finance={canSeeFinance} pending={d.pendingConfirmation} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="مبيعات اليوم" value={formatEGP(d.todaySales)} icon={<CircleDollarSign className="size-5" />} />
         <StatCard label="الطلبات (الفترة)" value={formatNumber(d.orders)} hint={`متوسط الطلب ${formatEGP(d.aov)}`} icon={<ShoppingBag className="size-5" />} />
@@ -86,5 +87,32 @@ export default async function SellerDashboard(props: PageProps<'/seller'>) {
         </section>
       </div>
     </div>
+  );
+}
+
+/** Phones/tablets: the day-to-day seller tasks one tap away (desktop has them in the sidebar). */
+function QuickActions({ finance, pending }: { finance: boolean; pending: number }) {
+  const items = [
+    { href: '/seller/products/new', label: 'إضافة منتج', icon: PackagePlus },
+    { href: '/seller/orders', label: 'الطلبات', icon: ShoppingBag, count: pending },
+    { href: '/seller/shipping', label: 'الشحن', icon: Truck },
+    { href: '/seller/returns', label: 'المرتجعات', icon: RotateCcw },
+    ...(finance
+      ? [
+          { href: '/seller/balance', label: 'الرصيد', icon: Landmark },
+          { href: '/seller/withdrawals', label: 'السحوبات', icon: Wallet },
+        ]
+      : []),
+  ];
+  return (
+    <nav aria-label="إجراءات سريعة" className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:hidden">
+      {items.map((it) => (
+        <Link key={it.href} href={it.href} className="relative flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl bg-white p-2 text-center text-xs font-semibold text-brand-950 shadow-[var(--shadow-card)] ring-1 ring-line active:scale-[0.98]">
+          <span className="grid size-9 place-items-center rounded-xl bg-brand-950 text-white"><it.icon className="size-4" aria-hidden /></span>
+          {it.label}
+          {!!it.count && <span className="absolute end-2 top-2 grid min-w-5 place-items-center rounded-full bg-accent-600 px-1.5 text-[11px] font-bold text-white">{it.count}<span className="sr-only"> بانتظار تأكيدك</span></span>}
+        </Link>
+      ))}
+    </nav>
   );
 }

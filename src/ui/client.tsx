@@ -129,15 +129,24 @@ export function CopyButton({ value, label = 'انسخ' }: { value: string; label
 }
 
 /** Mobile drawer (e.g. filters/menu) built on <dialog>. */
-export function Drawer({ trigger, title, children }: { trigger: ReactNode; title: string; children: ReactNode }) {
+/**
+ * Accessible drawer on a native <dialog> (focus trap, Escape, backdrop). `side` slides from the start edge
+ * (navigation); `sheet` is a mobile bottom sheet (filters and other dense choices) — no squeezed desktop panels.
+ */
+export function Drawer({ trigger, title, children, variant = 'side' }: { trigger: ReactNode; title: string; children: ReactNode; variant?: 'side' | 'sheet' }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const shell =
+    variant === 'sheet'
+      ? 'edmn-sheet m-0 mt-auto max-h-[88dvh] w-full max-w-none rounded-t-3xl bg-white p-0 pb-[env(safe-area-inset-bottom)] shadow-2xl backdrop:bg-black/50'
+      : 'edmn-drawer ms-auto me-0 my-0 h-dvh max-h-dvh w-[min(88vw,380px)] bg-white p-0 pt-[env(safe-area-inset-top)] shadow-2xl backdrop:bg-black/50';
   return (
     <>
       <span onClick={() => ref.current?.showModal()}>{trigger}</span>
-      <dialog ref={ref} className="ms-auto me-0 my-0 h-dvh max-h-dvh w-[min(88vw,380px)] bg-white p-0 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-line p-4">
-          <h2 className="font-bold">{title}</h2>
-          <button type="button" onClick={() => ref.current?.close()} className="grid size-9 place-items-center rounded-full hover:bg-page" aria-label="إغلاق">
+      <dialog ref={ref} aria-label={title} className={shell}>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white px-4 py-2">
+          {variant === 'sheet' && <span aria-hidden className="absolute left-1/2 top-1.5 h-1 w-10 -translate-x-1/2 rounded-full bg-slate-200" />}
+          <h2 className="font-bold text-brand-950">{title}</h2>
+          <button type="button" onClick={() => ref.current?.close()} className="grid size-11 place-items-center rounded-full hover:bg-page" aria-label="إغلاق">
             <X className="size-5" />
           </button>
         </div>

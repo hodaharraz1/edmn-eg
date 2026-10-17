@@ -1,9 +1,7 @@
 import { BottomNav } from '@/app/_components/bottom-nav';
 import { LiveProvider } from '@/app/_components/live/live-provider';
 import { ShopFooter } from '@/app/_components/shop-footer';
-import { HeaderSwitch } from '@/app/_components/header-switch';
-import { HomeHeader } from '@/app/_components/home-header';
-import { ShopHeader } from '@/app/_components/shop-header';
+import { SiteHeader } from '@/app/_components/site-header';
 import { headerState, liveBootstrap } from '@/server/web/context';
 import { TRANSACTIONS_CLOSED_MESSAGE, transactionsState } from '@/server/ops/commerce-gate';
 
@@ -11,7 +9,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const [boot, hs, tx] = await Promise.all([liveBootstrap(), headerState(), transactionsState()]);
   const page = (
     <>
-      <HeaderSwitch home={<HomeHeader />} other={<ShopHeader />} />
+      <SiteHeader />
       {!tx.open && (
         <div role="status" data-testid="transactions-closed" className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-900">
           {TRANSACTIONS_CLOSED_MESSAGE[tx.reason]}

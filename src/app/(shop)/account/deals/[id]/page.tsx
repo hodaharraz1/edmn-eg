@@ -39,6 +39,8 @@ import { Alert, Badge, StatusChip } from '@/ui/feedback';
 import { Checkbox, Field, Input, Radio, Select, Textarea } from '@/ui/form';
 import { TestBadge, TestMoneyNotice } from '@/app/_components/test-money';
 import { DealShare } from '@/app/_components/deal-share';
+import { DealStatusPanel } from '@/app/_components/deal-status';
+import type { DealStatus } from '@/domain/machines';
 import { LocationPicker } from '@/app/_components/location-picker';
 import { ReturnPolicyFields } from '@/app/_components/return-policy-fields';
 import { ReturnPolicyView } from '@/app/_components/return-policy-view';
@@ -102,6 +104,8 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         actions={<><Badge tone={isBuyer ? 'brand' : 'accent'}>{isBuyer ? 'انت المشتري' : 'انت البائع'}</Badge><StatusChip status={deal.status === 'DELIVERED' ? 'DEAL_SHIPPED' : deal.status} kind="deal" />{canMessage && <MessageCtaLink href={`/account/messages/open?deal=${deal.id}`} label={isBuyer ? 'تواصل مع البائع' : 'تواصل مع المشتري'} unread={unreadMsgs} />}</>}
       />
 
+      <DealStatusPanel status={deal.status as DealStatus} role={isBuyer ? 'BUYER' : 'SELLER'} openDispute={!!dispute} />
+
       {inviteLink && <DealShare url={inviteLink} dealRef={g.ref} />}
       {['ACTIVE', 'DELIVERED'].includes(deal.status) && deal.deliveryDeadline && !dispute && (
         <DealTimer
@@ -135,7 +139,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       )}
 
       <section className="card p-5">
-        <h2 className="mb-3 font-bold">طلب المشتري</h2>
+        <h2 className="mb-3 font-bold text-brand-950">طلب المشتري</h2>
         <DefinitionList items={[
           { label: 'المنتج', value: `${deal.title} × ${deal.quantity}` },
           { label: 'الحالة', value: deal.condition === 'NEW' ? 'جديد' : 'مستعمل' },

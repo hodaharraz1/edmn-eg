@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 
-/* ───────────────────────── EDMN design tokens ─────────────────────────
-   Built around the official logo colours (deep blue + red). Red is reserved for the
-   protected-deal identity and urgent states; commerce UI is predominantly blue/neutral. */
+/* ───────────────────────── EDMN design tokens (master: the approved homepage) ─────────────────────────
+   Deep navy (navigation, hero, protection areas) · EDMN blue (actions, links, focus) · white working surfaces
+   · soft blue-gray secondary sections. Semantic colours only: green = protected/verified/success, amber =
+   warning, red = danger/dispute and the protected-deal CTA. Yellow is never a brand/navigation colour. */
 @theme {
   --font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, 'Noto Sans Arabic', system-ui, sans-serif;
 
@@ -28,12 +29,18 @@
   --color-ink: #0f172a;
   --color-muted: #5b6474;
   --color-line: #e3e8ef;
-  --color-page: #f5f7fa;
+  --color-page: #f4f7fb; /* commerce content background */
+  --color-soft: #eaf0f8; /* secondary sections (soft blue-gray) */
+  --color-navy: #061a3d; /* = brand-950: header, hero, protection areas */
 
-  --radius-card: 0.875rem;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
-  --shadow-pop: 0 10px 30px rgb(15 23 42 / 0.12);
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 6px 16px -10px rgb(6 26 61 / 0.18);
+  --shadow-pop: 0 16px 36px -14px rgb(6 26 61 / 0.32);
   --shadow-lift: 0 24px 60px -20px rgb(6 26 61 / 0.45), 0 8px 24px -12px rgb(6 26 61 / 0.25);
+  --shadow-cta: 0 10px 24px -12px rgb(20 82 179 / 0.85);
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   --breakpoint-xs: 26rem;
 }
@@ -143,7 +150,10 @@
     display: block;
   }
   .rtable tr {
-    padding: 0.75rem 1rem;
+    padding: 0.875rem 1rem;
+  }
+  .rtable tbody tr + tr {
+    border-top: 6px solid var(--color-page);
   }
   .rtable td {
     display: flex;
@@ -318,13 +328,29 @@
     animation: edmn-breathe 4.5s ease-in-out infinite;
   }
 }
-/* Mobile bottom sheet (native <dialog>). */
+/* Mobile bottom sheet and side drawer (native <dialog>). */
 .edmn-sheet[open] {
   animation: edmn-sheet-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes edmn-sheet-in {
   from {
     transform: translateY(100%);
+  }
+}
+.edmn-drawer[open] {
+  animation: edmn-drawer-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes edmn-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+[dir='ltr'] .edmn-drawer[open] {
+  animation-name: edmn-drawer-in-ltr;
+}
+@keyframes edmn-drawer-in-ltr {
+  from {
+    transform: translateX(-100%);
   }
 }
 @keyframes edmn-breathe {

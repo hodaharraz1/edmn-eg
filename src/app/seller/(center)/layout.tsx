@@ -33,7 +33,7 @@ export default async function SellerLayout({ children }: { children: React.React
     <div className="min-h-dvh bg-page lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="hidden bg-brand-950 p-4 lg:flex lg:flex-col lg:gap-4">
         <div className="-mx-4 -mt-4 flex flex-col items-center gap-1 bg-white px-4 py-4"><Logo href="/seller" variant="sidebar" label="مركز بائعي اضمن" /><p className="text-[11px] font-bold tracking-wide text-brand-800" dir="ltr">EDMN Seller Center</p></div>
-        <div className="rounded-lg bg-white/10 p-3 text-xs text-white">
+        <div className="rounded-xl bg-white/10 p-3 text-xs text-white ring-1 ring-white/10">
           <p className="truncate font-semibold">{store?.name ?? 'متجري'}</p>
           <div className="mt-1 flex items-center justify-between"><StatusChip status={ctx.seller.status} /><span className="text-white/60">{ctx.role === 'STORE_OWNER' ? 'المالك' : label('sellerRole', ctx.role)}</span></div>
         </div>
@@ -41,8 +41,8 @@ export default async function SellerLayout({ children }: { children: React.React
         <form action={logoutAction}><button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/70 hover:bg-white/10"><LogOut className="size-4" /> خروج</button></form>
       </aside>
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-white px-4">
-          <Drawer title="مركز البائع" trigger={<button type="button" className="grid size-9 place-items-center rounded-lg hover:bg-page lg:hidden" aria-label="القائمة"><Menu className="size-5" /></button>}>
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-line bg-white/95 px-4 backdrop-blur sm:gap-3">
+          <Drawer title="مركز البائع" trigger={<button type="button" className="grid size-11 place-items-center rounded-xl hover:bg-page lg:hidden" aria-label="القائمة"><Menu className="size-5" /></button>}>
             <div className="rounded-xl bg-brand-950 p-2"><SellerNav unreadMessages={unread} canMessage={canMessage} /></div>
           </Drawer>
           <Logo href="/seller" variant="mobile" label="مركز بائعي اضمن" className="lg:hidden" />
@@ -61,7 +61,7 @@ export default async function SellerLayout({ children }: { children: React.React
               className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:font-semibold aria-[current=page]:text-brand-800 [&>span:last-child]:hidden sm:[&>span:last-child]:inline"
             />
           )}
-          <LiveIconLink href="/seller/notifications" kind="notifications" fallback={unreadNotifs} testId="seller-header-notifications" className="grid size-10 place-items-center rounded-lg hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-800" />
+          <LiveIconLink href="/seller/notifications" kind="notifications" fallback={unreadNotifs} testId="seller-header-notifications" className="grid size-11 place-items-center rounded-xl hover:bg-page aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-800" />
           <span className="hidden text-sm text-muted sm:inline">{user.fullName}</span>
         </header>
         <main id="main" className="mx-auto w-full max-w-7xl p-4 sm:p-6">{children}</main>

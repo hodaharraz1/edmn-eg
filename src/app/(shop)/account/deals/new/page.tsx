@@ -15,6 +15,7 @@ import { DefinitionList, PageHeader } from '@/ui/data';
 import { Alert } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 import Link from '@/ui/link';
+import { ProtectionNote } from '@/ui/protection';
 
 export const metadata = { title: 'صفقة محمية جديدة' };
 const STEPS = ['المنتج', 'السعر المطلوب', 'توقعات التسليم', 'شروط خاصة', 'عنوان الاستلام', 'المراجعة'];
@@ -36,6 +37,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
     <div className="space-y-4">
       <PageHeader title="اضمن صفقة خارج السوق" description="اكتب تفاصيل الصفقة زي ما اتفقت مع البائع. بعدها هتاخد رابط آمن تبعته له، وهو يراجع ويوافق قبل أي دفع." />
       <Stepper steps={STEPS} current={step} hrefFor={hrefFor} />
+      <ProtectionNote>مفيش أي دفع دلوقتي. بتدفع لحساب اضمن بس بعد ما البائع يقدّم عرضه وتوافق عليه، والمبلغ بيفضل محمي لحد إتمام الصفقة.</ProtectionNote>
       {step < 6 ? (
         <ActionForm action={dealStepAction} className="card space-y-4 p-5" encType="multipart/form-data">
           {deal && <input type="hidden" name="dealId" value={deal.id} />}
@@ -87,7 +89,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
             </>
           )}
           <div className="flex gap-2">
-            {step > 1 && deal && <Link href={`/account/deals/new?deal=${deal.id}&step=${step - 1}`} className="inline-flex h-10 items-center rounded-lg border border-line px-4 text-sm">السابق</Link>}
+            {step > 1 && deal && <Link href={`/account/deals/new?deal=${deal.id}&step=${step - 1}`} className="inline-flex h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold hover:border-brand-300">السابق</Link>}
             <SubmitButton>حفظ والتالي</SubmitButton>
           </div>
         </ActionForm>

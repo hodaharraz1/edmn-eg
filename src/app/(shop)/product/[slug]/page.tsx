@@ -4,7 +4,7 @@ import { ReturnPolicyView } from '@/app/_components/return-policy-view';
 import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
-import { BadgeCheck, CircleAlert, PackageCheck, RotateCcw, ShieldCheck, Store, Truck } from 'lucide-react';
+import { BadgeCheck, CircleAlert, PackageCheck, RotateCcw, Store, Truck } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { sellerShippingRates } from '@/server/db/schema';
 import { productDetailBySlug, relatedProducts } from '@/server/modules/catalog/search';
@@ -17,6 +17,7 @@ import { Gallery, RecordRecentlyViewed } from '@/ui/client';
 import { DeliveryLine, Price, ProductCard, ProductRail, RailItem, Stars, mediaUrl } from '@/ui/commerce';
 import { Breadcrumbs } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
+import { ProtectionPanel } from '@/ui/protection';
 import { AddToCartForm } from '@/app/_components/add-to-cart';
 import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
 import { JsonLd, absoluteUrl, breadcrumbJsonLd } from '@/app/_components/seo';
@@ -94,69 +95,127 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         </Alert>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_320px]">
-        <div className="relative">
-          <Gallery alt={p.titleAr} images={d.images.map((i) => ({ src: mediaUrl(i.key, 'md')!, full: mediaUrl(i.key)!, actual: i.isActualItem }))} />
-          <div className="absolute top-3 end-3">
-            <WishlistButton productId={p.id} active={wished.has(p.id)} back={`/product/${p.slug}`} />
+      {/* Desktop: gallery on the visual (left) side, purchase on the right. Mobile: gallery → summary → purchase. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+        <div className="relative lg:order-2">
+          <div className="lg:sticky lg:top-44">
+            <Gallery alt={p.titleAr} images={d.images.map((i) => ({ src: mediaUrl(i.key, 'md')!, full: mediaUrl(i.key)!, actual: i.isActualItem }))} />
+            <div className="absolute top-3 end-3">
+              <WishlistButton productId={p.id} active={wished.has(p.id)} back={`/product/${p.slug}`} />
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {d.brand && (
-              <Link href={`/brand/${d.brand.slug}`} className="text-sm font-semibold text-brand-700 hover:underline">
-                {d.brand.nameAr || d.brand.name}
-              </Link>
+        <div className="min-w-0 space-y-5 lg:order-1">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {d.brand && (
+                <Link href={`/brand/${d.brand.slug}`} className="text-sm font-semibold text-brand-600 hover:underline">
+                  {d.brand.nameAr || d.brand.name}
+                </Link>
+              )}
+              <Badge tone={p.condition === 'USED' ? 'warning' : 'brand'}>
+                {label('condition', p.condition)}
+                {p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}
+              </Badge>
+              {d.store.isVerified && (
+                <Badge tone="info">
+                  <BadgeCheck className="size-3.5" aria-hidden /> بائع موثّق
+                </Badge>
+              )}
+            </div>
+            <h1 className="text-[1.45rem] font-bold leading-snug text-brand-950 sm:text-[1.85rem]">{p.titleAr}</h1>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              {p.ratingCount > 0 ? (
+                <a href="#reviews" className="hover:underline">
+                  <Stars value={p.ratingAvg} count={p.ratingCount} size="md" />
+                </a>
+              ) : (
+                <span className="text-muted">مفيش تقييمات لسه</span>
+              )}
+              {v && <span className="text-xs text-muted ltr">SKU: {v.sku}</span>}
+            </div>
+            {p.condition === 'USED' && (
+              <p className="flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
+                <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل
+                <span className="font-normal">— راجع حالته وعيوبه قبل ما تشتري</span>
+              </p>
             )}
-            <Badge tone={p.condition === 'USED' ? 'warning' : 'brand'}>
-              {label('condition', p.condition)}
-              {p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}
-            </Badge>
-          </div>
-          {p.condition === 'USED' && (
-            <p className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
-              <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل
-              <span className="font-normal">— راجع حالته وعيوبه قبل ما تشتري</span>
-            </p>
-          )}
-          <h1 className="text-xl font-bold leading-snug sm:text-2xl">{p.titleAr}</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            {p.ratingCount > 0 ? (
-              <a href="#reviews" className="hover:underline">
-                <Stars value={p.ratingAvg} count={p.ratingCount} size="md" />
-              </a>
-            ) : (
-              <span className="text-muted">مفيش تقييمات لسه</span>
-            )}
-            {v && <span className="text-xs text-muted ltr">SKU: {v.sku}</span>}
-          </div>
-          <div className="border-y border-line py-4">
-            <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" />
-            <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة لو موجودة. مصاريف الشحن بتتحسب وقت الدفع.</p>
           </div>
 
-          {d.variants.length > 1 && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">اختار النوع:</p>
-              <div className="flex flex-wrap gap-2">
-                {d.variants.map((x) => {
-                  const out = x.stockOnHand - x.reserved <= 0;
-                  return (
-                    <Link
-                      key={x.id}
-                      href={`/product/${p.slug}?v=${x.id}`}
-                      scroll={false}
-                      aria-current={x.id === v?.id}
-                      className={`rounded-lg border px-3 py-2 text-sm ${x.id === v?.id ? 'border-brand-600 bg-brand-50 font-semibold text-brand-800' : 'border-line bg-white hover:border-brand-400'} ${out ? 'opacity-50 line-through' : ''}`}
-                    >
-                      {x.label || x.sku} · {formatEGP(x.price)}
-                    </Link>
-                  );
-                })}
+          {/* Purchase card */}
+          <div className="card space-y-4 p-5">
+            <div>
+              <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" className="[&>span:first-child]:text-3xl [&>span:first-child]:text-brand-950" />
+              <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة لو موجودة. مصاريف الشحن بتتحسب وقت الدفع.</p>
+            </div>
+
+            {d.variants.length > 1 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">اختار النوع:</p>
+                <div className="flex flex-wrap gap-2">
+                  {d.variants.map((x) => {
+                    const out = x.stockOnHand - x.reserved <= 0;
+                    return (
+                      <Link
+                        key={x.id}
+                        href={`/product/${p.slug}?v=${x.id}`}
+                        scroll={false}
+                        aria-current={x.id === v?.id}
+                        className={`inline-flex min-h-11 items-center rounded-xl border px-3.5 text-sm transition-colors ${x.id === v?.id ? 'border-brand-600 bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-600' : 'border-line bg-white hover:border-brand-300'} ${out ? 'opacity-50 line-through' : ''}`}
+                      >
+                        {x.label || x.sku} · {formatEGP(x.price)}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-xl bg-soft/60 p-3.5">
+              <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
+              <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (تقدر تغيّرها من أعلى الصفحة)</p>
+              <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                {available > 5 ? 'متوفر' : available > 0 ? `فاضل ${available} بس` : 'نفدت الكمية'}
+              </p>
+            </div>
+            {d.visible && v && available > 0 && shipFee !== null ? (
+              <AddToCartForm variantId={v.id} max={available} />
+            ) : d.visible && shipFee === null ? (
+              <Alert tone="warning">البائع لا يشحن إلى هذه المحافظة حالياً.</Alert>
+            ) : null}
+          </div>
+
+          <ProtectionPanel>
+            يظل المبلغ محميًا لدى اضمن حتى استلام المنتج وتأكيد الاستلام وفق شروط الصفقة. البائع ما يقدرش يسحب مستحقاته قبل استلامك وتأكيدك أو انتهاء مهلة الاعتراض، وموافقة الإدارة. ولو حصلت مشكلة تقدر تطلب إرجاع أو تفتح نزاع.
+          </ProtectionPanel>
+
+          {/* Seller card */}
+          <div className="card space-y-3 p-5 text-sm">
+            <p className="text-xs text-muted">بيبيعه ويشحنه</p>
+            <Link href={`/store/${d.store.slug}`} className="flex min-h-11 items-center gap-2 text-base font-bold text-brand-950 hover:text-brand-700">
+              <span className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-700"><Store className="size-5" /></span> {d.store.name}
+            </Link>
+            {d.store.isVerified && (
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — هويته ومستنداته اتراجعت</p>
+            )}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+              {d.seller.ratingCount > 0 ? <Stars value={d.seller.ratingAvg} count={d.seller.ratingCount} /> : <span>متجر جديد</span>}
+              {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
+              {d.seller.approvedAt && <span>على اضمن من {formatDate(d.seller.approvedAt)}</span>}
+            </div>
+            <div className="flex items-start gap-2 border-t border-line pt-3 text-xs">
+              <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
+              <div className="space-y-1" data-testid="pdp-return-policy">
+                <span className="block font-semibold">سياسة الإرجاع</span>
+                <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
+                <span className="block">وتقدر دايماً تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
               </div>
             </div>
-          )}
+            <p className="flex items-start gap-2 text-xs">
+              <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> البائع بيجهّز الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
+            </p>
+          </div>
 
           {p.keyFeatures.length > 0 && (
             <ul className="list-inside list-disc space-y-1 text-sm marker:text-brand-600">
@@ -167,7 +226,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           )}
 
           {p.condition === 'USED' && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
               <p className="mb-2 flex items-center gap-2 font-bold text-amber-900">
                 <CircleAlert className="size-4" /> تفاصيل حالة المنتج المستعمل
               </p>
@@ -183,56 +242,11 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             </div>
           )}
         </div>
-
-        <aside className="space-y-4">
-          <div className="card space-y-4 p-4">
-            <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} />
-            <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
-            <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (تقدر تغيّرها من أعلى الصفحة)</p>
-            <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-              {available > 5 ? 'متوفر' : available > 0 ? `فاضل ${available} بس` : 'نفدت الكمية'}
-            </p>
-            {d.visible && v && available > 0 && shipFee !== null ? (
-              <AddToCartForm variantId={v.id} max={available} />
-            ) : d.visible && shipFee === null ? (
-              <Alert tone="warning">البائع لا يشحن إلى هذه المحافظة حالياً.</Alert>
-            ) : null}
-            <div className="space-y-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-900">
-              <p className="flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" /> شراء محمي من اضمن</p>
-              <p>بتدفع لاضمن، والبائع ما يقدرش يسحب مستحقاته قبل استلامك للطلب، وتأكيدك أو انتهاء مهلة الاعتراض، وموافقة الإدارة. لو حصلت مشكلة، تقدر تطلب إرجاع أو تفتح نزاع حسب <Link href="/legal/buyer-terms" className="underline">الشروط</Link>.</p>
-            </div>
-          </div>
-          <div className="card space-y-3 p-4 text-sm">
-            <p className="text-xs text-muted">بيبيعه ويشحنه</p>
-            <Link href={`/store/${d.store.slug}`} className="flex items-center gap-2 font-bold hover:text-brand-700">
-              <Store className="size-4" /> {d.store.name}
-            </Link>
-            {d.store.isVerified && (
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — هويته ومستنداته اتراجعت</p>
-            )}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-              {d.seller.ratingCount > 0 ? <Stars value={d.seller.ratingAvg} count={d.seller.ratingCount} /> : <span>متجر جديد</span>}
-              {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
-              {d.seller.approvedAt && <span>على اضمن من {formatDate(d.seller.approvedAt)}</span>}
-            </div>
-            <div className="flex items-start gap-2 text-xs">
-              <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
-              <div className="space-y-1" data-testid="pdp-return-policy">
-                <span className="block font-semibold">سياسة الإرجاع</span>
-                <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
-                <span className="block">وتقدر دايماً تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
-              </div>
-            </div>
-            <p className="flex items-start gap-2 text-xs">
-              <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> البائع بيجهّز الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
-            </p>
-          </div>
-        </aside>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section className="card space-y-4 p-5">
-          <h2 className="text-lg font-bold">الوصف</h2>
+          <h2 className="text-lg font-bold text-brand-950">الوصف</h2>
           <div className="prose-ar whitespace-pre-line text-sm leading-7">{p.description}</div>
           {d.specs.length > 0 && (
             <>
@@ -256,8 +270,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             </>
           )}
         </section>
-        <section className="card space-y-3 p-5 text-sm">
-          <h2 className="flex items-center gap-2 text-lg font-bold"><Truck className="size-5 text-brand-600" /> الشحن والإرجاع</h2>
+        <section className="card space-y-3 bg-soft/40 p-5 text-sm">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-brand-950"><Truck className="size-5 text-brand-600" /> الشحن والإرجاع</h2>
           <p>البائع بيشحن الطلب بنفسه، وتقدر تتابع رقم التتبع من صفحة الطلب.</p>
           <p>حق الإرجاع القانوني: تقدر تقدّم طلب إرجاع خلال {statutoryDays} يوم من الاستلام حسب <Link href="/legal/returns" className="underline">سياسة الإرجاع والاسترداد</Link>.</p>
           {d.store.shippingPolicy && <p className="text-muted">{d.store.shippingPolicy}</p>}
@@ -267,7 +281,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
 
       <section id="reviews" className="card grid gap-6 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
         <div className="space-y-3">
-          <h2 className="text-lg font-bold">تقييمات المنتج</h2>
+          <h2 className="text-lg font-bold text-brand-950">تقييمات المنتج</h2>
           {p.ratingCount === 0 ? (
             <p className="text-sm text-muted">محدش قيّم المنتج ده لسه.</p>
           ) : (

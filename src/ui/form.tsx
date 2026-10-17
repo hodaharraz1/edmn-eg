@@ -2,14 +2,14 @@ import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 const control =
-  'w-full rounded-lg border border-line bg-white px-3 text-sm text-ink placeholder:text-slate-400 transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-page disabled:text-muted aria-[invalid=true]:border-red-500';
+  'w-full rounded-xl border border-line bg-white px-3.5 text-[15px] text-ink placeholder:text-slate-400 transition-[border-color,box-shadow] focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100 disabled:bg-page disabled:text-muted aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-red-100 sm:text-sm';
 
 export function Field({ label, htmlFor, hint, error, required, children, className }: { label?: ReactNode; htmlFor?: string; hint?: ReactNode; error?: string | string[]; required?: boolean; children: ReactNode; className?: string }) {
   const err = Array.isArray(error) ? error[0] : error;
   return (
     <div className={cn('space-y-1.5', className)}>
       {label && (
-        <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
+        <label htmlFor={htmlFor} className="block text-sm font-semibold text-ink">
           {label}
           {required && <span className="text-red-700" aria-hidden> *</span>}
         </label>
@@ -27,7 +27,7 @@ export function Field({ label, htmlFor, hint, error, required, children, classNa
 }
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
-  return <input className={cn(control, 'h-10', className)} {...props} />;
+  return <input className={cn(control, 'h-11', className)} {...props} />;
 }
 
 export function Textarea({ className, rows = 4, ...props }: ComponentProps<'textarea'>) {
@@ -36,7 +36,7 @@ export function Textarea({ className, rows = 4, ...props }: ComponentProps<'text
 
 export function Select({ className, children, ...props }: ComponentProps<'select'>) {
   return (
-    <select className={cn(control, 'h-10 pe-8', className)} {...props}>
+    <select className={cn(control, 'h-11 pe-8', className)} {...props}>
       {children}
     </select>
   );
@@ -53,7 +53,7 @@ export function Checkbox({ label, className, ...props }: ComponentProps<'input'>
 
 export function Radio({ label, description, className, ...props }: ComponentProps<'input'> & { label: ReactNode; description?: ReactNode }) {
   return (
-    <label className={cn('flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-white p-3 text-sm has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50', className)}>
+    <label className={cn('flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-3.5 text-sm transition-colors hover:border-brand-200 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:ring-1 has-[:checked]:ring-brand-500', className)}>
       <input type="radio" className="mt-1 size-4 accent-brand-700" {...props} />
       <span>
         <span className="block font-medium">{label}</span>
@@ -80,8 +80,8 @@ export function Switch({ label, className, ...props }: ComponentProps<'input'> &
 export function FormSection({ title, description, children, className }: { title: ReactNode; description?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={cn('card p-5 sm:p-6', className)}>
-      <header className="mb-4">
-        <h2 className="text-base font-bold">{title}</h2>
+      <header className="mb-4 border-b border-line pb-3">
+        <h2 className="text-base font-bold text-brand-950">{title}</h2>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </header>
       <div className="space-y-4">{children}</div>

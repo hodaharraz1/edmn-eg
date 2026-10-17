@@ -69,7 +69,7 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
   const [brands, attrs] = await Promise.all([hideBrand ? Promise.resolve([]) : brandFacets(categoryId), categoryId ? filterableAttributes(categoryId) : Promise.resolve([])]);
   const selectedBrands = new Set(many(sp.brand));
   return (
-    <form action={path} className="space-y-5 text-sm">
+    <form action={path} className="space-y-5 text-sm [&_input[type=checkbox]]:size-5 [&_input[type=radio]]:size-5 [&_label]:min-h-9 [&_legend]:text-brand-950">
       {one(sp.q) && <input type="hidden" name="q" value={one(sp.q)} />}
       {one(sp.sort) && <input type="hidden" name="sort" value={one(sp.sort)} />}
       <fieldset className="space-y-2">
@@ -87,9 +87,9 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
       <fieldset className="space-y-2">
         <legend className="mb-1 font-semibold">السعر (ج.م)</legend>
         <div className="flex items-center gap-2">
-          <input name="min" defaultValue={one(sp.min)} inputMode="decimal" placeholder="من" aria-label="أقل سعر" className="h-9 w-full rounded-lg border border-line px-2" />
+          <input name="min" defaultValue={one(sp.min)} inputMode="decimal" placeholder="من" aria-label="أقل سعر" className="h-11 w-full rounded-xl border border-line px-3 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100" />
           <span>–</span>
-          <input name="max" defaultValue={one(sp.max)} inputMode="decimal" placeholder="إلى" aria-label="أعلى سعر" className="h-9 w-full rounded-lg border border-line px-2" />
+          <input name="max" defaultValue={one(sp.max)} inputMode="decimal" placeholder="إلى" aria-label="أعلى سعر" className="h-11 w-full rounded-xl border border-line px-3 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-100" />
         </div>
       </fieldset>
       <fieldset className="space-y-2">
@@ -132,9 +132,9 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
           </div>
         </fieldset>
       ))}
-      <div className="flex gap-2">
-        <button className={buttonClass('primary', 'sm', 'flex-1')}>طبّق</button>
-        <Link href={one(sp.q) ? `${path}?q=${encodeURIComponent(one(sp.q))}` : path} className={buttonClass('outline', 'sm')}>
+      <div className="sticky bottom-0 -mx-1 flex gap-2 bg-white px-1 pb-1 pt-2">
+        <button className={buttonClass('primary', 'md', 'flex-1')}>طبّق</button>
+        <Link href={one(sp.q) ? `${path}?q=${encodeURIComponent(one(sp.q))}` : path} className={buttonClass('outline', 'md')}>
           امسح
         </Link>
       </div>
@@ -151,7 +151,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
   return (
     <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden lg:block">
-        <div className="card sticky top-32 p-4">{filters}</div>
+        <div className="card sticky top-40 max-h-[calc(100dvh-11rem)] overflow-y-auto p-4">{filters}</div>
       </aside>
       <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -159,8 +159,9 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <Drawer
               title="تصفية النتائج"
+              variant="sheet"
               trigger={
-                <button type="button" className={buttonClass('outline', 'sm', 'lg:hidden')}>
+                <button type="button" className={buttonClass('outline', 'md', 'lg:hidden')}>
                   <SlidersHorizontal className="size-4" /> تصفية
                 </button>
               }
@@ -173,7 +174,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
                   key={s}
                   href={hrefWith(path, sp, { sort: s })}
                   aria-current={query.sort === s ? 'true' : undefined}
-                  className={`whitespace-nowrap rounded-full border px-3 py-1 text-xs ${query.sort === s ? 'border-brand-600 bg-brand-600 text-white' : 'border-line bg-white hover:bg-page'}`}
+                  className={`inline-flex min-h-10 items-center whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition-colors ${query.sort === s ? 'border-brand-600 bg-brand-600 text-white shadow-[var(--shadow-cta)]' : 'border-line bg-white hover:border-brand-200 hover:bg-brand-50/60'}`}
                 >
                   {SORT_LABELS[s]}
                 </Link>

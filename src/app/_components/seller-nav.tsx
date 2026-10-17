@@ -40,7 +40,7 @@ export function SellerNav({ compact, unreadMessages = 0, canMessage = true }: { 
             href={it.href}
             aria-current={active ? 'page' : undefined}
             aria-label={it.href === '/seller/messages' ? messagesLabel(unread) : undefined}
-            className={cn('flex items-center gap-3 rounded-lg border-s-2 px-3 py-2 text-sm', active ? 'border-white bg-white/15 font-semibold text-white' : 'border-transparent text-white/75 hover:bg-white/10 hover:text-white', compact && 'text-ink/80 hover:text-ink')}
+            className={cn('flex min-h-11 items-center gap-3 rounded-xl border-s-2 px-3 text-sm lg:min-h-10', active ? 'border-white bg-white/15 font-semibold text-white' : 'border-transparent text-white/75 hover:bg-white/10 hover:text-white', compact && 'text-ink/80 hover:text-ink')}
           >
             <Icon className="size-4 shrink-0" aria-hidden />
             {it.label}

@@ -9,7 +9,7 @@ export function PageHeader({ title, description, actions, breadcrumbs, className
       {breadcrumbs}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold sm:text-2xl">{title}</h1>
+          <h1 className="text-[1.4rem] font-bold leading-tight text-brand-950 sm:text-[1.75rem]">{title}</h1>
           {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -53,7 +53,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, className }: { colu
   return (
     <div className={cn('card rtable overflow-x-auto', className)}>
       <table className="w-full text-sm md:min-w-[640px]">
-        <thead className="border-b border-line bg-page/60 text-xs text-muted">
+        <thead className="border-b border-line bg-soft/60 text-xs text-muted">
           <tr>
             {columns.map((c) => (
               <th key={c.key} scope="col" className={cn('px-4 py-3 text-start font-semibold', c.className)}>
@@ -64,7 +64,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, className }: { colu
         </thead>
         <tbody className="divide-y divide-line">
           {rows.map((r) => (
-            <tr key={rowKey(r)} className="hover:bg-page/50">
+            <tr key={rowKey(r)} className="transition-colors hover:bg-brand-50/40">
               {columns.map((c) => (
                 <td key={c.key} data-label={typeof c.header === 'string' && c.header ? c.header : undefined} className={cn('px-4 py-3 align-middle', c.className)}>
                   {c.cell(r)}
@@ -86,7 +86,7 @@ export function Pagination({ page, pages, hrefFor }: { page: number; pages: numb
   return (
     <nav aria-label="ترقيم الصفحات" className="mt-6 flex items-center justify-center gap-1">
       {page > 1 && (
-        <Link href={hrefFor(page - 1)} className="grid size-9 place-items-center rounded-lg border border-line bg-white hover:bg-page" aria-label="السابق">
+        <Link href={hrefFor(page - 1)} className="grid size-11 place-items-center rounded-xl border border-line bg-white hover:border-brand-200 hover:bg-brand-50/60" aria-label="السابق">
           <ChevronRight className="size-4 ltr:rotate-180" />
         </Link>
       )}
@@ -96,14 +96,14 @@ export function Pagination({ page, pages, hrefFor }: { page: number; pages: numb
           <Link
             href={hrefFor(n)}
             aria-current={n === page ? 'page' : undefined}
-            className={cn('grid size-9 place-items-center rounded-lg border text-sm', n === page ? 'border-brand-600 bg-brand-600 text-white' : 'border-line bg-white hover:bg-page')}
+            className={cn('grid size-11 place-items-center rounded-xl border text-sm font-semibold', n === page ? 'border-brand-600 bg-brand-600 text-white shadow-[var(--shadow-cta)]' : 'border-line bg-white hover:border-brand-200 hover:bg-brand-50/60')}
           >
             {n}
           </Link>
         </span>
       ))}
       {page < pages && (
-        <Link href={hrefFor(page + 1)} className="grid size-9 place-items-center rounded-lg border border-line bg-white hover:bg-page" aria-label="التالي">
+        <Link href={hrefFor(page + 1)} className="grid size-11 place-items-center rounded-xl border border-line bg-white hover:border-brand-200 hover:bg-brand-50/60" aria-label="التالي">
           <ChevronLeft className="size-4 ltr:rotate-180" />
         </Link>
       )}
@@ -122,12 +122,12 @@ export function Tabs({ tabs, active, className }: { tabs: { key: string; label: 
           role="tab"
           aria-selected={t.key === active}
           className={cn(
-            '-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium',
-            t.key === active ? 'border-brand-600 text-brand-700' : 'border-transparent text-muted hover:text-ink',
+            '-mb-px flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors',
+            t.key === active ? 'border-brand-600 text-brand-700' : 'border-transparent text-muted hover:text-brand-800',
           )}
         >
           {t.label}
-          {t.count !== undefined && <span className="rounded-full bg-page px-1.5 text-xs text-muted">{t.count}</span>}
+          {t.count !== undefined && <span className={cn('rounded-full px-2 text-xs', t.key === active ? 'bg-brand-50 text-brand-700' : 'bg-page text-muted')}>{t.count}</span>}
         </Link>
       ))}
     </div>
@@ -137,11 +137,11 @@ export function Tabs({ tabs, active, className }: { tabs: { key: string; label: 
 export function StatCard({ label, value, hint, icon, tone = 'brand', href }: { label: ReactNode; value: ReactNode; hint?: ReactNode; icon?: ReactNode; tone?: 'brand' | 'success' | 'warning' | 'danger' | 'neutral'; href?: string }) {
   const tones = { brand: 'bg-brand-50 text-brand-700', success: 'bg-emerald-50 text-emerald-700', warning: 'bg-amber-50 text-amber-700', danger: 'bg-red-50 text-red-700', neutral: 'bg-slate-100 text-slate-700' };
   const body = (
-    <div className="card flex h-full items-start gap-3 p-4">
-      {icon && <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', tones[tone])}>{icon}</span>}
+    <div className="card flex h-full items-start gap-3 p-4 sm:p-5">
+      {icon && <span className={cn('grid size-11 shrink-0 place-items-center rounded-xl', tones[tone])}>{icon}</span>}
       <div className="min-w-0">
-        <p className="text-xs text-muted">{label}</p>
-        <p className="mt-0.5 truncate text-lg font-bold">{value}</p>
+        <p className="text-xs font-medium text-muted">{label}</p>
+        <p className="mt-1 truncate text-xl font-bold text-brand-950">{value}</p>
         {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
       </div>
     </div>
@@ -195,7 +195,7 @@ export function Timeline({ items }: { items: { title: ReactNode; time?: ReactNod
     <ol className="relative space-y-4 border-s-2 border-line ps-5">
       {items.map((it, i) => (
         <li key={i} className="relative">
-          <span className={cn('absolute -start-[27px] top-1 size-3 rounded-full ring-4 ring-white', it.done === false ? 'bg-slate-300' : 'bg-brand-600')} />
+          <span className={cn('absolute -start-[27px] top-1 size-3 rounded-full ring-4 ring-white', it.done === false ? 'bg-slate-300' : 'bg-emerald-500')} />
           <p className="text-sm font-semibold">{it.title}</p>
           {it.time && <p className="text-xs text-muted">{it.time}</p>}
           {it.body && <div className="mt-1 text-sm text-muted">{it.body}</div>}

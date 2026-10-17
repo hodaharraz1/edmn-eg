@@ -9,7 +9,7 @@ test('desktop homepage: header, hero, sections in the approved order, search rou
   await expect(page.locator('h1')).toContainText('تحمي كل صفقة');
 
   const nav = page.getByRole('navigation', { name: 'التنقل الرئيسي' });
-  for (const href of ['/', '/stores', '/#escrow', '/sell', '/contact']) await expect(nav.locator(`a[href="${href}"]`)).toBeVisible();
+  for (const href of ['/', '/stores', '/protected-deal', '/sell', '/contact']) await expect(nav.locator(`a[href="${href}"]`)).toBeVisible();
   await nav.getByTestId('category-menu-trigger').click();
   await expect(page.getByTestId('category-menu-panel')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -34,13 +34,13 @@ test('desktop homepage: header, hero, sections in the approved order, search rou
   await expect.poll(() => seller.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
 
   // Search: all categories → /search; a chosen category → that category's listing with the query.
-  await page.locator('#home-search').fill('سامسونج');
-  await page.locator('#home-search').press('Enter');
+  await page.locator('#site-search').fill('سامسونج');
+  await page.locator('#site-search').press('Enter');
   await page.waitForURL(/\/search\?q=/);
   await page.goto('/');
-  const firstCat = await page.locator('#home-search-cat option').nth(1).getAttribute('value');
-  await page.locator('#home-search-cat').selectOption(firstCat!);
-  await page.locator('#home-search').fill('test');
+  const firstCat = await page.locator('#site-search-cat option').nth(1).getAttribute('value');
+  await page.locator('#site-search-cat').selectOption(firstCat!);
+  await page.locator('#site-search').fill('test');
   await page.getByRole('button', { name: 'ابحث', exact: true }).click();
   await page.waitForURL((u) => u.pathname === `/category/${firstCat}` && u.searchParams.get('q') === 'test');
 
@@ -57,7 +57,7 @@ test('desktop homepage: header, hero, sections in the approved order, search rou
 test('mobile homepage: compact header search, no horizontal scroll, reduced hero visual', async ({ browser }) => {
   const page = await (await browser.newContext({ locale: 'ar-EG', viewport: { width: 360, height: 780 } })).newPage();
   await page.goto('/');
-  await expect(page.locator('#home-search')).toBeVisible();
+  await expect(page.locator('#site-search')).toBeVisible();
   await expect(page.getByTestId('category-menu-trigger')).toBeHidden();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.context().close();

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { discountPercent, formatEGP, formatNumber } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
+import { SafeImg } from '@/ui/safe-img';
 
 export function Price({ value, compareAt, size = 'md', className }: { value: number | null; compareAt?: number | null; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const off = discountPercent(value, compareAt ?? null);
@@ -39,7 +40,7 @@ export function Stars({ value, count, size = 'sm', showValue = true }: { value: 
 
 export function ProtectedBadge({ className, compact }: { className?: string; compact?: boolean }) {
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700', className)}>
+    <span className={cn('inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100', className)}>
       <ShieldCheck className="size-3.5" aria-hidden />
       {compact ? 'شراء محمي' : 'شراء محمي من اضمن'}
     </span>
@@ -67,56 +68,58 @@ export function mediaUrl(key: string | null | undefined, size?: 'thumb' | 'md') 
   return `/media/${size ? key.replace(/\.webp$/, `_${size}.webp`) : key}`;
 }
 
-export function ProductCard({ p, wishlistSlot, priority }: { p: CardProduct; wishlistSlot?: ReactNode; priority?: boolean }) {
+/**
+ * THE product card of the marketplace (listings, search, categories, wishlist, homepage, related products).
+ * Approved homepage design: large contained image on a light tile, wishlist, title, rating only when real,
+ * prominent EGP price, store + verification, protected-purchase badge, and an optional purchase CTA slot.
+ * The whole card opens the product (stretched title link); wishlist and CTA sit above that link.
+ */
+export function ProductCard({ p, wishlistSlot, priority, cta }: { p: CardProduct; wishlistSlot?: ReactNode; priority?: boolean; cta?: ReactNode }) {
   const img = mediaUrl(p.imageKey, 'md');
   const out = p.totalAvailable <= 0;
+  const titleId = `pc-${p.id}`;
   return (
-    <article className="card group relative flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[var(--shadow-pop)]">
-      <Link href={`/product/${p.slug}`} className="relative block aspect-square overflow-hidden bg-white">
-        {img ? (
-          <img src={img} alt={p.titleAr} loading={priority ? 'eager' : 'lazy'} className={cn('size-full object-contain p-2 transition-transform duration-300 group-hover:scale-105', out && 'opacity-60')} />
-        ) : (
-          <div className="grid size-full place-items-center text-xs text-muted">مفيش صورة</div>
-        )}
-        <div className="absolute top-2 start-2 flex flex-col items-start gap-1">
-          {p.condition === 'USED' && <span className="rounded bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold text-amber-950">مستعمل{p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}</span>}
-          {out && <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[11px] font-bold text-white">نفدت الكمية</span>}
+    <article className="group relative flex h-full flex-col rounded-2xl border border-line bg-white p-2.5 shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-pop)] sm:p-3">
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-slate-100/70">
+        <SafeImg src={img} alt={p.titleAr} eager={priority} className={cn('size-full p-3 transition-transform duration-300 group-hover:scale-105', out && 'opacity-60')} />
+        <div className="absolute bottom-2 start-2 flex flex-col items-start gap-1">
+          {p.condition === 'USED' && <span className="rounded-md bg-amber-400 px-1.5 py-0.5 text-[11px] font-bold text-amber-950">مستعمل{p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}</span>}
+          {out && <span className="rounded-md bg-slate-700 px-1.5 py-0.5 text-[11px] font-bold text-white">نفدت الكمية</span>}
         </div>
-      </Link>
-      {wishlistSlot && <div className="absolute top-2 end-2">{wishlistSlot}</div>}
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <Link href={`/product/${p.slug}`} className="line-clamp-2 min-h-[2.6em] text-sm font-medium leading-snug hover:text-brand-700">
+      </div>
+      {wishlistSlot && <div className="absolute end-3 top-3 z-10 sm:end-5 sm:top-5">{wishlistSlot}</div>}
+      <div className="flex flex-1 flex-col gap-1.5 pt-3">
+        <Link id={titleId} href={`/product/${p.slug}`} className="line-clamp-2 min-h-[2.6em] text-sm font-semibold leading-snug after:absolute after:inset-0 after:rounded-2xl hover:text-brand-700">
           {p.titleAr}
         </Link>
-        {p.ratingCount > 0 ? <Stars value={p.ratingAvg} count={p.ratingCount} /> : <span className="text-[11px] text-muted">مفيش تقييمات لسه</span>}
-        <Price value={p.minPrice} compareAt={p.maxCompareAtPrice} />
-        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-1 text-[11px] text-muted">
-          <span className="inline-flex items-center gap-1">
-            <Store className="size-3" aria-hidden />
-            <span className="max-w-[9rem] truncate">{p.storeName}</span>
-            {p.storeVerified && <BadgeCheck className="size-3.5 text-brand-600" aria-label="متجر موثّق" />}
-          </span>
-        </div>
+        {p.ratingCount > 0 && <Stars value={p.ratingAvg} count={p.ratingCount} />}
+        <Price value={p.minPrice} compareAt={p.maxCompareAtPrice} className="[&>span:first-child]:text-lg" />
+        <p className="flex min-w-0 items-center gap-1 text-xs text-muted">
+          <Store className="size-3.5 shrink-0" aria-hidden />
+          <span className="truncate">{p.storeName}</span>
+          {p.storeVerified && <BadgeCheck className="size-3.5 shrink-0 text-brand-600" aria-label="متجر موثّق" />}
+        </p>
         <div className="flex items-center justify-between gap-2">
           <ProtectedBadge compact />
           {!out && p.totalAvailable <= 3 && <span className="text-[11px] font-semibold text-deal-600">فاضل {p.totalAvailable}</span>}
         </div>
+        {cta && <div className="relative z-10 mt-auto pt-1.5 [&_[aria-describedby]]:w-full">{cta}</div>}
       </div>
     </article>
   );
 }
 
 export function ProductGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5', className)}>{children}</div>;
+  return <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5', className)}>{children}</div>;
 }
 
 export function ProductRail({ title, href, children }: { title: ReactNode; href?: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between">
-        <h2 className="text-lg font-bold sm:text-xl">{title}</h2>
+        <h2 className="text-xl font-bold text-brand-950 sm:text-2xl">{title}</h2>
         {href && (
-          <Link href={href} className="text-sm font-semibold text-brand-700 hover:underline">
+          <Link href={href} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-600 hover:text-brand-700">
             شوف الكل
           </Link>
         )}

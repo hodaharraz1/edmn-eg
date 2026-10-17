@@ -41,7 +41,7 @@ export default async function CategoryPage(props: PageProps<'/category/[slug]'>)
       {children.length > 0 && (
         <div className="scrollbar-none -mx-1 mb-5 flex gap-2 overflow-x-auto px-1">
           {children.map((ch) => (
-            <Link key={ch.id} href={`/category/${ch.slug}`} className="whitespace-nowrap rounded-full border border-line bg-white px-4 py-1.5 text-sm hover:border-brand-400 hover:text-brand-700">
+            <Link key={ch.id} href={`/category/${ch.slug}`} className="inline-flex min-h-10 items-center whitespace-nowrap rounded-full border border-line bg-white px-4 text-sm font-medium shadow-sm transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
               {ch.nameAr}
             </Link>
           ))}

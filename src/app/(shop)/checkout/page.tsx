@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { randomUUID } from 'node:crypto';
 import Link from '@/ui/link';
-import { MapPin, ShieldCheck, Truck, Wallet } from 'lucide-react';
+import { Check, CheckCircle2, MapPin, ShieldCheck, StickyNote, Truck, Wallet, type LucideIcon } from 'lucide-react';
 import { placeOrderAction } from '@/app/_actions/checkout';
 import { AddressForm } from '@/app/_components/address-form';
 import { cartView } from '@/server/modules/commerce/cart';
@@ -19,6 +19,9 @@ import { PageHeader } from '@/ui/data';
 import { Alert, EmptyState } from '@/ui/feedback';
 import { TestMoneyNotice } from '@/app/_components/test-money';
 import { Radio, Textarea } from '@/ui/form';
+import { ProtectionPanel } from '@/ui/protection';
+import { SafeImg } from '@/ui/safe-img';
+import { cn } from '@/lib/cn';
 
 export const metadata: Metadata = { title: 'إتمام الشراء', robots: { index: false } };
 
@@ -52,16 +55,18 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
 
   return (
     <div className="container-page py-6">
-      <PageHeader title="إتمام الشراء" description="العنوان ← التوصيل ← طريقة الدفع ← المراجعة" />
+      <PageHeader title="إتمام الشراء" description="خطوات واضحة، والمبلغ محمي لدى اضمن لحد ما تستلم وتأكد." />
+      <CheckoutSteps current={step} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <section className="card p-5">
-            <h2 className="mb-3 flex items-center gap-2 font-bold"><MapPin className="size-5 text-brand-600" /> 1. عنوان التوصيل</h2>
+            <StepTitle n={1} icon={MapPin}>عنوان التوصيل</StepTitle>
             {addrs.length > 0 && (
               <div className="grid gap-2 sm:grid-cols-2">
                 {addrs.map((a) => (
-                  <Link key={a.id} href={`/checkout?address=${a.id}`} className={`rounded-xl border p-3 text-sm ${a.id === chosen?.id ? 'border-brand-600 bg-brand-50' : 'border-line hover:border-brand-300'}`}>
-                    <p className="font-semibold">{a.recipientName} {a.label && <span className="text-xs text-muted">({a.label})</span>}</p>
+                  <Link key={a.id} href={`/checkout?address=${a.id}`} aria-current={a.id === chosen?.id ? 'true' : undefined} className={`relative rounded-xl border p-3.5 text-sm transition-colors ${a.id === chosen?.id ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600' : 'border-line hover:border-brand-300'}`}>
+                    {a.id === chosen?.id && <CheckCircle2 className="absolute end-3 top-3 size-5 text-brand-600" aria-hidden />}
+                    <p className="pe-7 font-semibold">{a.recipientName} {a.label && <span className="text-xs text-muted">({a.label})</span>}</p>
                     <p className="text-muted">{govs.find((g) => g.id === a.governorateId)?.nameAr}، {a.city}، {a.street} {a.building ?? ''}</p>
                     <p className="text-xs text-muted ltr">{a.phone}</p>
                   </Link>
@@ -69,7 +74,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               </div>
             )}
             <details className="mt-3" open={addrs.length === 0}>
-              <summary className="cursor-pointer text-sm font-semibold text-brand-700">+ ضيف عنوان جديد</summary>
+              <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-brand-600">+ ضيف عنوان جديد</summary>
               <div className="mt-3">
                 <AddressForm back="checkout" defaultName={user.fullName} defaultPhone={user.phone ?? ''} />
               </div>
@@ -79,8 +84,8 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
           {step >= 2 && (
             <>
               <section className="card p-5">
-                <h2 className="mb-3 flex items-center gap-2 font-bold"><Truck className="size-5 text-brand-600" /> 2. التوصيل ({cart.groups.length} شحنة)</h2>
-                <p className="mb-3 rounded-lg bg-brand-50 p-2 text-xs text-brand-900" data-testid="checkout-shipping-basis">
+                <StepTitle n={2} icon={Truck}>التوصيل ({cart.groups.length} شحنة)</StepTitle>
+                <p className="mb-3 rounded-xl bg-brand-50 p-3 text-xs leading-6 text-brand-900" data-testid="checkout-shipping-basis">
                   مصاريف الشحن محسوبة على عنوان التوصيل اللي اخترته في <span className="font-bold" data-testid="checkout-governorate">{chosenGov?.nameAr}</span>
                   {browsingGov && chosenGov && browsingGov.id !== chosenGov.id && <> (المحافظة اللي في أعلى الصفحة «{browsingGov.nameAr}» مش بتأثر على الطلب ده)</>}.
                 </p>
@@ -94,8 +99,8 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                       {g.etaMinDays !== null && <p className="text-xs text-muted">التوصيل المتوقع خلال {g.etaMinDays + g.processingDays}–{(g.etaMaxDays ?? 0) + g.processingDays} أيام عمل بعد تأكيد الدفع</p>}
                       <div className="mt-2 flex gap-2 overflow-x-auto">
                         {g.lines.map((l) => (
-                          <span key={l.variantId} className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-line bg-white" title={l.title}>
-                            {l.imageKey && <img src={mediaUrl(l.imageKey, 'thumb')!} alt={l.title} className="size-full object-contain" />}
+                          <span key={l.variantId} className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-gradient-to-b from-slate-50 to-slate-100" title={l.title}>
+                            <SafeImg src={l.imageKey ? mediaUrl(l.imageKey, 'thumb') : null} alt={l.title} className="size-full p-1" />
                             <span className="absolute bottom-0 end-0 rounded-tl bg-ink px-1 text-[10px] text-white">×{l.quantity}</span>
                           </span>
                         ))}
@@ -129,7 +134,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                 <input type="hidden" name="expectedTotal" value={cart.grandTotal} />
                 <input type="hidden" name="expectedPricingVersionId" value={cart.pricingVersionId ?? ''} />
                 <section className="card p-5">
-                  <h2 className="mb-3 flex items-center gap-2 font-bold"><Wallet className="size-5 text-brand-600" /> 3. طريقة الدفع</h2>
+                  <StepTitle n={3} icon={Wallet}>طريقة الدفع</StepTitle>
                   {!live && <TestMoneyNotice className="mb-3" />}
                   {methods.length === 0 ? (
                     <Alert tone="warning">مفيش طرق دفع متاحة دلوقتي. جرّب تاني بعد شوية.</Alert>
@@ -145,7 +150,7 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
                   </p>
                 </section>
                 <section className="card p-5">
-                  <h2 className="mb-3 font-bold">4. ملاحظات للبائع (اختياري)</h2>
+                  <StepTitle n={4} icon={StickyNote}>ملاحظات للبائع (اختياري)</StepTitle>
                   <Textarea name="note" rows={2} maxLength={500} placeholder="مثال: كلّمني قبل التوصيل" />
                 </section>
                 {cart.pricingUnavailable ? (
@@ -169,20 +174,61 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
           )}
         </div>
         <aside>
-          <div className="card sticky top-32 space-y-3 p-5 text-sm">
-            <h2 className="font-bold">5. مراجعة الطلب</h2>
+          <div className="sticky top-44 space-y-3">
+          <div className="card overflow-hidden text-sm">
+            <h2 className="bg-brand-950 px-5 py-3.5 font-bold text-white">مراجعة الطلب</h2>
+            <div className="space-y-3 p-5">
             <dl className="space-y-2">
               <div className="flex justify-between"><dt className="text-muted">المنتجات ({cart.itemCount})</dt><dd>{formatEGP(cart.merchandiseTotal)}</dd></div>
               <div className="flex justify-between"><dt className="text-muted">الشحن</dt><dd data-testid="checkout-shipping-total">{!chosen ? '—' : cart.shippingResolved ? formatEGP(cart.shippingTotal) : 'غير متاح'}</dd></div>
               <div className="flex justify-between"><dt className="text-muted">رسوم خدمة وحماية اضمن</dt><dd data-testid="checkout-buyer-fee">{cart.pricingUnavailable ? '—' : formatEGP(cart.buyerFeeTotal)}</dd></div>
               <p className="text-[11px] text-muted">رسوم خدمة وحماية اضمن تُحسب على قيمة المنتجات فقط (من غير الشحن) حسب نوع المنتج وقيمة الطلب، وتظهر لك قبل التأكيد. الشحن على المشتري. الرسوم المثبتة في طلبك لا تتغير بعد التأكيد.</p>
               {cart.pricingUnavailable && <Alert tone="danger">{cart.pricingUnavailable}</Alert>}
-              <div className="flex justify-between border-t border-line pt-2 text-base font-bold"><dt>الإجمالي المطلوب</dt><dd>{formatEGP(cart.grandTotal)}</dd></div>
+              <div className="flex items-baseline justify-between border-t border-line pt-3"><dt className="text-base font-bold">الإجمالي المطلوب</dt><dd className="text-2xl font-bold text-brand-950">{formatEGP(cart.grandTotal)}</dd></div>
             </dl>
             <p className="flex items-start gap-2 text-xs text-muted"><ShieldCheck className="size-4 shrink-0 text-emerald-600" /> بتأكيد الطلب أنت توافق على <Link href="/legal/buyer-terms" className="underline">شروط الشراء</Link>. الطلب بيتقسم تلقائياً على حسب كل بائع.</p>
+            </div>
+          </div>
+          <ProtectionPanel title="دفعك محمي مع اضمن" compact>
+            بتحوّل لحسابات اضمن المعلنة بس، وفريقنا يراجع التحويل. المبلغ ما بيتاحش للبائع غير بعد الاستلام وتأكيدك أو انتهاء مهلة الاعتراض، وموافقة الإدارة.
+          </ProtectionPanel>
           </div>
         </aside>
       </div>
     </div>
+  );
+}
+
+function StepTitle({ n, icon: Icon, children }: { n: number; icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-4 flex items-center gap-3 font-bold text-brand-950">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-950 text-sm text-white" aria-hidden>
+        {n}
+      </span>
+      <Icon className="size-5 text-brand-600" aria-hidden />
+      {children}
+    </h2>
+  );
+}
+
+/** Visual progress: address → delivery → payment → review (the page itself is one calm form). */
+function CheckoutSteps({ current }: { current: number }) {
+  const steps = ['العنوان', 'التوصيل', 'الدفع', 'المراجعة'];
+  return (
+    <ol aria-label="خطوات إتمام الشراء" className="mb-6 grid grid-cols-4 gap-2">
+      {steps.map((t, i) => {
+        const n = i + 1;
+        const done = n < current || (current === 2 && n === 1);
+        const active = n === current || (current === 2 && n > 1);
+        return (
+          <li key={t} aria-current={n === current ? 'step' : undefined} className="space-y-1.5">
+            <span className={cn('block h-1.5 rounded-full', done ? 'bg-emerald-500' : active ? 'bg-brand-600' : 'bg-line')} />
+            <span className={cn('flex items-center gap-1 text-xs font-semibold', done ? 'text-emerald-700' : active ? 'text-brand-800' : 'text-muted')}>
+              {done && <Check className="size-3.5" aria-hidden />} {t}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

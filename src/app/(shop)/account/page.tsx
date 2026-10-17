@@ -41,7 +41,7 @@ export default async function AccountDashboard() {
       ))}
       <section className="card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold">آخر طلباتك</h2>
+          <h2 className="font-bold text-brand-950">آخر طلباتك</h2>
           <Link href="/account/orders" className="text-sm text-brand-700 hover:underline">كل الطلبات</Link>
         </div>
         {recent.length ? (
@@ -60,7 +60,7 @@ export default async function AccountDashboard() {
         )}
       </section>
       <form action={logoutAction} className="lg:hidden">
-        <button className="flex items-center gap-2 text-sm text-red-700"><LogOut className="size-4" /> تسجيل الخروج</button>
+        <button className="flex min-h-11 items-center gap-2 text-sm font-semibold text-red-700"><LogOut className="size-4" aria-hidden /> تسجيل الخروج</button>
       </form>
     </div>
   );

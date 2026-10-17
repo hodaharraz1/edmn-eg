@@ -3,7 +3,7 @@ import { BadgeCheck, Bell, Heart, Home, LayoutGrid, PackageCheck, Search, Shield
 import { formatEGP } from '@/lib/format';
 import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
 import { mediaUrl } from '@/ui/commerce';
-import { SafeImg } from './safe-img';
+import { SafeImg } from '@/ui/safe-img';
 
 export interface DeviceProduct {
   titleAr: string;

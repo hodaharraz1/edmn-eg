@@ -345,15 +345,15 @@ test('navigation: buyer desktop + mobile, seller desktop + mobile, active states
   await buyer.goto(`/account/messages/${convId}`);
   await buyer.getByTestId('conversation-back').click();
   await buyer.waitForURL(/\/account\/messages$/);
-  // 50 — mobile bottom nav
+  // 50 — mobile: messages live in the compact header (badge), the bottom nav carries the shopping destinations
   await buyer.setViewportSize({ width: 390, height: 844 });
   await buyer.goto('/');
-  await expect(buyer.getByTestId('header-messages')).toBeHidden();
-  await buyer.getByTestId('bottom-nav-messages').click();
+  await expect(buyer.getByTestId('bottom-nav')).toBeVisible();
+  await buyer.getByTestId('header-messages').click();
   await buyer.waitForURL(/\/account\/messages$/);
-  await expect(buyer.getByTestId('bottom-nav-messages')).toHaveAttribute('aria-current', 'page');
+  await expect(buyer.getByTestId('header-messages')).toHaveAttribute('aria-current', 'page');
   await buyer.goto(`/account/messages/${convId}`);
-  await expect(buyer.getByTestId('bottom-nav-messages')).toHaveAttribute('aria-current', 'page'); // 61 (nested route)
+  await expect(buyer.getByTestId('header-messages')).toHaveAttribute('aria-current', 'page'); // 61 (nested route)
   // 64 — empty (filtered) state
   await buyer.goto('/account/messages?q=zzzz-no-match');
   await expect(buyer.getByText('مفيش محادثات مطابقة')).toBeVisible();

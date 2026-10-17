@@ -20,8 +20,14 @@ export default async function SupportPage() {
         <ul className="card divide-y divide-line">
           {list.map((t) => (
             <li key={t.id}>
-              <Link href={`/account/support/${t.id}`} className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm hover:bg-page/50">
-                <span>#{t.number} · {t.subject} <span className="text-xs text-muted">({label('ticketType', t.type)}) · {formatDate(t.updatedAt)}</span></span>
+              <Link href={`/account/support/${t.id}`} className="flex min-h-16 flex-wrap items-center justify-between gap-3 p-4 text-sm transition-colors hover:bg-soft/60">
+                <span className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><LifeBuoy className="size-5" aria-hidden /></span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold text-brand-950">#{t.number} · {t.subject}</span>
+                    <span className="block text-xs text-muted">{label('ticketType', t.type)} · آخر تحديث {formatDate(t.updatedAt)}</span>
+                  </span>
+                </span>
                 <StatusChip status={t.status} />
               </Link>
             </li>

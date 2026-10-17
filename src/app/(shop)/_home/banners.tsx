@@ -3,7 +3,7 @@ import Link from '@/ui/link';
 import { LOGO_HEIGHT, LOGO_SRC, LOGO_WIDTH } from '@/ui/logo';
 import { mediaUrl } from '@/ui/commerce';
 import { SELLER_BANNER } from '@/config/home-assets';
-import { SafeImg } from './safe-img';
+import { SafeImg } from '@/ui/safe-img';
 
 const SELLER_ONBOARDING = '/seller/register'; // existing seller sign-up (redirected to the seller host where configured)
 const NEW_PROTECTED_DEAL = '/account/deals/new'; // existing «اضمن صفقة خارج السوق» creation flow
