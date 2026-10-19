@@ -19,7 +19,7 @@ const SEV = { HIGH: { label: 'مرتفع', tone: 'danger' }, MEDIUM: { label: '�
  * Rule-based risk signals computed live from operational data (read-only).
  * They are prompts for human review — never automatic decisions.
  */
-const FLAG_LABEL: Record<string, string> = { DELIVERY_CONFLICT: 'تعارض في التسليم', DELIVERY_EXCEPTION: 'تعذر التحقق من التسليم', ADMIN_HOLD: 'إيقاف إداري', MANUAL: 'ملاحظة يدوية' };
+const FLAG_LABEL: Record<string, string> = { DELIVERY_CONFLICT: 'تعارض في التسليم', DELIVERY_EXCEPTION: 'تعذر التحقق من التسليم', ADMIN_HOLD: 'إيقاف إداري', MANUAL: 'ملاحظة يدوية', DUPLICATE_IDENTIFIER: 'نفس رقم الجهاز في جوازين لبائعين مختلفين' };
 
 export default async function RiskFlags() {
   const { allowed } = await adminWith(['audit.view', 'finance.view']);
@@ -90,7 +90,7 @@ export default async function RiskFlags() {
               <li key={f.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <Badge tone={f.severity === 'HIGH' ? 'danger' : 'warning'}>{FLAG_LABEL[f.code] ?? f.code}</Badge>
                 <span className="min-w-0 flex-1">{f.note} · {formatDate(f.createdAt, true)}</span>
-                <Link href={f.entityType === 'external_deal' ? `/admin/deals/${f.entityId}` : `/admin/sellers/${f.entityId}`} className="text-brand-700 hover:underline">فتح</Link>
+                <Link href={f.entityType === 'external_deal' ? `/admin/deals/${f.entityId}` : f.entityType === 'product_passport' ? `/admin/used/passports/${f.entityId}` : `/admin/sellers/${f.entityId}`} className="text-brand-700 hover:underline">فتح</Link>
                 <ActionForm action={riskFlagAction} className="flex items-center gap-1">
                   <input type="hidden" name="op" value="resolve" />
                   <input type="hidden" name="flagId" value={f.id} />

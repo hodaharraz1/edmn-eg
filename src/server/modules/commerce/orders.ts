@@ -267,6 +267,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
       }
     }
 
+    // Product Condition Freeze for documented used items (the buyer accepts the listing as documented).
+    const { freezeOrderConditions } = await import('@/server/modules/used/snapshots');
+    await freezeOrderConditions(tx, order.id);
+
     const [payment] = await tx
       .insert(payments)
       .values({

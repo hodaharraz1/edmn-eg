@@ -20,6 +20,7 @@ import {
   products,
   sellerShippingRates,
   sellers,
+  usedConditionReports,
 } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
@@ -380,6 +381,12 @@ export async function submissionProblems(conn: DbOrTx, p: Product): Promise<stri
     if (!p.defects) problems.push('اذكر العيوب الموجودة (أو اكتب "لا يوجد")');
     const minActual = await getSetting('products.minActualImagesForUsed', conn);
     if (imgs.filter((i) => i.isActualItem).length < minActual) problems.push(`المنتج المستعمل يتطلب ${minActual} صور فعلية على الأقل للقطعة نفسها`);
+    // Covered category (configurable used policy): the structured condition report must be complete and declared.
+    const { policyForCategory } = await import('@/server/modules/used/policies');
+    if (await policyForCategory(p.categoryId, conn)) {
+      const [r] = await conn.select({ status: usedConditionReports.status }).from(usedConditionReports).where(eq(usedConditionReports.productId, p.id));
+      if (!r || r.status !== 'DECLARED') problems.push('وثّق حالة المنتج المستعمل (البيانات والصور والإقرار) من «جواز المنتج»');
+    }
   }
   const variants = await conn.select().from(productVariants).where(and(eq(productVariants.productId, p.id), eq(productVariants.isActive, true)));
   if (!variants.length) problems.push('أضف السعر والكمية');

@@ -46,6 +46,15 @@ const GROUPS: { title: string; items: Item[] }[] = [
     ],
   },
   {
+    title: 'المستعمل المضمون',
+    items: [
+      { href: '/admin/used', label: 'نظرة عامة والتحليلات', perm: ['products.moderate', 'deals.manage', 'reports.view', 'catalog.manage'] },
+      { href: '/admin/used/passports', label: 'جوازات المنتجات والفحص', perm: ['products.moderate', 'deals.manage'] },
+      { href: '/admin/used/policies', label: 'سياسات الفئات', perm: 'catalog.manage' },
+      { href: '/admin/used/score', label: 'قواعد مؤشر الأمان', perm: 'settings.manage' },
+    ],
+  },
+  {
     title: 'المالية',
     items: [
       { href: '/admin/finance-control', label: 'مركز الرقابة المالية', perm: ['finance.view', 'finance.controls'] },

@@ -49,6 +49,8 @@ export const externalDeals = pgTable(
     shippingFee: money().notNull().default(0),
     processingDays: integer(),
     /** Immutable once set: the exact terms both parties accepted (DB trigger blocks any later change). */
+    /** Marketplace category of the item — selects the used-condition policy when condition = USED. */
+    categoryId: uuid(),
     agreedTerms: jsonb().$type<Record<string, unknown>>(),
     agreedVersion: integer(),
     agreedAt: ts(),

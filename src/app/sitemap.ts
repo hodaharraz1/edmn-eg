@@ -27,6 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: u('/categories'), changeFrequency: 'weekly', priority: 0.6 },
     { url: u('/stores'), changeFrequency: 'weekly', priority: 0.5 },
     { url: u('/protected-deal'), changeFrequency: 'monthly', priority: 0.7 },
+    { url: u('/used'), changeFrequency: 'daily', priority: 0.8 },
     { url: u('/sell'), changeFrequency: 'monthly', priority: 0.5 },
     ...Object.values(LEGAL_CODES).map((l) => ({ url: u(`/legal/${l.slug}`), changeFrequency: 'monthly' as const, priority: 0.2 })),
     ...cats.map((c) => ({ url: u(`/category/${c.slug}`), lastModified: c.updatedAt, changeFrequency: 'daily' as const, priority: 0.7 })),

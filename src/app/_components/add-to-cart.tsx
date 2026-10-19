@@ -1,11 +1,11 @@
 'use client';
 
-import { ShoppingCart, Zap } from 'lucide-react';
+import { ShoppingCart, Zap, ShieldCheck } from 'lucide-react';
 import { addToCartAction } from '@/app/_actions/shop';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { QuantityInput } from '@/ui/client';
 
-export function AddToCartForm({ variantId, max, disabled }: { variantId: string; max: number; disabled?: boolean }) {
+export function AddToCartForm({ variantId, max, disabled, protectedBuy }: { variantId: string; max: number; disabled?: boolean; protectedBuy?: boolean }) {
   return (
     <ActionForm action={addToCartAction} className="space-y-3">
       <input type="hidden" name="variantId" value={variantId} />
@@ -18,7 +18,7 @@ export function AddToCartForm({ variantId, max, disabled }: { variantId: string;
           <ShoppingCart className="size-5" /> ضيف للسلة
         </SubmitButton>
         <SubmitButton size="lg" variant="secondary" className="w-full" name="intent" value="buy">
-          <Zap className="size-5" /> اشتري دلوقتي
+          {protectedBuy ? <ShieldCheck className="size-5" /> : <Zap className="size-5" />} {protectedBuy ? 'اشتري بحماية اضمن' : 'اشتري دلوقتي'}
         </SubmitButton>
       </div>
       {disabled && <p className="text-xs text-muted">المنتج ده مش متاح للطلب دلوقتي.</p>}

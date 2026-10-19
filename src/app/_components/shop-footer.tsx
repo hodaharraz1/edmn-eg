@@ -33,6 +33,7 @@ export async function ShopFooter() {
             <li><Link href="/deals" className="inline-flex min-h-10 items-center hover:text-white">العروض</Link></li>
             <li><Link href="/best-sellers" className="inline-flex min-h-10 items-center hover:text-white">الأكثر مبيعاً</Link></li>
             <li><Link href="/stores" className="inline-flex min-h-10 items-center hover:text-white">المتاجر</Link></li>
+            <li><Link href="/used" className="inline-flex min-h-10 items-center hover:text-white">سوق المستعمل المضمون</Link></li>
             <li><Link href="/protected-deal" className="inline-flex min-h-10 items-center hover:text-white">اضمن صفقة خارج السوق</Link></li>
           </ul>
         </div>

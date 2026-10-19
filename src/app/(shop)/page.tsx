@@ -12,6 +12,7 @@ import { EscrowHowItWorks } from './_home/escrow';
 import { FeaturedProducts } from './_home/featured';
 import { HomeHero, TrustStrip } from './_home/hero';
 import { MetricsStrip } from './_home/metrics';
+import { UsedTrustedSection } from './_home/used';
 
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
@@ -44,6 +45,7 @@ export default async function HomePage() {
       <div className="container-page space-y-10 py-8 sm:space-y-12 sm:py-10">
         <CategoryBrowser categories={cats} />
         <FeaturedProducts products={featured} />
+        <UsedTrustedSection />
         <EscrowHowItWorks />
         <MetricsStrip />
         <HomeBanners products={featured.map((p) => ({ imageKey: p.imageKey }))} />

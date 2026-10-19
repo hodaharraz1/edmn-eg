@@ -20,6 +20,9 @@ import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
 import { marketHref } from '@/lib/market-url';
 import { Checkbox, Field, Input, Radio, Select, Textarea } from '@/ui/form';
+import { usedStartAction } from '@/app/_actions/used';
+import { policyForCategory } from '@/server/modules/used/policies';
+import { reportForProduct } from '@/server/modules/used/reports';
 
 export default async function ProductEditor(props: PageProps<'/seller/products/[id]'>) {
   const actor = await requireSellerActor('/seller/products');
@@ -45,6 +48,9 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
     db.select().from(stores).where(eq(stores.sellerId, p.sellerId)),
   ]);
   const problems = await submissionProblems(db, p);
+  // Trusted Used Commerce: used listings in a covered category are documented in a Product Passport.
+  const usedPolicy = p.condition === 'USED' ? await policyForCategory(p.categoryId) : null;
+  const usedReport = usedPolicy ? await reportForProduct(p.id) : null;
   const optionAttrs = attrs.filter((a) => a.ca.isVariantAxis && (a.attr.type === 'SELECT'));
   const rev = g.openRevision;
   const href = (k: string) => `/seller/products/${p.id}?step=${k}`;
@@ -64,6 +70,26 @@ export default async function ProductEditor(props: PageProps<'/seller/products/[
       )}
       {approved && <Alert tone="info">المنتج معتمد. تعديل الأسعار والمخزون يُطبق فوراً، أما تعديل البيانات الأساسية أو الصور فيُرسل للمراجعة دون إيقاف الإعلان الحالي.</Alert>}
       {rev && <Alert tone="warning" title="يوجد تعديل قيد المراجعة">الحقول المعدلة: {rev.changedFields.join('، ')}</Alert>}
+
+      {usedPolicy && (
+        <section className="card flex flex-wrap items-center justify-between gap-3 border-brand-200 p-4" data-testid="seller-passport-entry">
+          <div className="min-w-0">
+            <p className="font-bold">جواز المنتج — توثيق حالة {usedPolicy.policy.title}</p>
+            <p className="text-sm text-muted">
+              {!usedReport ? 'مطلوب قبل إرسال المنتج للمراجعة: بيانات الحالة والصور والإقرار.' : usedReport.report.status === 'DECLARED' ? `مكتمل ومقرّ بيه${usedReport.passport ? ` — ${usedReport.passport.code}` : ''}.` : `اكتمال التوثيق ${Math.round(((usedReport.check.conditionCompleteness + usedReport.check.evidenceCompleteness) / 2) * 100)}% — محتاج إقرار.`}
+            </p>
+          </div>
+          {usedReport ? (
+            <Link href={`/seller/products/${p.id}/condition`} className="inline-flex min-h-11 items-center rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-500">فتح جواز المنتج</Link>
+          ) : (
+            <form action={usedStartAction}>
+              <input type="hidden" name="mode" value="product" />
+              <input type="hidden" name="productId" value={p.id} />
+              <button type="submit" className="inline-flex min-h-11 items-center rounded-xl bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-500">وثّق حالة المنتج</button>
+            </form>
+          )}
+        </section>
+      )}
 
       <Stepper steps={PRODUCT_STEPS} current={current} hrefFor={(n) => (n === 1 ? null : href(STEP_KEYS[n - 1]))} />
 

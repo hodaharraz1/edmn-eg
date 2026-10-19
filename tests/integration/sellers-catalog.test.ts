@@ -88,6 +88,10 @@ describe('product moderation', () => {
     await updateLogistics(seller, d.id, { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, processingDays: null, returnPolicyOverride: true, acceptsVoluntaryReturns: false, voluntaryReturnDays: null });
     await expect(submitForReview(seller, d.id)).rejects.toThrow(/صور فعلية/);
     await addImages(seller, d.id, [{ data: await png('real1'), name: 'r1.png' }, { data: await png('real2'), name: 'r2.png' }], true);
+    // Phones are a covered used category: the structured condition passport is also required (Trusted Used Commerce).
+    await expect(submitForReview(seller, d.id)).rejects.toThrow(/جواز المنتج/);
+    const { documentUsedListing, USED_DEMO_DOCS } = await import('@/server/db/seed/used-demo');
+    await documentUsedListing(seller, d.id, { ...USED_DEMO_DOCS['UW-IP13P-256'], imei: '356938035643809' });
     await expect(submitForReview(seller, d.id)).resolves.toBe('SUBMITTED');
   });
 

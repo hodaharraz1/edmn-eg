@@ -22,7 +22,7 @@ export function ShopMenuDrawer({ cats, triggerClassName }: { cats: { id: string;
         {[
           ['/deals', t('nav.deals')],
           ['/best-sellers', t('nav.bestSellers')],
-          ['/search?condition=USED', 'المستعمل'],
+          ['/used', 'سوق المستعمل المضمون'],
           ['/account/wishlist', 'المفضلة'],
           ['/stores', t('nav.stores')],
           ['/sell', t('nav.sell')],

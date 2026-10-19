@@ -23,6 +23,8 @@ export const FILE_PURPOSES = [
   'MESSAGE_ATTACHMENT',
   /** National ID front/back for the global identity verification (highly sensitive, private, audited). */
   'IDENTITY_DOCUMENT',
+  /** Used-product condition evidence that must not be public (identifier photos, deal evidence, inspection reports). */
+  'CONDITION_EVIDENCE',
 ] as const;
 export type FilePurpose = (typeof FILE_PURPOSES)[number];
 /**

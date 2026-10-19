@@ -18,7 +18,7 @@ const evidenceRoles = sql.join(EVIDENCE_ROLES.map((r) => sql`${r}`), sql`, `);
  * business record the file is attached to (purpose-specific rules below). Denials are uniform 404s.
  */
 const DOC_STEP_UP_MS = 60 * 60_000;
-const SENSITIVE_PURPOSES = new Set(['IDENTITY_DOCUMENT', 'SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE', 'MESSAGE_ATTACHMENT']);
+const SENSITIVE_PURPOSES = new Set(['IDENTITY_DOCUMENT', 'SELLER_DOCUMENT', 'PAYMENT_PROOF', 'WITHDRAWAL_PROOF', 'REFUND_PROOF', 'DISPUTE_EVIDENCE', 'DEAL_EVIDENCE', 'MESSAGE_ATTACHMENT', 'CONDITION_EVIDENCE']);
 
 export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<boolean> {
   const [f] = await db.select().from(files).where(eq(files.id, fileId));
@@ -67,6 +67,21 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
     case 'DEAL_EVIDENCE':
       if (hasPermission(actor, 'deals.view')) return true;
       return one(sql`select 1 from deal_evidence de join external_deals d on d.id = de.deal_id where de.file_id = ${f.id} and (d.buyer_id = ${uid} or d.seller_user_id = ${uid})`);
+    case 'CONDITION_EVIDENCE':
+      // Used-condition evidence that is never public (identifier photos, every protected-deal photo, inspection
+      // reports): the item's seller side, the transaction's buyer, and staff who review listings, deals or disputes.
+      if (hasPermission(actor, 'products.moderate') || hasPermission(actor, 'deals.view') || hasPermission(actor, 'disputes.manage')) return true;
+      return one(sql`
+        select 1 from used_condition_reports r
+          left join external_deals d on d.id = r.deal_id
+          left join products p on p.id = r.product_id
+          left join sellers s on s.id = p.seller_id
+          left join seller_members m on m.seller_id = p.seller_id and m.user_id = ${uid} and m.is_active
+         where (r.id in (select e.report_id from used_condition_evidence e where e.file_id = ${f.id})
+             or r.id in (select pp.report_id from used_inspections i join product_passports pp on pp.id = i.passport_id where i.report_file_id = ${f.id}))
+           and (r.author_user_id = ${uid} or d.buyer_id = ${uid} or d.seller_user_id = ${uid} or s.owner_user_id = ${uid} or m.user_id is not null
+             or exists (select 1 from condition_snapshots cs join seller_orders so on so.id = cs.seller_order_id join orders o on o.id = so.order_id
+                         where cs.report_id = r.id and cs.status = 'ACCEPTED' and o.customer_id = ${uid}))`);
     case 'WITHDRAWAL_PROOF':
       if (hasPermission(actor, 'withdrawals.view') || hasPermission(actor, 'deals.payout')) return true;
       return one(sql`select 1 from withdrawal_requests w join sellers s on s.id = w.seller_id where w.proof_file_id = ${f.id} and s.owner_user_id = ${uid}`);

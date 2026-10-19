@@ -18,6 +18,9 @@ import { FileInput } from '@/ui/client';
 import { Breadcrumbs, DefinitionList, PageHeader } from '@/ui/data';
 import { Alert, Badge, StatusChip } from '@/ui/feedback';
 import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
+import { ConditionDetails, ProtectionLevelBadge } from '@/app/_components/used';
+import { snapshotsForDispute } from '@/server/modules/used/snapshots';
+import { USED_DISPUTE_REASONS, type ProtectionLevel } from '@/domain/used';
 
 export default async function AdminDispute(props: PageProps<'/admin/disputes/[id]'>) {
   const { actor, allowed } = await adminWith('disputes.manage');
@@ -38,6 +41,8 @@ export default async function AdminDispute(props: PageProps<'/admin/disputes/[id
   } else if (d.dealId) orderLink = { href: `/admin/deals/${d.dealId}`, label: 'الصفقة الخارجية' };
   const [assignee] = d.assignedTo ? await db.select({ name: users.fullName }).from(users).where(eq(users.id, d.assignedTo)) : [];
   const open = !['RESOLVED', 'CLOSED'].includes(d.status);
+  // Trusted Used Commerce: the frozen condition this claim is judged against (with its integrity verdict).
+  const frozen = await snapshotsForDispute({ dealId: d.dealId, sellerOrderId: d.sellerOrderId });
   const hidden = <><input type="hidden" name="disputeId" value={d.id} /><input type="hidden" name="back" value={`/admin/disputes/${d.id}`} /></>;
   return (
     <div className="space-y-4">
@@ -59,6 +64,22 @@ export default async function AdminDispute(props: PageProps<'/admin/disputes/[id
         ]} />
         {g.evidence.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{g.evidence.map((e) => <a key={e.id} href={`/api/files/${e.fileId}`} target="_blank" className="rounded border border-line px-2 py-1 text-xs text-brand-700">دليل {e.note ?? ''}</a>)}</div>}
       </section>
+      {frozen.map(({ row, snapshot, intact }) => (
+        <section key={row.id} className="card space-y-3 border-brand-200 p-5" data-testid="dispute-frozen-condition">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-bold">الحالة المجمّدة وقت الاتفاق — المرجع للنزاع</h2>
+            <ProtectionLevelBadge level={snapshot.passport.level as ProtectionLevel} />
+            <Badge tone={intact ? 'success' : 'danger'}>{intact ? 'البصمة سليمة' : 'تحذير: البصمة غير مطابقة'}</Badge>
+            <Link href={`/passport/${snapshot.passport.code}`} target="_blank" className="ltr font-mono text-xs text-brand-700 hover:underline">{snapshot.passport.code}</Link>
+          </div>
+          <p className="text-sm">
+            سبب المشتري: <span className="font-semibold">{USED_DISPUTE_REASONS[d.reasonCode as keyof typeof USED_DISPUTE_REASONS] ?? d.reasonCode}</span> · نسخة الحالة {row.version} · اتجمّدت {formatDate(row.respondedAt ?? row.createdAt, true)}
+            {snapshot.amendment ? ` · تعديل متفق عليه: ${snapshot.amendment.reason}` : ''}
+          </p>
+          <ConditionDetails fields={snapshot.fields.map((f) => ({ code: f.code, group: f.group, label: f.label, display: f.display }))} defects={snapshot.defects} identifierMasked={snapshot.identifier?.masked ?? null} evidence={snapshot.evidence.map((e) => ({ slot: e.slot, label: e.label, fileId: e.fileId, private: true }))} showPrivate />
+          <p className="text-xs text-muted">قارن أدلة المشتري بالحالة دي (العيوب المعلنة مش سبب للنزاع). المبلغ محجوز بقواعد النزاع الحالية، وأي إتاحة أو استرداد بيمر بالموافقة المزدوجة.</p>
+        </section>
+      ))}
       <section className="card p-5">
         <h2 className="mb-3 font-bold">المراسلات</h2>
         <ul className="space-y-2">

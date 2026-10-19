@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import { asc, eq } from 'drizzle-orm';
 import { dealStepAction, inviteSellerAction } from '@/app/_actions/deals';
 import { db } from '@/server/db/client';
-import { externalDeals, governorates } from '@/server/db/schema';
+import { categories, externalDeals, governorates, usedCategoryPolicies } from '@/server/db/schema';
+import { policyForCategory } from '@/server/modules/used/policies';
 import { decryptLocation } from '@/server/modules/locations';
 import { LocationPicker } from '@/app/_components/location-picker';
 import { dealProblems } from '@/server/modules/deals/service';
@@ -32,6 +33,10 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
   const govs = await db.select({ id: governorates.id, nameAr: governorates.nameAr }).from(governorates).orderBy(asc(governorates.sortOrder));
   const myLoc = deal ? decryptLocation(deal.buyerLocationEnc) : null;
   const govName = (id?: number | null) => govs.find((g) => g.id === id)?.nameAr ?? '—';
+  // Marketplace categories (optional): a USED item in a covered category gets the structured condition passport.
+  const cats = await db.select({ id: categories.id, nameAr: categories.nameAr, parentId: categories.parentId }).from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.sortOrder));
+  const covered = new Set((await db.select({ c: usedCategoryPolicies.categoryId }).from(usedCategoryPolicies).where(eq(usedCategoryPolicies.enabled, true))).map((r) => r.c));
+  const used = deal?.condition === 'USED' ? await policyForCategory(deal.categoryId) : null;
   const hrefFor = (n: number) => (deal && n <= deal.wizardStep ? `/account/deals/new?deal=${deal.id}&step=${n}` : null);
   return (
     <div className="space-y-4">
@@ -51,6 +56,18 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
                 <Field label="الكمية" htmlFor="quantity"><Input id="quantity" name="quantity" type="number" min={1} defaultValue={deal?.quantity ?? 1} /></Field>
                 <Field label="النوع / التصنيف" htmlFor="productCategory"><Input id="productCategory" name="productCategory" defaultValue={deal?.productCategory ?? ''} placeholder="موبايل، لابتوب…" /></Field>
               </div>
+              <Field label="فئة المنتج على اضمن (اختياري)" htmlFor="categoryId" hint="لو المنتج مستعمل في فئة عليها «توثيق المستعمل»، البائع هيوثّق حالته بالتفصيل والصور في جواز المنتج قبل ما يقدّم عرضه.">
+                <Select id="categoryId" name="categoryId" defaultValue={deal?.categoryId ?? ''}>
+                  <option value="">— من غير فئة —</option>
+                  {cats.filter((c) => !c.parentId).map((top) => (
+                    <optgroup key={top.id} label={top.nameAr}>
+                      {[top, ...cats.filter((c) => c.parentId === top.id)].map((c) => (
+                        <option key={c.id} value={c.id}>{c.nameAr}{covered.has(c.id) ? ' — توثيق المستعمل متاح' : ''}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+              </Field>
               <Field label="رابط الإعلان الأصلي (اختياري)" htmlFor="sourceUrl"><Input id="sourceUrl" name="sourceUrl" defaultValue={deal?.sourceUrl ?? ''} dir="ltr" /></Field>
               <FileInput name="photos" multiple label="صور المنتج اللي بعتها البائع (اختياري)" />
             </>
@@ -67,7 +84,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
               <Field label="طريقة التسليم المفضلة" htmlFor="deliveryMethod" required><Input id="deliveryMethod" name="deliveryMethod" defaultValue={deal?.deliveryMethod ?? ''} placeholder="شحن عبر شركة / تسليم إيد بإيد في…" required /></Field>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="آخر موعد تحب تستلم قبله" htmlFor="deliveryDeadline" required><Input id="deliveryDeadline" name="deliveryDeadline" type="date" defaultValue={deal?.deliveryDeadline?.toISOString().slice(0, 10)} required /></Field>
-                <Field label="مدة الفحص بعد الاستلام (أيام)" htmlFor="inspectionDays"><Input id="inspectionDays" name="inspectionDays" type="number" min={1} max={14} defaultValue={deal?.inspectionDays ?? 2} /></Field>
+                <Field label="مدة الفحص بعد الاستلام (أيام)" htmlFor="inspectionDays" hint={used ? `للفئة دي: من ${used.policy.inspection.minDays} لـ ${used.policy.inspection.maxDays} أيام. فلوسك بتفضل محمية طول فترة الفحص.` : undefined}><Input id="inspectionDays" name="inspectionDays" type="number" min={used?.policy.inspection.minDays ?? 1} max={used?.policy.inspection.maxDays ?? 14} defaultValue={deal?.inspectionDays ?? 2} /></Field>
               </div>
             </>
           )}

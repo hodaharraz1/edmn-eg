@@ -22,6 +22,7 @@ export function SiteNav({ productsMenu }: { productsMenu: ReactNode }) {
       {item('/', 'الرئيسية', (p) => p === '/')}
       {productsMenu}
       {item('/stores', 'المتاجر', (p) => p.startsWith('/stores') || p.startsWith('/store/'))}
+      {item('/used', 'المستعمل المضمون', (p) => p.startsWith('/used') || p.startsWith('/passport'))}
       {item('/protected-deal', 'كيف يعمل الضمان؟', (p) => p.startsWith('/protected-deal'))}
       {item('/seller', 'مركز البائع', (p) => p.startsWith('/sell'))}
       {item('/contact', 'المساعدة', (p) => p.startsWith('/contact') || p.startsWith('/legal'))}

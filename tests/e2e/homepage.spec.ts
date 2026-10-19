@@ -9,7 +9,7 @@ test('desktop homepage: header, hero, sections in the approved order, search rou
   await expect(page.locator('h1')).toContainText('تحمي كل صفقة');
 
   const nav = page.getByRole('navigation', { name: 'التنقل الرئيسي' });
-  for (const href of ['/', '/stores', '/protected-deal', '/seller', '/contact']) await expect(nav.locator(`a[href="${href}"]`)).toBeVisible();
+  for (const href of ['/', '/stores', '/used', '/protected-deal', '/seller', '/contact']) await expect(nav.locator(`a[href="${href}"]`)).toBeVisible();
   await nav.getByTestId('category-menu-trigger').click();
   await expect(page.getByTestId('category-menu-panel')).toBeVisible();
   await page.keyboard.press('Escape');

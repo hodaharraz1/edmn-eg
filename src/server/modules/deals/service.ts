@@ -28,6 +28,10 @@ import { parse, requireReason, transition } from '../_shared';
 import { returnPolicySchema, type ReturnPolicy, type ReturnPolicySnapshot } from '@/domain/return-policy';
 import { offeredDestinations } from '@/server/modules/payments/service';
 import { asc } from 'drizzle-orm';
+import { categories } from '@/server/db/schema';
+import { track as trackUsed } from '@/server/modules/used/analytics';
+import { policyForCategory } from '@/server/modules/used/policies';
+import { acceptDealSnapshot, closeProposedSnapshots, dealUsesPolicy, proposeDealSnapshot } from '@/server/modules/used/snapshots';
 import { activeVersionId, loadVersion, lockPricingShared, quoteDeal, requireActiveVersion } from '@/server/modules/pricing/service';
 
 export type Deal = typeof externalDeals.$inferSelect;
@@ -53,6 +57,8 @@ export const step1Schema = z.object({
   productCategory: z.string().trim().max(100).optional().default(''),
   condition: z.enum(['NEW', 'USED']),
   sourceUrl: z.string().trim().max(500).optional().default(''),
+  /** Marketplace category (optional): selects the used-condition policy for USED items. */
+  categoryId: z.string().uuid().optional().or(z.literal('')).default(''),
   quantity: z.coerce.number().int().min(1).max(10000),
 });
 /** Wizard order: 1 product → 2 price → 3 delivery expectations → 4 terms → 5 buyer location (+ optional seller hints). */
@@ -84,14 +90,25 @@ export async function createDeal(actor: Actor, input: z.input<typeof step1Schema
   await enforce(`deal-create:${userId}`, 20, 24 * 3600);
   const d = parse(step1Schema, input);
   return db.transaction(async (tx) => {
+    const used = await usedStep1(tx, d);
     const [deal] = await tx
       .insert(externalDeals)
-      .values({ buyerId: userId, title: d.title, description: d.description, productCategory: d.productCategory || null, condition: d.condition, sourceUrl: d.sourceUrl || null, quantity: d.quantity, wizardStep: 2 })
+      .values({ buyerId: userId, title: d.title, description: d.description, productCategory: d.productCategory || null, condition: d.condition, sourceUrl: d.sourceUrl || null, quantity: d.quantity, wizardStep: 2, ...used })
       .returning();
+    await trackUsed(tx, 'EXTERNAL_DEAL_CREATED', deal.id, { condition: d.condition });
     await recordTransition(tx, actor, 'external_deal', deal.id, null, 'DRAFT');
     await audit(tx, actor, { action: 'deal.created', entityType: 'external_deal', entityId: deal.id });
     return deal;
   });
+}
+
+/** Step 1 for a used item: a real category (if given) and the policy's default inspection period. */
+async function usedStep1(tx: DbOrTx, d: z.output<typeof step1Schema>): Promise<Partial<Deal>> {
+  if (!d.categoryId) return { categoryId: null };
+  const [cat] = await tx.select({ id: categories.id }).from(categories).where(eq(categories.id, d.categoryId));
+  if (!cat) throw validation('الفئة مش موجودة');
+  const used = d.condition === 'USED' ? await policyForCategory(cat.id, tx) : null;
+  return used ? { categoryId: cat.id, inspectionDays: used.policy.inspection.defaultDays } : { categoryId: cat.id };
 }
 
 async function requireDraft(tx: DbOrTx, actor: Actor, dealId: string) {
@@ -106,7 +123,7 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
     let sets: Partial<Deal> = {};
     if (step === 1) {
       const d = parse(step1Schema, input);
-      sets = { title: d.title, description: d.description, productCategory: d.productCategory || null, condition: d.condition, sourceUrl: d.sourceUrl || null, quantity: d.quantity };
+      sets = { title: d.title, description: d.description, productCategory: d.productCategory || null, condition: d.condition, sourceUrl: d.sourceUrl || null, quantity: d.quantity, ...(await usedStep1(tx, d)) };
     } else if (step === 2) {
       const d = parse(step2Schema, input);
       let unit: number;
@@ -133,6 +150,11 @@ export async function saveDealStep(actor: Actor, dealId: string, step: number, i
     } else if (step === 3) {
       const d = parse(step3Schema, input);
       if (d.deliveryDeadline.getTime() < Date.now() + 3600_000) throw validation('موعد التسليم لازم يكون في المستقبل');
+      // Used items in a covered category: the inspection period must sit inside the category policy's range.
+      const used = await dealUsesPolicy(tx, deal);
+      if (used && (d.inspectionDays < used.policy.inspection.minDays || d.inspectionDays > used.policy.inspection.maxDays)) {
+        throw validation(`مدة الفحص للفئة دي من ${used.policy.inspection.minDays} لـ ${used.policy.inspection.maxDays} أيام`);
+      }
       sets = { deliveryMethod: d.deliveryMethod, deliveryDeadline: d.deliveryDeadline, inspectionDays: d.inspectionDays };
     } else if (step === 4) {
       const d = parse(step4Schema, input);
@@ -321,6 +343,7 @@ export async function claimInvitation(actor: Actor, token: string) {
     await tx.update(dealInvitations).set({ boundUserId: userId, boundAt: now }).where(eq(dealInvitations.id, inv.id));
     await moveDeal(tx, actor, deal, 'SELLER_JOINED', { sellerUserId: userId, sellerJoinedAt: now });
     await audit(tx, actor, { action: 'deal.invitation_bound', entityType: 'external_deal', entityId: deal.id });
+    await trackUsed(tx, 'DEAL_INVITE_CLAIMED', deal.id, { condition: deal.condition });
     await notify(tx, { event: 'EXTERNAL_DEAL_ACCEPTED', userIds: [deal.buyerId], vars: { deal: dealRef(deal.number) }, link: `/account/deals/${deal.id}` });
     return deal.id;
   });
@@ -369,9 +392,11 @@ export type Terms = {
   mandatoryRightsNotice: string;
   customTerms: string | null;
   dealTermsLegalVersion: string | null;
+  /** Used items in a covered category: the frozen condition snapshot this terms version refers to. */
+  condition?: { snapshotId: string; version: number; hash: string; passportCode: string; level: string };
 };
 
-async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerOfferSchema>, policy: ReturnPolicy): Promise<Terms> {
+async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerOfferSchema>, policy: ReturnPolicy, documented = false): Promise<Terms> {
   let shipping: number;
   try {
     shipping = offer.shippingFee ? parseEgp(offer.shippingFee) : 0;
@@ -379,7 +404,7 @@ async function buildTerms(tx: DbOrTx, deal: Deal, offer: z.output<typeof sellerO
     throw validation('مصاريف الشحن مش صحيحة');
   }
   if (shipping < 0) throw validation('مصاريف الشحن مش صحيحة');
-  if (deal.condition === 'USED' && !offer.defects) throw validation('للمنتج المستعمل: اكتب العيوب المعروفة (أو "لا يوجد")');
+  if (deal.condition === 'USED' && !offer.defects && !documented) throw validation('للمنتج المستعمل: اكتب العيوب المعروفة (أو "لا يوجد")');
   let unit = deal.unitPrice ?? 0;
   if (offer.unitPrice) {
     try {
@@ -435,6 +460,7 @@ async function nextVersion(tx: DbOrTx, dealId: string) {
 
 async function closeOpenVersions(tx: DbOrTx, dealId: string, as: 'SUPERSEDED' | 'REJECTED') {
   await tx.update(dealTermsVersions).set({ status: as, respondedAt: new Date() }).where(and(eq(dealTermsVersions.dealId, dealId), eq(dealTermsVersions.status, 'PROPOSED')));
+  await closeProposedSnapshots(tx, dealId, as);
 }
 
 /**
@@ -479,9 +505,16 @@ export async function submitSellerOffer(
       };
       await tx.insert(legalAcceptances).values({ userId, documentCode: 'EXTERNAL_DEAL_TERMS', version: deal.termsVersion ?? 'unversioned-draft', context: `deal:${deal.id}:seller`, ip: actor.ip ?? null });
     }
-    const terms = await buildTerms(tx, deal, offer, policy);
+    const documented = !!(await dealUsesPolicy(tx, deal));
+    const terms = await buildTerms(tx, deal, offer, policy, documented);
     await closeOpenVersions(tx, deal.id, 'SUPERSEDED');
     const version = await nextVersion(tx, deal.id);
+    // Covered used item: the declared condition report is frozen into a snapshot bound to THIS terms version.
+    const condition = await proposeDealSnapshot(tx, actor, deal, version, terms);
+    if (condition) {
+      terms.condition = { snapshotId: condition.snapshotId, version: condition.version, hash: condition.hash, passportCode: condition.passportCode, level: condition.level };
+      if (!terms.disclosure.defects) terms.disclosure.defects = 'موثّقة في جواز المنتج';
+    }
     await tx.insert(dealTermsVersions).values({ dealId: deal.id, version, proposedBy: 'SELLER', proposedByUserId: userId, terms, message: input.message?.trim().slice(0, 1000) || null });
     await moveDeal(tx, actor, deal, 'OFFER_PENDING_BUYER', sellerSets);
     await audit(tx, actor, { action: deal.status === 'SELLER_JOINED' ? 'deal.offer_submitted' : 'deal.offer_countered', entityType: 'external_deal', entityId: deal.id, newValues: { version, returnPolicy: policy.type, windowDays: policy.windowDays } });
@@ -518,6 +551,13 @@ async function finalizeTerms(tx: DbOrTx, actor: Actor, deal: Deal, v: typeof dea
     },
     agreement: { version: v.version, proposedBy: v.proposedBy, proposedAt: v.createdAt.toISOString(), agreedAt: now.toISOString(), acceptedByUserId: actor.userId ?? null },
   };
+  // Product Condition Freeze: the snapshot this version refers to becomes binding and the report is locked.
+  if (t.condition) {
+    const frozen = await acceptDealSnapshot(tx, actor, deal.id, v.version);
+    if (!frozen || frozen.hash !== t.condition.hash) throw new DomainError('CONFLICT', 'بيانات حالة المنتج في العرض ده مش متطابقة. اطلب من البائع يرسل العرض تاني.');
+  } else if (await dealUsesPolicy(tx, deal)) {
+    throw new DomainError('CONFLICT', 'العرض ده من غير توثيق حالة المنتج المستعمل. اطلب من البائع يرسل العرض تاني.');
+  }
   await tx.update(dealTermsVersions).set({ status: 'ACCEPTED', respondedAt: now }).where(eq(dealTermsVersions.id, v.id));
   await tx.update(dealInvitations).set({ status: 'ACCEPTED', respondedAt: new Date(), respondedBy: deal.sellerUserId }).where(and(eq(dealInvitations.dealId, deal.id), eq(dealInvitations.status, 'PENDING')));
   await moveDeal(tx, actor, deal, 'ACCEPTED', {

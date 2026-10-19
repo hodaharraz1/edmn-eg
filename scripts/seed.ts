@@ -19,6 +19,9 @@ async function main() {
     const { seedDemo, demoCredentials, DEMO_PASSWORD, DEMO_ADMIN_PASSWORD, DEMO_TOTP_SECRET } = await import('../src/server/db/seed/demo');
     const staging = demoCredentials().staging; // validates staging secrets before writing anything
     const res = await seedDemo();
+    // Trusted Used Commerce demo documentation (idempotent backfill; also completes a fresh database's review).
+    const { seedUsedDemo } = await import('../src/server/db/seed/used-demo');
+    await seedUsedDemo();
     if (res.skipped) console.log('• demo data already present — skipped');
     else if (staging) console.log('✓ STAGING demo data', res, '— credentials come from the STAGING_* environment variables (never printed)');
     else {

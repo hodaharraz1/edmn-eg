@@ -21,6 +21,8 @@ import { ProtectionPanel } from '@/ui/protection';
 import { AddToCartForm } from '@/app/_components/add-to-cart';
 import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
 import { JsonLd, absoluteUrl, breadcrumbJsonLd } from '@/app/_components/seo';
+import { ConditionDetails, CoverageList, LevelExplainer, PassportLink, SafetyScoreCard, SellerSignalsCard } from '@/app/_components/used';
+import { usedListingView } from '@/server/modules/used/views';
 
 export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
   const d = await productDetailBySlug(decodeURIComponent((await props.params).slug));
@@ -60,6 +62,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
     wishlistSet([p.id]),
   ]);
   const policy = listingReturnPolicy(p, d.store);
+  // Trusted Used Commerce: documented used listings carry a Product Passport (null for new or legacy listings).
+  const used = p.condition === 'USED' ? await usedListingView(p.id, policy.type) : null;
   const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
   const crumbs = [{ label: 'الرئيسية', href: '/' }, ...d.breadcrumbs.map((c) => ({ label: c.nameAr, href: `/category/${c.slug}` })), { label: p.titleAr }];
   const positive = d.seller.ratingCount ? Math.round((d.seller.positiveCount / d.seller.ratingCount) * 100) : null;
@@ -143,6 +147,15 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
                 <span className="font-normal">— راجع حالته وعيوبه قبل ما تشتري</span>
               </p>
             )}
+            {used && (
+              <div className="space-y-2" data-testid="used-summary">
+                <PassportLink code={used.bundle.passport!.code} level={used.level} />
+                <LevelExplainer level={used.level} />
+                <p className="text-sm text-ink">
+                  <span className="font-semibold">فترة الفحص بعد الاستلام:</span> {used.inspectionDays} أيام — فلوسك بتفضل محمية لحد ما تتأكد إن المنتج مطابق لجواز المنتج.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Purchase card */}
@@ -182,7 +195,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
               </p>
             </div>
             {d.visible && v && available > 0 && shipFee !== null ? (
-              <AddToCartForm variantId={v.id} max={available} />
+              <AddToCartForm variantId={v.id} max={available} protectedBuy={!!used} />
             ) : d.visible && shipFee === null ? (
               <Alert tone="warning">البائع لا يشحن إلى هذه المحافظة حالياً.</Alert>
             ) : null}
@@ -227,7 +240,19 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             </ul>
           )}
 
-          {p.condition === 'USED' && (
+          {used && (
+            <section data-testid="used-trust" aria-labelledby="used-trust-title" className="space-y-4">
+              <h2 id="used-trust-title" className="text-lg font-bold text-brand-950">حالة المنتج الموثّقة</h2>
+              <ConditionDetails fields={used.fields} defects={used.bundle.check.defects} identifierMasked={used.bundle.report.identifierMasked} evidence={used.evidence} showPrivate={false} />
+              <div className="card p-4">
+                <h3 className="mb-3 text-sm font-bold">اضمن بتحميك في إيه بالظبط؟</h3>
+                <CoverageList level={used.level} warranty={p.warrantyInfo} />
+              </div>
+              <SafetyScoreCard score={used.score} />
+              {used.seller && <SellerSignalsCard signals={used.seller.signals} />}
+            </section>
+          )}
+          {p.condition === 'USED' && !used && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
               <p className="mb-2 flex items-center gap-2 font-bold text-amber-900">
                 <CircleAlert className="size-4" /> تفاصيل حالة المنتج المستعمل

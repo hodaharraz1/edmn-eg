@@ -5,6 +5,7 @@ import { requirePermission, type Actor, requireStepUp } from '@/server/core/acto
 import { validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { paymentDestinations, systemSettings } from '@/server/db/schema';
+import { DEFAULT_SAFETY_RULES, safetyRulesSchema } from '@/domain/used';
 
 /**
  * Typed business configuration. Defaults below are DEVELOPMENT/BENCHMARK values and are editable
@@ -61,6 +62,8 @@ export const SETTINGS_SCHEMA = {
   'orders.completionDays': z.number().int().min(0).max(60).default(14),
   'deals.feeBps': z.number().int().min(0).max(5000).default(0),
   'deals.feePayer': z.enum(['SELLER', 'BUYER']).default('SELLER'),
+  /** Explainable Deal Safety Score (used commerce): factor weights and level thresholds. Information only — never a release rule. */
+  'used.safetyScore': safetyRulesSchema.default(DEFAULT_SAFETY_RULES),
   'deals.invitationTtlHours': z.number().int().min(1).max(720).default(168),
   /** Delivery handover OTP lifetime and wrong-code limit (a new code can be requested afterwards). */
   'deals.deliveryOtpTtlHours': z.number().int().min(1).max(336).default(72),
@@ -173,6 +176,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'fees.buyerShareBps',
   'fees.ownerApproved',
   'legal.policiesApproved',
+  'used.safetyScore',
 ];
 
 /** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */

@@ -435,6 +435,9 @@ export async function seedReference() {
   const { seedOwnerApprovedDrafts } = await import('@/server/modules/pricing/service');
   const { seedPayoutChannels } = await import('@/server/modules/pricing/payout-costs');
   const { seedRefundPolicyDraft } = await import('@/server/modules/pricing/refund-policy');
+  // Trusted Used Commerce: the V1 used-condition policy (mobile phones). Never overwrites an admin-edited policy.
+  const { seedUsedPolicies } = await import('@/server/modules/used/policies');
+  await seedUsedPolicies();
   await seedOwnerApprovedDrafts();
   await seedPayoutChannels();
   await seedRefundPolicyDraft();

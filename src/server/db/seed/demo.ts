@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import type { SellerDocumentKind } from '@/domain/machines';
 import { adminActor, customerActor, sellerActor } from '@/server/auth/actors';
+import { documentUsedListing, USED_DEMO_DOCS } from './used-demo';
 import { hashPassword } from '@/server/auth/password';
 import type { Actor } from '@/server/core/actor';
 import { encrypt } from '@/server/core/crypto';
@@ -146,6 +147,9 @@ async function createProduct(seller: Actor, admin: Actor, p: ProductSeed, catIds
     await addImages(seller, draft.id, [{ data: await demoImage(p.label, p.icon, 0), name: 'main.png' }, { data: await demoImage(`${p.label} `, p.icon, 0), name: 'side.png' }], false);
   }
   await saveVariants(seller, draft.id, p.variants.map((v) => ({ sku: v.sku, options: v.options ?? {}, price: v.price, compareAtPrice: v.compareAt ?? null, stockOnHand: v.stock, lowStockThreshold: 2, isActive: true })));
+  // Used listings in a covered category are documented (structured condition + evidence + declaration) first.
+  const usedDoc = p.condition === 'USED' ? USED_DEMO_DOCS[p.variants[0].sku] : undefined;
+  if (usedDoc) await documentUsedListing(seller, draft.id, usedDoc);
   await submitForReview(seller, draft.id);
   if (approve) await moderateProduct(admin, draft.id, 'APPROVE');
   return draft.id;

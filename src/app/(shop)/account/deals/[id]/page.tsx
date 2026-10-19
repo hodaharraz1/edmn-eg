@@ -47,6 +47,8 @@ import { ReturnPolicyView } from '@/app/_components/return-policy-view';
 import { ContactVerification } from '@/app/_components/contact-verification';
 import { MessageCtaLink } from '@/app/_components/message-cta';
 import { dealMessagingAvailable, unreadForContext } from '@/server/modules/messaging/service';
+import { dealUsesPolicy } from '@/server/modules/used/snapshots';
+import { UsedDealSection } from './used-section';
 
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
 const NEGOTIATION = ['SELLER_JOINED', 'OFFER_PENDING_BUYER', 'CHANGE_REQUESTED'];
@@ -94,6 +96,9 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
   // Conversation opens once the seller has securely claimed the invitation (identity bound to the deal).
   const canMessage = dealMessagingAvailable(deal);
   const unreadMsgs = canMessage ? await unreadForContext(actor, { dealId: deal.id }) : 0;
+  // Trusted Used Commerce: documented used item (structured condition, frozen snapshot, structured problems).
+  const usedDeal = !!(await dealUsesPolicy(db, deal));
+  const problemHref = usedDeal ? `/account/deals/${deal.id}/problem` : `/account/disputes/new?deal=${deal.id}`;
 
   return (
     <div className="space-y-4">
@@ -158,6 +163,8 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         <p className="mt-3 whitespace-pre-line text-sm text-muted">{deal.description}</p>
       </section>
 
+      <UsedDealSection deal={deal} isBuyer={isBuyer} isSeller={isSeller} />
+
       {(g.buyerLocation || g.sellerLocation) && (
         <section className="card grid gap-4 p-5 sm:grid-cols-2" data-testid="deal-locations">
           {g.buyerLocation && <LocationCard title={isBuyer ? 'عنوان الاستلام (عنوانك)' : 'عنوان المشتري'} loc={g.buyerLocation} gov={govName(g.buyerLocation.governorateId)} />}
@@ -186,7 +193,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
               <Field label="إيميل للتواصل (اختياري)" htmlFor="contactEmail"><Input id="contactEmail" name="contactEmail" type="email" dir="ltr" defaultValue={me.email ?? ''} /></Field>
             </div>
             <LocationPicker governorates={govs} title="عنوان استلام الشحنة منك" />
-            <OfferFields condition={deal.condition} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} />
+            <OfferFields condition={deal.condition} documented={usedDeal} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} />
             <ReturnPolicyFields mandatoryNotice={mandatoryNotice} />
             <PayoutFields holder={me.fullName} />
             <Field label="رسالة للمشتري (اختياري)" htmlFor="message"><Textarea id="message" name="message" rows={2} maxLength={1000} /></Field>
@@ -267,7 +274,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
             <ActionForm action={sellerOfferAction} className="mt-3 space-y-3">
               <input type="hidden" name="dealId" value={deal.id} />
               <input type="hidden" name="first" value="0" />
-              <OfferFields condition={deal.condition} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} defaults={(lastSeller?.terms as Terms | undefined) ?? openTerms} />
+              <OfferFields condition={deal.condition} documented={usedDeal} request={{ unitPrice: deal.unitPrice, deliveryMethod: deal.deliveryMethod, deadline: deal.deliveryDeadline }} defaults={(lastSeller?.terms as Terms | undefined) ?? openTerms} />
               <ReturnPolicyFields defaults={openTerms.returnPolicy} mandatoryNotice={mandatoryNotice} />
               <Field label="رسالة للمشتري" htmlFor="counter-message"><Textarea id="counter-message" name="message" rows={2} maxLength={1000} /></Field>
               <Checkbox name="acceptTerms" required label="أؤكد صحة العرض وأوافق على شروط الصفقات المحمية" />
@@ -419,14 +426,14 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
       {/* ── Buyer: explicit final choice after a verified handover (OTP ≠ acceptance) ── */}
       {isBuyer && handoverOpen && !dispute && (
         <section id="delivery-choice" className="card space-y-3 border-emerald-200 bg-emerald-50 p-5" data-testid="delivery-choice">
-          <p className="font-semibold">تسليم المنتج ليك اتأكد برمز الاستلام.</p>
+          <p className="font-semibold">{usedDeal ? 'تم استلام المنتج. أموالك ما زالت محمية.' : 'تسليم المنتج ليك اتأكد برمز الاستلام.'}</p>
           <p className="text-sm">رمز الاستلام بيثبت التسليم بس، مش موافقتك على المنتج. افحص المنتج واختار قبل {deal.buyerResponseDueAt ? formatDate(deal.buyerResponseDueAt, true) : `${deal.inspectionDays} يوم`}. لو المهلة خلصت من غير ما تبلّغ عن مشكلة، البائع بيبقى مستحق للمبلغ (من غير ما يتحسب إنك أكدت)، والمبلغ مش بيتاح له غير بموافقة الإدارة.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <ActionForm action={dealConfirmAction} className="sm:flex-1">
               <input type="hidden" name="dealId" value={deal.id} />
-              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="لو أكدت إن المنتج مطابق، البائع بيبقى مستحق للمبلغ والإدارة بتراجع وتوافق على إتاحته. حقوقك القانونية محفوظة. متأكد؟">استلمت والمنتج مطابق</ConfirmSubmit>
+              <ConfirmSubmit variant="success" size="lg" className="w-full" confirm="لو أكدت إن المنتج مطابق، البائع بيبقى مستحق للمبلغ والإدارة بتراجع وتوافق على إتاحته. حقوقك القانونية محفوظة. متأكد؟">{usedDeal ? 'المنتج مطابق' : 'استلمت والمنتج مطابق'}</ConfirmSubmit>
             </ActionForm>
-            <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="outline" size="lg" className="sm:flex-1"><Scale className="size-4" aria-hidden /> استلمت بس فيه مشكلة</LinkButton>
+            <LinkButton href={problemHref} variant="outline" size="lg" className="sm:flex-1" data-testid="problem-link"><Scale className="size-4" aria-hidden /> {usedDeal ? 'توجد مشكلة' : 'استلمت بس فيه مشكلة'}</LinkButton>
           </div>
           <details className="rounded-xl border border-line bg-white p-3 text-sm">
             <summary className="cursor-pointer font-semibold">لم أستلم المنتج فعليًا</summary>
@@ -460,7 +467,7 @@ export default async function DealDetail(props: { params: Promise<{ id: string }
         <Alert tone="info" title="مستحق وفي انتظار موافقة الإدارة">{deal.status === 'BUYER_CONFIRMED_RECEIPT' ? 'المشتري أكد الاستلام.' : 'انتهت مهلة المشتري بدون اعتراض.'} المبلغ لسه عند اضمن لحد ما الإدارة توافق على الإتاحة. {isBuyer ? 'لو ظهرت مشكلة قبل الإتاحة تقدر تبلّغ.' : ''}</Alert>
       )}
       {(deal.status === 'BUYER_CONFIRMED_RECEIPT' || deal.status === 'ENTITLED_AWAITING_RELEASE') && isBuyer && !dispute && (
-        <LinkButton href={`/account/disputes/new?deal=${deal.id}`} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> ظهرت مشكلة؟ بلّغ قبل الإتاحة</LinkButton>
+        <LinkButton href={problemHref} variant="ghost" size="sm"><Scale className="size-4" aria-hidden /> ظهرت مشكلة؟ بلّغ قبل الإتاحة</LinkButton>
       )}
       {deal.status === 'REFUND_PENDING' && <Alert tone="warning" title="استرداد قيد الاعتماد">قرار النزاع استرداد كامل للمشتري، والإدارة بتراجع وتعتمد الاسترداد قبل التحويل.</Alert>}
       {deal.status === 'COMPLETED' && <Alert tone="success" title="الصفقة خلصت">{isSeller ? `الإدارة أتاحت مستحقك ${formatEGP(g.payout?.amount ?? deal.sellerReceives)} في «رصيد الصفقات المحمية». ${g.payout?.status === 'PAID' ? 'الحالة: تم التحويل.' : 'الحالة: مستحق — لم يُحوَّل بعد. اطلب سحبه من «مستحقاتي من البيع» على «بيانات استلام الأموال» المتحقق منها.'}` : 'شكرًا إنك استخدمت اضمن.'}</Alert>}
@@ -530,7 +537,9 @@ function TermsTable({ t }: { t: Terms }) {
   );
 }
 
-function OfferFields({ condition, defaults, request }: { condition: string | null; defaults?: Terms; request: { unitPrice: number | null; deliveryMethod: string | null; deadline: Date | null } }) {
+function OfferFields({ condition, defaults, request, documented }: { condition: string | null; defaults?: Terms; request: { unitPrice: number | null; deliveryMethod: string | null; deadline: Date | null }; documented?: boolean }) {
+  // A documented used item carries its defects in the Product Passport; this free text is then an optional note.
+  const needDefects = condition === 'USED' && !documented;
   return (
     <fieldset className="space-y-3 rounded-xl border border-line p-4">
       <legend className="px-1 text-sm font-bold">تفاصيل العرض</legend>
@@ -548,7 +557,7 @@ function OfferFields({ condition, defaults, request }: { condition: string | nul
         <Field label="التوصيل من (يوم)" htmlFor="deliveryMinDays" required><Input id="deliveryMinDays" name="deliveryMinDays" type="number" min={0} max={60} defaultValue={defaults?.delivery.expectedMinDays ?? 1} required /></Field>
         <Field label="إلى (يوم)" htmlFor="deliveryMaxDays" required><Input id="deliveryMaxDays" name="deliveryMaxDays" type="number" min={0} max={90} defaultValue={defaults?.delivery.expectedMaxDays ?? 3} required /></Field>
       </div>
-      <Field label={condition === 'USED' ? 'العيوب المعروفة (مطلوب للمستعمل)' : 'العيوب المعروفة'} htmlFor="defects" required={condition === 'USED'}><Textarea id="defects" name="defects" rows={2} defaultValue={defaults?.disclosure.defects ?? ''} required={condition === 'USED'} placeholder='اكتب "لا يوجد" لو مفيش' /></Field>
+      <Field label={documented ? 'ملاحظة إضافية عن العيوب (العيوب موثّقة في جواز المنتج)' : needDefects ? 'العيوب المعروفة (مطلوب للمستعمل)' : 'العيوب المعروفة'} htmlFor="defects" required={needDefects}><Textarea id="defects" name="defects" rows={2} defaultValue={defaults?.disclosure.defects ?? ''} required={needDefects} placeholder={documented ? 'اختياري' : 'اكتب "لا يوجد" لو مفيش'} /></Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="الملحقات المرفقة" htmlFor="accessories"><Input id="accessories" name="accessories" defaultValue={defaults?.disclosure.accessories ?? ''} /></Field>
         <Field label="الضمان" htmlFor="warranty"><Input id="warranty" name="warranty" defaultValue={defaults?.disclosure.warranty ?? ''} placeholder="بدون / ضمان وكيل حتى…" /></Field>
