@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Clock, LifeBuoy, Mail, MapPin, MessageCircle, Phone } from 'lucide-react';
 import Link from '@/ui/link';
 import { getAllSettings } from '@/server/modules/settings';
+import { supportEmail } from '@/config/support';
+import { KeyRound } from 'lucide-react';
 import { Breadcrumbs, PageHeader } from '@/ui/data';
 import { LinkButton } from '@/ui/button';
 
@@ -18,8 +20,9 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   const s = await getAllSettings();
   const wa = s['marketplace.whatsapp'].replace(/[^\d]/g, '');
+  const email = supportEmail(s['marketplace.supportEmail']);
   const rows = [
-    s['marketplace.supportEmail'] && { icon: Mail, label: 'البريد الإلكتروني', value: <a href={`mailto:${s['marketplace.supportEmail']}`} className="ltr text-brand-700 underline">{s['marketplace.supportEmail']}</a> },
+    { icon: Mail, label: 'البريد الإلكتروني', value: <a href={`mailto:${email}`} className="ltr text-brand-700 underline">{email}</a> },
     s['marketplace.supportPhone'] && { icon: Phone, label: 'التليفون', value: <a href={`tel:${s['marketplace.supportPhone']}`} className="ltr text-brand-700 underline">{s['marketplace.supportPhone']}</a> },
     wa && { icon: MessageCircle, label: 'واتساب', value: <a href={`https://wa.me/${wa}`} rel="noopener noreferrer" target="_blank" className="ltr text-brand-700 underline">{s['marketplace.whatsapp']}</a> },
     s['marketplace.businessHours'] && { icon: Clock, label: 'مواعيد العمل', value: s['marketplace.businessHours'] },
@@ -37,6 +40,23 @@ export default async function ContactPage() {
           </div>
         </div>
         <LinkButton href="/account/support/new">افتح تذكرة</LinkButton>
+      </section>
+      {/* Visitors who cannot sign in (forgotten password, lost phone, locked account): no login needed here. */}
+      <section id="cant-sign-in" className="card scroll-mt-40 space-y-3 p-5" data-testid="guest-support">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><KeyRound className="size-5" aria-hidden /></span>
+          <div className="space-y-1">
+            <h2 className="font-bold text-brand-950">مش قادر تدخل حسابك؟</h2>
+            <p className="text-sm leading-6 text-muted">جرّب الأول استعادة كلمة المرور. لو لسه مش قادر تدخل، ابعتلنا على البريد من نفس البريد أو اكتب رقم الموبايل المسجّل على حسابك ووصف المشكلة.</p>
+            <p className="text-xs leading-5 text-muted">متبعتش كلمة المرور أو أي رمز تحقق أو بيانات بطاقتك أبدًا — فريق اضمن عمره ما هيطلبها منك.</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <LinkButton href="/forgot-password" variant="outline">استعادة كلمة المرور</LinkButton>
+          <a href={`mailto:${email}?subject=${encodeURIComponent('مش قادر أدخل حسابي')}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700" data-testid="guest-support-email">
+            <Mail className="size-4" aria-hidden /> راسل الدعم: <span dir="ltr">{email}</span>
+          </a>
+        </div>
       </section>
       {rows.length > 0 && (
         <section className="card divide-y divide-line" data-testid="contact-details">

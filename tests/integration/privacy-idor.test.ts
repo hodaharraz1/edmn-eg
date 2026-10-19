@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { paymentSubmissions, sellerDocuments, sellerPayoutMethods, sellers, shipmentDocuments, shipments } from '@/server/db/schema';
+import { payments, paymentSubmissions, sellerDocuments, sellerPayoutMethods, sellers, shipmentDocuments, shipments } from '@/server/db/schema';
 import { canReadPrivateFile } from '@/server/storage/access';
-import { orderForCustomer } from '@/server/modules/commerce/orders';
+import { cancelUnpaidOrder, expireOrder, orderForCustomer } from '@/server/modules/commerce/orders';
 import { sellerOrderForSeller } from '@/server/modules/commerce/fulfilment';
 import type { Actor } from '@/server/core/actor';
 import { checkout, makeAdmin, makeCustomer, makeProduct, makeSeller, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
@@ -69,6 +69,23 @@ describe('real-seller pilot privacy — explicit IDOR checks', () => {
     await expect(orderForCustomer(stranger.actor, orderId)).rejects.toThrow();
     await expect(sellerOrderForSeller(sellerA.actor, soId)).resolves.toBeTruthy();
     await expect(sellerOrderForSeller(sellerB.actor, soId)).rejects.toThrow();
+  });
+
+  it('an order cancelled or expired before payment never exposes the buyer to the seller (name, phone, address)', async () => {
+    const p = await makeProduct(sellerA.actor, admin, { stock: 3 });
+    for (const close of [(id: string) => cancelUnpaidOrder(buyer.actor, id), async (id: string) => {
+      await db.update(payments).set({ dueAt: new Date(Date.now() - 3_600_000) }).where(eq(payments.orderId, id));
+      expect(await expireOrder(id)).toBeTruthy();
+    }]) {
+      const o = await checkout(buyer, [{ variantId: p.variantId, qty: 1 }]);
+      const so = (await sellerOrdersOf(o.id))[0];
+      await expect(sellerOrderForSeller(sellerA.actor, so.id)).rejects.toThrow();
+      await close(o.id);
+      const [after] = await sellerOrdersOf(o.id);
+      expect(after.status).toBe('CANCELLED');
+      expect(after.paidAt).toBeNull();
+      await expect(sellerOrderForSeller(sellerA.actor, so.id)).rejects.toThrow();
+    }
   });
 
   it('national ID and payout destination are stored encrypted and only masked values are kept in clear', async () => {

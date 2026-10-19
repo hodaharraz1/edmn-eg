@@ -114,7 +114,7 @@ export default async function NewDealWizard(props: PageProps<'/account/deals/new
               <input type="hidden" name="dealId" value={deal.id} />
               <Checkbox name="acceptTerms" required label={<>أوافق على <Link href="/legal/protected-deal-terms" target="_blank" className="text-brand-700 underline">شروط الصفقات المحمية</Link> وأقر بصحة البيانات</>} />
               <p className="text-xs text-muted">السعر النهائي (مع الشحن) وسياسة الإرجاع بيحددهم البائع في عرضه، وانت هتراجعهم وتوافق قبل الدفع.</p>
-              <SubmitButton variant="accent" size="lg" className="w-full sm:w-auto">إنشاء طلب الصفقة</SubmitButton>
+              <SubmitButton variant="primary" size="lg" className="w-full sm:w-auto">إنشاء طلب الصفقة</SubmitButton>
             </ActionForm>
           </div>
         )

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { after } from 'next/server';
+import { after, connection } from 'next/server';
 import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-500.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
@@ -33,7 +33,9 @@ export const viewport: Viewport = {
   themeColor: '#0f3f8c',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/** Every page renders per request: the per-request nonce CSP (src/proxy.ts) can only stamp dynamically rendered HTML. */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await connection();
   // Serverless hosts have no long-running worker: process due jobs shortly after page renders.
   if (process.env.INLINE_WORKER === 'true') after(async () => (await import('@/server/jobs/tick')).maybeRunInlineTick());
   return (

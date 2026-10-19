@@ -16,9 +16,9 @@ export default async function DealsPage() {
   const list = await dealsForUser(user.id);
   return (
     <div>
-      <PageHeader title="الصفقات المحمية" description="صفقاتك مع بائعين برّه السوق، سواء انت المشتري أو البائع." actions={<LinkButton href="/account/deals/new" variant="accent">صفقة جديدة</LinkButton>} />
+      <PageHeader title="الصفقات المحمية" description="صفقاتك مع بائعين برّه السوق، سواء انت المشتري أو البائع." actions={<LinkButton href="/account/deals/new" variant="primary">صفقة جديدة</LinkButton>} />
       {list.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="مفيش صفقات لسه" description="اشتري من أي بائع برّه اضمن وانت مطمّن." action={<LinkButton href="/account/deals/new" variant="accent">ابدأ صفقة محمية</LinkButton>} />
+        <EmptyState icon={ShieldCheck} title="مفيش صفقات لسه" description="اشتري من أي بائع برّه اضمن وانت مطمّن." action={<LinkButton href="/account/deals/new" variant="primary">ابدأ صفقة محمية</LinkButton>} />
       ) : (
         <ul className="space-y-3">
           {list.map((d) => (

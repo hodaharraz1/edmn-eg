@@ -68,20 +68,20 @@ export function visibleCondition(): SQL {
   return and(eq(products.status, 'LIVE'), inArray(sellers.status, ['APPROVED', 'RESTRICTED']))!;
 }
 
-export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
-  const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), 60);
-  const page = Math.max(query.page ?? 1, 1);
+/**
+ * The WHERE conditions of a catalog query — shared by the result list and by every facet, so counts always describe
+ * the same result set the shopper is looking at. `except` drops one filter group (disjunctive faceting: a facet's own
+ * selection is ignored when counting its values, so selecting a second brand still shows how many it adds).
+ */
+export function catalogConditions(query: SearchQuery, except?: { brand?: boolean; attr?: string; allAttrs?: boolean }): SQL[] {
   const where: SQL[] = [visibleCondition()];
-  let rank: SQL | null = null;
   const q = query.q ? normalizeSearch(query.q).slice(0, 100) : '';
   if (q) {
-    const terms = q.split(' ').filter(Boolean).map((t) => t.replace(/[':&|!()*\\]/g, '')).filter(Boolean);
-    const tsq = terms.map((t) => `${t}:*`).join(' & ');
+    const tsq = searchTsQuery(q);
     where.push(sql`(${products.searchVector} @@ to_tsquery('simple', ${tsq}) or word_similarity(${q}, ${products.searchText}) > 0.45 or ${products.searchText} ilike ${'%' + q + '%'})`);
-    rank = sql`(ts_rank(${products.searchVector}, to_tsquery('simple', ${tsq})) + word_similarity(${q}, ${products.searchText}))`;
   }
   if (query.categoryId) where.push(sql`${products.categoryId} in (select id from categories where ${query.categoryId}::uuid = any(path))`);
-  if (query.brandIds?.length) where.push(inArray(products.brandId, query.brandIds));
+  if (query.brandIds?.length && !except?.brand) where.push(inArray(products.brandId, query.brandIds));
   if (query.sellerId) where.push(eq(products.sellerId, query.sellerId));
   if (query.condition) where.push(eq(products.condition, query.condition));
   if (query.minPrice !== undefined) where.push(gte(products.minPrice, query.minPrice));
@@ -94,10 +94,24 @@ export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
     where.push(sql`exists (select 1 from seller_shipping_rates r where r.seller_id = ${products.sellerId} and r.governorate_id = ${query.governorateId} and r.enabled)`);
   }
   for (const [code, values] of Object.entries(query.attrs ?? {})) {
-    if (!values.length) continue;
+    if (!values.length || code === except?.attr || except?.allAttrs) continue;
     where.push(sql`exists (select 1 from product_attribute_values pav join attributes a on a.id = pav.attribute_id
       where pav.product_id = ${products.id} and a.code = ${code} and pav.values && ARRAY[${sql.join(values.slice(0, 20).map((v) => sql`${v}`), sql`, `)}]::text[])`);
   }
+  return where;
+}
+
+function searchTsQuery(q: string) {
+  const terms = q.split(' ').filter(Boolean).map((t) => t.replace(/[':&|!()*\\]/g, '')).filter(Boolean);
+  return terms.map((t) => `${t}:*`).join(' & ');
+}
+
+export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
+  const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), 60);
+  const page = Math.max(query.page ?? 1, 1);
+  const where = catalogConditions(query);
+  const q = query.q ? normalizeSearch(query.q).slice(0, 100) : '';
+  const rank: SQL | null = q ? sql`(ts_rank(${products.searchVector}, to_tsquery('simple', ${searchTsQuery(q)})) + word_similarity(${q}, ${products.searchText}))` : null;
   const orderBy: SQL[] = (() => {
     switch (query.sort) {
       case 'best_selling':
@@ -137,35 +151,54 @@ export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
   return { items, total, page, pageSize, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
-/** Facet counts for the brand filter within a result set's category scope. */
-export async function brandFacets(categoryId?: string, conn: DbOrTx = db) {
-  const where: SQL[] = [visibleCondition()];
-  if (categoryId) where.push(sql`${products.categoryId} in (select id from categories where ${categoryId}::uuid = any(path))`);
+/** Brand facet: counts within the current result set (every active filter except the brand selection itself). */
+export async function brandFacets(query: SearchQuery = {}, conn: DbOrTx = db) {
   return conn
     .select({ id: brands.id, name: brands.name, nameAr: brands.nameAr, slug: brands.slug, count: sql<number>`count(*)::int` })
     .from(products)
     .innerJoin(brands, eq(brands.id, products.brandId))
     .innerJoin(sellers, eq(sellers.id, products.sellerId))
-    .where(and(...where))
+    .innerJoin(stores, eq(stores.sellerId, products.sellerId))
+    .where(and(...catalogConditions(query, { brand: true })))
     .groupBy(brands.id)
     .orderBy(desc(sql`count(*)`))
     .limit(30);
 }
 
-export async function filterableAttributes(categoryId: string, conn: DbOrTx = db) {
+/**
+ * Attribute facets of a category, counted within the current result set: every active filter applies except the
+ * attribute's own selection (so ticking a second value of the same attribute still shows what it adds).
+ */
+/** Names of brands selected in the URL that have no match in the current results (count 0, still un-tickable). */
+export async function brandsByIds(ids: string[], conn: DbOrTx = db) {
+  const valid = ids.filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 30);
+  return valid.length ? conn.select({ id: brands.id, name: brands.name, nameAr: brands.nameAr, slug: brands.slug }).from(brands).where(inArray(brands.id, valid)) : [];
+}
+
+export async function filterableAttributes(categoryId: string, query: SearchQuery = {}, conn: DbOrTx = db) {
   const [cat] = await conn.select({ path: categories.path }).from(categories).where(eq(categories.id, categoryId));
   if (!cat) return [];
+  // Products matching everything except attribute filters…
+  const inResults = sql`pav.product_id in (select ${products.id} from ${products}
+      join ${sellers} on ${sellers.id} = ${products.sellerId} join ${stores} on ${stores.sellerId} = ${products.sellerId}
+      where ${and(...catalogConditions({ ...query, categoryId }, { allAttrs: true }))})`;
+  // …and every OTHER attribute's selection (the counted attribute's own selection is ignored).
+  const otherAttrs = Object.entries(query.attrs ?? {})
+    .filter(([, values]) => values.length)
+    .map(
+      ([code, values]) => sql`(a.code = ${code} or exists (select 1 from product_attribute_values pav2 join attributes a2 on a2.id = pav2.attribute_id
+        where pav2.product_id = pav.product_id and a2.code = ${code} and pav2.values && ARRAY[${sql.join(values.slice(0, 20).map((v) => sql`${v}`), sql`, `)}]::text[]))`,
+    );
   const rows = await conn.execute<{ code: string; name_ar: string; type: string; value: string; label_ar: string | null; count: number }>(sql`
     select a.code, a.name_ar, a.type, v.value, ao.label_ar, count(*)::int as count
     from category_attributes ca
     join attributes a on a.id = ca.attribute_id
     join product_attribute_values pav on pav.attribute_id = a.id
-    join products p on p.id = pav.product_id and p.status = 'LIVE'
-    join sellers s on s.id = p.seller_id and s.status in ('APPROVED','RESTRICTED')
     cross join lateral unnest(pav.values) as v(value)
     left join attribute_options ao on ao.attribute_id = a.id and ao.value = v.value
     where ca.category_id = any(${sql.raw(`'{${cat.path.join(',')}}'::uuid[]`)}) and ca.is_filterable
-      and p.category_id in (select id from categories where ${categoryId}::uuid = any(path))
+      and ${inResults}
+      ${otherAttrs.length ? sql`and ${sql.join(otherAttrs, sql` and `)}` : sql``}
     group by a.code, a.name_ar, a.type, v.value, ao.label_ar, ao.sort_order
     order by a.code, ao.sort_order nulls last, count desc`);
   const grouped = new Map<string, { code: string; nameAr: string; values: { value: string; label: string; count: number }[] }>();
@@ -203,15 +236,26 @@ export async function productDetailBySlug(slug: string, conn: DbOrTx = db) {
     row.product.brandId ? conn.select().from(brands).where(eq(brands.id, row.product.brandId)).then((r) => r[0] ?? null) : Promise.resolve(null),
     row.product.categoryId ? conn.select().from(categories).where(eq(categories.id, row.product.categoryId)).then((r) => r[0] ?? null) : Promise.resolve(null),
   ]);
-  const optionIds = attrRows.filter((a) => a.type === 'SELECT' || a.type === 'MULTI_SELECT').map((a) => a.attributeId);
+  // Variant-defining attributes (e.g. storage, color) live on each variant's `options`, keyed by attribute code.
+  // Their metadata is loaded too, so a variant can be described even when the product has no product-level value.
+  const variantCodes = [...new Set(variants.flatMap((v) => Object.keys(v.options ?? {})))].filter((c) => !attrRows.some((a) => a.code === c));
+  const variantAttrs = variantCodes.length
+    ? await conn.select({ code: attributes.code, nameAr: attributes.nameAr, type: attributes.type, unit: attributes.unit, attributeId: attributes.id }).from(attributes).where(inArray(attributes.code, variantCodes))
+    : [];
+  const allAttrs = [...attrRows, ...variantAttrs.map((a) => ({ ...a, values: [] as string[] }))];
+  const optionIds = allAttrs.filter((a) => a.type === 'SELECT' || a.type === 'MULTI_SELECT').map((a) => a.attributeId);
   const labels = optionIds.length ? await conn.select().from(attributeOptions).where(inArray(attributeOptions.attributeId, optionIds)) : [];
-  const specs = attrRows.map((a) => ({
-    code: a.code,
-    name: a.nameAr,
-    value: a.values
-      .map((v) => (a.type === 'BOOLEAN' ? (v === 'true' ? 'نعم' : 'لا') : (labels.find((l) => l.attributeId === a.attributeId && l.value === v)?.labelAr ?? v)))
-      .join('، ') + (a.unit ? ` ${a.unit}` : ''),
-  }));
+  const describe = (a: (typeof allAttrs)[number], values: string[]) =>
+    values.map((v) => (a.type === 'BOOLEAN' ? (v === 'true' ? 'نعم' : 'لا') : (labels.find((l) => l.attributeId === a.attributeId && l.value === v)?.labelAr ?? v))).join('، ') + (a.unit ? ` ${a.unit}` : '');
+  /** Specifications of one variant: product-level values, overridden by (and extended with) the variant's own options. */
+  const specsFor = (options: Record<string, string> | null | undefined) => {
+    const opts = options ?? {};
+    const rows = attrRows.map((a) => ({ code: a.code, name: a.nameAr, value: describe(a, opts[a.code] != null ? [opts[a.code]] : a.values) }));
+    for (const a of variantAttrs) if (opts[a.code] != null) rows.push({ code: a.code, name: a.nameAr, value: describe({ ...a, values: [] }, [opts[a.code]]) });
+    return rows.filter((r) => r.value.trim() !== '');
+  };
+  const specs = specsFor(null);
+  const variantSpecs: Record<string, ReturnType<typeof specsFor>> = Object.fromEntries(variants.map((v) => [v.id, specsFor(v.options)]));
   const breadcrumbs = category ? await conn.select().from(categories).where(inArray(categories.id, category.path)) : [];
   return {
     ...row,
@@ -219,6 +263,7 @@ export async function productDetailBySlug(slug: string, conn: DbOrTx = db) {
     variants,
     images,
     specs,
+    variantSpecs,
     brand,
     category,
     breadcrumbs: category ? category.path.map((id) => breadcrumbs.find((b) => b.id === id)!).filter(Boolean) : [],

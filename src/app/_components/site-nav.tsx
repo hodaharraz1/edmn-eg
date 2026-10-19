@@ -23,7 +23,7 @@ export function SiteNav({ productsMenu }: { productsMenu: ReactNode }) {
       {productsMenu}
       {item('/stores', 'المتاجر', (p) => p.startsWith('/stores') || p.startsWith('/store/'))}
       {item('/protected-deal', 'كيف يعمل الضمان؟', (p) => p.startsWith('/protected-deal'))}
-      {item('/sell', 'مركز البائع', (p) => p.startsWith('/sell'))}
+      {item('/seller', 'مركز البائع', (p) => p.startsWith('/sell'))}
       {item('/contact', 'المساعدة', (p) => p.startsWith('/contact') || p.startsWith('/legal'))}
     </nav>
   );

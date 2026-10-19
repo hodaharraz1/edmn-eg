@@ -46,6 +46,8 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
   const variantId = typeof sp.v === 'string' ? sp.v : undefined;
   const v = d.variants.find((x) => x.id === variantId) ?? d.variants.find((x) => x.stockOnHand - x.reserved > 0) ?? d.variants[0];
   const available = v ? v.stockOnHand - v.reserved : 0;
+  // Single source of truth: price, stock, SKU and specifications all come from the selected variant `v`.
+  const specs = (v && d.variantSpecs[v.id]) ?? d.specs;
   const gov = await deliveryGovernorate();
   const [rate] = gov ? await db.select().from(sellerShippingRates).where(and(eq(sellerShippingRates.sellerId, p.sellerId), eq(sellerShippingRates.governorateId, gov.id))) : [];
   const shipFee = rate?.enabled ? (d.store.freeShippingThreshold !== null && v && v.price >= d.store.freeShippingThreshold ? 0 : rate.fee) : null;
@@ -146,7 +148,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
           {/* Purchase card */}
           <div className="card space-y-4 p-5">
             <div>
-              <Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" className="[&>span:first-child]:text-3xl [&>span:first-child]:text-brand-950" />
+              <div data-testid="product-price" data-variant={v?.id}><Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" className="[&>span:first-child]:text-3xl [&>span:first-child]:text-brand-950" /></div>
               <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة لو موجودة. مصاريف الشحن بتتحسب وقت الدفع.</p>
             </div>
 
@@ -175,7 +177,7 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
             <div className="space-y-2 rounded-xl bg-soft/60 p-3.5">
               <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
               <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (تقدر تغيّرها من أعلى الصفحة)</p>
-              <p className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+              <p data-testid="product-availability" data-variant={v?.id} className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
                 {available > 5 ? 'متوفر' : available > 0 ? `فاضل ${available} بس` : 'نفدت الكمية'}
               </p>
             </div>
@@ -248,12 +250,12 @@ export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
         <section className="card space-y-4 p-5">
           <h2 className="text-lg font-bold text-brand-950">الوصف</h2>
           <div className="prose-ar whitespace-pre-line text-sm leading-7">{p.description}</div>
-          {d.specs.length > 0 && (
+          {specs.length > 0 && (
             <>
               <h3 className="pt-2 font-bold">المواصفات</h3>
-              <table className="w-full text-sm">
+              <table className="w-full text-sm" data-testid="product-specs" data-variant={v?.id}>
                 <tbody className="divide-y divide-line">
-                  {d.specs.map((s) => (
+                  {specs.map((s) => (
                     <tr key={s.code}>
                       <th scope="row" className="w-40 py-2 text-start font-medium text-muted">{s.name}</th>
                       <td className="py-2">{s.value}</td>

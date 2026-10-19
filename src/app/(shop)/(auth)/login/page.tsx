@@ -12,7 +12,8 @@ export const metadata: Metadata = { title: 'تسجيل الدخول', robots: { 
 
 export default async function LoginPage(props: PageProps<'/login'>) {
   const sp = await props.searchParams;
-  const next = safeNext(typeof sp.next === 'string' ? sp.next : null, '/');
+  // `returnTo` is accepted as an alias of `next`; both are validated (internal relative paths only).
+  const next = safeNext(typeof sp.next === 'string' ? sp.next : typeof sp.returnTo === 'string' ? sp.returnTo : null, '/');
   if (await currentUser()) redirect(next);
   return (
     <>
@@ -27,7 +28,8 @@ export default async function LoginPage(props: PageProps<'/login'>) {
         <Field label="كلمة المرور" htmlFor="password" required>
           <Input id="password" name="password" type="password" autoComplete="current-password" required />
         </Field>
-        <div className="flex justify-end text-sm">
+        <div className="flex flex-wrap justify-between gap-2 text-sm">
+          <Link href="/contact#cant-sign-in" className="text-brand-700 hover:underline" data-testid="login-help">مش قادر تدخل؟ كلّم الدعم</Link>
           <Link href="/forgot-password" className="text-brand-700 hover:underline">نسيت كلمة المرور؟</Link>
         </div>
         <SubmitButton className="w-full" size="lg" pendingText="بنسجّل دخولك…">تسجيل الدخول</SubmitButton>

@@ -813,7 +813,8 @@ export async function sellerOrderForSeller(actor: Actor, soId: string) {
   const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
   if (!so) throw notFound('الطلب');
   if (so.sellerId !== sellerId) throw forbidden();
-  if (so.status === 'PENDING_PAYMENT' || so.status === 'PAYMENT_UNDER_REVIEW') throw forbidden('هذا الطلب لم يُدفع بعد');
+  // Never paid (pending, under review, or cancelled/expired before payment) → the buyer's details are not the seller's.
+  if (!so.paidAt || so.status === 'PENDING_PAYMENT' || so.status === 'PAYMENT_UNDER_REVIEW') throw forbidden('هذا الطلب لم يُدفع بعد');
   return loadSellerOrderGraph(so);
 }
 

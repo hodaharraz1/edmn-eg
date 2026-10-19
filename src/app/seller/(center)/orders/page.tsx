@@ -1,6 +1,6 @@
 import Link from '@/ui/link';
 import { SellerForbidden } from '@/app/_components/seller-forbidden';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { ShoppingBag } from 'lucide-react';
 import { db } from '@/server/db/client';
 import { orders, sellerOrders } from '@/server/db/schema';
@@ -30,7 +30,8 @@ export default async function SellerOrders(props: PageProps<'/seller/orders'>) {
     .select({ so: sellerOrders, number: orders.number, placedAt: orders.placedAt, address: orders.shippingAddress })
     .from(sellerOrders)
     .innerJoin(orders, eq(orders.id, sellerOrders.orderId))
-    .where(and(eq(sellerOrders.sellerId, actor.sellerId!), inArray(sellerOrders.status, tab[2])))
+    // Only paid orders: one cancelled/expired before payment never reaches the seller (buyer data stays private).
+    .where(and(eq(sellerOrders.sellerId, actor.sellerId!), inArray(sellerOrders.status, tab[2]), isNotNull(sellerOrders.paidAt)))
     .orderBy(desc(sellerOrders.paidAt))
     .limit(200);
   return (

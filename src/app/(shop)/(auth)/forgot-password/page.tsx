@@ -1,3 +1,4 @@
+import { marketHref } from '@/lib/market-url';
 import type { Metadata } from 'next';
 import Link from '@/ui/link';
 import { forgotPasswordAction } from '@/app/_actions/auth';
@@ -18,6 +19,7 @@ export default function ForgotPasswordPage() {
         <SubmitButton className="w-full" size="lg">ابعت الرابط</SubmitButton>
       </ActionForm>
       <p className="mt-6 text-center text-sm"><Link href="/login" className="text-brand-700 hover:underline">ارجع لتسجيل الدخول</Link></p>
+      <p className="mt-2 text-center text-sm text-muted">مش بيوصلك الرابط أو غيّرت رقمك؟ <Link href={marketHref('/contact#cant-sign-in')} className="font-semibold text-brand-700 hover:underline">كلّم الدعم</Link></p>
     </>
   );
 }

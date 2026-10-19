@@ -72,7 +72,7 @@ test('desktop: closes on outside / page content / search / header actions / othe
     ['other nav item (الرئيسية)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).getByRole('link', { name: 'الرئيسية' }).click()],
     ['other nav item (المتاجر)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/stores"]').click()],
     ['other nav item (كيف يعمل الضمان؟)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/protected-deal"]').click()],
-    ['other nav item (مركز البائع)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/sell"]').click()],
+    ['other nav item (مركز البائع)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/seller"]').click()],
     ['other nav item (المساعدة)', async (p) => p.getByRole('navigation', { name: 'التنقل الرئيسي' }).locator('a[href="/contact"]').click()],
   ];
   for (const [name, act] of cases) {
@@ -81,7 +81,8 @@ test('desktop: closes on outside / page content / search / header actions / othe
     await act(page);
     await expect(panel(page), `closes after: ${name}`).toBeHidden();
     if (name.startsWith('other nav item') || name.startsWith('quick link')) await expect.poll(() => new URL(page.url()).pathname, { message: `navigates after: ${name}` }).not.toBe('/search');
-    await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
+    // «مركز البائع» leaves the shop for the seller surface (its own shell, no category menu).
+    if (name !== 'other nav item (مركز البائع)') await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false');
   }
   await page.context().close();
 });

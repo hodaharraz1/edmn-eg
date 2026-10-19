@@ -48,7 +48,7 @@ export default async function ProtectedDealLanding() {
               لقيت حاجة على فيسبوك أو عند تاجر؟ اضمن بيحتفظ بالمبلغ طول الصفقة، ومش بيتصرف للبائع غير بعد التسليم برمز الاستلام، وتأكيدك أو انتهاء مهلة الفحص بدون اعتراض، وموافقة يدوية من الإدارة.
             </p>
             <div className="grid gap-3 sm:flex sm:flex-wrap">
-              <Link href="/account/deals/new" className="edmn-cta inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-accent-600 px-7 text-base font-bold text-white shadow-[0_14px_34px_-12px_rgb(215_38_61/0.8)] hover:bg-accent-700">
+              <Link href="/account/deals/new" className="edmn-cta inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 text-base font-bold text-white shadow-[var(--shadow-cta)] hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-300">
                 <Handshake className="size-5" aria-hidden /> أنشئ صفقة ضمان
               </Link>
               <Link href="/legal/protected-deal-terms" className="edmn-cta inline-flex h-14 items-center justify-center rounded-xl border border-white/30 bg-white/5 px-7 text-base font-bold hover:bg-white/15">
@@ -111,7 +111,7 @@ export default async function ProtectedDealLanding() {
               <h2 className="text-2xl font-bold">جاهز تحمي صفقتك؟</h2>
               <p className="mt-1 text-brand-100/85">اكتب التفاصيل في دقيقتين وابعت الدعوة للطرف التاني.</p>
             </div>
-            <Link href="/account/deals/new" className="edmn-cta inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-accent-600 px-7 text-base font-bold hover:bg-accent-700">
+            <Link href="/account/deals/new" className="edmn-cta inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-brand-600 px-7 text-base font-bold text-white shadow-[var(--shadow-cta)] hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-sky-300">
               <Handshake className="size-5" aria-hidden /> أنشئ صفقة ضمان
             </Link>
           </div>

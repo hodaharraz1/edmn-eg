@@ -34,7 +34,7 @@ test('B2-B: migration 0016 objects exist; append-only ledger health and key fing
   }
 });
 
-test('B2-N: the admin surface runs under a per-request nonce CSP; public pages keep their policy; request ids are sanitized', async ({ request }) => {
+test('B2-N: the admin surface runs under a per-request nonce CSP (public pages too since the QA batch); request ids are sanitized', async ({ request }) => {
   const admin = await request.get('/admin/login');
   const csp = admin.headers()['content-security-policy'] ?? '';
   expect(csp).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
@@ -43,7 +43,7 @@ test('B2-N: the admin surface runs under a per-request nonce CSP; public pages k
   expect(again.match(/nonce-([^']+)/)?.[1]).not.toBe(csp.match(/nonce-([^']+)/)?.[1]);
   const home = await request.get('/');
   expect(home.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
-  expect(home.headers()['content-security-policy']).not.toContain('nonce-');
+  expect(home.headers()['content-security-policy']).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/);
   expect(home.headers()['cross-origin-opener-policy']).toBe('same-origin');
   const bad = await request.get('/api/health', { headers: { 'x-request-id': '<script>x</script>' } });
   expect(bad.headers()['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);

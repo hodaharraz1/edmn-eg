@@ -1,6 +1,6 @@
 import { SlidersHorizontal, SearchX } from 'lucide-react';
 import Link from '@/ui/link';
-import { brandFacets, filterableAttributes, searchProducts, SORTS, type SearchQuery, type Sort } from '@/server/modules/catalog/search';
+import { brandFacets, brandsByIds, filterableAttributes, searchProducts, SORTS, type SearchQuery, type Sort } from '@/server/modules/catalog/search';
 import { parseEgp } from '@/server/core/money';
 import { Drawer } from '@/ui/client';
 import { ProductGrid } from '@/ui/commerce';
@@ -65,9 +65,13 @@ function hrefWith(path: string, sp: SP, patch: Record<string, string | null>) {
   return qs ? `${path}?${qs}` : path;
 }
 
-async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: SP; categoryId?: string; hideBrand?: boolean }) {
-  const [brands, attrs] = await Promise.all([hideBrand ? Promise.resolve([]) : brandFacets(categoryId), categoryId ? filterableAttributes(categoryId) : Promise.resolve([])]);
+async function Filters({ path, sp, query, hideBrand }: { path: string; sp: SP; query: SearchQuery; hideBrand?: boolean }) {
+  // Facet counts are computed within the current result set (search text + every active filter), never the catalog.
+  const [facetBrands, attrs] = await Promise.all([hideBrand ? Promise.resolve([]) : brandFacets(query), query.categoryId ? filterableAttributes(query.categoryId, query) : Promise.resolve([])]);
   const selectedBrands = new Set(many(sp.brand));
+  // A selected brand stays listed (with its real count, possibly 0) so it can always be unticked.
+  const missing = await brandsByIds([...selectedBrands].filter((id) => !facetBrands.some((b) => b.id === id)));
+  const brands = [...facetBrands, ...missing.map((b) => ({ ...b, count: 0 }))];
   return (
     <form action={path} className="space-y-5 text-sm [&_input[type=checkbox]]:size-5 [&_input[type=radio]]:size-5 [&_label]:min-h-9 [&_legend]:text-brand-950">
       {one(sp.q) && <input type="hidden" name="q" value={one(sp.q)} />}
@@ -111,7 +115,7 @@ async function Filters({ path, sp, categoryId, hideBrand }: { path: string; sp: 
           <legend className="mb-1 font-semibold">العلامة التجارية</legend>
           <div className="max-h-48 space-y-1.5 overflow-y-auto">
             {brands.map((b) => (
-              <label key={b.id} className="flex items-center gap-2">
+              <label key={b.id} className="flex items-center gap-2" data-testid="brand-facet" data-brand={b.id} data-count={b.count}>
                 <input type="checkbox" name="brand" value={b.id} defaultChecked={selectedBrands.has(b.id)} className="accent-brand-700" />
                 {b.nameAr || b.name} <span className="text-xs text-muted">({b.count})</span>
               </label>
@@ -147,7 +151,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
   const query = queryFromParams(sp, base);
   const gov = await deliveryGovernorate();
   const result = await searchProducts(query);
-  const filters = <Filters path={path} sp={sp} categoryId={base.categoryId} hideBrand={hideBrand} />;
+  const filters = <Filters path={path} sp={sp} query={query} hideBrand={hideBrand} />;
   return (
     <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       <aside className="hidden lg:block">
@@ -155,7 +159,7 @@ export async function Listing({ path, sp, base = {}, hideBrand, emptyHint }: { p
       </aside>
       <div className="min-w-0 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted">{result.total.toLocaleString('ar-EG-u-nu-latn')} منتج · التوصيل إلى {gov?.nameAr}</p>
+          <p className="text-sm text-muted"><span data-testid="result-count" data-count={result.total}>{result.total.toLocaleString('ar-EG-u-nu-latn')}</span> منتج · التوصيل إلى {gov?.nameAr}</p>
           <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <Drawer
               title="تصفية النتائج"

@@ -26,7 +26,7 @@ import { RETENTION_POLICY } from '@/server/ops/retention';
 import { readPrivateFile } from '@/server/storage/access';
 import { initialScanStatus, scanPendingFiles, servable, setScannerForTests, storageClass } from '@/server/storage/scanning';
 import { storeUpload } from '@/server/storage/uploads';
-import { makeAdmin, makeCustomer, pdf } from '../helpers/factory';
+import { makeAdmin, makeCustomer, pdf, png } from '../helpers/factory';
 
 const TEST_URL = () => process.env.DATABASE_URL!;
 async function setSetting(key: string, value: unknown) {
@@ -493,6 +493,33 @@ describe('B2-I/J storage classification and malware quarantine', () => {
     expect(await readPrivateFile(admin, ids[0])).not.toBeNull();
     expect(await readPrivateFile(admin, ids[1])).toBeNull();
     expect(await readPrivateFile(admin, ids[2])).toBeNull();
+  });
+
+  it('J4: public /media serves an image (and its resized variants) only while its record is live and servable', async () => {
+    setScannerForTests(null);
+    const { GET } = await import('@/app/media/[...key]/route');
+    const admin = await makeAdmin();
+    const image = await png('media');
+    const f = await db.transaction((tx) => storeUpload(tx, admin, { purpose: 'PRODUCT_IMAGE', data: image, originalName: 'm.png' }));
+    const [row] = await db.select().from(files).where(eq(files.id, f.id));
+    const get = (key: string) => GET(new Request(`https://edmn.test/media/${key}`), { params: Promise.resolve({ key: key.split('/') }) } as never);
+    const keys = [row.storageKey, ...(row.variantKeys ?? [])];
+    for (const k of keys) expect((await get(k)).status, k).toBe(200);
+    await db.update(files).set({ scanStatus: 'INFECTED' }).where(eq(files.id, f.id));
+    for (const k of keys) expect((await get(k)).status, `infected ${k}`).toBe(404);
+    await db.update(files).set({ scanStatus: 'CLEAN', deletedAt: new Date() }).where(eq(files.id, f.id));
+    for (const k of keys) expect((await get(k)).status, `deleted ${k}`).toBe(404);
+    await db.update(files).set({ deletedAt: null }).where(eq(files.id, f.id));
+    const ok = await get(row.storageKey);
+    expect(ok.headers.get('cache-control')).toContain('immutable');
+    // Quarantined where scanning is required → withheld.
+    await db.update(files).set({ scanStatus: 'QUARANTINED' }).where(eq(files.id, f.id));
+    process.env.MALWARE_SCAN_REQUIRED = 'true';
+    try {
+      expect((await get(row.storageKey)).status).toBe(404);
+    } finally {
+      delete process.env.MALWARE_SCAN_REQUIRED;
+    }
   });
 });
 

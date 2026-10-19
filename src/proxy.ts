@@ -26,16 +26,21 @@ export function proxy(req: NextRequest) {
   const sellerHost = (process.env.SELLER_HOST ?? 'seller.edmneg.com').toLowerCase();
   const adminHost = (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase();
   const { pathname } = req.nextUrl;
-  // Batch 2: the admin surface (money approvals, KYC documents) gets a strict nonce CSP — no inline script runs
-  // unless Next.js stamped it with this request's nonce. Next reads the nonce from the request CSP header.
   const onAdminHost = enforceAdmin && host === adminHost;
   const onSellerHost = enforceSeller && host === sellerHost;
   const adminSurface = pathname.startsWith('/admin') || onAdminHost;
-  const csp = adminSurface && !pathname.startsWith('/api/') ? adminCsp(btoa(crypto.randomUUID())) : null;
-  if (csp) headers.set('content-security-policy', csp);
   const shared =
     pathname.startsWith('/_next') || pathname.startsWith('/media/') || pathname.startsWith('/api/') || pathname.startsWith('/brand/') ||
     ['/favicon.ico', '/icon.png', '/sw.js', '/robots.txt', '/sitemap.xml', '/manifest.webmanifest'].includes(pathname);
+  // Every page (marketplace, account, Seller Center, admin) runs under a strict per-request nonce CSP: no inline
+  // script executes unless Next.js stamped it with this request's nonce (Next reads it from the request CSP header).
+  // All pages render per request already (root layout), so the nonce costs no static caching.
+  const csp = shared ? null : pageCsp(btoa(crypto.randomUUID()));
+  if (csp) headers.set('content-security-policy', csp);
+  // The page the visitor actually asked for, so a login wall can send them back to it (validated by safeNext on
+  // use). Always overwritten/removed here — a client-supplied value never reaches the app.
+  if (shared) headers.delete('x-edmn-path');
+  else headers.set('x-edmn-path', pathname + req.nextUrl.search);
 
   let res: NextResponse;
   if (!shared && (onSellerHost || onAdminHost)) {
@@ -67,12 +72,17 @@ export function proxy(req: NextRequest) {
   return res;
 }
 
-export function adminCsp(nonce: string): string {
+/**
+ * style-src keeps 'unsafe-inline' (documented limitation): React `style={{…}}` attributes are used across the UI
+ * (aspect ratios, computed positions, CSS custom properties) and style attributes cannot carry a nonce.
+ * Scripts — the actual XSS vector — are nonce-only.
+ */
+export function pageCsp(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'` + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data: blob:",
     "connect-src 'self'",
     "worker-src 'self'",
@@ -84,6 +94,8 @@ export function adminCsp(nonce: string): string {
     "form-action 'self'",
   ].join('; ');
 }
+/** @deprecated kept for existing callers — the admin surface uses the same policy as every page. */
+export const adminCsp = pageCsp;
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],

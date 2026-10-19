@@ -15,12 +15,12 @@ export default async function SellLanding() {
   const seller = user ? await sellerContextForUser(user.id) : null;
   return (
     <div className="container-page space-y-10 py-8">
-      <section className="grid items-center gap-8 rounded-3xl bg-brand-900 p-8 text-white sm:p-12 lg:grid-cols-2">
+      <section className="grid items-center gap-8 rounded-3xl bg-brand-900 p-6 text-white sm:p-12 lg:grid-cols-2 [&>*]:min-w-0">
         <div className="space-y-4">
           <h1 className="text-3xl font-bold leading-tight sm:text-4xl">بيع منتجاتك الجديدة والمستعملة لعملاء في كل مصر</h1>
           <p className="text-white/80">سجّل كفرد أو شركة، وبعد مراجعة بياناتك تقدر تضيف منتجاتك، تحدد مصاريف الشحن لكل محافظة، وتسحب مستحقاتك بعد استلام العميل وموافقة الإدارة.</p>
           {seller ? (
-            <LinkButton href="/seller" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">روح لمركز البائع</LinkButton>
+            <LinkButton href="/seller" size="lg" className="bg-white text-brand-950 shadow-none hover:bg-brand-50">روح لمركز البائع</LinkButton>
           ) : user ? (
             <ActionForm action={startSellerAction} className="space-y-3 rounded-2xl bg-white p-4 text-ink">
               <p className="font-semibold">نوع الحساب</p>
@@ -31,8 +31,8 @@ export default async function SellLanding() {
               <SubmitButton size="lg" className="w-full">سجّل كبائع</SubmitButton>
             </ActionForm>
           ) : (
-            <div className="flex gap-2">
-              <LinkButton href="/seller/register" size="lg" className="bg-amber-400 text-brand-950 hover:bg-amber-300">اعمل حساب وابدأ</LinkButton>
+            <div className="flex flex-wrap gap-2">
+              <LinkButton href="/seller/register" size="lg" className="bg-white text-brand-950 shadow-none hover:bg-brand-50">اعمل حساب وابدأ</LinkButton>
               <LinkButton href="/seller/login" size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:bg-white/10">عندي حساب</LinkButton>
             </div>
           )}
@@ -47,7 +47,7 @@ export default async function SellLanding() {
             const Icon = I as typeof BadgeCheck;
             return (
               <li key={t as string} className="rounded-2xl bg-white/10 p-4">
-                <Icon className="mb-2 size-6 text-amber-300" />
+                <Icon className="mb-2 size-6 text-sky-300" aria-hidden />
                 <p className="font-semibold">{t as string}</p>
                 <p className="text-sm text-white/75">{b as string}</p>
               </li>

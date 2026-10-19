@@ -3,12 +3,13 @@ import Link from '@/ui/link';
 import { registerAction } from '@/app/_actions/auth';
 import { ActionForm, FieldError, SubmitButton } from '@/ui/action-form';
 import { Checkbox, Field, Input } from '@/ui/form';
+import { safeNext } from '@/server/web/action';
 
 export const metadata: Metadata = { title: 'إنشاء حساب', robots: { index: false } };
 
 export default async function RegisterPage(props: PageProps<'/register'>) {
   const sp = await props.searchParams;
-  const next = typeof sp.next === 'string' ? sp.next : '/';
+  const next = safeNext(typeof sp.next === 'string' ? sp.next : typeof sp.returnTo === 'string' ? sp.returnTo : null, '/');
   return (
     <>
       <h1 className="mb-1 text-xl font-bold">إنشاء حساب جديد</h1>

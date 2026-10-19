@@ -8,6 +8,7 @@ import { resolveSession } from '@/server/auth/service';
 import type { Actor } from '@/server/core/actor';
 import { cookieSecure } from '@/server/core/env';
 import { clientIp } from './client-ip';
+import { safeNext } from './safe-next';
 import { sha256 } from '@/server/core/crypto';
 
 export const WEB_COOKIE = 'edmn_sid';
@@ -58,8 +59,18 @@ export async function currentUser() {
  */
 export async function requireUser(next = '/account') {
   const user = await currentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent(await returnTarget(next))}`);
   return user;
+}
+
+/**
+ * Where to come back after signing in: the page actually requested (set by src/proxy.ts, internal paths only via
+ * safeNext), falling back to the caller's default. Layouts and pages guard concurrently, so whichever redirects
+ * first still preserves the real destination.
+ */
+async function returnTarget(fallback: string): Promise<string> {
+  const requested = (await headers()).get('x-edmn-path');
+  return safeNext(requested, safeNext(fallback, '/account'));
 }
 
 export async function customerActorOrNull(): Promise<Actor | null> {
@@ -71,14 +82,14 @@ export async function customerActorOrNull(): Promise<Actor | null> {
 /** For pages/actions that need a signed-in user. Redirects to login preserving the target. */
 export async function requireCustomer(next = '/account'): Promise<Actor> {
   const a = await customerActorOrNull();
-  if (!a) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!a) redirect(`/login?next=${encodeURIComponent(await returnTarget(next))}`);
   return a;
 }
 
 /** Seller Center access: signed in AND associated with a seller account (any status). */
 export async function requireSellerActor(next = '/seller'): Promise<Actor> {
   const s = await getWebSession();
-  if (!s) redirect(`/seller/login?next=${encodeURIComponent(next)}`);
+  if (!s) redirect(`/seller/login?next=${encodeURIComponent(await returnTarget(next))}`);
   const a = await sellerActor(s.user.id, { ...(await requestMeta()), sessionId: s.session.id });
   if (!a) redirect('/seller/register');
   return a;
