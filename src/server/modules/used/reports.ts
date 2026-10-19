@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { enforce } from '@/server/auth/rate-limit';
 import { hasPermission, requirePermission, requireSeller, requireStepUp, requireUser, type Actor } from '@/server/core/actor';
@@ -208,8 +208,11 @@ export async function removeReportEvidence(actor: Actor, reportId: string, evide
     const [e] = await tx.select().from(usedConditionEvidence).where(and(eq(usedConditionEvidence.id, evidenceId), eq(usedConditionEvidence.reportId, r.id)));
     if (!e) throw notFound('الصورة');
     await tx.delete(usedConditionEvidence).where(eq(usedConditionEvidence.id, e.id));
-    // The bytes stop being served (public /media and private /api/files both refuse deleted files).
-    await tx.update(files).set({ deletedAt: new Date() }).where(eq(files.id, e.fileId));
+    // A photo referenced by a frozen condition snapshot is EVIDENCE of an agreement: it is only unlinked from the
+    // listing, never deleted (a seller must not be able to destroy what a buyer's dispute is judged against).
+    const frozen = await tx.execute(sql`select 1 from condition_snapshots where snapshot->'evidence' @> ${JSON.stringify([{ fileId: e.fileId }])}::jsonb limit 1`);
+    // Otherwise the bytes stop being served (public /media and private /api/files both refuse deleted files).
+    if (!frozen.rows.length) await tx.update(files).set({ deletedAt: new Date() }).where(eq(files.id, e.fileId));
     const { policy } = await policyById(r.policyId, tx);
     await afterChange(tx, actor, r, policy, {});
     await audit(tx, actor, { action: 'used.evidence_removed', entityType: 'used_condition_report', entityId: r.id, newValues: { slot: e.slot } });
@@ -225,7 +228,8 @@ export async function declareReport(actor: Actor, reportId: string, accepted: bo
     const { policy } = await policyById(r.policyId, tx);
     const check = await evaluate(tx, r, policy);
     if (!check.complete) throw validation(`التوثيق لسه مش كامل: ${check.problems.slice(0, 4).join('، ')}`);
-    await tx.update(usedConditionReports).set({ status: 'DECLARED', declaredAt: new Date() }).where(eq(usedConditionReports.id, r.id));
+    // Database clock, like used_inspections.created_at (an inspection counts only if recorded after this).
+    await tx.update(usedConditionReports).set({ status: 'DECLARED', declaredAt: sql`now()` }).where(eq(usedConditionReports.id, r.id));
     let [pp] = await tx.select().from(productPassports).where(eq(productPassports.reportId, r.id));
     if (!pp) {
       [pp] = await tx.insert(productPassports).values({ code: passportCode(), reportId: r.id, productId: r.productId, dealId: r.dealId, identifierHash: r.identifierHash }).returning();
@@ -273,12 +277,15 @@ export async function recomputeLevel(tx: DbOrTx, passportId: string) {
   const r = await loadReport(tx, pp.reportId);
   const { policy } = await policyById(r.policyId, tx);
   const check = await evaluate(tx, r, policy);
-  const [insp] = await tx.select({ result: usedInspections.result }).from(usedInspections).where(eq(usedInspections.passportId, pp.id)).orderBy(desc(usedInspections.performedAt)).limit(1);
+  const [insp] = await tx.select({ result: usedInspections.result, createdAt: usedInspections.createdAt }).from(usedInspections).where(eq(usedInspections.passportId, pp.id)).orderBy(desc(usedInspections.performedAt)).limit(1);
+  // An inspection vouches only for the condition as declared when it was recorded: a later edit (re-declaration
+  // or a report still in DRAFT) can never keep «مفحوص» — it needs a new inspection.
+  const inspectionCurrent = !!insp && r.status !== 'DRAFT' && !!r.declaredAt && insp.createdAt.getTime() >= r.declaredAt.getTime();
   const level = protectionLevel(policy, {
     complete: check.complete && r.status !== 'DRAFT',
     identityApproved: (await identityStatus(tx, r.authorUserId)) === 'APPROVED',
     staffVerified: pp.verificationStatus === 'VERIFIED',
-    inspectionPassed: insp?.result === 'PASS' || insp?.result === 'PASS_WITH_NOTES',
+    inspectionPassed: inspectionCurrent && (insp.result === 'PASS' || insp.result === 'PASS_WITH_NOTES'),
   });
   if (level !== pp.level) {
     await tx.update(productPassports).set({ level }).where(eq(productPassports.id, pp.id));

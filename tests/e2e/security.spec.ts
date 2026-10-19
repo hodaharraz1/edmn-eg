@@ -48,3 +48,38 @@ test('security headers are present', async ({ request }) => {
   expect(h['content-security-policy']).toContain("frame-ancestors 'none'");
   expect(h['referrer-policy']).toBeTruthy();
 });
+
+test('re-login revokes the previously presented session token (no stale session survives a new sign-in)', async ({ browser }) => {
+  const { DEMO_PASSWORD } = await import('./helpers');
+  // Two tabs of the same browser both show the sign-in form; the user signs in from both (realistic re-login).
+  const ctx = await browser.newContext({ locale: 'ar-EG' });
+  const tab1 = await ctx.newPage();
+  const tab2 = await ctx.newPage();
+  for (const t of [tab1, tab2]) {
+    await t.goto('/login');
+    await t.waitForLoadState('networkidle');
+  }
+  const submit = async (t: import('@playwright/test').Page) => {
+    await t.fill('input[name=identifier]', 'omar@demo.edmn.local');
+    await t.fill('input[name=password]', DEMO_PASSWORD);
+    await t.locator('form button[type=submit]').first().click();
+    await t.waitForURL((u) => u.pathname !== '/login');
+  };
+  await submit(tab1);
+  const first = (await ctx.cookies()).find((c) => c.name === 'edmn_sid')!;
+  expect(first?.value).toBeTruthy();
+  await submit(tab2);
+  const second = (await ctx.cookies()).find((c) => c.name === 'edmn_sid')!;
+  expect(second.value).not.toBe(first.value);
+  // The previously issued token no longer authenticates anywhere.
+  const stale = await browser.newContext({ locale: 'ar-EG' });
+  await stale.addCookies([{ ...first }]);
+  const sp = await stale.newPage();
+  await sp.goto('/account');
+  await sp.waitForURL(/\/login/);
+  // The new one does.
+  await tab1.goto('/account');
+  expect(new URL(tab1.url()).pathname).toBe('/account');
+  await stale.close();
+  await ctx.close();
+});

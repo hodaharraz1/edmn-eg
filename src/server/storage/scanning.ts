@@ -93,16 +93,24 @@ export function scanRequired(raw: Record<string, string | undefined> = process.e
   return raw.MALWARE_SCAN_REQUIRED === 'true';
 }
 
+/**
+ * Public uploads must also be scanned in PRODUCTION (fail closed): without a CLEAN verdict a public file is never
+ * served there. Outside production public images stay visible unscanned (re-encoded, staging/dev convenience).
+ */
+export function publicScanRequired(raw: Record<string, string | undefined> = process.env): boolean {
+  return runtimeEnvironment(raw) === 'PRODUCTION';
+}
+
 /** Initial status for a new upload. */
 export function initialScanStatus(visibility: 'PUBLIC' | 'PRIVATE'): 'UNSCANNED' | 'QUARANTINED' {
-  if (visibility === 'PUBLIC') return activeScanner() ? 'QUARANTINED' : 'UNSCANNED';
+  if (visibility === 'PUBLIC') return activeScanner() || publicScanRequired() ? 'QUARANTINED' : 'UNSCANNED';
   return activeScanner() || scanRequired() ? 'QUARANTINED' : 'UNSCANNED';
 }
 
 /** May this file's bytes be served? Only CLEAN, or UNSCANNED where scanning is not required. */
 export function servable(f: { visibility: string; scanStatus: string }): boolean {
   if (f.scanStatus === 'CLEAN') return true;
-  if (f.scanStatus === 'UNSCANNED') return f.visibility === 'PUBLIC' || !scanRequired();
+  if (f.scanStatus === 'UNSCANNED') return f.visibility === 'PUBLIC' ? !publicScanRequired() : !scanRequired();
   // A public image waiting for a scanner verdict stays visible only where scanning is not required.
   if (f.visibility === 'PUBLIC' && f.scanStatus === 'QUARANTINED') return !scanRequired();
   return false;

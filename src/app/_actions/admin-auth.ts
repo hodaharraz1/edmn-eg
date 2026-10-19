@@ -7,11 +7,12 @@ import { db } from '@/server/db/client';
 import { users } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { runAction, safeNext, str, type ActionState } from '@/server/web/action';
-import { ADMIN_COOKIE, clearCookie, getAdminSession, requestMeta, setSessionCookie } from '@/server/web/session';
+import { ADMIN_COOKIE, clearCookie, getAdminSession, requestMeta, revokePresentedSession, setSessionCookie } from '@/server/web/session';
 
 export async function adminLoginAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const res = await runAction(async () => {
     const { token } = await login(str(fd, 'email'), str(fd, 'password'), 'ADMIN', await requestMeta());
+    await revokePresentedSession(ADMIN_COOKIE);
     await setSessionCookie(ADMIN_COOKIE, token, env().ADMIN_SESSION_TTL_HOURS);
   });
   if (res.ok) redirect('/admin/2fa');

@@ -71,6 +71,9 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
       // Used-condition evidence that is never public (identifier photos, every protected-deal photo, inspection
       // reports): the item's seller side, the transaction's buyer, and staff who review listings, deals or disputes.
       if (hasPermission(actor, 'products.moderate') || hasPermission(actor, 'deals.view') || hasPermission(actor, 'disputes.manage')) return true;
+      // The parties of an agreement keep access to the evidence frozen in it (even if later unlinked from a listing).
+      if (await one(sql`select 1 from condition_snapshots cs where cs.status = 'ACCEPTED' and cs.snapshot->'evidence' @> ${JSON.stringify([{ fileId: f.id }])}::jsonb
+          and (cs.snapshot->'parties'->>'buyerId' = ${uid} or cs.snapshot->'parties'->>'sellerUserId' = ${uid})`)) return true;
       return one(sql`
         select 1 from used_condition_reports r
           left join external_deals d on d.id = r.deal_id

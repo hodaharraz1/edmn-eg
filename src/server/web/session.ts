@@ -37,6 +37,16 @@ export async function setSessionCookie(name: string, token: string, maxAgeHours:
   });
 }
 
+/**
+ * Re-login hygiene: before a new session cookie replaces an old one, the old server-side session is revoked, so a
+ * previously issued (possibly leaked) token cannot outlive the user's new sign-in. (New sessions always get a fresh
+ * random id — fixation of a client-chosen id is impossible regardless.)
+ */
+export async function revokePresentedSession(name: string) {
+  const { logout } = await import('@/server/auth/service');
+  await logout((await cookies()).get(name)?.value);
+}
+
 export async function clearCookie(name: string) {
   (await cookies()).delete(name);
 }

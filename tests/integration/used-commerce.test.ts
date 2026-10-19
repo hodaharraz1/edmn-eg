@@ -526,3 +526,85 @@ describe('used commerce — explainable score, seller signals, privacy-safe anal
     await expect(usedAnalytics(customerActor(d.buyerUser.id))).rejects.toThrow();
   });
 });
+
+/* ───────────────────────── 8. Final security gate regressions ───────────────────────── */
+
+describe('used commerce — security gate regressions', () => {
+  it('«مفحوص» never survives a later change of the documented condition (needs a new inspection after the latest declaration)', async () => {
+    const d = await joinedUsedDeal();
+    const r = await ensureDealReport(d.seller, d.dealId);
+    const { passportCode } = await documentReport(d.seller, r.id);
+    const [pp] = await db.select().from(productPassports).where(eq(productPassports.code, passportCode));
+    await recordInspection(admin, pp.id, { provider: 'مركز فحص', inspectorName: 'فاحص', result: 'PASS', summary: 'كل الوظائف شغالة', performedAt: new Date() }, { data: pdf(), name: 'r.pdf' });
+    const level = async () => (await db.select({ l: productPassports.level }).from(productPassports).where(eq(productPassports.id, pp.id)))[0].l;
+    expect(await level()).toBe('INSPECTED');
+    // Seller changes the condition after the inspection → no longer inspected (draft), and re-declaring does not restore it.
+    await saveReportAnswers(d.seller, r.id, { ...ANSWERS, battery_health: 60 });
+    expect(await level()).toBe('PROTECTED');
+    await declareReport(d.seller, r.id, true);
+    expect(await level()).not.toBe('INSPECTED');
+    // A new real inspection of the re-declared condition restores it.
+    await new Promise((res) => setTimeout(res, 5));
+    await recordInspection(admin, pp.id, { provider: 'مركز فحص', inspectorName: 'فاحص', result: 'PASS', summary: 'فحص بعد التعديل', performedAt: new Date() }, { data: pdf(), name: 'r2.pdf' });
+    expect(await level()).toBe('INSPECTED');
+  });
+
+  it('a seller cannot destroy evidence frozen in a buyer’s purchase: unlinking keeps the file and the buyer’s access; unfrozen evidence is deleted', async () => {
+    const s = await makeSeller(admin);
+    const p = await createDraft(s.actor, { categoryId: mobile, titleAr: 'شاومي مستعمل للبيع للاختبار', condition: 'USED' });
+    await updateDetails(s.actor, p.id, { titleAr: 'شاومي مستعمل للبيع للاختبار', categoryId: mobile, description: 'موبايل شاومي مستعمل بحالة جيدة جدًا', keyFeatures: ['ميزة'], condition: 'USED', usedGrade: 'GOOD', conditionNotes: 'حالة جيدة', defects: 'خدش', attributes: { model: ['M1'], storage: ['128GB'] } });
+    await addImages(s.actor, p.id, [{ data: await png('a'), name: 'a.png' }, { data: await png('b'), name: 'b.png' }], true);
+    await saveVariants(s.actor, p.id, [{ sku: `SKU-${randomUUID().slice(0, 6)}`, price: 5000_00, stockOnHand: 2, options: {}, isActive: true, lowStockThreshold: 1 }]);
+    await updateLogistics(s.actor, p.id, { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, processingDays: null, returnPolicyOverride: false, acceptsVoluntaryReturns: null, voluntaryReturnDays: null });
+    const r = await ensureProductReport(s.actor, p.id);
+    await documentReport(s.actor, r.id);
+    await addReportEvidence(s.actor, r.id, 'accessories', [{ data: await png('acc'), name: 'acc.png' }]); // optional, unfrozen until an order
+    await declareReport(s.actor, r.id, true);
+    await submitForReview(s.actor, p.id);
+    await moderateProduct(admin, p.id, 'APPROVE');
+    const buyer = await makeCustomer();
+    const { variantOf } = await import('../helpers/factory');
+    await checkout(buyer, [{ variantId: await variantOf(p.id), qty: 1 }]);
+    const ev = await db.select().from(usedConditionEvidence).where(eq(usedConditionEvidence.reportId, r.id));
+    const imeiEv = ev.find((e) => e.slot === 'imei')!;
+    const frontEv = ev.find((e) => e.slot === 'front')!;
+    await removeReportEvidence(s.actor, r.id, imeiEv.id);
+    await removeReportEvidence(s.actor, r.id, frontEv.id);
+    const alive = async (fileId: string) => (await db.execute<{ d: string | null }>(sql`select deleted_at::text d from files where id = ${fileId}`)).rows[0].d === null;
+    expect(await alive(imeiEv.fileId)).toBe(true);
+    expect(await alive(frontEv.fileId)).toBe(true);
+    expect(await canReadPrivateFile(buyer.actor, imeiEv.fileId)).toBe(true);
+    expect(await canReadPrivateFile((await makeCustomer()).actor, imeiEv.fileId)).toBe(false);
+    // Evidence added AFTER the purchase is not frozen anywhere → removal deletes it.
+    await addReportEvidence(s.actor, r.id, 'accessories', [{ data: await png('late'), name: 'late.png' }]);
+    const [late] = (await db.select().from(usedConditionEvidence).where(eq(usedConditionEvidence.reportId, r.id))).filter((e) => e.slot === 'accessories').slice(-1);
+    await removeReportEvidence(s.actor, r.id, late.id);
+    expect(await alive(late.fileId)).toBe(false);
+  });
+
+  it('production fails closed for PUBLIC uploads too: unscanned / quarantined public files are never served by /media', async () => {
+    const { initialScanStatus, servable } = await import('@/server/storage/scanning');
+    const { GET } = await import('@/app/media/[...key]/route');
+    const s = await makeSeller(admin);
+    const p = await createDraft(s.actor, { categoryId: await categoryId('electronics-accessories'), titleAr: 'منتج اختبار فحص الملفات', condition: 'NEW' });
+    await addImages(s.actor, p.id, [{ data: await png('pub'), name: 'pub.png' }], false);
+    const [f] = await db.execute<{ storage_key: string; scan_status: string }>(sql`select f.storage_key, f.scan_status from product_images i join files f on f.id = i.file_id where i.product_id = ${p.id}`).then((x) => x.rows);
+    expect(f.scan_status).toBe('UNSCANNED'); // no scanner outside production
+    const get = () => GET(new Request(`https://edmn.test/media/${f.storage_key}`), { params: Promise.resolve({ key: f.storage_key.split('/') }) } as never);
+    expect((await get()).status).toBe(200);
+    const prev = process.env.EDMN_ENVIRONMENT;
+    process.env.EDMN_ENVIRONMENT = 'production';
+    try {
+      expect(initialScanStatus('PUBLIC')).toBe('QUARANTINED');
+      expect(servable({ visibility: 'PUBLIC', scanStatus: 'UNSCANNED' })).toBe(false);
+      expect(servable({ visibility: 'PUBLIC', scanStatus: 'QUARANTINED' })).toBe(false);
+      expect(servable({ visibility: 'PRIVATE', scanStatus: 'UNSCANNED' })).toBe(false);
+      expect(servable({ visibility: 'PUBLIC', scanStatus: 'CLEAN' })).toBe(true);
+      expect((await get()).status).toBe(404);
+    } finally {
+      if (prev === undefined) delete process.env.EDMN_ENVIRONMENT;
+      else process.env.EDMN_ENVIRONMENT = prev;
+    }
+    expect(servable({ visibility: 'PUBLIC', scanStatus: 'UNSCANNED' })).toBe(true);
+  });
+});

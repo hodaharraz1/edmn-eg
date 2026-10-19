@@ -7,9 +7,10 @@ import { runAction, safeNext, str, type ActionState } from '@/server/web/action'
 import { customerActor } from '@/server/auth/actors';
 import { env } from '@/server/core/env';
 import { mergeGuestCart } from '@/server/modules/commerce/cart';
-import { CART_COOKIE, clearCookie, guestCartToken, requestMeta, setSessionCookie, WEB_COOKIE } from '@/server/web/session';
+import { CART_COOKIE, clearCookie, guestCartToken, requestMeta, revokePresentedSession, setSessionCookie, WEB_COOKIE } from '@/server/web/session';
 
 async function afterLogin(token: string, userId: string) {
+  await revokePresentedSession(WEB_COOKIE);
   await setSessionCookie(WEB_COOKIE, token, env().SESSION_TTL_HOURS);
   const guest = await guestCartToken(false);
   if (guest) {

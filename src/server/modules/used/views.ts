@@ -16,9 +16,9 @@ export function evidenceOf(b: ReportBundle) {
   return b.evidence.map((e) => ({ slot: e.slot, label: b.policy.evidence.find((s) => s.code === e.slot)?.label ?? e.slot, fileId: e.fileId, storageKey: e.storageKey, private: e.visibility === 'PRIVATE' }));
 }
 
+/** The score's «inspected» factor follows the server-computed level (a stale inspection never counts). */
 export function inspectedOk(b: ReportBundle) {
-  const last = b.inspections[0];
-  return !!last && (last.result === 'PASS' || last.result === 'PASS_WITH_NOTES');
+  return b.passport?.level === 'INSPECTED';
 }
 
 export type UsedListingView = Awaited<ReturnType<typeof usedListingView>>;
