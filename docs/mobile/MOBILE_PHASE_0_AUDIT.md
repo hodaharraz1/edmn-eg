@@ -1,5 +1,7 @@
 # EDMN Mobile Ecosystem: Phase 0 Audit & Implementation Plan
 
+> **⚠️ SUPERSEDED (2026-10-20).** This v1 document audited the marketing-site `main` branch and wrongly concluded that no EDMN backend exists. The EDMN Marketplace platform lives on branch `claude/great-tesla-nor0wt` (baseline `48ae40c`). Use [`MOBILE_PHASE_0_AUDIT_V2.md`](./MOBILE_PHASE_0_AUDIT_V2.md) and [`MOBILE_API_EXTRACTION_PLAN.md`](./MOBILE_API_EXTRACTION_PLAN.md). This file is kept unchanged below for audit history.
+
 | | |
 |---|---|
 | **Status** | Phase 0, read-only audit and planning. No application code, schema, API, deployment or financial logic was changed. |

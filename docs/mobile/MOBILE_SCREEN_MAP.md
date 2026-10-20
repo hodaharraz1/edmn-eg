@@ -1,5 +1,7 @@
 # EDMN Mobile: Screen Map
 
+> **⚠️ SUPERSEDED (2026-10-20).** This v1 document audited the marketing-site `main` branch and wrongly concluded that no EDMN backend exists. The EDMN Marketplace platform lives on branch `claude/great-tesla-nor0wt` (baseline `48ae40c`). Use [`MOBILE_SCREEN_MAP_V2.md`](./MOBILE_SCREEN_MAP_V2.md) and [`MOBILE_API_EXTRACTION_PLAN.md`](./MOBILE_API_EXTRACTION_PLAN.md). This file is kept unchanged below for audit history.
+
 Companion to `MOBILE_PHASE_0_AUDIT.md` (Phase 0G and 0H). This is a planning artifact only. **No screen is implemented.**
 
 API IDs refer to `MOBILE_API_GAP_MATRIX.md` §3. **All of those APIs are currently MISSING.**

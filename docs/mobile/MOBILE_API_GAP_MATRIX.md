@@ -1,5 +1,7 @@
 # EDMN Mobile: API & Backend Gap Matrix
 
+> **⚠️ SUPERSEDED (2026-10-20).** This v1 document audited the marketing-site `main` branch and wrongly concluded that no EDMN backend exists. The EDMN Marketplace platform lives on branch `claude/great-tesla-nor0wt` (baseline `48ae40c`). Use [`MOBILE_API_GAP_MATRIX_V2.md`](./MOBILE_API_GAP_MATRIX_V2.md) and [`MOBILE_API_EXTRACTION_PLAN.md`](./MOBILE_API_EXTRACTION_PLAN.md). This file is kept unchanged below for audit history.
+
 Companion to `MOBILE_PHASE_0_AUDIT.md`. Phase 0, read-only. **Nothing in this document is implemented.**
 
 **Key finding.** The audited repositories (`edmn-eg`, `edmn-eg-nextjs`) contain no backend for any transactional feature. Unless D-01 locates an existing backend, every feature below is **MISSING**. In that case the "Required work" column describes greenfield backend work in the canonical platform.

@@ -1,5 +1,7 @@
 # EDMN Mobile: Implementation Backlog
 
+> **⚠️ SUPERSEDED (2026-10-20).** This v1 document audited the marketing-site `main` branch and wrongly concluded that no EDMN backend exists. The EDMN Marketplace platform lives on branch `claude/great-tesla-nor0wt` (baseline `48ae40c`). Use [`MOBILE_BACKLOG_V2.md`](./MOBILE_BACKLOG_V2.md) and [`MOBILE_API_EXTRACTION_PLAN.md`](./MOBILE_API_EXTRACTION_PLAN.md). This file is kept unchanged below for audit history.
+
 Companion to `MOBILE_PHASE_0_AUDIT.md` (Phase 0J). Ordered by dependency. **Nothing here is approved or started.**
 
 Phase 1 starts only after explicit owner approval and answers to **D-01** (backend location), **D-02** (stack) and **D-08** (repo layout).
