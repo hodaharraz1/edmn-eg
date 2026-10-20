@@ -1,0 +1,372 @@
+import type { Metadata } from 'next';
+import { listingReturnPolicy } from '@/server/modules/catalog/return-policy';
+import { ReturnPolicyView } from '@/app/_components/return-policy-view';
+import Link from '@/ui/link';
+import { notFound } from 'next/navigation';
+import { and, eq } from 'drizzle-orm';
+import { BadgeCheck, CircleAlert, PackageCheck, RotateCcw, Store, Truck } from 'lucide-react';
+import { db } from '@/server/db/client';
+import { sellerShippingRates } from '@/server/db/schema';
+import { productDetailBySlug, relatedProducts } from '@/server/modules/catalog/search';
+import { productReviewsPublic, ratingHistogram, reviewerDisplayName, sellerReviewsPublic } from '@/server/modules/reviews/service';
+import { getSetting } from '@/server/modules/settings';
+import { deliveryGovernorate } from '@/server/web/context';
+import { formatDate, formatEGP } from '@/lib/format';
+import { label } from '@/lib/i18n/labels';
+import { Gallery, RecordRecentlyViewed } from '@/ui/client';
+import { DeliveryLine, Price, ProductCard, ProductRail, RailItem, Stars, mediaUrl } from '@/ui/commerce';
+import { Breadcrumbs } from '@/ui/data';
+import { Alert, Badge } from '@/ui/feedback';
+import { ProtectionPanel } from '@/ui/protection';
+import { AddToCartForm } from '@/app/_components/add-to-cart';
+import { WishlistButton, wishlistSet } from '@/app/_components/product-bits';
+import { JsonLd, absoluteUrl, breadcrumbJsonLd } from '@/app/_components/seo';
+import { ConditionDetails, CoverageList, LevelExplainer, PassportLink, SafetyScoreCard, SellerSignalsCard } from '@/app/_components/used';
+import { usedListingView } from '@/server/modules/used/views';
+
+export async function generateMetadata(props: PageProps<'/product/[slug]'>): Promise<Metadata> {
+  const d = await productDetailBySlug(decodeURIComponent((await props.params).slug));
+  if (!d || !d.visible) return { title: d?.product.publishedAt ? 'منتج غير متاح' : 'غير موجود', robots: { index: false } };
+  const img = d.images[0] ? mediaUrl(d.images[0].key, 'md') : undefined;
+  return {
+    title: d.product.seoTitle || d.product.titleAr,
+    description: d.product.seoDescription || (d.product.description ?? '').slice(0, 155),
+    alternates: { canonical: `/product/${d.product.slug}` },
+    // Nested openGraph replaces the root one: repeat site name and locale.
+    openGraph: { title: d.product.titleAr, images: img ? [img] : undefined, type: 'website', siteName: 'اضمن | EDMN', locale: 'ar_EG' },
+  };
+}
+
+export default async function ProductPage(props: PageProps<'/product/[slug]'>) {
+  const { slug } = await props.params;
+  const sp = await props.searchParams;
+  const d = await productDetailBySlug(decodeURIComponent(slug));
+  // Listings that were never approved/published are not public, even by direct URL. Previously published
+  // listings (later archived/suspended) keep an "unavailable" page so past buyers' links still resolve.
+  if (!d || (!d.visible && !d.product.publishedAt)) notFound();
+  const p = d.product;
+  const variantId = typeof sp.v === 'string' ? sp.v : undefined;
+  const v = d.variants.find((x) => x.id === variantId) ?? d.variants.find((x) => x.stockOnHand - x.reserved > 0) ?? d.variants[0];
+  const available = v ? v.stockOnHand - v.reserved : 0;
+  // Single source of truth: price, stock, SKU and specifications all come from the selected variant `v`.
+  const specs = (v && d.variantSpecs[v.id]) ?? d.specs;
+  const gov = await deliveryGovernorate();
+  const [rate] = gov ? await db.select().from(sellerShippingRates).where(and(eq(sellerShippingRates.sellerId, p.sellerId), eq(sellerShippingRates.governorateId, gov.id))) : [];
+  const shipFee = rate?.enabled ? (d.store.freeShippingThreshold !== null && v && v.price >= d.store.freeShippingThreshold ? 0 : rate.fee) : null;
+  const [reviews, hist, sellerReviews, related, statutoryDays, wished] = await Promise.all([
+    productReviewsPublic(p.id, 10),
+    ratingHistogram(p.id),
+    sellerReviewsPublic(p.sellerId, 3),
+    relatedProducts(p.id, p.categoryId),
+    getSetting('returns.statutoryWindowDays'),
+    wishlistSet([p.id]),
+  ]);
+  const policy = listingReturnPolicy(p, d.store);
+  // Trusted Used Commerce: documented used listings carry a Product Passport (null for new or legacy listings).
+  const used = p.condition === 'USED' ? await usedListingView(p.id, policy.type) : null;
+  const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
+  const crumbs = [{ label: 'الرئيسية', href: '/' }, ...d.breadcrumbs.map((c) => ({ label: c.nameAr, href: `/category/${c.slug}` })), { label: p.titleAr }];
+  const positive = d.seller.ratingCount ? Math.round((d.seller.positiveCount / d.seller.ratingCount) * 100) : null;
+
+  const productLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.titleAr,
+    description: p.description,
+    sku: v?.sku,
+    image: d.images.slice(0, 5).map((i) => absoluteUrl(mediaUrl(i.key)!)),
+    itemCondition: p.condition === 'USED' ? 'https://schema.org/UsedCondition' : 'https://schema.org/NewCondition',
+    ...(d.brand ? { brand: { '@type': 'Brand', name: d.brand.name } } : {}),
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'EGP',
+      price: v ? (v.price / 100).toFixed(2) : undefined,
+      availability: d.visible && available > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: absoluteUrl(`/product/${p.slug}`),
+      seller: { '@type': 'Organization', name: d.store.name },
+    },
+    ...(p.ratingCount > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(p.ratingAvg), reviewCount: p.ratingCount } } : {}),
+  };
+
+  return (
+    <div className="container-page space-y-8 py-6">
+      <RecordRecentlyViewed id={p.id} />
+      <JsonLd data={productLd} />
+      <JsonLd data={breadcrumbJsonLd(crumbs.map((c) => ({ name: c.label, url: c.href ?? `/product/${p.slug}` })))} />
+      <Breadcrumbs items={crumbs} />
+
+      {!d.visible && (
+        <Alert tone="warning" title="المنتج ده مش متاح دلوقتي">
+          ممكن يكون البائع وقّفه مؤقتاً أو لسه تحت المراجعة. <Link href="/search" className="underline">شوف منتجات مشابهة</Link>
+        </Alert>
+      )}
+
+      {/* Desktop: gallery on the visual (left) side, purchase on the right. Mobile: gallery → summary → purchase. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+        <div className="relative lg:order-2">
+          <div className="lg:sticky lg:top-44">
+            <Gallery alt={p.titleAr} images={d.images.map((i) => ({ src: mediaUrl(i.key, 'md')!, full: mediaUrl(i.key)!, actual: i.isActualItem }))} />
+            <div className="absolute top-3 end-3">
+              <WishlistButton productId={p.id} active={wished.has(p.id)} back={`/product/${p.slug}`} />
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-5 lg:order-1">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {d.brand && (
+                <Link href={`/brand/${d.brand.slug}`} className="text-sm font-semibold text-brand-600 hover:underline">
+                  {d.brand.nameAr || d.brand.name}
+                </Link>
+              )}
+              <Badge tone={p.condition === 'USED' ? 'warning' : 'brand'}>
+                {label('condition', p.condition)}
+                {p.usedGrade ? ` · ${label('usedGrade', p.usedGrade)}` : ''}
+              </Badge>
+              {d.store.isVerified && (
+                <Badge tone="info">
+                  <BadgeCheck className="size-3.5" aria-hidden /> بائع موثّق
+                </Badge>
+              )}
+            </div>
+            <h1 className="text-[1.45rem] font-bold leading-snug text-brand-950 sm:text-[1.85rem]">{p.titleAr}</h1>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              {p.ratingCount > 0 ? (
+                <a href="#reviews" className="hover:underline">
+                  <Stars value={p.ratingAvg} count={p.ratingCount} size="md" />
+                </a>
+              ) : (
+                <span className="text-muted">مفيش تقييمات لسه</span>
+              )}
+              {v && <span className="text-xs text-muted ltr">SKU: {v.sku}</span>}
+            </div>
+            {p.condition === 'USED' && (
+              <p className="flex items-center gap-2 rounded-xl bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950" role="note">
+                <CircleAlert className="size-4 shrink-0" aria-hidden /> منتج مستعمل
+                <span className="font-normal">— راجع حالته وعيوبه قبل ما تشتري</span>
+              </p>
+            )}
+            {used && (
+              <div className="space-y-2" data-testid="used-summary">
+                <PassportLink code={used.bundle.passport!.code} level={used.level} />
+                <LevelExplainer level={used.level} />
+                <p className="text-sm text-ink">
+                  <span className="font-semibold">فترة الفحص بعد الاستلام:</span> {used.inspectionDays} أيام — فلوسك بتفضل محمية لحد ما تتأكد إن المنتج مطابق لجواز المنتج.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Purchase card */}
+          <div className="card space-y-4 p-5">
+            <div>
+              <div data-testid="product-price" data-variant={v?.id}><Price value={v?.price ?? p.minPrice} compareAt={v?.compareAtPrice} size="lg" className="[&>span:first-child]:text-3xl [&>span:first-child]:text-brand-950" /></div>
+              <p className="mt-1 text-xs text-muted">السعر شامل ضريبة القيمة المضافة لو موجودة. مصاريف الشحن بتتحسب وقت الدفع.</p>
+            </div>
+
+            {d.variants.length > 1 && (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">اختار النوع:</p>
+                <div className="flex flex-wrap gap-2">
+                  {d.variants.map((x) => {
+                    const out = x.stockOnHand - x.reserved <= 0;
+                    return (
+                      <Link
+                        key={x.id}
+                        href={`/product/${p.slug}?v=${x.id}`}
+                        scroll={false}
+                        aria-current={x.id === v?.id}
+                        className={`inline-flex min-h-11 items-center rounded-xl border px-3.5 text-sm transition-colors ${x.id === v?.id ? 'border-brand-600 bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-600' : 'border-line bg-white hover:border-brand-300'} ${out ? 'opacity-50 line-through' : ''}`}
+                      >
+                        {x.label || x.sku} · {formatEGP(x.price)}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 rounded-xl bg-soft/60 p-3.5">
+              <DeliveryLine fee={shipFee} min={rate?.enabled ? rate.etaMinDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} max={rate?.enabled ? rate.etaMaxDays + (p.processingDays ?? d.store.defaultProcessingDays) : null} />
+              <p className="text-xs text-muted" data-testid="product-delivery-governorate">التوصيل إلى: <span className="font-semibold text-ink">{gov?.nameAr}</span> (تقدر تغيّرها من أعلى الصفحة)</p>
+              <p data-testid="product-availability" data-variant={v?.id} className={`text-sm font-semibold ${available > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                {available > 5 ? 'متوفر' : available > 0 ? `فاضل ${available} بس` : 'نفدت الكمية'}
+              </p>
+            </div>
+            {d.visible && v && available > 0 && shipFee !== null ? (
+              <AddToCartForm variantId={v.id} max={available} protectedBuy={!!used} />
+            ) : d.visible && shipFee === null ? (
+              <Alert tone="warning">البائع لا يشحن إلى هذه المحافظة حالياً.</Alert>
+            ) : null}
+          </div>
+
+          <ProtectionPanel>
+            يظل المبلغ محميًا لدى اضمن حتى استلام المنتج وتأكيد الاستلام وفق شروط الصفقة. البائع ما يقدرش يسحب مستحقاته قبل استلامك وتأكيدك أو انتهاء مهلة الاعتراض، وموافقة الإدارة. ولو حصلت مشكلة تقدر تطلب إرجاع أو تفتح نزاع.
+          </ProtectionPanel>
+
+          {/* Seller card */}
+          <div className="card space-y-3 p-5 text-sm">
+            <p className="text-xs text-muted">بيبيعه ويشحنه</p>
+            <Link href={`/store/${d.store.slug}`} className="flex min-h-11 items-center gap-2 text-base font-bold text-brand-950 hover:text-brand-700">
+              <span className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-700"><Store className="size-5" /></span> {d.store.name}
+            </Link>
+            {d.store.isVerified && (
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><BadgeCheck className="size-4" aria-hidden /> بائع موثّق — هويته ومستنداته اتراجعت</p>
+            )}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+              {d.seller.ratingCount > 0 ? <Stars value={d.seller.ratingAvg} count={d.seller.ratingCount} /> : <span>متجر جديد</span>}
+              {positive !== null && <span>{positive}% تقييمات إيجابية</span>}
+              {d.seller.approvedAt && <span>على اضمن من {formatDate(d.seller.approvedAt)}</span>}
+            </div>
+            <div className="flex items-start gap-2 border-t border-line pt-3 text-xs">
+              <RotateCcw className="mt-0.5 size-4 shrink-0 text-brand-600" />
+              <div className="space-y-1" data-testid="pdp-return-policy">
+                <span className="block font-semibold">سياسة الإرجاع</span>
+                <ReturnPolicyView policy={policy} mandatoryNotice={mandatoryNotice} />
+                <span className="block">وتقدر دايماً تبلّغ عن منتج فيه عيب أو غلط أو تالف أو مش مطابق للوصف. <Link href="/legal/returns" className="text-brand-700 underline">سياسة الإرجاع والاسترداد</Link></span>
+              </div>
+            </div>
+            <p className="flex items-start gap-2 text-xs">
+              <PackageCheck className="mt-0.5 size-4 shrink-0 text-brand-600" /> البائع بيجهّز الطلب خلال {p.processingDays ?? d.store.defaultProcessingDays} يوم عمل.
+            </p>
+          </div>
+
+          {p.keyFeatures.length > 0 && (
+            <ul className="list-inside list-disc space-y-1 text-sm marker:text-brand-600">
+              {p.keyFeatures.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          )}
+
+          {used && (
+            <section data-testid="used-trust" aria-labelledby="used-trust-title" className="space-y-4">
+              <h2 id="used-trust-title" className="text-lg font-bold text-brand-950">حالة المنتج الموثّقة</h2>
+              <ConditionDetails fields={used.fields} defects={used.bundle.check.defects} identifierMasked={used.bundle.report.identifierMasked} evidence={used.evidence} showPrivate={false} />
+              <div className="card p-4">
+                <h3 className="mb-3 text-sm font-bold">اضمن بتحميك في إيه بالظبط؟</h3>
+                <CoverageList level={used.level} warranty={p.warrantyInfo} />
+              </div>
+              <SafetyScoreCard score={used.score} />
+              {used.seller && <SellerSignalsCard signals={used.seller.signals} />}
+            </section>
+          )}
+          {p.condition === 'USED' && !used && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+              <p className="mb-2 flex items-center gap-2 font-bold text-amber-900">
+                <CircleAlert className="size-4" /> تفاصيل حالة المنتج المستعمل
+              </p>
+              <dl className="space-y-1.5 text-amber-950">
+                <div><dt className="inline font-semibold">الحالة: </dt><dd className="inline">{label('usedGrade', p.usedGrade)} — {p.conditionNotes}</dd></div>
+                <div><dt className="inline font-semibold">العيوب المعلنة: </dt><dd className="inline">{p.defects || 'مفيش'}</dd></div>
+                {p.includedAccessories && <div><dt className="inline font-semibold">المرفقات: </dt><dd className="inline">{p.includedAccessories}</dd></div>}
+                {p.usageInfo && <div><dt className="inline font-semibold">مدة الاستخدام: </dt><dd className="inline">{p.usageInfo}</dd></div>}
+                <div><dt className="inline font-semibold">الضمان: </dt><dd className="inline">{p.warrantyInfo || 'البائع ما أعلنش عن ضمان'}</dd></div>
+                <div><dt className="inline font-semibold">صور القطعة الفعلية: </dt><dd className="inline">{d.images.filter((i) => i.isActualItem).length} صورة</dd></div>
+              </dl>
+              <p className="mt-2 text-xs text-amber-800">الصور اللي عليها علامة «صورة حقيقية للقطعة» متصوّرة للقطعة نفسها اللي معروضة للبيع.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="card space-y-4 p-5">
+          <h2 className="text-lg font-bold text-brand-950">الوصف</h2>
+          <div className="prose-ar whitespace-pre-line text-sm leading-7">{p.description}</div>
+          {specs.length > 0 && (
+            <>
+              <h3 className="pt-2 font-bold">المواصفات</h3>
+              <table className="w-full text-sm" data-testid="product-specs" data-variant={v?.id}>
+                <tbody className="divide-y divide-line">
+                  {specs.map((s) => (
+                    <tr key={s.code}>
+                      <th scope="row" className="w-40 py-2 text-start font-medium text-muted">{s.name}</th>
+                      <td className="py-2">{s.value}</td>
+                    </tr>
+                  ))}
+                  {p.warrantyInfo && (
+                    <tr><th scope="row" className="py-2 text-start font-medium text-muted">الضمان</th><td className="py-2">{p.warrantyInfo}</td></tr>
+                  )}
+                  {p.weightGrams ? (
+                    <tr><th scope="row" className="py-2 text-start font-medium text-muted">الوزن</th><td className="py-2">{(p.weightGrams / 1000).toLocaleString('ar-EG-u-nu-latn')} كجم</td></tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </>
+          )}
+        </section>
+        <section className="card space-y-3 bg-soft/40 p-5 text-sm">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-brand-950"><Truck className="size-5 text-brand-600" /> الشحن والإرجاع</h2>
+          <p>البائع بيشحن الطلب بنفسه، وتقدر تتابع رقم التتبع من صفحة الطلب.</p>
+          <p>حق الإرجاع القانوني: تقدر تقدّم طلب إرجاع خلال {statutoryDays} يوم من الاستلام حسب <Link href="/legal/returns" className="underline">سياسة الإرجاع والاسترداد</Link>.</p>
+          {d.store.shippingPolicy && <p className="text-muted">{d.store.shippingPolicy}</p>}
+          {d.store.returnConditions && <p className="text-muted">شروط البائع: {d.store.returnConditions}</p>}
+        </section>
+      </div>
+
+      <section id="reviews" className="card grid gap-6 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-brand-950">تقييمات المنتج</h2>
+          {p.ratingCount === 0 ? (
+            <p className="text-sm text-muted">محدش قيّم المنتج ده لسه.</p>
+          ) : (
+          <>
+          <div className="flex items-center gap-2">
+            <span className="text-4xl font-bold">{Number(p.ratingAvg).toFixed(1)}</span>
+            <Stars value={p.ratingAvg} count={p.ratingCount} size="md" showValue={false} />
+          </div>
+          <ul className="space-y-1">
+            {hist.map((h) => (
+              <li key={h.rating} className="flex items-center gap-2 text-xs">
+                <span className="w-10">{h.rating} نجوم</span>
+                <span className="h-2 flex-1 overflow-hidden rounded-full bg-page">
+                  <span className="block h-full bg-amber-400" style={{ width: `${p.ratingCount ? (h.count / p.ratingCount) * 100 : 0}%` }} />
+                </span>
+                <span className="w-6 text-muted">{h.count}</span>
+              </li>
+            ))}
+          </ul>
+          </>
+          )}
+          <p className="text-xs text-muted">التقييمات من ناس اشترت المنتج فعلاً بس. تقييم المنتج منفصل عن تقييم البائع.</p>
+        </div>
+        <div className="space-y-4">
+          {reviews.length === 0 && <p className="text-sm text-muted">مفيش تقييمات لسه. اللي يشتري يقدر يقيّم بعد ما يستلم الطلب.</p>}
+          {reviews.map(({ r, author }) => (
+            <article key={r.id} className="border-b border-line pb-4 last:border-0">
+              <div className="flex items-center gap-2">
+                <Stars value={r.rating} showValue={false} />
+                {r.title && <span className="font-semibold">{r.title}</span>}
+              </div>
+              <p className="mt-1 text-xs text-muted">{reviewerDisplayName(author)} · {formatDate(r.createdAt)} · <Badge tone="success">شراء مؤكد</Badge></p>
+              {r.body && <p className="mt-2 text-sm">{r.body}</p>}
+              {r.sellerResponse && <p className="mt-2 rounded-xl bg-page p-3 text-xs"><span className="font-semibold">رد البائع: </span>{r.sellerResponse}</p>}
+            </article>
+          ))}
+          {sellerReviews.length > 0 && (
+            <div className="rounded-xl bg-page p-4">
+              <p className="mb-2 text-sm font-bold">آراء العملاء في البائع</p>
+              {sellerReviews.map(({ r, author }) => (
+                <p key={r.id} className="text-xs">
+                  <Stars value={r.rating} showValue={false} /> {r.body} — <span className="text-muted">{reviewerDisplayName(author)}</span>
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {related.length > 0 && (
+        <ProductRail title="منتجات مشابهة">
+          {related.map((r) => (
+            <RailItem key={r.id}>
+              <ProductCard p={r} />
+            </RailItem>
+          ))}
+        </ProductRail>
+      )}
+    </div>
+  );
+}

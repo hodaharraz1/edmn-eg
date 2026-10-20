@@ -1,0 +1,187 @@
+# EDMN — PRODUCTION (self-hosted) Docker Compose.
+#
+#   docker compose -f deploy/compose/docker-compose.prod.yml --env-file /etc/edmn/compose.env up -d web worker
+#
+# • web and worker run the SAME immutable image: ${EDMN_IMAGE}:${EDMN_IMAGE_TAG} (tag = git commit SHA, required).
+# • NEITHER service runs scripts/start.sh: a (re)start never migrates or seeds. Migrations / reference seed are the
+#   explicit one-off services `migrate` / `seed` (profile "ops"), run only by deploy/scripts/deploy.sh after a backup.
+# • Secrets come only from files outside the repository (/etc/edmn/*.env, mode 0600). Nothing secret is in this file.
+# • Only the web container publishes a port, and only on 127.0.0.1 (the reverse proxy is the public entry point).
+#   Postgres, clamd and the scanner wrapper are on an INTERNAL network with no published ports.
+# • Optional profiles: "postgres-local" (PostgreSQL 16 on this host) and "scanner" (clamd + private wrapper).
+#   With an external database (e.g. Neon), do not enable "postgres-local" — only DATABASE_URL changes.
+name: edmn
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "50m", max-file: "5" }
+
+x-app: &app
+  image: ${EDMN_IMAGE:-edmn-app}:${EDMN_IMAGE_TAG:?EDMN_IMAGE_TAG must be the commit SHA of the release}
+  env_file:
+    - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
+  environment:
+    NODE_ENV: production
+    NEXT_TELEMETRY_DISABLED: "1"
+  restart: unless-stopped
+  stop_grace_period: 30s
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  tmpfs: ["/tmp:size=512m,mode=1777"]
+  logging: *logging
+  networks: [edge, backend]
+
+services:
+  web:
+    <<: *app
+    # Direct start — never scripts/start.sh (which would run migrations on every start).
+    command: ["node", "node_modules/next/dist/bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
+    ports:
+      - "127.0.0.1:${EDMN_WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { memory: "${EDMN_WEB_MEMORY:-1g}", cpus: "${EDMN_WEB_CPUS:-1.5}" }
+
+  worker:
+    <<: *app
+    # Primary scheduler: due schedules every 5 s under database leases (one run per period across all instances).
+    command: ["node", "--max-old-space-size=256", "--import", "tsx", "scripts/worker.ts"]
+    healthcheck:
+      test: ["CMD", "node", "scripts/worker-health.mjs"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits: { memory: "${EDMN_WORKER_MEMORY:-512m}", cpus: "${EDMN_WORKER_CPUS:-0.75}" }
+
+  # ── explicit one-off operations (profile "ops"): run ONLY by deploy/scripts/deploy.sh ──
+  # DDL runs as the schema OWNER role: /etc/edmn/migrate.env holds only DATABASE_URL (+ DATABASE_URL_UNPOOLED) for
+  # `edmn_owner` and overrides the runtime (DML-only) DATABASE_URL. Without that file the runtime URL is used.
+  migrate:
+    <<: *app
+    profiles: ["ops"]
+    restart: "no"
+    env_file:
+      - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
+      - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
+        required: false
+    command: ["node", "--import", "tsx", "scripts/migrate.ts"]
+  migrate-preflight:
+    <<: *app
+    profiles: ["ops"]
+    restart: "no"
+    env_file:
+      - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
+      - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
+        required: false
+    command: ["node", "--import", "tsx", "scripts/migrate.ts", "--preflight"]
+  seed:
+    <<: *app
+    profiles: ["ops"]
+    restart: "no"
+    env_file:
+      - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
+      - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
+        required: false
+    command: ["node", "--import", "tsx", "scripts/seed.ts"]
+  acceptance:
+    <<: *app
+    profiles: ["ops"]
+    restart: "no"
+    command: ["node", "--import", "tsx", "scripts/prod-acceptance.ts", "--db-only"]
+
+  # ── optional: PostgreSQL 16 on this host (profile "postgres-local") ──
+  postgres:
+    profiles: ["postgres-local"]
+    image: ${EDMN_POSTGRES_IMAGE:-postgres:16.4-bookworm}
+    env_file:
+      - ${EDMN_POSTGRES_ENV_FILE:-/etc/edmn/postgres.env}
+    environment:
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8 --data-checksums"
+      TZ: UTC
+      PGTZ: UTC
+    command: ["postgres", "-c", "timezone=UTC", "-c", "log_timezone=UTC", "-c", "listen_addresses=*", "-c", "password_encryption=scram-sha-256", "-c", "shared_buffers=${EDMN_PG_SHARED_BUFFERS:-256MB}", "-c", "max_connections=${EDMN_PG_MAX_CONNECTIONS:-50}", "-c", "wal_level=replica", "-c", "archive_mode=${EDMN_PG_ARCHIVE_MODE:-off}", "-c", "archive_command=${EDMN_PG_ARCHIVE_COMMAND:-/bin/true}", "-c", "log_min_duration_statement=2000"]
+    volumes:
+      - edmn_pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    stop_grace_period: 60s
+    shm_size: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+    networks: [backend]          # internal only — NO published 5432
+    deploy:
+      resources:
+        limits: { memory: "${EDMN_PG_MEMORY:-1g}" }
+
+  # ── optional: private malware scanning (profile "scanner") ──
+  clamd:
+    profiles: ["scanner"]
+    image: ${EDMN_CLAMAV_IMAGE:-clamav/clamav:1.4}
+    volumes:
+      - edmn_clamav:/var/lib/clamav
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 300s          # first signature download
+    logging: *logging
+    networks: [backend, clamav_updates]   # freshclam needs egress for signatures; clamd port is never published
+    deploy:
+      resources:
+        limits: { memory: "${EDMN_CLAMD_MEMORY:-3g}" }
+  scanner:
+    profiles: ["scanner"]
+    # Same immutable release image (it ships ops/scanner/clamd-http.mjs); no extra image to trust or update.
+    image: ${EDMN_IMAGE:-edmn-app}:${EDMN_IMAGE_TAG:?EDMN_IMAGE_TAG must be the commit SHA of the release}
+    user: node
+    read_only: true
+    tmpfs: ["/tmp:size=64m"]
+    command: ["node", "ops/scanner/clamd-http.mjs"]
+    env_file:
+      - ${EDMN_SCANNER_ENV_FILE:-/etc/edmn/scanner.env}   # SCANNER_TOKEN (same value as the app's MALWARE_SCANNER_TOKEN)
+    environment:
+      CLAMD_HOST: clamd
+      CLAMD_PORT: "3310"
+      PORT: "8080"
+      MAX_BYTES: "26214400"
+    depends_on: [clamd]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+    logging: *logging
+    networks: [backend]           # internal only — the app reaches it as http://scanner:8080/scan
+    deploy:
+      resources:
+        limits: { memory: "128m" }
+
+networks:
+  edge: {}                        # egress for web/worker (SMTP, Web Push, error tracking)
+  backend:
+    internal: true                # no route to the internet; nothing here is published
+  clamav_updates: {}              # egress for freshclam signature updates only
+
+volumes:
+  edmn_pgdata: {}
+  edmn_clamav: {}

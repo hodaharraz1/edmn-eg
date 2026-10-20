@@ -1,0 +1,324 @@
+import { randomUUID } from 'node:crypto';
+import { and, eq } from 'drizzle-orm';
+import sharp from 'sharp';
+import { adminActor, customerActor, sellerActor } from '@/server/auth/actors';
+import type { Actor } from '@/server/core/actor';
+import { db } from '@/server/db/client';
+import {
+  addresses,
+  categories,
+  orderItems,
+  paymentDestinations,
+  paymentMethods,
+  paymentSubmissions,
+  payments,
+  productVariants,
+  roles,
+  sellerOrders,
+  sellerPayoutMethods,
+  sellerShippingRates,
+  userRoles,
+  users,
+} from '@/server/db/schema';
+import { hashPassword } from '@/server/auth/password';
+import { addImages, createDraft, moderateProduct, saveVariants, submitForReview, updateDetails, updateLogistics } from '@/server/modules/catalog/products';
+import { addToCart, cartLines } from '@/server/modules/commerce/cart';
+import { placeOrder } from '@/server/modules/commerce/orders';
+import { priceLines } from '@/server/modules/commerce/pricing';
+import { confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
+import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { addPayoutMethod, decideSeller, verifyPayoutMethod, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
+
+let seq = 0;
+const uniq = () => `${Date.now().toString(36)}${(seq++).toString(36)}${Math.floor(Math.random() * 1e4)}`;
+let phoneSeq = 10_000_000 + Math.floor(Math.random() * 80_000_000);
+const nextPhone = () => `+2010${String(phoneSeq++).padStart(8, '0')}`;
+
+let PASSWORD_HASH: string | null = null;
+
+/**
+ * Non-staff users get an APPROVED global identity by default (Batch 1.5: identity is required before any
+ * transactional operation) — through the REAL submit + independent staff review flow, never a direct insert.
+ * Pass `identity: false` for a user who has not verified yet.
+ */
+export async function makeUser(opts: { staff?: boolean; roles?: string[]; name?: string; identity?: boolean } = {}) {
+  PASSWORD_HASH ??= await hashPassword('Test@12345');
+  const [u] = await db
+    .insert(users)
+    .values({
+      email: `u-${uniq()}@test.local`,
+      phone: nextPhone(),
+      fullName: opts.name ?? 'مستخدم اختبار',
+      passwordHash: PASSWORD_HASH,
+      isStaff: !!opts.staff,
+      phoneVerifiedAt: new Date(),
+      emailVerifiedAt: new Date(),
+    })
+    .returning();
+  for (const r of opts.roles ?? []) {
+    const [exists] = await db.select().from(roles).where(eq(roles.code, r));
+    if (!exists) throw new Error(`role ${r} not seeded`);
+    await db.insert(userRoles).values({ userId: u.id, roleCode: r });
+  }
+  if (!opts.staff && opts.identity !== false) await approveIdentity(u.id);
+  return u;
+}
+
+let identityReviewer: Actor | null = null;
+/** Submit the National ID (front + back) as the user, then approve it as an independent identity reviewer. */
+export async function approveIdentity(userId: string, reviewer?: Actor) {
+  const { submitIdentity, reviewIdentity } = await import('@/server/modules/identity/service');
+  const r = await submitIdentity(customerActor(userId), { legalName: 'مستخدم اختبار ثلاثي الاسم', nationalId: '29001011234567' }, { front: { data: await png('idf'), name: 'front.png' }, back: { data: await png('idb'), name: 'back.png' } });
+  identityReviewer ??= await makeAdmin(['SELLER_REVIEWER']);
+  await reviewIdentity(reviewer ?? identityReviewer, r.id, 'APPROVE');
+  return r.id;
+}
+
+export async function makeAdmin(rolesList: string[] = ['SUPER_ADMIN']) {
+  const u = await makeUser({ staff: true, roles: rolesList });
+  return adminActor(u.id, { stepUpAt: new Date() });
+}
+
+export async function makeCustomer(opts: { identity?: boolean } = {}) {
+  const u = await makeUser({ name: 'عميل اختبار', identity: opts.identity });
+  const [address] = await db
+    .insert(addresses)
+    .values({ userId: u.id, recipientName: u.fullName, phone: u.phone!, governorateId: 1, city: 'القاهرة', street: 'شارع الاختبار', isDefault: true })
+    .returning();
+  return { user: u, actor: customerActor(u.id), address };
+}
+
+export async function png(label = 'x', w = 400): Promise<Buffer> {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${w}"><rect width="${w}" height="${w}" fill="#3366${(label.length * 7) % 99}"/></svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+export const pdf = () => Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF', 'ascii');
+
+let pricingReady = false;
+/** Activate the seeded owner-approved pricing versions through the real maker/checker workflow (idempotent). */
+export async function ensurePricingActive() {
+  if (pricingReady) return;
+  const { activeVersionId, activateVersionWorkflow } = await import('@/server/modules/pricing/service');
+  const { pricingVersions } = await import('@/server/db/schema');
+  for (const model of ['MARKETPLACE', 'PROTECTED_DEAL'] as const) {
+    if (await activeVersionId(db, model)) continue;
+    const [v] = await db.select().from(pricingVersions).where(and(eq(pricingVersions.model, model), eq(pricingVersions.versionNo, 1)));
+    const maker = await makeAdmin(['FINANCE_OPERATOR']);
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await activateVersionWorkflow(maker, checker, v.id);
+  }
+  pricingReady = true;
+}
+
+export async function ensurePaymentSetup() {
+  await ensurePricingActive();
+  await db.update(paymentMethods).set({ isEnabled: true });
+  const [d] = await db.select().from(paymentDestinations).limit(1);
+  if (!d) {
+    await db.insert(paymentDestinations).values([
+      { methodCode: 'INSTAPAY', label: 'TEST', details: { instapayAddress: 'test@instapay' } },
+      { methodCode: 'BANK_TRANSFER', label: 'TEST', details: { bankName: 'T', accountName: 'T', accountNumber: '1' } },
+      { methodCode: 'VODAFONE_CASH', label: 'TEST', details: { walletNumber: '0' } },
+    ]);
+  }
+}
+
+/** Fully onboarded, APPROVED seller shipping to every governorate. */
+export async function makeSeller(admin: Actor, opts: { type?: 'INDIVIDUAL' | 'BUSINESS' } = {}) {
+  const u = await makeUser({ name: 'بائع اختبار' });
+  const a = customerActor(u.id);
+  await startApplication(a, opts.type ?? 'INDIVIDUAL');
+  await saveIdentity(a, { type: opts.type ?? 'INDIVIDUAL', legalName: 'بائع اختبار كامل', nationalId: '29001011234567', mobile: u.phone!, email: u.email!, addressLine: 'عنوان اختبار طويل', city: 'القاهرة', governorateId: 1 });
+  await saveStore(a, { name: `متجر ${uniq()}`, description: 'متجر اختبار', returnAddress: 'عنوان الإرجاع للاختبار', returnGovernorateId: 1 });
+  await uploadSellerDocument(a, 'NATIONAL_ID_FRONT', { data: await png('f'), name: 'f.png' });
+  await uploadSellerDocument(a, 'NATIONAL_ID_BACK', { data: await png('b'), name: 'b.png' });
+  await addPayoutMethod(a, { type: 'INSTAPAY', holderName: 'بائع اختبار', instapayAddress: `s${uniq()}@instapay` });
+  await submitApplication(a, true);
+  const pre = (await sellerActor(u.id))!;
+  await decideSeller(admin, pre.sellerId!, 'APPROVE');
+  // Approval never verifies the payout destination (C3): the payout verifier does it explicitly.
+  const [pm] = await db.select().from(sellerPayoutMethods).where(and(eq(sellerPayoutMethods.sellerId, pre.sellerId!), eq(sellerPayoutMethods.status, 'PENDING_VERIFICATION')));
+  await verifyPayoutMethod(admin, pm.id, true, 'تحقق في الاختبار');
+  await db.update(sellerShippingRates).set({ enabled: true, fee: 5000, etaMinDays: 1, etaMaxDays: 3 }).where(eq(sellerShippingRates.sellerId, pre.sellerId!));
+  return { user: u, actor: (await sellerActor(u.id))! };
+}
+
+export async function categoryId(slug: string) {
+  const [c] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug));
+  return c.id;
+}
+
+/** LIVE product with one variant. */
+export async function makeProduct(
+  seller: Actor,
+  admin: Actor,
+  opts: { price?: number; stock?: number; category?: string; condition?: 'NEW' | 'USED'; title?: string; approve?: boolean; setReturnPolicy?: boolean; attributes?: Record<string, string[]> } = {},
+) {
+  const cat = await categoryId(opts.category ?? 'electronics-accessories');
+  const title = opts.title ?? `منتج اختبار ${uniq()}`;
+  const p = await createDraft(seller, { categoryId: cat, titleAr: title, condition: opts.condition ?? 'NEW' });
+  await updateDetails(seller, p.id, {
+    titleAr: title,
+    categoryId: cat,
+    description: 'وصف تفصيلي لمنتج الاختبار يتجاوز عشرين حرفاً',
+    keyFeatures: ['ميزة'],
+    condition: opts.condition ?? 'NEW',
+    usedGrade: opts.condition === 'USED' ? 'GOOD' : null,
+    conditionNotes: opts.condition === 'USED' ? 'حالة جيدة' : '',
+    defects: opts.condition === 'USED' ? 'لا يوجد' : '',
+    attributes: opts.attributes ?? {},
+  });
+  await addImages(seller, p.id, [{ data: await png('1'), name: '1.png' }, { data: await png('2'), name: '2.png' }], opts.condition === 'USED');
+  await saveVariants(seller, p.id, [{ sku: `SKU-${uniq()}`, price: opts.price ?? 10000, stockOnHand: opts.stock ?? 10, options: {}, isActive: true, lowStockThreshold: 1 }]);
+  // Every listing needs an explicit return policy before submission (here: the store default).
+  if (opts.setReturnPolicy !== false) await updateLogistics(seller, p.id, { weightGrams: null, lengthCm: null, widthCm: null, heightCm: null, processingDays: null, returnPolicyOverride: false, acceptsVoluntaryReturns: null, voluntaryReturnDays: null });
+  if (opts.approve === false) return { productId: p.id, variantId: await variantOf(p.id) };
+  await submitForReview(seller, p.id);
+  await moderateProduct(admin, p.id, 'APPROVE');
+  return { productId: p.id, variantId: await variantOf(p.id) };
+}
+
+export async function variantOf(productId: string) {
+  const [v] = await db.select().from(productVariants).where(eq(productVariants.productId, productId));
+  return v.id;
+}
+
+export async function checkout(c: Awaited<ReturnType<typeof makeCustomer>>, items: { variantId: string; qty: number }[], key = randomUUID()) {
+  await ensurePaymentSetup();
+  for (const i of items) await addToCart({ userId: c.user.id }, i.variantId, i.qty);
+  const lines = await cartLines(db, { userId: c.user.id });
+  const priced = await priceLines(db, lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), c.address.governorateId);
+  const { order } = await placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'INSTAPAY', checkoutKey: key, expectedTotal: priced.grandTotal });
+  return order;
+}
+
+export async function paymentOf(orderId: string) {
+  const [p] = await db.select().from(payments).where(eq(payments.orderId, orderId));
+  return p;
+}
+
+export async function submitAndConfirm(c: { actor: Actor }, orderId: string, admin: Actor) {
+  const p = await paymentOf(orderId);
+  const { submission } = await submitProof(c.actor, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png('proof'), name: 'proof.png' });
+  await confirmPayment(admin, p.id, submission.id);
+  return { payment: p, submission };
+}
+
+export async function sellerOrdersOf(orderId: string) {
+  return db.select().from(sellerOrders).where(eq(sellerOrders.orderId, orderId)).orderBy(sellerOrders.suffix);
+}
+
+export async function shipIt(seller: Actor, soId: string) {
+  await confirmSellerOrder(seller, soId);
+  await saveShipment(seller, soId, { carrierName: 'بوسطة', trackingNumber: 'T1', shippedAt: new Date() }, { data: pdf(), name: 'waybill.pdf' });
+  await markShipped(seller, soId);
+}
+
+export async function itemsOf(soId: string) {
+  return db.select().from(orderItems).where(eq(orderItems.sellerOrderId, soId));
+}
+
+export async function pendingSubmission(paymentId: string) {
+  const [s] = await db.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, paymentId), eq(paymentSubmissions.status, 'SUBMITTED')));
+  return s;
+}
+
+let movementMaker: Actor | null = null;
+/**
+ * Universal Maker/Checker (Batch 1.5): the Maker step for one financial movement, by a finance operator who is
+ * NOT the Checker that will execute it. Returns the open request.
+ */
+export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
+  const { requestMovement } = await import('@/server/modules/finance/movements');
+  movementMaker ??= await makeAdmin(['FINANCE_OPERATOR']);
+  return requestMovement(opts.maker ?? movementMaker, kind, { entityId, amount, reason: 'طلب حركة مالية في الاختبار', params: opts.params });
+}
+
+/** Buyer confirms receipt, then a finance checker explicitly approves the seller release (the only path to available). */
+export async function receiveAndRelease(buyer: Actor, soId: string, admin?: Actor) {
+  const { confirmReceipt, releaseSellerOrder } = await import('@/server/modules/commerce/fulfilment');
+  const { sellerOrderPosition } = await import('@/server/modules/finance/postings');
+  await confirmReceipt(buyer, soId);
+  const releaser = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.id, soId));
+  const pos = await sellerOrderPosition(db, so);
+  await makerRequest('SELLER_RELEASE', soId, pos.pending);
+  return releaseSellerOrder(releaser, soId, { expectedSellerAmount: pos.pending, reason: 'اعتماد الإتاحة في الاختبار' });
+}
+
+/** Approve every REQUESTED refund of a seller order (finance checker). */
+export async function approveRefundsOf(soId: string, admin?: Actor) {
+  const { refunds } = await import('@/server/db/schema');
+  const { approveRefund } = await import('@/server/modules/finance/refunds');
+  const checker = admin ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const rows = await db.select().from(refunds).where(and(eq(refunds.sellerOrderId, soId), eq(refunds.status, 'REQUESTED')));
+  for (const r of rows) await makerRequest('REFUND_APPROVAL', r.id, r.amount);
+  for (const r of rows) await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد الاسترداد في الاختبار' });
+  return rows;
+}
+
+/** Seller available balance with Admin-approved withdrawal reservation semantics. */
+export async function approveAndPayWithdrawal(withdrawalId: string, checker?: Actor, payer?: Actor) {
+  const { approveWithdrawal, markWithdrawalPaid } = await import('@/server/modules/finance/withdrawals');
+  const c = checker ?? (await makeAdmin(['FINANCE_CHECKER']));
+  const p = payer ?? (await makeAdmin(['FINANCE_OPERATOR']));
+  await approveWithdrawal(c, withdrawalId);
+  await markWithdrawalPaid(p, withdrawalId, 'REF-TEST-1');
+}
+
+/** A real approval row for tests that post synthetic journal entries directly (DB requires one). */
+export async function testApproval(entryTypes: string[], amount: number, approver?: Actor) {
+  const { sql } = await import('drizzle-orm');
+  const a = approver ?? (await makeAdmin());
+  // Every movement approval is two-person (DB-enforced): the fixture records a distinct maker.
+  const maker = await makeAdmin(['FINANCE_OPERATOR']);
+  const r = await db.execute<{ id: string }>(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, dual_control, requested_by, approved_by, approved_at, idempotency_key)
+    values ('MANUAL_ADJUSTMENT', 'test', ${randomUUID()}, ${amount}, 'test', ${sql.raw(`array[${entryTypes.map((t) => `'${t.replace(/[^A-Z_]/g, '')}'`).join(',')}]`)}, 'test fixture', true, ${maker.userId}, ${a.userId}, now(), ${randomUUID()}) returning id`);
+  return r.rows[0].id;
+}
+
+/**
+ * Test-only clock simulation: shifts every delivery/response timestamp of a seller order back by
+ * `hours`, as if that much real time had passed. The deadline-immutability trigger is disabled only
+ * inside this one transaction (ALTER TABLE is transactional) and re-enabled before commit.
+ */
+export async function elapse(soId: string, hours: number) {
+  const { sql } = await import('drizzle-orm');
+  const iv = sql.raw(`interval '${Number(hours)} hours'`);
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`alter table seller_orders disable trigger seller_orders_deadline_guard`);
+    await tx.execute(sql`update seller_orders set
+      shipped_at = shipped_at - ${iv},
+      delivery_event_at = delivery_event_at - ${iv},
+      delivery_report_due_at = delivery_report_due_at - ${iv},
+      seller_delivery_confirmed_at = seller_delivery_confirmed_at - ${iv},
+      delivery_established_at = delivery_established_at - ${iv},
+      buyer_response_due_at = buyer_response_due_at - ${iv}
+      where id = ${soId}`);
+    await tx.execute(sql`alter table seller_orders enable trigger seller_orders_deadline_guard`);
+  });
+}
+
+/**
+ * Publish a new MARKETPLACE (or deal) pricing version through the real maker/checker workflow, cloned
+ * from the owner-approved version 1, optionally with modified tiers. Returns the new version id.
+ * Call again without `mutate` to restore the owner-approved rates for later suites.
+ */
+type TierRow = { economicClass: string; lowerBound: number; upperBound: number | null; buyerBps: number; sellerBps: number; totalBps: number };
+export async function publishPricingVariant(model: 'MARKETPLACE' | 'PROTECTED_DEAL' = 'MARKETPLACE', mutate?: (tiers: TierRow[]) => TierRow[]) {
+  await ensurePricingActive();
+  const { createDraft, updateDraft, loadVersion, activateVersionWorkflow } = await import('@/server/modules/pricing/service');
+  const { pricingVersions } = await import('@/server/db/schema');
+  const [v1] = await db.select().from(pricingVersions).where(and(eq(pricingVersions.model, model), eq(pricingVersions.versionNo, 1)));
+  const maker = await makeAdmin(['FINANCE_OPERATOR']);
+  const checker = await makeAdmin(['FINANCE_CHECKER']);
+  const draft = await createDraft(maker, model, v1.id);
+  if (mutate) {
+    const base = await loadVersion(db, draft.id);
+    const tiers = Object.entries(base.tiersByClass).flatMap(([economicClass, ts]) => ts.map((t) => ({ economicClass, ...t })));
+    await updateDraft(maker, draft.id, { tiers: mutate(tiers) });
+  }
+  await activateVersionWorkflow(maker, checker, draft.id);
+  return draft.id;
+}

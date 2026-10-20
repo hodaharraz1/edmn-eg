@@ -1,0 +1,134 @@
+import { expect, type Browser, type Page } from '@playwright/test';
+import { Client } from 'pg';
+import { totpCode } from '../../src/server/auth/totp';
+// Mirrors the development-only demo seed (src/server/db/seed/demo.ts).
+// When running against a deployed staging URL these come from the environment (never committed).
+const DEMO_TOTP_SECRET = process.env.STAGING_TOTP_SECRET ?? 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
+export const DEMO_PASSWORD = process.env.STAGING_DEMO_PASSWORD ?? 'Demo@12345';
+const DEMO_ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? 'Admin@Edmn#2026';
+
+export const DB_URL = process.env.E2E_DATABASE_URL ?? 'postgresql://edmn:edmn@localhost:5432/edmn_e2e';
+
+/**
+ * Read-only verification queries. E2E_DB_HTTP=neon uses Neon's HTTPS SQL endpoint (for runners that
+ * cannot open port 5432 to a hosted staging database).
+ */
+export async function q<T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> {
+  if (process.env.E2E_DB_HTTP === 'neon') {
+    const host = new URL(DB_URL).host;
+    const res = await fetch(`https://${host}/sql`, {
+      method: 'POST',
+      headers: { 'Neon-Connection-String': DB_URL, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: text, params }),
+    });
+    const body = (await res.json()) as { rows?: T[]; message?: string };
+    if (!res.ok || !body.rows) throw new Error(`neon sql failed: ${body.message ?? res.status}`);
+    return body.rows;
+  }
+  const c = new Client({ connectionString: DB_URL });
+  await c.connect();
+  try {
+    return (await c.query(text, params)).rows as T[];
+  } finally {
+    await c.end();
+  }
+}
+
+/** A real 480×480 PNG (uploads below the minimum dimensions are rejected by the server). */
+export async function png(): Promise<Buffer> {
+  const sharp = (await import('sharp')).default;
+  return sharp({ create: { width: 480, height: 480, channels: 3, background: { r: 30, g: 90, b: 160 } } }).png().toBuffer();
+}
+export const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF', 'ascii');
+
+/**
+ * Sessions are reused per account within a run: the suite would otherwise exceed the production
+ * login rate limit (30 logins / 15 min per IP), which we deliberately do not relax for tests.
+ */
+const sessions = new Map<string, Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>>();
+
+export async function customerLogin(browser: Browser, email: string, password = DEMO_PASSWORD): Promise<Page> {
+  const saved = sessions.get(email);
+  if (saved) {
+    const ctx = await browser.newContext({ locale: 'ar-EG', storageState: saved });
+    const page = await ctx.newPage();
+    await page.goto('/account');
+    if (!new URL(page.url()).pathname.startsWith('/login')) return page;
+    await ctx.close();
+    sessions.delete(email);
+  }
+  const ctx = await browser.newContext({ locale: 'ar-EG' });
+  const page = await ctx.newPage();
+  await page.goto('/login');
+  await page.locator('input[name=identifier]').fill(email);
+  await page.locator('input[name=password]').fill(password);
+  await page.locator('form button[type=submit]').first().click();
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'));
+  sessions.set(email, await ctx.storageState());
+  return page;
+}
+
+let lastStep = 0;
+/**
+ * Staff sessions are reused like customer sessions (same production login rate limit), but only while the
+ * 2FA performed at login is still fresh for step-up actions (window 10 min → reuse for at most 8 min).
+ */
+const adminSessions = new Map<string, { state: Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>; at: number }>();
+/** Staff login + TOTP. Codes are single-use, so wait for a fresh 30s step if the last one was consumed. */
+export async function adminLogin(browser: Browser, email = 'admin@edmn.local'): Promise<Page> {
+  const saved = adminSessions.get(email);
+  if (saved && Date.now() - saved.at < 8 * 60_000) {
+    const c = await browser.newContext({ locale: 'ar-EG', storageState: saved.state });
+    const p = await c.newPage();
+    await p.goto('/admin');
+    const path = new URL(p.url()).pathname;
+    if (path === '/admin' || path === '/admin/') return p;
+    await c.close();
+  }
+  adminSessions.delete(email);
+  const ctx = await browser.newContext({ locale: 'ar-EG' });
+  const page = await ctx.newPage();
+  await page.goto('/admin/login');
+  await page.locator('input[name=email]').fill(email);
+  await page.locator('input[name=password]').fill(DEMO_ADMIN_PASSWORD);
+  await page.locator('form button[type=submit]').click();
+  await page.waitForURL(/\/admin\/2fa/);
+  while (Math.floor(Date.now() / 30_000) <= lastStep) await page.waitForTimeout(1000);
+  lastStep = Math.floor(Date.now() / 30_000);
+  await page.locator('input[name=code]').fill(totpCode(DEMO_TOTP_SECRET));
+  await page.locator('form button[type=submit]').click();
+  await page.waitForURL((u) => u.pathname === '/admin' || u.pathname === '/admin/');
+  adminSessions.set(email, { state: await ctx.storageState(), at: Date.now() });
+  return page;
+}
+
+export function acceptDialogs(page: Page) {
+  page.on('dialog', (d) => void d.accept());
+}
+
+/** Submit the form that contains the given button text and wait for the success toast/alert. */
+export async function submitAndExpect(page: Page, button: string | RegExp, expectText: string | RegExp = /تم/) {
+  await page.getByRole('button', { name: button }).first().click();
+  await expect(page.getByText(expectText).first()).toBeVisible();
+}
+
+/**
+ * Batch 1.5: the user's GLOBAL identity through the real UI — the user submits the National ID (front + back),
+ * an independent identity reviewer (catalog@, SELLER_REVIEWER) approves it. Never a direct database write.
+ */
+export async function verifyIdentityViaUi(browser: Browser, page: Page, email: string, nationalId: string, legalName = 'مستخدم اختبار ثلاثي الاسم') {
+  await page.goto('/account/identity');
+  await page.locator('input[name=legalName]').fill(legalName);
+  await page.locator('input[name=nationalId]').fill(nationalId);
+  await page.locator('input[name=front]').setInputFiles({ name: 'id-front.png', mimeType: 'image/png', buffer: await png() });
+  await page.locator('input[name=back]').setInputFiles({ name: 'id-back.png', mimeType: 'image/png', buffer: await png() });
+  await page.getByRole('button', { name: 'إرسال للمراجعة' }).click();
+  await expect(page.getByTestId('identity-status')).toContainText('قيد المراجعة');
+  const caseOf = async () => (await q<{ id: string; status: string }>(`select v.id, v.status from user_identity_verifications v join users u on u.id = v.user_id where u.email = $1`, [email]))[0];
+  const reviewer = await adminLogin(browser, 'catalog@edmn.local');
+  await reviewer.goto(`/admin/identity/${(await caseOf()).id}`);
+  await reviewer.locator('select[name=decision]').selectOption('APPROVE');
+  await reviewer.getByRole('button', { name: 'تسجيل القرار' }).click();
+  await expect.poll(async () => (await caseOf()).status).toBe('APPROVED');
+  await reviewer.context().close();
+}

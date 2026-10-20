@@ -1,51 +1,39 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL } from '@/lib/utils';
-import { getAllSlugs } from '@/data/blog-posts';
+import { and, eq, inArray } from 'drizzle-orm';
+import { db } from '@/server/db/client';
+import { brands, categories, products, sellers, stores } from '@/server/db/schema';
+import { LEGAL_CODES } from '@/server/modules/cms/service';
 
-const locales = ['ar', 'en'];
+export const dynamic = 'force-dynamic';
+const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
+/** One sitemap file holds at most 50,000 URLs: products are capped so the total always stays below it. */
+const MAX_URLS = 49_000;
 
-function localizedUrl(path: string, locale: string) {
-  if (locale === 'ar') return `${SITE_URL}${path}`;
-  return `${SITE_URL}/en${path}`;
-}
-
-export default function sitemap(): MetadataRoute.Sitemap {
-  const staticPages = [
-    { path: '/', priority: 1.0, changeFrequency: 'weekly' as const },
-    { path: '/about', priority: 0.8, changeFrequency: 'monthly' as const },
-    { path: '/how-it-works', priority: 0.9, changeFrequency: 'monthly' as const },
-    { path: '/why-us', priority: 0.8, changeFrequency: 'monthly' as const },
-    { path: '/faq', priority: 0.8, changeFrequency: 'weekly' as const },
-    { path: '/contact', priority: 0.7, changeFrequency: 'yearly' as const },
-    { path: '/blog', priority: 0.8, changeFrequency: 'weekly' as const },
-    { path: '/privacy-policy', priority: 0.4, changeFrequency: 'yearly' as const },
-    { path: '/terms', priority: 0.4, changeFrequency: 'yearly' as const },
-    { path: '/refund-policy', priority: 0.4, changeFrequency: 'yearly' as const },
+/** Sitemap of public, indexable pages only (LIVE products of active sellers). */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const u = (p: string) => new URL(p, APP_URL).toString();
+  const [prods, cats, brs, sts] = await Promise.all([
+    db.select({ slug: products.slug, updatedAt: products.updatedAt }).from(products).innerJoin(sellers, eq(sellers.id, products.sellerId)).where(and(eq(products.status, 'LIVE'), inArray(sellers.status, ['APPROVED', 'RESTRICTED']))).limit(40_000),
+    db.select({ slug: categories.slug, updatedAt: categories.updatedAt }).from(categories).where(and(eq(categories.isActive, true), eq(categories.isProhibited, false))),
+    db.select({ slug: brands.slug, updatedAt: brands.updatedAt }).from(brands).where(eq(brands.isActive, true)),
+    db.select({ slug: stores.slug, updatedAt: stores.updatedAt }).from(stores).innerJoin(sellers, eq(sellers.id, stores.sellerId)).where(eq(sellers.status, 'APPROVED')),
+  ]);
+  const all: MetadataRoute.Sitemap = [
+    { url: u('/'), changeFrequency: 'daily', priority: 1 },
+    { url: u('/legal'), changeFrequency: 'monthly', priority: 0.2 },
+    { url: u('/contact'), changeFrequency: 'monthly', priority: 0.3 },
+    { url: u('/deals'), changeFrequency: 'daily', priority: 0.8 },
+    { url: u('/best-sellers'), changeFrequency: 'daily', priority: 0.7 },
+    { url: u('/categories'), changeFrequency: 'weekly', priority: 0.6 },
+    { url: u('/stores'), changeFrequency: 'weekly', priority: 0.5 },
+    { url: u('/protected-deal'), changeFrequency: 'monthly', priority: 0.7 },
+    { url: u('/used'), changeFrequency: 'daily', priority: 0.8 },
+    { url: u('/sell'), changeFrequency: 'monthly', priority: 0.5 },
+    ...Object.values(LEGAL_CODES).map((l) => ({ url: u(`/legal/${l.slug}`), changeFrequency: 'monthly' as const, priority: 0.2 })),
+    ...cats.map((c) => ({ url: u(`/category/${c.slug}`), lastModified: c.updatedAt, changeFrequency: 'daily' as const, priority: 0.7 })),
+    ...brs.map((b) => ({ url: u(`/brand/${b.slug}`), lastModified: b.updatedAt, priority: 0.5 })),
+    ...sts.map((s) => ({ url: u(`/store/${s.slug}`), lastModified: s.updatedAt, priority: 0.5 })),
+    ...prods.map((p) => ({ url: u(`/product/${p.slug}`), lastModified: p.updatedAt, changeFrequency: 'weekly' as const, priority: 0.8 })),
   ];
-
-  const blogSlugs = getAllSlugs();
-
-  const entries: MetadataRoute.Sitemap = [];
-
-  for (const locale of locales) {
-    for (const { path, priority, changeFrequency } of staticPages) {
-      entries.push({
-        url: localizedUrl(path, locale),
-        lastModified: new Date(),
-        changeFrequency,
-        priority,
-      });
-    }
-
-    for (const slug of blogSlugs) {
-      entries.push({
-        url: localizedUrl(`/blog/${slug}`, locale),
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.6,
-      });
-    }
-  }
-
-  return entries;
+  return all.slice(0, MAX_URLS);
 }

@@ -1,0 +1,199 @@
+/**
+ * Permission catalogue. Enforcement is ALWAYS server-side (`requirePermission`) — hiding a button
+ * in the UI is never treated as authorization.
+ */
+export const PERMISSIONS = {
+  // Dashboard & reporting
+  'dashboard.view': 'عرض لوحة القيادة',
+  'reports.view': 'عرض التقارير',
+  'reports.export': 'تصدير البيانات',
+  // Customers
+  'customers.view': 'عرض العملاء',
+  'customers.manage': 'إدارة حسابات العملاء',
+  // Sellers
+  'sellers.view': 'عرض البائعين',
+  'sellers.review': 'مراجعة طلبات البائعين',
+  'sellers.suspend': 'إيقاف وتقييد البائعين',
+  'sellers.documents.view': 'عرض وثائق الهوية',
+  'sellers.payout.verify': 'اعتماد بيانات السحب',
+  // Catalog
+  'catalog.manage': 'إدارة التصنيفات والعلامات والسمات',
+  'products.view': 'عرض المنتجات',
+  'products.moderate': 'مراجعة المنتجات',
+  'policy.manage': 'إدارة سياسات المنتجات المحظورة',
+  // Orders & fulfilment
+  'orders.view': 'عرض الطلبات',
+  'orders.manage': 'إدارة الطلبات',
+  /** Retired: Admin can never confirm receipt on the buyer's behalf (kept only so old grants stay valid data). */
+  'orders.confirm_receipt_on_behalf': 'تأكيد الاستلام نيابة عن العميل (موقوف)',
+  'delivery.verify': 'تسجيل حدث التسليم من شركة الشحن ومراجعة أدلة التسليم',
+  'shipping.view': 'عرض مستندات الشحن',
+  // Payments
+  'payments.view': 'عرض المدفوعات',
+  'payments.verify': 'تأكيد/رفض المدفوعات',
+  'payments.destinations.manage': 'إدارة حسابات الاستلام',
+  // Returns, refunds, disputes
+  'returns.manage': 'إدارة المرتجعات',
+  'refunds.approve': 'اعتماد الاسترداد (قيد عكسي)',
+  'refunds.pay': 'تسجيل صرف المبالغ المستردة',
+  /** Exceptional change of a refund destination (requires re-approval by a different person before payout). */
+  'refunds.destination.override': 'تغيير استثنائي لوجهة الاسترداد',
+  'disputes.manage': 'إدارة النزاعات',
+  'deals.view': 'عرض الصفقات الخارجية',
+  'deals.manage': 'إدارة الصفقات الخارجية',
+  'deals.payout': 'صرف مستحقات الصفقات',
+  // Reviews
+  'reviews.moderate': 'إدارة التقييمات',
+  // Finance
+  'finance.view': 'عرض الحسابات المالية',
+  'commissions.manage': 'إدارة العمولات',
+  'withdrawals.view': 'عرض طلبات السحب',
+  'withdrawals.approve': 'اعتماد طلبات السحب (المراجِع)',
+  'withdrawals.pay': 'تنفيذ وتسجيل صرف السحب (المنفّذ)',
+  'ledger.adjust.create': 'إنشاء تسوية مالية',
+  'ledger.adjust.approve': 'اعتماد تسوية مالية',
+  'settlements.manage': 'إدارة التسويات الدورية',
+  'finance.release': 'اعتماد إتاحة مستحقات البائع بعد الاستلام',
+  'finance.controls': 'مفاتيح الإيقاف المالية والإقفال اليومي',
+  'reconciliation.manage': 'المطابقة مع كشوف الحسابات',
+  // Pricing & fees (versioned fee engine)
+  'pricing.view': 'عرض إصدارات التسعير والرسوم',
+  'pricing.draft': 'إنشاء وتعديل مسودات التسعير',
+  'pricing.simulate': 'محاكي التسعير والربحية',
+  'pricing.submit': 'إرسال مسودة التسعير للاعتماد (المنشئ)',
+  'pricing.approve': 'اعتماد إصدار التسعير (المراجِع)',
+  'pricing.publish': 'نشر/جدولة إصدار التسعير',
+  'pricing.override_margin_guard': 'تجاوز حارس هامش المساهمة (استثناء موثق)',
+  'payout_costs.manage': 'إدارة تكاليف وحدود قنوات التحويل',
+  'refund_fee_policy.manage': 'إدارة مصفوفة استرداد الرسوم وتحميل التكاليف',
+  'profitability.view': 'عرض لوحة الربحية',
+  // Ops
+  'support.manage': 'إدارة الدعم الفني',
+  // Buyer ↔ seller conversations (private customer communication — every staff view is audited)
+  'messages.view': 'عرض محادثات المشترين والبائعين',
+  'messages.moderate': 'إدارة البلاغات وإخفاء الرسائل',
+  'cms.manage': 'إدارة المحتوى',
+  'legal.manage': 'إدارة النصوص القانونية',
+  'notifications.manage': 'إدارة قوالب الإشعارات',
+  'audit.view': 'عرض سجل التدقيق',
+  'roles.manage': 'إدارة الأدوار والصلاحيات',
+  'settings.manage': 'إدارة إعدادات النظام',
+  // Batch 1.5 — identity, receiving destinations, Maker/Checker, privileged messages, support operations
+  'identity.view': 'عرض حالات التحقق من الهوية',
+  'identity.documents.view': 'عرض صور بطاقة الرقم القومي',
+  'identity.review': 'البت في التحقق من الهوية',
+  'destinations.review': 'مراجعة واعتماد بيانات استلام الأموال',
+  'destinations.view_full': 'عرض بيانات استلام الأموال كاملة',
+  'finance.movement.request': 'إنشاء طلب حركة مالية (Maker)',
+  'support.escalate': 'تصعيد تذاكر الدعم وتحويلها للمختصين',
+  'support.qa': 'مراجعة جودة خدمة العملاء',
+} as const;
+
+export type Permission = keyof typeof PERMISSIONS;
+export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
+
+/** Default staff roles (seeded; editable by SUPER_ADMIN through Roles & Permissions). */
+export const DEFAULT_ROLES: Record<string, { nameAr: string; nameEn: string; permissions: Permission[] }> = {
+  SUPER_ADMIN: { nameAr: 'مدير عام النظام', nameEn: 'Super admin', permissions: ALL_PERMISSIONS },
+  OPERATIONS_MANAGER: {
+    nameAr: 'مدير العمليات',
+    nameEn: 'Operations manager',
+    permissions: [
+      'dashboard.view', 'reports.view', 'reports.export', 'customers.view', 'sellers.view', 'sellers.review',
+      'sellers.suspend', 'products.view', 'products.moderate', 'orders.view', 'orders.manage', 'shipping.view',
+      'delivery.verify', 'payments.view', 'returns.manage', 'disputes.manage', 'deals.view',
+      'deals.manage', 'reviews.moderate', 'support.manage', 'cms.manage', 'audit.view', 'finance.view',
+      'withdrawals.view', 'messages.view', 'messages.moderate', 'identity.view', 'support.escalate', 'support.qa',
+    ],
+  },
+  SELLER_REVIEWER: {
+    nameAr: 'مراجع البائعين',
+    nameEn: 'Seller reviewer',
+    permissions: ['dashboard.view', 'sellers.view', 'sellers.review', 'sellers.documents.view', 'sellers.payout.verify', 'identity.view', 'identity.documents.view', 'identity.review'],
+  },
+  CATALOG_REVIEWER: {
+    nameAr: 'مراجع المنتجات',
+    nameEn: 'Catalog reviewer',
+    permissions: ['dashboard.view', 'products.view', 'products.moderate', 'catalog.manage', 'policy.manage', 'sellers.view'],
+  },
+  PAYMENT_REVIEWER: {
+    nameAr: 'مراجع المدفوعات',
+    nameEn: 'Payment reviewer',
+    permissions: ['dashboard.view', 'payments.view', 'payments.verify', 'orders.view', 'deals.view'],
+  },
+  FINANCE_OPERATOR: {
+    nameAr: 'منفّذ مالي',
+    nameEn: 'Finance operator',
+    permissions: [
+      'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.pay', 'refunds.pay', 'deals.payout',
+      'ledger.adjust.create', 'payments.view', 'orders.view', 'settlements.manage', 'reports.view', 'reports.export',
+      'reconciliation.manage', 'destinations.view_full', 'finance.movement.request', 'deals.view',
+      // Pricing maker: drafts, simulates and submits; never approves.
+      'pricing.view', 'pricing.draft', 'pricing.simulate', 'pricing.submit', 'profitability.view',
+    ],
+  },
+  FINANCE_CHECKER: {
+    nameAr: 'مراجع مالي (معتمد)',
+    nameEn: 'Finance checker',
+    permissions: [
+      'dashboard.view', 'finance.view', 'withdrawals.view', 'withdrawals.approve', 'ledger.adjust.approve',
+      'commissions.manage', 'payments.destinations.manage', 'payments.view', 'orders.view', 'reports.view',
+      'finance.release', 'refunds.approve', 'finance.controls', 'reconciliation.manage', 'destinations.review', 'destinations.view_full', 'finance.movement.request',
+      // Read-only deal view: a settlement is approved from the deal page.
+      'deals.view',
+      // Pricing checker: approves/publishes versions a different person submitted.
+      'pricing.view', 'pricing.simulate', 'pricing.approve', 'pricing.publish', 'payout_costs.manage', 'refund_fee_policy.manage', 'profitability.view',
+    ],
+  },
+  DISPUTE_OFFICER: {
+    nameAr: 'مسؤول النزاعات',
+    nameEn: 'Dispute officer',
+    permissions: ['dashboard.view', 'disputes.manage', 'returns.manage', 'orders.view', 'shipping.view', 'deals.view', 'deals.manage', 'payments.view', 'messages.view', 'delivery.verify', 'support.escalate'],
+  },
+  CUSTOMER_SUPPORT: {
+    nameAr: 'خدمة العملاء',
+    nameEn: 'Customer support',
+    permissions: ['dashboard.view', 'support.manage', 'customers.view', 'orders.view', 'sellers.view', 'deals.view', 'reviews.moderate', 'messages.view', 'messages.moderate', 'support.escalate', 'identity.view'],
+  },
+};
+
+/**
+ * Permissions introduced after the first seed. `seedReference` grants each (role, permission) pair ONCE
+ * (recorded in system_settings `rbac.additiveGrants`), so existing databases receive new capabilities
+ * without overwriting role edits an admin made afterwards.
+ */
+export const ADDITIVE_ROLE_GRANTS: { id: string; role: string; permissions: Permission[] }[] = [
+  { id: 'b15-identity-reviewer', role: 'SELLER_REVIEWER', permissions: ['identity.view', 'identity.documents.view', 'identity.review'] },
+  { id: 'b15-ops-identity', role: 'OPERATIONS_MANAGER', permissions: ['identity.view', 'support.escalate', 'support.qa'] },
+  { id: 'b15-finance-checker', role: 'FINANCE_CHECKER', permissions: ['destinations.review', 'destinations.view_full', 'finance.movement.request'] },
+  { id: 'b15-finance-operator', role: 'FINANCE_OPERATOR', permissions: ['destinations.view_full', 'finance.movement.request', 'deals.view'] },
+  { id: 'b15-support', role: 'CUSTOMER_SUPPORT', permissions: ['support.escalate', 'identity.view'] },
+  { id: 'b15-dispute-officer', role: 'DISPUTE_OFFICER', permissions: ['support.escalate'] },
+];
+
+/** Seller-staff permissions inside the Seller Center (scoped to their own seller account). */
+export const SELLER_PERMISSIONS = [
+  'store.manage',
+  'products.manage',
+  'inventory.manage',
+  'orders.manage',
+  /** Read and answer buyer conversations on the store's orders (not granted to finance/catalog staff). */
+  'orders.communicate',
+  'returns.manage',
+  'finance.view',
+  'finance.withdraw',
+  'payout.manage',
+  'reviews.respond',
+  'support.use',
+  'staff.manage',
+] as const;
+export type SellerPermission = (typeof SELLER_PERMISSIONS)[number];
+
+export const SELLER_ROLE_PERMISSIONS: Record<string, readonly SellerPermission[]> = {
+  STORE_OWNER: SELLER_PERMISSIONS,
+  STORE_MANAGER: ['store.manage', 'products.manage', 'inventory.manage', 'orders.manage', 'orders.communicate', 'returns.manage', 'reviews.respond', 'support.use', 'finance.view'],
+  CATALOG_MANAGER: ['products.manage', 'inventory.manage', 'support.use'],
+  ORDER_MANAGER: ['orders.manage', 'orders.communicate', 'returns.manage', 'inventory.manage', 'support.use'],
+  FINANCE: ['finance.view', 'finance.withdraw', 'support.use'],
+  SUPPORT: ['support.use', 'reviews.respond', 'orders.manage', 'orders.communicate'],
+};

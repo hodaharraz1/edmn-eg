@@ -1,0 +1,146 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791116458434,
+      "tag": "0000_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791116473578,
+      "tag": "0001_integrity_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791123071719,
+      "tag": "0002_totp_replay",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791188766992,
+      "tag": "0003_stored_objects",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791195187229,
+      "tag": "0004_pilot_test_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791202866089,
+      "tag": "0005_deals_terms_location_returns",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791208376865,
+      "tag": "0006_deal_delivery_otp",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791285842352,
+      "tag": "0007_buyer_seller_messaging",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791298117806,
+      "tag": "0008_production_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791371105681,
+      "tag": "0009_checker_deals_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791382364696,
+      "tag": "0010_fee_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791450841701,
+      "tag": "0011_messaging_realtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791468660049,
+      "tag": "0012_live_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791473243477,
+      "tag": "0013_batch1_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791803608384,
+      "tag": "0014_batch15_identity_finance_support",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1791811615461,
+      "tag": "0015_batch15_closure_withdrawal_allocations",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791818178919,
+      "tag": "0016_batch2_infrastructure_reliability",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791914931697,
+      "tag": "0017_batch_final_seller_invitations",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791918991680,
+      "tag": "0018_infra_provider_health",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792407958311,
+      "tag": "0019_used_trusted_commerce",
+      "breakpoints": true
+    }
+  ]
+}

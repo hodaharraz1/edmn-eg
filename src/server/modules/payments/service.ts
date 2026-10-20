@@ -1,0 +1,410 @@
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
+import { audit } from '@/server/audit/audit';
+import { requirePermission, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
+import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
+import { parseEgp } from '@/server/core/money';
+import { db, type DbOrTx } from '@/server/db/client';
+import {
+  externalDeals,
+  inventoryReservations,
+  orderItems,
+  orders,
+  paymentDestinations,
+  paymentMethods,
+  paymentSubmissions,
+  payments,
+  sellerOrders,
+  sellers,
+  users,
+} from '@/server/db/schema';
+import { commitReservation } from '@/server/modules/catalog/inventory';
+import { postSellerOrderPayment } from '@/server/modules/finance/postings';
+import { postEntry } from '@/server/modules/finance/ledger';
+import { notify } from '@/server/modules/notifications/notify';
+import { storeUpload } from '@/server/storage/uploads';
+import { parse, requireReason, transition } from '../_shared';
+import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
+import { grantApproval } from '@/server/modules/finance/approvals';
+import { assertNotPaused } from '@/server/modules/finance/controls';
+import { formatEGP } from '@/lib/format';
+import { enforce } from '@/server/auth/rate-limit';
+
+export type Payment = typeof payments.$inferSelect;
+
+export const proofSchema = z.object({
+  reference: z.string().trim().max(100).optional().default(''),
+  claimedAmount: z.string().trim().min(1, 'اكتب المبلغ المحوّل'),
+  payerName: z.string().trim().max(120).optional().default(''),
+  notes: z.string().trim().max(1000).optional().default(''),
+  clientKey: z.string().min(8).max(100),
+});
+
+/**
+ * Customer uploads payment proof. This NEVER marks anything paid — it only queues the payment
+ * for verification by authorized EDMN staff.
+ * Idempotent per clientKey; a second, different submission while one is under review is refused.
+ */
+export async function submitProof(actor: Actor, paymentId: string, input: z.input<typeof proofSchema>, proof: { data: Buffer; name: string } | null) {
+  const userId = requireUser(actor);
+  const d = parse(proofSchema, input);
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(db, actor, 'PAYMENT_SUBMISSION');
+  await enforce(`proof:${userId}`, 10, 3600);
+  let claimed: number;
+  try {
+    claimed = parseEgp(d.claimedAmount);
+    if (!(claimed > 0)) throw new Error('non-positive');
+  } catch {
+    throw validation('المبلغ غير صحيح', { claimedAmount: ['المبلغ غير صحيح'] });
+  }
+  return db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('عملية الدفع');
+    if (p.payerUserId !== userId) throw forbidden();
+    const [same] = await tx.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, p.id), eq(paymentSubmissions.clientKey, d.clientKey)));
+    if (same) return { submission: same, created: false };
+    if (p.status === 'PAYMENT_SUBMITTED' || p.status === 'UNDER_REVIEW') throw invalidState('إثبات الدفع للطلب ده وصلنا وهو قيد المراجعة');
+    if (p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('مينفعش ترفع إثبات دفع للطلب ده دلوقتي');
+    if (p.dueAt < new Date() && p.status === 'AWAITING_PAYMENT') throw invalidState('مهلة الدفع للطلب ده خلصت');
+    if (!proof) throw validation('ارفع صورة أو ملف إثبات الدفع', { proof: ['مطلوب'] });
+    const file = await storeUpload(tx, actor, { purpose: 'PAYMENT_PROOF', data: proof.data, originalName: proof.name });
+    const [sub] = await tx
+      .insert(paymentSubmissions)
+      .values({
+        paymentId: p.id,
+        submittedBy: userId,
+        proofFileId: file.id,
+        proofSha256: file.sourceSha256,
+        reference: d.reference || null,
+        claimedAmount: claimed,
+        payerName: d.payerName || null,
+        notes: d.notes || null,
+        clientKey: d.clientKey,
+      })
+      .returning();
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'PAYMENT_SUBMITTED');
+    await tx.update(payments).set({ status: 'PAYMENT_SUBMITTED' }).where(eq(payments.id, p.id));
+    if (p.orderId) {
+      await moveOrderTo(tx, actor, p.orderId, 'PAYMENT_UNDER_REVIEW');
+      const [o] = await tx.select({ number: orders.number }).from(orders).where(eq(orders.id, p.orderId));
+      await notify(tx, { event: 'PAYMENT_SUBMITTED', userIds: [userId], vars: { order: o.number }, link: `/account/orders/${p.orderId}` });
+    } else if (p.dealId) {
+      const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId)).for('update');
+      await transition(tx, actor, dealMachine, deal.id, deal.status, 'PAYMENT_UNDER_REVIEW');
+      await tx.update(externalDeals).set({ status: 'PAYMENT_UNDER_REVIEW' }).where(eq(externalDeals.id, deal.id));
+    }
+    await audit(tx, actor, { action: 'payment.proof_submitted', entityType: 'payment', entityId: p.id, newValues: { submissionId: sub.id, claimedAmount: claimed, reference: d.reference } });
+    return { submission: sub, created: true };
+  });
+}
+
+async function moveOrderTo(tx: DbOrTx, actor: Actor, orderId: string, to: 'PAYMENT_UNDER_REVIEW' | 'PENDING_PAYMENT' | 'PAID', reason?: string) {
+  const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
+  if (o.status !== to) {
+    await transition(tx, actor, orderMachine, o.id, o.status, to, reason);
+    await tx.update(orders).set({ status: to, ...(to === 'PAID' ? { paidAt: new Date() } : {}) }).where(eq(orders.id, o.id));
+  }
+  const sos = await tx.select().from(sellerOrders).where(and(eq(sellerOrders.orderId, orderId), ne(sellerOrders.status, 'CANCELLED'))).for('update');
+  for (const so of sos) {
+    if (so.status === to) continue;
+    await transition(tx, actor, sellerOrderMachine, so.id, so.status, to, reason);
+    await tx.update(sellerOrders).set({ status: to, ...(to === 'PAID' ? { paidAt: new Date() } : {}) }).where(eq(sellerOrders.id, so.id));
+  }
+  return { order: o, sellerOrders: sos };
+}
+
+export async function startReview(actor: Actor, paymentId: string) {
+  requirePermission(actor, 'payments.verify');
+  await db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('عملية الدفع');
+    if (p.status !== 'PAYMENT_SUBMITTED') return;
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'UNDER_REVIEW');
+    await tx.update(payments).set({ status: 'UNDER_REVIEW' }).where(eq(payments.id, p.id));
+    await audit(tx, actor, { action: 'payment.review_started', entityType: 'payment', entityId: p.id });
+  });
+}
+
+/**
+ * ConfirmPayment — authorization-protected, transactional, idempotent, audited.
+ * The payment row is locked FOR UPDATE; a double-click / retry finds it CONFIRMED and returns
+ * without re-posting. Ledger entries additionally carry unique idempotency keys.
+ */
+export async function confirmPayment(actor: Actor, paymentId: string, submissionId: string, note?: string | null, expectedAmount?: number) {
+  requirePermission(actor, 'payments.verify');
+  requireStepUp(actor); // confirming a payment creates seller liabilities in the ledger
+  return db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('عملية الدفع');
+    if (p.status === 'CONFIRMED') return { alreadyConfirmed: true };
+    await assertNotPaused(tx, 'killswitch.paymentConfirmation');
+    if (p.currency !== 'EGP') throw invalidState('عملة غير مدعومة');
+    if (expectedAmount !== undefined && expectedAmount !== p.amountDue) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
+    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') throw invalidState('لا يوجد إثبات دفع قيد المراجعة لهذه العملية');
+    const [sub] = await tx.select().from(paymentSubmissions).where(eq(paymentSubmissions.id, submissionId)).for('update');
+    if (!sub || sub.paymentId !== p.id || sub.status !== 'SUBMITTED') throw invalidState('إثبات الدفع المحدد غير صالح للتأكيد');
+    // The amount the buyer declares must equal the amount due; a different transfer needs a new proof.
+    if (sub.claimedAmount !== p.amountDue) throw invalidState('المبلغ المحوَّل المعلن لا يطابق المبلغ المطلوب. اطلب إثباتاً جديداً بالمبلغ الصحيح');
+    // Separation of duties: staff can never confirm a payment they made or one that pays their own store.
+    if (p.payerUserId === actor.userId) throw forbidden('لا يمكنك تأكيد دفعة قمت بها بنفسك');
+    await assertNotSelfDealingOnPayment(tx, actor, p);
+    // Pilot safety: a payment made while real money was off can never be confirmed after go-live.
+    if (p.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذه دفعة تجريبية (TEST) ولا يمكن تأكيدها بعد تفعيل الأموال الحقيقية');
+
+    // One operation-specific approval: this payment, this exact amount, this proof.
+    const approval = await grantApproval(tx, actor, {
+      action: p.orderId ? 'PAYMENT_CONFIRMATION' : 'DEAL_PAYMENT_CONFIRMATION',
+      entityType: 'payment',
+      entityId: p.id,
+      amount: p.amountDue,
+      economicVersion: `amount:${p.amountDue}:submission:${sub.id}`,
+      reason: note?.trim() || 'تأكيد استلام التحويل بعد مراجعة الإثبات',
+      idempotencyKey: `payment-confirmation:${p.id}`,
+    });
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', note);
+    await tx.update(payments).set({ status: 'CONFIRMED', confirmedAt: new Date(), confirmedBy: actor.userId, confirmedAmount: p.amountDue }).where(eq(payments.id, p.id));
+    await tx.update(paymentSubmissions).set({ status: 'ACCEPTED', reviewedBy: actor.userId, reviewedAt: new Date(), reviewReason: note ?? null }).where(eq(paymentSubmissions.id, sub.id));
+    await confirmPaymentInternal(tx, actor, p, approval.id);
+    await audit(tx, actor, {
+      action: 'payment.confirmed',
+      entityType: 'payment',
+      entityId: p.id,
+      oldValues: { status: p.status },
+      newValues: { status: 'CONFIRMED', amount: p.amountDue, claimedAmount: sub.claimedAmount, submissionId: sub.id, approvalId: approval.id },
+      reason: note ?? null,
+    });
+    return { alreadyConfirmed: false };
+  });
+}
+
+/**
+ * Shared post-confirmation effects. Always executes an Admin approval: a provider callback or
+ * reconciliation suggestion is evidence only and can never call this on its own.
+ */
+export async function confirmPaymentInternal(tx: DbOrTx, actor: Actor, p: Payment, approvalId: string) {
+  if (p.orderId) {
+    const { order, sellerOrders: sos } = await moveOrderTo(tx, actor, p.orderId, 'PAID');
+    for (const so of sos) {
+      const items = await tx.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+      for (const it of items) {
+        const [r] = await tx.select().from(inventoryReservations).where(eq(inventoryReservations.orderItemId, it.id));
+        if (!r || r.status === 'RELEASED' || r.status === 'EXPIRED') {
+          // Reservation was released (should not happen for submitted proofs) — fail loudly rather than oversell.
+          throw invalidState('انتهى حجز المخزون لهذا الطلب. راجع توفر المنتجات قبل التأكيد');
+        }
+        await commitReservation(tx, it.id);
+      }
+      await postSellerOrderPayment(tx, actor, p.id, so, approvalId);
+      // Fulfilment SLAs start at payment confirmation (operational flags only).
+      const confirmHours = await getSetting('sla.sellerConfirmHours', tx);
+      const grace = await getSetting('sla.shipGraceDays', tx);
+      const now = Date.now();
+      await tx
+        .update(sellerOrders)
+        .set({
+          sellerResponseDueAt: new Date(now + confirmHours * 3600_000),
+          shipByDueAt: new Date(now + ((so.processingDays ?? 2) + grace) * 86400_000),
+        })
+        .where(eq(sellerOrders.id, so.id));
+      const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));
+      await notify(tx, { event: 'SELLER_NEW_ORDER', userIds: [s.ownerUserId], vars: { order: `${order.number}-${so.suffix}`, amount: formatEGP(so.grossTotal) }, link: `/seller/orders/${so.id}`, dedupeKey: `so:${so.id}:paid` });
+    }
+    await notify(tx, { event: 'PAYMENT_CONFIRMED', userIds: [p.payerUserId], vars: { order: order.number }, link: `/account/orders/${order.id}`, dedupeKey: `payment:${p.id}:confirmed` });
+    // A buyer who asked to cancel while the proof was under review keeps that right: cancelled now,
+    // with a refund OBLIGATION (request) for the confirmed money — never silently dropped.
+    const { applyPendingBuyerCancellation } = await import('@/server/modules/commerce/fulfilment');
+    for (const so of sos) await applyPendingBuyerCancellation(tx, actor, so.id);
+  } else if (p.dealId) {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId)).for('update');
+    await transition(tx, actor, dealMachine, deal.id, deal.status, 'ACTIVE');
+    await tx.update(externalDeals).set({ status: 'ACTIVE', activatedAt: new Date() }).where(eq(externalDeals.id, deal.id));
+    await postEntry(tx, actor, {
+      entryType: 'DEAL_PAYMENT',
+      sourceType: 'external_deal',
+      sourceId: deal.id,
+      idempotencyKey: `payment:${p.id}:deal:${deal.id}`,
+      description: `تأكيد دفع الصفقة المحمية #${deal.number}`,
+      approvalId,
+      lines: [
+        { account: { code: 'PLATFORM_CASH' }, debit: p.amountDue },
+        { account: { code: 'DEAL_FUNDS_HELD' }, credit: p.amountDue },
+      ],
+    });
+    await notify(tx, { event: 'EXTERNAL_DEAL_ACTIVE', userIds: [deal.buyerId, deal.sellerUserId], vars: { deal: deal.number }, link: `/account/deals/${deal.id}` });
+  }
+}
+
+/** RejectPayment / RequestNewProof — customer may resubmit; the payment window is extended by 24h. */
+export async function rejectPayment(actor: Actor, paymentId: string, submissionId: string, reason: string, requestNewProof = false) {
+  requirePermission(actor, 'payments.verify');
+  const why = requireReason(reason);
+  await db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('عملية الدفع');
+    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') throw invalidState('لا يوجد إثبات دفع قيد المراجعة');
+    const [sub] = await tx.select().from(paymentSubmissions).where(eq(paymentSubmissions.id, submissionId)).for('update');
+    if (!sub || sub.paymentId !== p.id || sub.status !== 'SUBMITTED') throw invalidState('إثبات الدفع المحدد غير صالح');
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'REJECTED', why);
+    const newDue = new Date(Math.max(p.dueAt.getTime(), Date.now() + 24 * 3600_000));
+    await tx.update(payments).set({ status: 'REJECTED', dueAt: newDue }).where(eq(payments.id, p.id));
+    await tx
+      .update(paymentSubmissions)
+      .set({ status: requestNewProof ? 'NEW_PROOF_REQUESTED' : 'REJECTED', reviewedBy: actor.userId, reviewedAt: new Date(), reviewReason: why })
+      .where(eq(paymentSubmissions.id, sub.id));
+    let label = '';
+    if (p.orderId) {
+      const { order, sellerOrders: sos } = await moveOrderTo(tx, actor, p.orderId, 'PENDING_PAYMENT', why);
+      await tx.update(orders).set({ paymentDueAt: newDue }).where(eq(orders.id, order.id));
+      for (const so of sos) {
+        const items = await tx.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+        for (const it of items) {
+          await tx.update(inventoryReservations).set({ expiresAt: newDue }).where(and(eq(inventoryReservations.orderItemId, it.id), eq(inventoryReservations.status, 'ACTIVE')));
+        }
+      }
+      label = String(order.number);
+    } else if (p.dealId) {
+      const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, p.dealId)).for('update');
+      await transition(tx, actor, dealMachine, deal.id, deal.status, 'PAYMENT_PENDING', why);
+      await tx.update(externalDeals).set({ status: 'PAYMENT_PENDING' }).where(eq(externalDeals.id, deal.id));
+      label = `صفقة ${deal.number}`;
+    }
+    await audit(tx, actor, { action: requestNewProof ? 'payment.new_proof_requested' : 'payment.rejected', entityType: 'payment', entityId: p.id, newValues: { submissionId }, reason: why });
+    await notify(tx, {
+      event: 'PAYMENT_REJECTED',
+      userIds: [p.payerUserId],
+      vars: { order: label, reason: why },
+      link: p.orderId ? `/account/orders/${p.orderId}` : `/account/deals/${p.dealId}`,
+    });
+  });
+}
+
+/* ───────── Admin: payment methods & destinations ───────── */
+
+export const destinationSchema = z.object({
+  methodCode: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']),
+  label: z.string().trim().min(2).max(100),
+  details: z.record(z.string(), z.string().trim().max(200)),
+  instructionsAr: z.string().trim().max(1000).optional().default(''),
+  isEnabled: z.boolean(),
+  /** TEST destinations carry no real account data and are labelled "NOT FOR REAL MONEY" to buyers. */
+  isTest: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(1000).default(0),
+});
+
+export async function saveDestination(actor: Actor, id: string | null, input: z.input<typeof destinationSchema>, reason: string) {
+  requirePermission(actor, 'payments.destinations.manage');
+  requireStepUp(actor); // changing where customers send money is a high-risk operation
+  const why = requireReason(reason);
+  const d = parse(destinationSchema, input);
+  const required: Record<string, string[]> = {
+    BANK_TRANSFER: ['bankName', 'accountName', 'accountNumber'],
+    INSTAPAY: ['instapayAddress'],
+    VODAFONE_CASH: ['walletNumber'],
+  };
+  if (!d.isTest) for (const k of required[d.methodCode]) if (!d.details[k]) throw validation(`الحقل ${k} مطلوب`);
+  // Fail closed (C8): production never holds TEST destinations (the database refuses them as well).
+  if (d.isTest && process.env.EDMN_ENVIRONMENT === 'production') throw validation('وجهات الدفع التجريبية (TEST) غير مسموحة في بيئة الإنتاج');
+  return db.transaction(async (tx) => {
+    if (id) {
+      const [old] = await tx.select().from(paymentDestinations).where(eq(paymentDestinations.id, id)).for('update');
+      if (!old) throw notFound('حساب الاستلام');
+      await tx.update(paymentDestinations).set({ ...d, instructionsAr: d.instructionsAr || null }).where(eq(paymentDestinations.id, id));
+      await audit(tx, actor, { action: 'payment.destination_updated', entityType: 'payment_destination', entityId: id, oldValues: { label: old.label, details: old.details, isEnabled: old.isEnabled, isTest: old.isTest }, newValues: d, reason: why });
+      return id;
+    }
+    const [row] = await tx.insert(paymentDestinations).values({ ...d, instructionsAr: d.instructionsAr || null, createdBy: actor.userId }).returning({ id: paymentDestinations.id });
+    await audit(tx, actor, { action: 'payment.destination_created', entityType: 'payment_destination', entityId: row.id, newValues: d, reason: why });
+    return row.id;
+  });
+}
+
+export async function updatePaymentMethod(actor: Actor, code: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH', input: { isEnabled: boolean; instructionsAr: string; sortOrder: number }, reason: string) {
+  requirePermission(actor, 'payments.destinations.manage');
+  requireStepUp(actor);
+  const why = requireReason(reason);
+  await db.transaction(async (tx) => {
+    const [old] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, code)).for('update');
+    await tx.update(paymentMethods).set({ isEnabled: input.isEnabled, instructionsAr: input.instructionsAr || null, sortOrder: input.sortOrder }).where(eq(paymentMethods.code, code));
+    await audit(tx, actor, { action: 'payment.method_updated', entityType: 'payment_method', entityId: code, oldValues: old as unknown as Record<string, unknown>, newValues: input, reason: why });
+  });
+}
+
+export async function enabledPaymentMethods(conn: DbOrTx = db) {
+  const methods = await conn.select().from(paymentMethods).where(eq(paymentMethods.isEnabled, true)).orderBy(asc(paymentMethods.sortOrder));
+  const dests = methods.length
+    ? await conn
+        .select()
+        .from(paymentDestinations)
+        .where(and(inArray(paymentDestinations.methodCode, methods.map((m) => m.code)), offeredDestinations(await realMoneyEnabled(conn))))
+        .orderBy(asc(paymentDestinations.sortOrder))
+    : [];
+  return methods.map((m) => ({ ...m, destinations: dests.filter((d) => d.methodCode === m.code) })).filter((m) => m.destinations.length);
+}
+
+export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'REJECTED')[], limit = 50, offset = 0) {
+  return db
+    .select({ payment: payments, payer: { id: users.id, fullName: users.fullName, phone: users.phone }, orderNumber: orders.number, dealNumber: externalDeals.number })
+    .from(payments)
+    .innerJoin(users, eq(users.id, payments.payerUserId))
+    .leftJoin(orders, eq(orders.id, payments.orderId))
+    .leftJoin(externalDeals, eq(externalDeals.id, payments.dealId))
+    .where(inArray(payments.status, status))
+    .orderBy(desc(payments.updatedAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function submissionsFor(paymentId: string) {
+  return db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, paymentId)).orderBy(desc(paymentSubmissions.createdAt));
+}
+
+/** Destinations shown to buyers: with real money on, TEST destinations are never offered. */
+export function offeredDestinations(realMoney: boolean) {
+  // Real money on → only verified real destinations. Real money off → only TEST destinations, so a
+  // "test" payment can never land in a real company account.
+  return and(eq(paymentDestinations.isEnabled, true), eq(paymentDestinations.isTest, !realMoney));
+}
+
+/** Reject confirmation by a staff member who owns or works for a store paid by this payment (or is the deal seller). */
+async function assertNotSelfDealingOnPayment(tx: DbOrTx, actor: Actor, p: Payment) {
+  if (!actor.userId) return;
+  const rows = p.orderId
+    ? await tx.execute(sql`select 1 from seller_orders so join sellers s on s.id = so.seller_id
+        left join seller_members m on m.seller_id = s.id and m.user_id = ${actor.userId} and m.is_active
+        where so.order_id = ${p.orderId} and (s.owner_user_id = ${actor.userId} or m.user_id is not null) limit 1`)
+    : await tx.execute(sql`select 1 from external_deals d where d.id = ${p.dealId} and d.seller_user_id = ${actor.userId} limit 1`);
+  if (rows.rows.length) throw forbidden('لا يمكنك تأكيد دفعة لصالح متجر أو صفقة أنت طرف فيها');
+}
+
+/**
+ * Review signals for possible duplicate / recycled proofs. Signals only: they never reject automatically.
+ *  - the same transfer reference on another payment
+ *  - the same proof file (sha256) on another payment
+ *  - the same amount + reference on another payment
+ *  - several submissions by the same payer in the last 24 hours
+ */
+export async function paymentReviewSignals(paymentId: string) {
+  const [p] = await db.select().from(payments).where(eq(payments.id, paymentId));
+  if (!p) return [];
+  const subs = await db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, p.id));
+  const signals: { code: string; label: string; refs: string[] }[] = [];
+  for (const s of subs) {
+    if (s.reference) {
+      const same = await db.execute<{ payment_id: string; claimed: string }>(sql`select payment_id, claimed_amount::text claimed from payment_submissions where reference = ${s.reference} and payment_id <> ${p.id}`);
+      if (same.rows.length) {
+        signals.push({ code: 'DUPLICATE_REFERENCE', label: `مرجع التحويل «${s.reference}» مستخدم في ${same.rows.length} دفعة أخرى`, refs: same.rows.map((r) => r.payment_id) });
+        const amt = same.rows.filter((r) => Number(r.claimed) === s.claimedAmount);
+        if (amt.length) signals.push({ code: 'DUPLICATE_AMOUNT_REFERENCE', label: 'نفس المبلغ ونفس المرجع في دفعة أخرى', refs: amt.map((r) => r.payment_id) });
+      }
+    }
+    if (s.proofSha256) {
+      const same = await db.execute<{ payment_id: string }>(sql`select payment_id from payment_submissions where proof_sha256 = ${s.proofSha256} and payment_id <> ${p.id}`);
+      if (same.rows.length) signals.push({ code: 'DUPLICATE_PROOF_FILE', label: 'نفس صورة/ملف الإثبات مرفوع في دفعة أخرى', refs: same.rows.map((r) => r.payment_id) });
+    }
+  }
+  const recent = await db.execute<{ n: string }>(sql`select count(*)::text n from payment_submissions where submitted_by = ${p.payerUserId} and created_at > now() - interval '24 hours'`);
+  if (Number(recent.rows[0].n) >= 4) signals.push({ code: 'REPEATED_SUBMISSIONS', label: `${recent.rows[0].n} إثباتات دفع من نفس العميل خلال 24 ساعة`, refs: [] });
+  return signals;
+}

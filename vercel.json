@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "buildCommand": "sh scripts/vercel-build.sh",
+  "crons": [
+    {
+      "path": "/api/cron/tick",
+      "schedule": "17 3 * * *"
+    }
+  ]
+}

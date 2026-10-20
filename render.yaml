@@ -1,0 +1,24 @@
+# Render Blueprint — FREE staging web service (database on Neon free tier; files stored in Postgres).
+services:
+  - type: web
+    name: edmn-staging
+    runtime: docker
+    plan: free
+    branch: claude/great-tesla-nor0wt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/ready
+    envVars:
+      - { key: EDMN_ENVIRONMENT, value: staging }
+      - { key: SEED_DEMO, value: "true" }
+      - { key: STORAGE_DRIVER, value: database }
+      - { key: MAIL_DRIVER, value: log }
+      - { key: SMS_DRIVER, value: log }
+      - { key: NODE_OPTIONS, value: --max-old-space-size=320 }
+      # Set as secrets (never committed): DATABASE_URL, APP_URL, SELLER_APP_URL, ADMIN_APP_URL,
+      # SESSION_SECRET, DATA_ENCRYPTION_KEY, STAGING_DEMO_PASSWORD, STAGING_ADMIN_PASSWORD, STAGING_TOTP_SECRET
+      - { key: DATABASE_URL, sync: false }
+      - { key: SESSION_SECRET, sync: false }
+      - { key: DATA_ENCRYPTION_KEY, sync: false }
+      - { key: STAGING_DEMO_PASSWORD, sync: false }
+      - { key: STAGING_ADMIN_PASSWORD, sync: false }
+      - { key: STAGING_TOTP_SECRET, sync: false }
