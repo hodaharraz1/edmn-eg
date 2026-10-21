@@ -71,9 +71,13 @@ export async function requestWithdrawal(
     }
     const min = await getSetting('withdrawals.minimumAmount', tx);
     if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
-    const available = await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId });
     // Early, friendly check only — the authoritative check runs at approval under the account lock.
-    if (amount > available) throw new DomainError('INSUFFICIENT_BALANCE', 'المبلغ أكبر من رصيدك المتاح');
+    // B2: post-release dispute/return holds are not withdrawable.
+    const { sellerFundsPosition } = await import('./holds');
+    const pos = await sellerFundsPosition(tx, sellerId);
+    if (amount > pos.withdrawable) {
+      throw new DomainError('INSUFFICIENT_BALANCE', pos.held > 0 ? `المبلغ أكبر من رصيدك القابل للسحب (${formatEGP(pos.withdrawable)}) — جزء من رصيدك محجوز لنزاعات/مرتجعات مفتوحة` : 'المبلغ أكبر من رصيدك المتاح');
+    }
     const pm = await activePayoutMethod(tx, sellerId);
     if (!pm) throw invalidState('لا توجد بيانات استلام أموال معتمدة. أضف بيانات استلام الأموال وانتظر اعتمادها');
     // Transfer cost quoted BEFORE the request (frozen at approval). This is never the EDMN sale fee:
@@ -183,6 +187,8 @@ export async function requestAccountWithdrawal(actor: Actor, input: { amount: st
     const min = await getSetting('withdrawals.minimumAmount', tx);
     if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
     await assertNoLiability(tx, userId);
+    const { assertClaimsCoveredByAvailable } = await import('./holds');
+    await assertClaimsCoveredByAvailable(tx, userId, false); // friendly; re-checked under locks at approval/execution
     const dest = await resolveAccountDestination(tx, userId, input.destination);
     const { candidates } = await sourceCandidates(tx, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
     const plan = planAllocation(candidates, amount);
@@ -366,9 +372,13 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     await assertNotOwnWithdrawal(tx, actor, w);
     const owner = await beneficiaryOf(tx, w);
     await lockBeneficiary(tx, owner);
+    // B2: the store's funds lock comes before any ledger-row lock (one lock order with holds and refund approval).
+    const { assertClaimsCoveredByAvailable, lockOwnerStoreFunds } = await import('./holds');
+    await lockOwnerStoreFunds(tx, owner);
     const { identityStatus } = await import('@/server/modules/identity/service');
     if ((await identityStatus(tx, owner)) !== 'APPROVED') throw invalidState('هوية صاحب السحب غير متحقق منها حاليًا. لا يمكن اعتماد سحب جديد');
     await assertNoLiability(tx, owner, true);
+    await assertClaimsCoveredByAvailable(tx, owner, false);
     let destination: Record<string, unknown>;
     if (w.sellerId) {
       const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
@@ -390,7 +400,7 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
     // Store requests (store context / scheduled settlement) use Marketplace funds only; account requests use the
     // beneficiary's Protected Deal payables, plus Marketplace funds when paid to the store's own payout method.
     const scope: Scope = w.source !== 'ACCOUNT' ? 'MARKETPLACE' : w.sellerId ? 'ALL_FOR_STORE_DESTINATION' : 'PROTECTED_DEAL';
-    const { candidates } = await sourceCandidates(tx, { userId: owner, sellerId: w.sellerId, scope, lock: true });
+    const { candidates, marketplaceHeld } = await sourceCandidates(tx, { userId: owner, sellerId: w.sellerId, scope, lock: true });
     const plan = planAllocation(candidates, w.amount);
     if (!plan) throw new DomainError('INSUFFICIENT_BALANCE', 'الرصيد المتاح من المصادر المسموح بها لا يغطي مبلغ السحب الآن');
     const recipientKey = w.payoutMethodId ?? w.receivingDestinationId;
@@ -422,7 +432,8 @@ export async function approveWithdrawal(actor: Actor, id: string, note?: string)
         { account: reservedAccount(a), credit: a.amount, memo: `reserved for withdrawal #${w.number}` },
       ]),
       guards: [
-        ...rows.filter((a) => a.sourceType === 'MARKETPLACE').map((a) => ({ account: sourceAccount(a), min: 0 })),
+        // B2: after the reservation the store must still cover its active holds (SELLER_AVAILABLE ≥ held).
+        ...rows.filter((a) => a.sourceType === 'MARKETPLACE').map((a) => ({ account: sourceAccount(a), min: marketplaceHeld })),
         ...(rows.some((a) => a.sourceType === 'PROTECTED_DEAL') ? [{ account: { code: 'DEAL_PAYOUTS_PAYABLE' as const }, min: 0 }] : []),
       ],
     });
@@ -444,6 +455,13 @@ export async function markWithdrawalProcessing(actor: Actor, id: string) {
   await db.transaction(async (tx) => {
     const w = await lockWithdrawal(tx, id);
     if (w.status === 'PROCESSING') return;
+    // B2: starting the transfer is the point of no return ("may we send money?") — full revalidation against the
+    // CURRENT position: every hold and every booked debt must be covered by AVAILABLE. The reservation itself never
+    // counts (a consumed hold must not let reserved money that backs a booked debt leave EDMN).
+    const owner = await beneficiaryOf(tx, w);
+    const { assertClaimsCoveredByAvailable, lockOwnerStoreFunds } = await import('./holds');
+    await lockOwnerStoreFunds(tx, owner);
+    await assertClaimsCoveredByAvailable(tx, owner, false);
     await transition(tx, actor, withdrawalMachine, w.id, w.status, 'PROCESSING');
     await tx.update(withdrawalRequests).set({ status: 'PROCESSING', processingBy: actor.userId }).where(eq(withdrawalRequests.id, w.id));
     await audit(tx, actor, { action: 'withdrawal.processing', entityType: 'withdrawal', entityId: w.id });
@@ -472,15 +490,27 @@ export async function markWithdrawalPaid(actor: Actor, id: string, reference: st
     if (w.approvedBy === actor.userId) throw forbidden('منفذ الصرف يجب أن يكون شخصاً مختلفاً عن معتمد السحب');
     await assertNotOwnWithdrawal(tx, actor, w);
     if (w.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذا سحب تجريبي (TEST) ولا يمكن صرفه بعد تفعيل الأموال الحقيقية');
+    // B2: lock the store's funds before any ledger-row lock. Two different questions:
+    //  - APPROVED → PAID sends money now ("may we send?"): full revalidation — holds and booked debt must be
+    //    covered by AVAILABLE, and no seller debt.
+    //  - PROCESSING / TRANSFER_UNCERTAIN → PAID records an external transfer that was ALREADY initiated under that
+    //    same check ("did money leave?"): a debt or hold that appeared afterwards must not block recording the fact.
+    //    The entry only consumes this withdrawal's own reservation (RESERVED → out): it never touches
+    //    SELLER_AVAILABLE, the debt or any hold, and it is recorded once (status guard + idempotency key).
+    const payee = await beneficiaryOf(tx, w);
+    const { assertClaimsCoveredByAvailable, lockOwnerStoreFunds } = await import('./holds');
+    await lockOwnerStoreFunds(tx, payee);
+    const sendsNow = w.status === 'APPROVED';
+    if (sendsNow) await assertClaimsCoveredByAvailable(tx, payee, false);
     if (w.sellerId) {
       const [seller] = await tx.select().from(sellers).where(eq(sellers.id, w.sellerId)).for('update');
       if (!seller || seller.status === 'SUSPENDED') throw invalidState('حساب البائع موقوف. لا يمكن صرف السحب');
       if (seller.payoutHoldUntil && seller.payoutHoldUntil > new Date()) throw invalidState('على البائع تجميد صرف مؤقت (تغيير بيانات استلام الأموال). لا يمكن الصرف الآن');
-      if ((await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
+      if (sendsNow && (await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: w.sellerId }, true)) < 0) {
         throw invalidState('على البائع مديونية (رصيد متاح سالب بعد استرداد). يجب تسويتها قبل صرف أي سحب');
       }
     }
-    await assertNoLiability(tx, await beneficiaryOf(tx, w), true);
+    if (sendsNow) await assertNoLiability(tx, payee, true);
     await assertDestinationStillValid(tx, w);
     const { rows: allocations } = await allocationsOf(tx, w);
     const live = allocations.filter((a) => a.status === 'RESERVED');
@@ -730,7 +760,9 @@ export async function runScheduledSettlement(date = new Date()) {
   let created = 0;
   let total = 0;
   for (const s of candidates) {
-    const available = await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId: s.id });
+    // B2: only the withdrawable part (post-release dispute/return holds excluded) is requested.
+    const { sellerFundsPosition } = await import('./holds');
+    const available = (await sellerFundsPosition(db, s.id)).withdrawable;
     if (available < min) continue;
     try {
       const r = await requestWithdrawal(SYSTEM_ACTOR, { amount: available, clientKey: `settlement:${isoDate}` }, { source: 'SCHEDULED', settlementId: settlement.id, sellerId: s.id });

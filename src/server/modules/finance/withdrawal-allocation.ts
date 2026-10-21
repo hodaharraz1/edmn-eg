@@ -49,16 +49,25 @@ async function dealCandidates(tx: DbOrTx, userId: string, lock: boolean): Promis
     .filter((c) => c.available > 0);
 }
 
-/** Ordered candidate sources (policy above). Marketplace availability is the ledger balance (never negative here). */
-export async function sourceCandidates(tx: DbOrTx, input: { userId: string; sellerId: string | null; scope: Scope; lock: boolean }): Promise<{ candidates: SourceCandidate[]; marketplaceBalance: number | null }> {
+/**
+ * Ordered candidate sources (policy above). Marketplace availability is the WITHDRAWABLE part of the ledger balance:
+ * SELLER_AVAILABLE minus the active post-release holds (B2) — never negative here. With lock = true the store's
+ * funds lock is taken first (callers deciding money already hold it; the advisory lock is re-entrant).
+ */
+export async function sourceCandidates(tx: DbOrTx, input: { userId: string; sellerId: string | null; scope: Scope; lock: boolean }): Promise<{ candidates: SourceCandidate[]; marketplaceBalance: number | null; marketplaceHeld: number }> {
   const out: SourceCandidate[] = [];
   if (input.scope !== 'MARKETPLACE') out.push(...(await dealCandidates(tx, input.userId, input.lock)));
   let marketplaceBalance: number | null = null;
+  let marketplaceHeld = 0;
   if (input.sellerId && input.scope !== 'PROTECTED_DEAL') {
+    const { lockSellerFunds, sellerFundsPosition } = await import('./holds');
+    if (input.lock) await lockSellerFunds(tx, input.sellerId);
     marketplaceBalance = await accountBalance(tx, { code: 'SELLER_AVAILABLE', sellerId: input.sellerId }, input.lock);
-    if (marketplaceBalance > 0) out.push({ sourceType: 'MARKETPLACE', sourceEntityType: 'seller_account', sourceEntityId: input.sellerId, dealId: null, available: marketplaceBalance });
+    const pos = await sellerFundsPosition(tx, input.sellerId);
+    marketplaceHeld = pos.held;
+    if (pos.withdrawable > 0) out.push({ sourceType: 'MARKETPLACE', sourceEntityType: 'seller_account', sourceEntityId: input.sellerId, dealId: null, available: pos.withdrawable });
   }
-  return { candidates: out, marketplaceBalance };
+  return { candidates: out, marketplaceBalance, marketplaceHeld };
 }
 
 /** Greedy deterministic split in candidate order. Returns null when the sources cannot cover the amount. */

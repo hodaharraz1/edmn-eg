@@ -4,6 +4,7 @@ import { Wallet } from 'lucide-react';
 import { cancelWithdrawalAction, requestWithdrawalAction } from '@/app/_actions/seller';
 import { db } from '@/server/db/client';
 import { sellerBalances } from '@/server/modules/finance/ledger';
+import { sellerFundsPosition } from '@/server/modules/finance/holds';
 import { previewWithdrawal, sellerWithdrawals } from '@/server/modules/finance/withdrawals';
 import { activePayoutMethod, sellerContextForUser } from '@/server/modules/sellers/service';
 import { getSetting } from '@/server/modules/settings';
@@ -37,6 +38,7 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
     getSetting('withdrawals.slaBusinessHours'),
   ]);
   const hold = ctx.seller.payoutHoldUntil && ctx.seller.payoutHoldUntil > new Date();
+  const funds = await sellerFundsPosition(db, actor.sellerId!);
   const sp = await props.searchParams;
   const previewAmount = typeof sp.preview === 'string' ? sp.preview : '';
   let preview: Awaited<ReturnType<typeof previewWithdrawal>> | null = null;
@@ -55,8 +57,15 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
       <PageHeader title="السحوبات" description={`الهدف تنفيذ طلبات السحب خلال ${sla} ساعة عمل. ${mode !== 'ON_REQUEST' ? `كما يُنشأ طلب سحب دوري تلقائيًا يوم ${days.join(' و ')} من كل شهر (يحتاج اعتماد الإدارة قبل التحويل).` : ''}`} />
       <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
         <div className="card space-y-3 p-5">
-          <p className="text-sm text-muted">رصيد متاح</p>
-          <p className="text-3xl font-bold text-emerald-700">{formatEGP(b.available)}</p>
+          <p className="text-sm text-muted">قابل للسحب</p>
+          <p className="text-3xl font-bold text-emerald-700">{formatEGP(funds.withdrawable)}</p>
+          {funds.held > 0 && (
+            <Alert tone="warning">
+              رصيدك المتاح {formatEGP(b.available)}، منه {formatEGP(funds.securedByAvailable)} محجوز لنزاعات/مرتجعات مفتوحة على طلبات سبق إتاحتها.
+              {funds.securedByReservation > 0 && <> وفيه {formatEGP(funds.securedByReservation)} مغطاة بسحب معتمد لسه ما اتحوّلش — التحويل ده موقوف لحد حسم الحالات.</>}
+              {funds.unsecuredExposure > 0 && <> وفيه {formatEGP(funds.unsecuredExposure)} مطلوبة لنفس الحالات ومش مغطاة — هتتغطى من مبيعاتك القادمة قبل أي سحب.</>}
+            </Alert>
+          )}
           <p className="text-xs text-muted">بيانات استلام الأموال: {pm ? pm.maskedLabel : 'لا توجد بيانات معتمدة'} · الحد الأدنى {formatEGP(min)}</p>
           {!pm && <LinkButton href="/seller/settings" size="sm" variant="outline">إضافة بيانات استلام الأموال</LinkButton>}
           {hold && <Alert tone="warning">تم تعديل بيانات استلام الأموال مؤخرًا. لحمايتك، السحب متاح بعد {formatDate(ctx.seller.payoutHoldUntil, true)}.</Alert>}
@@ -64,7 +73,7 @@ export default async function WithdrawalsPage(props: PageProps<'/seller/withdraw
         {canWithdraw ? (
           <div className="card space-y-3 p-5">
             <form method="get" className="flex flex-wrap items-end gap-2">
-              <Field label="المبلغ المطلوب (ج.م)" htmlFor="preview" required><Input id="preview" name="preview" inputMode="decimal" dir="ltr" defaultValue={previewAmount || toInputAmount(b.available)} required /></Field>
+              <Field label="المبلغ المطلوب (ج.م)" htmlFor="preview" required><Input id="preview" name="preview" inputMode="decimal" dir="ltr" defaultValue={previewAmount || toInputAmount(funds.withdrawable)} required /></Field>
               <button type="submit" className="h-10 rounded-xl border border-line px-4 text-sm font-semibold">احسب رسوم التحويل</button>
             </form>
             {previewError && <Alert tone="danger">{previewError}</Alert>}

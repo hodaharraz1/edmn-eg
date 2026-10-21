@@ -17,6 +17,7 @@ import { grantApproval } from './approvals';
 import { assertNotPaused } from './controls';
 import { postEntry, type AccountCode } from './ledger';
 import { assertNotSelfDealing } from './self-dealing';
+import { consumeRefundHold, convertToRefundHold, lockSellerFunds, releaseRefundHold } from './holds';
 
 export type Refund = typeof refunds.$inferSelect;
 type SellerOrder = typeof sellerOrders.$inferSelect;
@@ -97,6 +98,7 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   if (existing) return existing;
   const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, input.sellerOrderId)).for('update');
   if (!so) throw notFound('الطلب');
+  await lockSellerFunds(tx, so.sellerId); // B2 lock order: funds lock before any write
   const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
   const left = await refundableOf(tx, so);
   let principal = input.principalAmount ?? 0;
@@ -180,6 +182,8 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
   if (lines.length) await tx.insert(refundItems).values(lines.map((l) => ({ refundId: refund.id, ...l })));
   const { recordTransition } = await import('@/server/audit/audit');
   await recordTransition(tx, actor, 'refund', refund.id, null, 'REQUESTED', input.reason);
+  // B2 (P0 #5): on released funds the request replaces its case hold with exactly its seller liability.
+  await convertToRefundHold(tx, actor, so, refund);
   await audit(tx, actor, { action: 'refund.requested', entityType: 'refund', entityId: refund.id, newValues: { sellerOrderId: so.id, amount, principal, shipping, buyerFee, sellerFee, source: input.sourceType, reasonCode: attrib.reasonCode, responsibleParty: attrib.responsibleParty, stage, feePolicy: policy.source, manualReview: policy.manualReview } });
   await notify(tx, { event: 'REFUND_UPDATED', userIds: [order.customerId], vars: { status: 'طلب الاسترداد اتسجل وقيد مراجعة الإدارة', amount: formatEGP(amount) }, link: `/account/orders/${order.id}`, dedupeKey: `refund:${refund.id}:requested` });
   return refund;
@@ -248,6 +252,7 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
       return { alreadyApproved: false, approvalId: approval.id };
     }
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId)).for('update');
+    await lockSellerFunds(tx, so.sellerId); // B2 lock order: funds lock before the approval/ledger writes
     await assertNotSelfDealing(tx, actor, so.sellerId);
     if (so.refundedTotal + r.amount > so.grossTotal) throw invalidState('الاسترداد يتجاوز المبلغ المدفوع');
     const approval = await grantApproval(tx, actor, {
@@ -279,6 +284,8 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
         { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: r.amount },
       ],
     });
+    // The ledger now carries the seller liability (DR SELLER_AVAILABLE): the refund's hold is consumed.
+    if (released) await consumeRefundHold(tx, actor, r.id);
     await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', input.reason);
     // The destination is frozen with the approval: the payout goes exactly there or not at all.
     await tx
@@ -309,6 +316,7 @@ export async function rejectRefund(actor: Actor, refundId: string, reason: strin
     if (r.customerId === actor.userId) throw forbidden('لا يمكنك البت في استرداد لنفسك');
     await transition(tx, actor, refundMachine, r.id, r.status, 'REJECTED', reason);
     await tx.update(refunds).set({ status: 'REJECTED', rejectReason: reason }).where(eq(refunds.id, r.id));
+    await releaseRefundHold(tx, actor, r.id, `رفض الاسترداد: ${reason}`);
     await audit(tx, actor, { action: 'refund.rejected', entityType: 'refund', entityId: r.id, oldValues: { status: r.status }, newValues: { status: 'REJECTED', amount: r.amount }, reason });
     await notify(tx, { event: 'REFUND_UPDATED', userIds: [r.customerId], vars: { status: `طلب الاسترداد اترفض: ${reason}`, amount: formatEGP(r.amount) }, link: '/account', dedupeKey: `refund:${r.id}:rejected` });
   });

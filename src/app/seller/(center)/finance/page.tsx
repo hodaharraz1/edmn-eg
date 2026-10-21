@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { ledgerAdjustments, sellerOrders } from '@/server/db/schema';
 import { sellerBalances } from '@/server/modules/finance/ledger';
+import { sellerFundsPosition } from '@/server/modules/finance/holds';
 import { sellerStatement } from '@/server/modules/finance/seller-statement';
 import { requireSellerActor } from '@/server/web/session';
 import { formatDate, formatEGP } from '@/lib/format';
@@ -33,6 +34,7 @@ export default async function SellerFinance() {
   ]);
   const paid = await db.execute<{ s: string; c: string }>(sql`select coalesce(sum(amount),0)::text s, coalesce(sum(case when transfer_cost_payer = 'SELLER_PAYS' then least(coalesce(actual_transfer_cost, transfer_cost), transfer_cost) else 0 end),0)::text c from withdrawal_requests where seller_id = ${sellerId} and status = 'PAID'`);
   const ent = Number(entitled.rows[0].s);
+  const funds = await sellerFundsPosition(db, sellerId);
   return (
     <div className="space-y-5">
       <PageHeader title="المالية وكشف الحساب" description="كل الأرقام من دفتر قيود مزدوج غير قابل للتعديل. رسوم خدمة اضمن تُحسب مرة واحدة على كل عملية بيع ولا تُخصم مرة تانية عند السحب." />
@@ -43,7 +45,10 @@ export default async function SellerFinance() {
         <StatCard label="التسويات" value={formatEGP(Number(adj.total))} tone="neutral" />
         <StatCard label="رصيد معلّق" value={formatEGP(balances.pending - ent)} tone="warning" />
         <StatCard label="مستحق — بانتظار موافقة الإدارة" value={formatEGP(ent)} tone="warning" />
-        <StatCard label="رصيد متاح" value={formatEGP(balances.available)} tone="success" hint="متاح للسحب" />
+        <StatCard label="رصيد متاح" value={formatEGP(balances.available)} tone="success" hint={funds.held > 0 ? `القابل للسحب منه ${formatEGP(funds.withdrawable)}` : 'متاح للسحب'} />
+        {funds.securedByAvailable > 0 && <StatCard label="محجوز لنزاعات/مرتجعات (مغطى برصيدك)" value={formatEGP(funds.securedByAvailable)} tone="warning" />}
+        {funds.securedByReservation > 0 && <StatCard label="مغطى بسحب معتمد لم يُحوَّل" value={formatEGP(funds.securedByReservation)} tone="warning" hint="جزء من سحب معتمد موقوف تحويله لحد حسم الحالات — مش رصيد متاح" />}
+        {funds.unsecuredExposure > 0 && <StatCard label="مطلوب لنزاعات/مرتجعات وغير مغطى" value={formatEGP(funds.unsecuredExposure)} tone="warning" hint="يُغطى من مبيعاتك القادمة قبل أي سحب" />}
         <StatCard label="رصيد محجوز (لسحب معتمد)" value={formatEGP(balances.reserved)} tone="brand" />
         <StatCard label="تم تحويله لك" value={formatEGP(Number(paid.rows[0].s))} tone="success" hint={`رسوم تحويل تحملتها: ${formatEGP(Number(paid.rows[0].c))}`} />
       </div>

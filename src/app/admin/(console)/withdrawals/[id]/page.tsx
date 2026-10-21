@@ -10,6 +10,7 @@ import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { sellers, statusHistory, stores, users, withdrawalRequests } from '@/server/db/schema';
 import { sellerBalances } from '@/server/modules/finance/ledger';
+import { sellerFundsPosition, sendBlockReason } from '@/server/modules/finance/holds';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label, statusLabel } from '@/lib/i18n/labels';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -27,6 +28,9 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
   if (!w) notFound();
   const [s] = w.sellerId ? await db.select({ seller: sellers, store: stores.name }).from(sellers).innerJoin(stores, eq(stores.sellerId, sellers.id)).where(eq(sellers.id, w.sellerId)) : [null];
   const bal = w.sellerId ? await sellerBalances(db, w.sellerId) : null;
+  const funds = w.sellerId ? await sellerFundsPosition(db, w.sellerId) : null;
+  // B2: an APPROVED (reserved, not transferred) withdrawal blocked by later holds/debt — operator guidance only.
+  const sendBlocked = w.status === 'APPROVED' && funds ? sendBlockReason(funds) : null;
   const allocations = await withdrawalAllocationsOf(w.id);
   const [beneficiary] = w.userId ? await db.select({ n: users.fullName }).from(users).where(eq(users.id, w.userId)) : [];
   const people = [w.requestedBy, w.reviewedBy, w.approvedBy, w.paidBy].filter((x): x is string => !!x);
@@ -48,6 +52,11 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
       {w.isTest && <TestMoneyNotice kind="payout" />}
       {hold && <Alert tone="danger">على البائع تجميد صرف حتى {formatDate(s?.seller.payoutHoldUntil)} — راجع السبب في ملف البائع قبل الاعتماد.</Alert>}
       {s && s.seller.status !== 'APPROVED' && <Alert tone="warning">حالة البائع: {statusLabel(s.seller.status)}</Alert>}
+      {sendBlocked && (
+        <Alert tone="danger">
+          <span data-testid="withdrawal-send-blocked">التحويل موقوف: {sendBlocked}. المبلغ يفضل محجوزًا ولا يتحرك تلقائيًا. لو مش هيتحسم قريب: يُرفض السحب (طلب «عكس الحجز — رفض» من منشئ ثم اعتماد مراجع مختلف) فيرجع المبلغ للرصيد المتاح، وبعدها البائع يطلب سحب جديد بالمبلغ القابل للسحب فقط (يظهر في ملف البائع بعد عكس الحجز).</span>
+        </Alert>
+      )}
       <section className="card p-5">
         <DefinitionList items={[
           { label: 'البائع', value: s ? <Link className="text-brand-700" href={`/admin/sellers/${w.sellerId}`}>{s.store} · {s.seller.legalName}</Link> : `${beneficiary?.n ?? '—'} (بدون متجر — صفقات محمية)` },
@@ -63,6 +72,7 @@ export default async function WithdrawalDetail(props: PageProps<'/admin/withdraw
           { label: 'رسوم التحويل', value: w.payoutChannel ? `${w.payoutChannel} · ${formatEGP(w.transferCost)} ${w.transferCostPayer === 'SELLER_PAYS' ? '(على البائع)' : '(على اضمن)'} · صافي للبائع ${formatEGP(w.netTransferAmount ?? w.amount)}${w.actualTransferCost !== null ? ` · الفعلية ${formatEGP(w.actualTransferCost)}` : ''}` : '— (طلب قبل محرك التكاليف)' },
           ...(((w.transferCostSnapshot as { warnings?: string[] } | null)?.warnings ?? []).length ? [{ label: 'تحذيرات الحدود', value: ((w.transferCostSnapshot as { warnings?: string[] }).warnings ?? []).join('، ') }] : []),
           ...(bal ? [{ label: 'أرصدة المتجر الآن', value: `متاح ${formatEGP(bal.available)} · محجوز ${formatEGP(bal.reserved)} · معلق ${formatEGP(bal.pending)}` }] : []),
+          ...(funds && (funds.held > 0 || funds.bookedDebt > 0) ? [{ label: 'حجوزات نزاعات/مرتجعات بعد الإتاحة', value: `مغطى بالمتاح ${formatEGP(funds.securedByAvailable)} · مغطى بسحب معتمد لم يُحوَّل ${formatEGP(funds.securedByReservation)} · غير مغطى ${formatEGP(funds.unsecuredExposure)} · مديونية ${formatEGP(funds.bookedDebt)} · قابل للسحب ${formatEGP(funds.withdrawable)}` }] : []),
           ...(w.rejectReason ? [{ label: 'سبب الرفض', value: w.rejectReason }] : []),
           ...(w.transferUncertainAt ? [{ label: 'نتيجة غير مؤكدة منذ', value: formatDate(w.transferUncertainAt, true) }] : []),
           ...(w.transferFailedAt ? [{ label: 'فشل قبل التحويل', value: `${formatDate(w.transferFailedAt, true)} · ${w.transferFailureReason ?? ''} · دليل ${w.transferFailureEvidence ?? ''}` }] : []),

@@ -5,7 +5,8 @@ import { createdAt, enumCheck, money, ts, updatedAt } from './_helpers';
 import { files } from './files';
 import { users } from './identity';
 import { sellerPayoutMethods, sellers } from './sellers';
-import { sellerOrders } from './commerce';
+import { refunds, sellerOrders } from './commerce';
+import { disputes, returns } from './postpurchase';
 
 export const WITHDRAWAL_SOURCE_SCOPES = ['MARKETPLACE', 'PROTECTED_DEAL', 'MIXED'] as const;
 export const ALLOCATION_SOURCES = ['MARKETPLACE', 'PROTECTED_DEAL'] as const;
@@ -262,5 +263,53 @@ export const ledgerAdjustments = pgTable(
     enumCheck('ledger_adjustments_status_chk', t.status, ADJUSTMENT_STATUSES),
     check('ledger_adjustments_amount_chk', sql`${t.amount} <> 0`),
     check('ledger_adjustments_checker_chk', sql`${t.approvedBy} is null or ${t.approvedBy} <> ${t.createdBy}`),
+  ],
+);
+
+/**
+ * B2 — POST-RELEASE FINANCIAL HOLDS (encumbrances). A claim of an open dispute / return / refund request against a
+ * seller's RELEASED funds. It moves NO money and edits NO balance: the ledger stays the only source of balances.
+ * withdrawable = max(0, SELLER_AVAILABLE − Σ ACTIVE holds); the liability itself is booked in the ledger only by
+ * the Maker/Checker refund approval. Append-only: amounts/sources are immutable; status only ACTIVE → terminal.
+ */
+export const HOLD_KINDS = ['DISPUTE', 'RETURN', 'REFUND'] as const;
+export const HOLD_STATUSES = ['ACTIVE', 'RELEASED', 'CONVERTED', 'CONSUMED'] as const;
+export const sellerFinancialHolds = pgTable(
+  'seller_financial_holds',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    sellerId: uuid()
+      .notNull()
+      .references(() => sellers.id),
+    sellerOrderId: uuid()
+      .notNull()
+      .references(() => sellerOrders.id),
+    kind: text({ enum: HOLD_KINDS }).notNull(),
+    /** The case this hold belongs to (dispute / return / refund id) — one ACTIVE hold per source. */
+    sourceId: uuid().notNull(),
+    disputeId: uuid().references(() => disputes.id),
+    returnId: uuid().references(() => returns.id),
+    refundId: uuid().references(() => refunds.id),
+    amount: money().notNull(),
+    /** Part of the amount backed by the seller's available funds when the hold was opened (audit snapshot). */
+    securedAtOpen: money().notNull(),
+    /** Part NOT backed by cash when opened (seller exposure). securedAtOpen + unsecuredAtOpen = amount. */
+    unsecuredAtOpen: money().notNull(),
+    status: text({ enum: HOLD_STATUSES }).notNull().default('ACTIVE'),
+    reason: text().notNull(),
+    createdBy: uuid().references(() => users.id),
+    createdAt: createdAt(),
+    closedAt: ts(),
+    closedBy: uuid().references(() => users.id),
+    closeReason: text(),
+  },
+  (t) => [
+    uniqueIndex('seller_holds_active_source_uq').on(t.kind, t.sourceId).where(sql`${t.status} = 'ACTIVE'`),
+    index('seller_holds_seller_active_idx').on(t.sellerId).where(sql`${t.status} = 'ACTIVE'`),
+    index('seller_holds_seller_order_idx').on(t.sellerOrderId),
+    enumCheck('seller_holds_kind_chk', t.kind, HOLD_KINDS),
+    enumCheck('seller_holds_status_chk', t.status, HOLD_STATUSES),
+    check('seller_holds_amount_chk', sql`${t.amount} > 0 and ${t.securedAtOpen} >= 0 and ${t.unsecuredAtOpen} >= 0 and ${t.securedAtOpen} + ${t.unsecuredAtOpen} = ${t.amount}`),
+    check('seller_holds_closed_chk', sql`(${t.status} = 'ACTIVE') = (${t.closedAt} is null)`),
   ],
 );

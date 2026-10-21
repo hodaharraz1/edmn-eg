@@ -9,7 +9,9 @@ const ROWS: { key: keyof SourceBalances; label: string; hint: string }[] = [
   { key: 'entitledAwaitingRelease', label: 'مستحق — بانتظار موافقة الإدارة', hint: 'المشتري أكد الاستلام أو انتهت مهلته. لسه محتاج موافقة الإدارة. التأكيد أو انتهاء المهلة لا يحرك فلوس لوحده.' },
   { key: 'held', label: 'مجمّد بسبب نزاع أو تجميد إداري', hint: 'لا يتحرك لحد ما يتحسم النزاع أو يترفع التجميد.' },
   { key: 'reserved', label: 'رصيد محجوز', hint: 'محجوز لطلب سحب معتمد قيد التحويل.' },
+  { key: 'reservedBackingClaims', label: 'منه مربوط بنزاعات/مرتجعات', hint: 'جزء من مبلغ سحب معتمد لسه ما اتحوّلش، وهو حاليًا اللي مغطي نزاعات أو مرتجعات مفتوحة. مش رصيد متاح ومش قابل للسحب، والتحويل موقوف لحد حسم الحالات أو رفض السحب وطلب سحب جديد بالمبلغ القابل للسحب.' },
   { key: 'liability', label: 'مديونية', hint: 'مبالغ عليك (مثلاً استرداد بعد الإتاحة أكبر من المتاح). أي سحب موقوف لحد تسويتها.' },
+  { key: 'disputeExposure', label: 'مطلوب لنزاعات/مرتجعات وغير مغطى', hint: 'مبلغ مربوط بنزاع أو مرتجع اتفتح بعد الإتاحة ورصيدك الحالي مش مغطيه. مش فلوس محجوزة — بيتغطى من مستحقاتك القادمة، وأي سحب موقوف لحد تغطيته أو حسم الحالات.' },
 ];
 
 function Column({ title, b, testid, children }: { title: string; b: SourceBalances; testid: string; children?: React.ReactNode }) {
@@ -18,7 +20,7 @@ function Column({ title, b, testid, children }: { title: string; b: SourceBalanc
       <h2 className="font-bold">{title}</h2>
       <dl className="space-y-1 text-sm">
         {ROWS.map((r) => (
-          <div key={r.key} className={`flex items-center justify-between gap-2 ${r.key === 'liability' && b.liability > 0 ? 'text-red-700' : ''}`}>
+          <div key={r.key} className={`flex items-center justify-between gap-2 ${(r.key === 'liability' && b.liability > 0) || (r.key === 'disputeExposure' && b.disputeExposure > 0) ? 'text-red-700' : ''}`}>
             <dt className="flex items-center gap-1" title={r.hint}>{r.label}<CircleHelp className="size-3.5 text-muted" aria-hidden /></dt>
             <dd className="font-semibold tabular-nums">{formatEGP(b[r.key])}</dd>
           </div>

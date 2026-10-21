@@ -51,6 +51,13 @@ The gaps sit at the **edges**: fail-open corners in the financial guards, the po
 | P0-4 PARTIAL_REFUND amount ignored on a disputed return | **FIXED_PENDING_FINAL_GATE** | `acceptReturnRefundTx({ authorizedAmount })` + `applyOrderDecision`: the refund request equals the decided amount exactly (principal only, capped by the returned units, explicit `shippingAmount: 0`); any mismatch aborts | "B1 P0#4 …" (5 tests incl. ledger: CUSTOMER_REFUNDS_PAYABLE credit/debit = decided amount) |
 | P0-5, P0-6 | OPEN | Not part of B1 | — |
 
+## B2 status update — P0 #5 (B2 change, pending final gate)
+
+| P0 | Status | Fix | Proof |
+|---|---|---|---|
+| P0-5 no freeze of released funds after a post-release dispute/return | **FIXED_PENDING_FINAL_GATE** | New encumbrance table `seller_financial_holds` (migration 0021, additive, no journal entries, DB-immutable content, lifecycle ACTIVE → RELEASED / CONVERTED / CONSUMED by trigger). A dispute, return or refund request on a released sub-order opens a hold capped by that sub-order's released funds. Position: A = AVAILABLE, R = reservation of APPROVED not-yet-transferred withdrawals, H = active holds → securedByAvailable = min(max(A,0),H), securedByReservation = min(R, H − securedByAvailable) (backing frozen in place, never withdrawable), unsecuredExposure = rest, bookedDebt = max(0,−A), withdrawable = max(0, A − H). "May money be sent/committed?" (account request, approval, transfer start, APPROVED→PAID) fails closed unless every hold and booked debt is covered by AVAILABLE itself — a consumed hold cannot release a reservation that backs a booked debt. "Did money leave?" (PROCESSING / TRANSFER_UNCERTAIN → PAID) records the external fact once even if a later refund created a debt; confirmed-not-sent uses the existing Maker/Checker reversal. Unwind of a blocked reservation = existing full Maker/Checker rejection (no automatic movement, no partial reduction). Per-seller funds advisory lock taken before any write | `tests/integration/b2-post-release-holds.test.ts` (28 tests: scenarios A–H, the exact 1000/800/400 reserved-withdrawal case, processing/uncertain/not-sent outcomes, concurrency, idempotency, B1 regressions, ledger balanced; counter-proofs fail on the uncorrected gates) |
+| P0-6 | OPEN | Not part of B2 | — |
+
 These are **not closed**. They close only after the later final security/fraud gate on a new candidate SHA.
 
 ---
@@ -304,7 +311,7 @@ These block protected Real Money, because each can produce an incorrect or dupli
 - **Problem:** `disputes.ts:246` drops `decisionAmount`, and `returns.ts:208-218` requests the full refund of the returned units.
 - **Why P0:** an over-refund contrary to the recorded decision. The checker approves a request computed from the wrong basis.
 
-**P0-5 · No freeze of released seller funds when a dispute or return opens after release**
+**P0-5 · No freeze of released seller funds when a dispute or return opens after release** — `FIXED_PENDING_FINAL_GATE` (B2)
 - **Problem:**
   - Disputes and returns can open after `COMPLETED` (`disputes.ts:66`, `returns.ts:72`), but holds are refused after release (`fulfilment.ts:493`).
   - Withdrawal approve and pay don't check open disputes or returns (`withdrawals.ts`, `withdrawal-allocation.ts`).
@@ -564,7 +571,7 @@ All changes are additive: no destructive migration and no change to A-100016.
 | Fix | Migration impact |
 |---|---|
 | P0-3 | Add `TRANSFER_UNCERTAIN` (or similar) to the refund status CHECK; adjust the payable status list |
-| P0-5 | No schema change needed; gate withdrawals by open disputes/returns. Optionally add a seller-level dispute exposure view |
+| P0-5 | B2: additive table `seller_financial_holds` + immutability trigger (migration 0021); no balance column and no historical ledger entry changed |
 | P0-6 | Optional `staff_invitations` table with a second approver |
 | P1-1/P1-4 | New `used_category_policy_versions` (append-only); category eligibility columns (default false); report `policy_version` FK |
 | P1-2 | Lock or require re-moderation of the report for LIVE products (status machine change; possibly a trigger) |

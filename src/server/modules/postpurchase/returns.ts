@@ -68,6 +68,8 @@ export async function requestReturn(actor: Actor, input: z.input<typeof returnRe
   return db.transaction(async (tx) => {
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, d.sellerOrderId)).for('update');
     if (!so) throw notFound('الطلب');
+    // B2 lock order: the store's funds lock precedes every write.
+    await (await import('@/server/modules/finance/holds')).lockSellerFunds(tx, so.sellerId);
     const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
     if (order.customerId !== userId) throw forbidden();
     if (so.status !== 'DELIVERED' && so.status !== 'COMPLETED') throw invalidState('تقدر تطلب الإرجاع بس بعد ما تأكّد استلام الطلب');
@@ -105,6 +107,9 @@ export async function requestReturn(actor: Actor, input: z.input<typeof returnRe
     const { recordTransition } = await import('@/server/audit/audit');
     await recordTransition(tx, actor, 'return', ret.id, null, 'REQUESTED');
     await audit(tx, actor, { action: 'return.requested', entityType: 'return', entityId: ret.id, newValues: { reason: d.reason, items: d.items } });
+    // B2 (P0 #5): after release, the returned units' value is encumbered at once (only those units).
+    const { openHold, returnUnitsValue } = await import('@/server/modules/finance/holds');
+    await openHold(tx, actor, { so, kind: 'RETURN', sourceId: ret.id, returnId: ret.id, requested: await returnUnitsValue(tx, ret.id), reason: `طلب إرجاع #${ret.number} بعد إتاحة المستحقات` });
     const [s] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));
     await notify(tx, { event: 'RETURN_REQUESTED', userIds: [s.ownerUserId], vars: { ret: ret.number, order: `${order.number}-${so.suffix}` }, link: `/seller/returns/${ret.id}` });
     return ret;

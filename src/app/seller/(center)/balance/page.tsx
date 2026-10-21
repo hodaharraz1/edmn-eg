@@ -1,5 +1,6 @@
 import { CircleHelp } from 'lucide-react';
 import { sellerBalances } from '@/server/modules/finance/ledger';
+import { sellerFundsPosition } from '@/server/modules/finance/holds';
 import { db } from '@/server/db/client';
 import { sql } from 'drizzle-orm';
 import { requireSellerActor } from '@/server/web/session';
@@ -18,10 +19,18 @@ export default async function BalancePage() {
     join journal_entries e on e.id = l.entry_id join ledger_accounts a on a.id = l.account_id join seller_orders so on so.id::text = e.source_id
     where a.code = 'SELLER_PENDING' and a.seller_id = ${actor.sellerId!} and so.status = 'DELIVERED' and so.funds_released_at is null`);
   const entitled = Number(ent.rows[0].s);
+  const funds = await sellerFundsPosition(db, actor.sellerId!);
   const cards = [
     { label: 'رصيد معلّق', value: b.pending - entitled, tone: 'border-amber-300 bg-amber-50', def: 'صافي مبيعاتك (بعد رسوم اضمن) لطلبات مدفوعة لسه ما اتسلمتش أو في مهلة رد المشتري أو عليها نزاع/تجميد.' },
     { label: 'مستحق — بانتظار موافقة الإدارة', value: entitled, tone: 'border-sky-300 bg-sky-50', def: 'المشتري أكد الاستلام (أو انتهت مهلته بدون اعتراض). المبلغ لسه معلق ومش متاح للسحب لحد ما الإدارة توافق على الإتاحة.' },
     { label: 'رصيد متاح', value: b.available, tone: 'border-emerald-300 bg-emerald-50', def: 'المبالغ اللي الإدارة وافقت على إتاحتها، مطروحًا منها المستردات والتسويات والسحب. لو الرقم بالسالب فده مديونية لازم تتسوى قبل أي سحب.' },
+    ...(funds.held > 0
+      ? [
+          { label: 'محجوز لنزاعات/مرتجعات (مغطى)', value: funds.securedByAvailable, tone: 'border-amber-300 bg-amber-50', def: 'جزء من رصيدك المتاح مربوط بنزاع أو مرتجع اتفتح بعد إتاحة مستحقات الطلب. مش قابل للسحب لحد ما الحالة تتحسم.' },
+          { label: 'مغطى بسحب معتمد لم يُحوَّل', value: funds.securedByReservation, tone: 'border-amber-300 bg-amber-50', def: 'جزء من مبلغ سحب اعتمدته الإدارة ولسه ما اتحوّلش، وهو حاليًا اللي مغطي نزاعات/مرتجعات مفتوحة. مش رصيد متاح ومش قابل للسحب؛ التحويل موقوف لحد حسم الحالات، أو يُرفض السحب وتطلب سحب جديد بالمبلغ القابل للسحب.' },
+          { label: 'مطلوب للحالات وغير مغطى', value: funds.unsecuredExposure, tone: 'border-red-300 bg-red-50', def: 'مبلغ مربوط بنفس الحالات لكن رصيدك الحالي مش مغطيه (مثلاً اتسحب قبل فتح النزاع). مش فلوس محجوزة فعلًا — بيتغطى من مبيعاتك القادمة قبل أي سحب.' },
+        ]
+      : []),
     { label: 'رصيد محجوز (لسحب معتمد)', value: b.reserved, tone: 'border-brand-200 bg-brand-50', def: 'طلب السحب لا يحجز أي مبلغ. الحجز يتم فقط عند اعتماد الإدارة للطلب، ويرجع للمتاح لو اترفض.' },
   ];
   return (

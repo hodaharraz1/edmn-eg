@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { runAlertSweep } from '@/server/modules/alerts/engine';
 import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db } from '@/server/db/client';
+import { SYSTEM_ACTOR } from '@/server/core/actor';
 import { jobs } from '@/server/db/schema';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
@@ -10,6 +11,7 @@ import { expireDealInvitations, expireDeliveryOtps, flagDealsAwaitingConfirmatio
 import { runScheduledSettlement } from '@/server/modules/finance/withdrawals';
 import { flushOutbound, redactExpiredSecrets } from '@/server/modules/notifications/outbox';
 import { runLedgerHealthCheck } from '@/server/modules/finance/ledger-health';
+import { releaseLapsedReturnHolds } from '@/server/modules/finance/holds';
 import { scanPendingFiles } from '@/server/storage/scanning';
 import type { ScheduledJob } from './scheduler';
 import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
@@ -47,6 +49,8 @@ export const SCHEDULE: ScheduledJob[] = [
   { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },
   // Batch 2: read-only ledger health (never fixes anything; a CRITICAL snapshot blocks new money movements).
   { name: 'ledger.health', everyMs: 30 * 60_000, leaseMs: 10 * 60_000, run: () => runLedgerHealthCheck('scheduler') },
+  // B2: release holds of seller-rejected returns once escalation is no longer possible (moves no money).
+  { name: 'holds.release_lapsed_returns', everyMs: 60 * 60_000, run: () => db.transaction((tx) => releaseLapsedReturnHolds(tx, SYSTEM_ACTOR)) },
   // Malware scanning of quarantined uploads (no-op while no scanner is configured — never fakes CLEAN).
   { name: 'files.scan', everyMs: 5 * 60_000, run: () => scanPendingFiles() },
   // Operational telemetry retention (job runs, resolved error groups) — see docs/runbooks retention policy.

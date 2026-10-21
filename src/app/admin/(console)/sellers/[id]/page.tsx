@@ -8,6 +8,7 @@ import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { auditLogs, disputes, governorates, products, returns, riskFlags, sellerDocuments, sellerOrders, sellerPayoutMethods, sellerShippingRates, sellers, stores, supportTickets, users, withdrawalRequests } from '@/server/db/schema';
 import { sellerBalances } from '@/server/modules/finance/ledger';
+import { sellerFundsPosition } from '@/server/modules/finance/holds';
 import { applicationChecklist } from '@/server/modules/sellers/service';
 import { rangeFromPreset, sellerDashboard } from '@/server/modules/reports/service';
 import { formatDate, formatEGP } from '@/lib/format';
@@ -32,7 +33,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
   const [gov] = s.governorateId ? await db.select().from(governorates).where(eq(governorates.id, s.governorateId)) : [];
   const canDocs = hasPermission(actor, 'sellers.documents.view');
   const base = `/admin/sellers/${s.id}`;
-  const [balances, metrics, checklist] = await Promise.all([sellerBalances(db, s.id), sellerDashboard(s.id, rangeFromPreset('365d')), applicationChecklist(db, s)]);
+  const [balances, metrics, checklist, funds] = await Promise.all([sellerBalances(db, s.id), sellerDashboard(s.id, rangeFromPreset('365d')), applicationChecklist(db, s), sellerFundsPosition(db, s.id)]);
   const decisions: [string, string][] = s.status === 'PENDING_REVIEW' ? [['APPROVE', 'موافقة'], ['REQUEST_MORE_INFORMATION', 'طلب معلومات'], ['REJECT', 'رفض']] : s.status === 'APPROVED' ? [['RESTRICT', 'تقييد'], ['SUSPEND', 'إيقاف']] : s.status === 'RESTRICTED' || s.status === 'SUSPENDED' ? [['REINSTATE', 'إعادة تفعيل'], ...(s.status === 'RESTRICTED' ? [['SUSPEND', 'إيقاف']] : [['RESTRICT', 'تقييد']]) as [string, string][]] : s.status === 'MORE_INFO_REQUIRED' ? [['REJECT', 'رفض']] : [];
 
   return (
@@ -43,7 +44,7 @@ export default async function Seller360(props: PageProps<'/admin/sellers/[id]'>)
         <StatCard label="المبيعات (12 شهر)" value={formatEGP(metrics.gross)} />
         <StatCard label="العمولات" value={formatEGP(metrics.commission)} tone="success" />
         <StatCard label="معلق" value={formatEGP(balances.pending)} tone="warning" />
-        <StatCard label="متاح" value={formatEGP(balances.available)} tone="success" />
+        <StatCard label="متاح" value={formatEGP(balances.available)} tone="success" hint={funds.held > 0 ? `محجوز لحالات: مغطى بالمتاح ${formatEGP(funds.securedByAvailable)} · مغطى بسحب معتمد لم يُحوَّل ${formatEGP(funds.securedByReservation)} · غير مغطى ${formatEGP(funds.unsecuredExposure)}` : undefined} />
         <StatCard label="قيد السحب" value={formatEGP(balances.reserved)} tone="neutral" />
       </div>
       <Tabs active={tab} tabs={[

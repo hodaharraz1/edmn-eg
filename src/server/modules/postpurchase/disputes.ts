@@ -8,7 +8,7 @@ import { conflict, forbidden, invalidState, notFound, validation } from '@/serve
 import { parseEgp } from '@/server/core/money';
 import { LABELS } from '@/lib/i18n/labels';
 import { db, type DbOrTx } from '@/server/db/client';
-import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerOrders, sellers, users } from '@/server/db/schema';
+import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerFinancialHolds, sellerOrders, sellers, users } from '@/server/db/schema';
 import { requestRefundTx } from '@/server/modules/finance/refunds';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
@@ -59,6 +59,8 @@ export async function openDisputeTx(
   if (input.sellerOrderId) {
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, input.sellerOrderId)).for('update');
     if (!so) throw notFound('الطلب');
+    // B2 lock order: the store's funds lock precedes every write (the dispute row's FK share-locks the seller row).
+    await (await import('@/server/modules/finance/holds')).lockSellerFunds(tx, so.sellerId);
     const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
     const isBuyer = order.customerId === actor.userId;
     const isSellerSide = actor.type === 'SELLER' && actor.sellerId === so.sellerId;
@@ -105,8 +107,30 @@ export async function openDisputeTx(
   const { recordTransition } = await import('@/server/audit/audit');
   await recordTransition(tx, actor, 'dispute', dispute.id, null, 'OPEN');
   await audit(tx, actor, { action: 'dispute.opened', entityType: 'dispute', entityId: dispute.id, newValues: { sellerOrderId: input.sellerOrderId, dealId: input.dealId, reasonCode: input.reasonCode } });
+  if (dispute.sellerOrderId) await holdForDispute(tx, actor, dispute);
   await notify(tx, { event: 'DISPUTE_OPENED', userIds: [input.claimantUserId, respondentUserId], vars: { dispute: dispute.number }, link: `/account/disputes/${dispute.id}` });
   return dispute;
+}
+
+/**
+ * B2 (P0 #5): a dispute on a seller order whose funds were already released encumbers the affected amount at once.
+ * Allocation: the linked return's units (no second hold when the return already holds them), else the claimed
+ * amount, else the sub-order's remaining released funds — always capped (openHold).
+ */
+async function holdForDispute(tx: DbOrTx, actor: Actor, dispute: Dispute) {
+  const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, dispute.sellerOrderId!));
+  if (!so?.fundsReleasedAt) return;
+  const { openHold, returnUnitsValue } = await import('@/server/modules/finance/holds');
+  let requested: number | null = dispute.claimedAmount ?? null;
+  if (dispute.returnId) {
+    const [held] = await tx
+      .select({ id: sellerFinancialHolds.id })
+      .from(sellerFinancialHolds)
+      .where(and(eq(sellerFinancialHolds.returnId, dispute.returnId), eq(sellerFinancialHolds.status, 'ACTIVE')));
+    if (held) return;
+    requested = await returnUnitsValue(tx, dispute.returnId);
+  }
+  await openHold(tx, actor, { so, kind: 'DISPUTE', sourceId: dispute.id, disputeId: dispute.id, returnId: dispute.returnId, requested, reason: `نزاع #${dispute.number} بعد إتاحة المستحقات` });
 }
 
 function partyRole(actor: Actor, d: Dispute): 'CLAIMANT' | 'RESPONDENT' | 'ADMIN' | null {
@@ -200,6 +224,7 @@ export async function resolveDispute(actor: Actor, disputeId: string, input: z.i
     // Separation of duties: never decide a dispute you are a party to or whose store you belong to.
     if (actor.userId && (actor.userId === dispute.claimantUserId || actor.userId === dispute.respondentUserId)) throw forbidden('لا يمكنك الحكم في نزاع أنت طرف فيه');
     if (dispute.respondentSellerId) await assertNotSelfDealing(tx, actor, dispute.respondentSellerId);
+    if (dispute.respondentSellerId) await (await import('@/server/modules/finance/holds')).lockSellerFunds(tx, dispute.respondentSellerId);
     if (dispute.dealId) {
       const [dl] = await tx.select({ buyerId: externalDeals.buyerId, sellerUserId: externalDeals.sellerUserId }).from(externalDeals).where(eq(externalDeals.id, dispute.dealId));
       if (dl && (dl.buyerId === actor.userId || dl.sellerUserId === actor.userId)) throw forbidden('لا يمكنك الحكم في نزاع أنت طرف فيه');
@@ -235,6 +260,7 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
   const { refundableOf } = await import('@/server/modules/finance/refunds');
   const left = await refundableOf(tx, so);
   const refundAmount = decision === 'FULL_REFUND' ? left.total : decision === 'PARTIAL_REFUND' ? amount! : 0;
+  let createdReturnId: string | null = null;
 
   if (ret && ret.status === 'DISPUTED') {
     if (decision === 'FULL_REFUND' || decision === 'PARTIAL_REFUND') {
@@ -281,8 +307,10 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
         .values({ orderId: order.id, sellerOrderId: so.id, sellerId: so.sellerId, customerId: order.customerId, status: 'APPROVED', reason: 'OTHER', description: `بقرار النزاع #${dispute.number}: ${note}`.slice(0, 2000), decisionReason: note })
         .returning();
       await tx.insert(returnItems).values(remaining.map((i) => ({ returnId: r.id, orderItemId: i.id, quantity: i.quantity - i.returnedQuantity })));
+      createdReturnId = r.id;
     }
   }
+  await settleDisputeHolds(tx, actor, { so, dispute, decision, ret, createdReturnId });
   // The dispute (the hold) is resolved by this decision. A decision in the seller's favour on a shipped,
   // not-yet-accepted order establishes the receipt basis; the funds still need an Admin release.
   if ((decision === 'RELEASE_TO_SELLER' || decision === 'REJECT_CLAIM') && (so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE')) {
@@ -290,6 +318,33 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
     const now = new Date();
     await tx.update(sellerOrders).set({ status: 'DELIVERED', receiptBasis: 'DISPUTE_DECISION', entitledAt: now, deliveredAt: so.deliveryEventAt ?? now }).where(eq(sellerOrders.id, so.id));
   }
+}
+
+/**
+ * B2 (P0 #5): the decision settles ONLY this case's post-release holds.
+ *  - refund decisions: the refund request already replaced the case hold with its exact seller liability
+ *    (requestRefundTx → convertToRefundHold); anything left of this dispute is released;
+ *  - seller-side / replacement decisions: this dispute's holds (and its rejected return's) are released;
+ *  - RETURN_REQUIRED: the exposure continues with the return (a new return takes over the dispute's hold).
+ * No money moves here: refund approval and transfer remain separate Maker/Checker steps.
+ */
+async function settleDisputeHolds(
+  tx: DbOrTx,
+  actor: Actor,
+  c: { so: typeof sellerOrders.$inferSelect; dispute: Dispute; decision: DisputeDecision; ret: { id: string } | null; createdReturnId: string | null },
+) {
+  const holds = await import('@/server/modules/finance/holds');
+  const why = `قرار النزاع #${c.dispute.number}`;
+  if (c.decision === 'RETURN_REQUIRED') {
+    if (c.ret) return; // the existing return carries the case (its holds stay active)
+    if (c.createdReturnId) {
+      await holds.closeCaseHolds(tx, actor, { disputeId: c.dispute.id }, 'CONVERTED', `${why}: إرجاع مطلوب`);
+      await holds.openHold(tx, actor, { so: c.so, kind: 'RETURN', sourceId: c.createdReturnId, returnId: c.createdReturnId, requested: await holds.returnUnitsValue(tx, c.createdReturnId), reason: `${why}: إرجاع مطلوب` });
+    }
+    return;
+  }
+  const sellerSide = c.decision === 'REJECT_CLAIM' || c.decision === 'RELEASE_TO_SELLER';
+  await holds.releaseCaseHolds(tx, actor, { disputeId: c.dispute.id, returnId: sellerSide && c.ret ? c.ret.id : null }, why);
 }
 
 /**

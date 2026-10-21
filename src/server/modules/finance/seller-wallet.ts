@@ -27,6 +27,10 @@ export interface SourceBalances {
   reserved: number;
   /** Owed BY the seller (e.g. a refund after release exceeded the available balance). */
   liability: number;
+  /** B2: amount claimed by open post-release disputes/returns that NO money inside EDMN covers (not cash). */
+  disputeExposure: number;
+  /** B2: part of `reserved` (approved, not yet transferred) that currently backs open claims — frozen, not withdrawable. */
+  reservedBackingClaims: number;
   /** Already transferred to the seller (information). */
   paidOut: number;
 }
@@ -47,7 +51,7 @@ export interface SellerFinancialView {
   items: AttributedItem[];
 }
 
-const zero = (): SourceBalances => ({ pending: 0, held: 0, entitledAwaitingRelease: 0, available: 0, reserved: 0, liability: 0, paidOut: 0 });
+const zero = (): SourceBalances => ({ pending: 0, held: 0, entitledAwaitingRelease: 0, available: 0, reserved: 0, liability: 0, disputeExposure: 0, reservedBackingClaims: 0, paidOut: 0 });
 
 async function rows<T>(conn: DbOrTx, q: ReturnType<typeof sql>) {
   return (await conn.execute(q)).rows as T[];
@@ -64,7 +68,15 @@ export async function sellerFinancialView(conn: DbOrTx, userId: string): Promise
     const by = Object.fromEntries(bal.map((b) => [b.code, Number(b.balance)]));
     const m = { ...zero(), sellerId: seller.id, storeName: seller.store };
     const avail = by.SELLER_AVAILABLE ?? 0;
-    m.available = Math.max(0, avail);
+    // B2: post-release dispute/return holds — the part covered by AVAILABLE is held (not withdrawable); the part
+    // backed only by an approved, not-yet-transferred reservation is shown inside `reserved` (frozen); the rest is
+    // exposure (shown apart, never as cash).
+    const { sellerFundsPosition } = await import('./holds');
+    const funds = await sellerFundsPosition(conn, seller.id);
+    m.available = funds.withdrawable;
+    m.held += funds.securedByAvailable;
+    m.disputeExposure = funds.unsecuredExposure;
+    m.reservedBackingClaims = funds.securedByReservation;
     m.liability = Math.max(0, -avail);
     m.reserved = by.SELLER_WITHDRAWAL_RESERVED ?? 0;
     // Per sub-order pending (journal-attributed), classified by state — sums back to SELLER_PENDING.
