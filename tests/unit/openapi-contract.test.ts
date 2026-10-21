@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -64,4 +65,8 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       expect(readFileSync(join(process.cwd(), 'src/server/api/routes', `${f}.ts`), 'utf8')).not.toMatch(/@\/server\/db|drizzle-orm/);
     }
   });
+
+  it('the Flutter models in packages/edmn_api are generated from the committed contract (run: npx tsx scripts/generate-dart-api.ts)', () => {
+    expect(() => execFileSync('npx', ['tsx', 'scripts/generate-dart-api.ts', '--check'], { cwd: process.cwd(), stdio: 'pipe' })).not.toThrow();
+  }, 60_000);
 });
