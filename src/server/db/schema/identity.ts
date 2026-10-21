@@ -39,7 +39,12 @@ export const users = pgTable(
   ],
 );
 
-export const SESSION_SCOPES = ['WEB', 'ADMIN'] as const;
+/**
+ * WEB / ADMIN = browser cookie sessions. MOBILE / ADMIN_MOBILE = device-bound sessions of the EDMN Customer App and the
+ * EDMN Admin App (bearer access token + rotating refresh token, see src/server/auth/mobile.ts). Same table, same
+ * revocation and password-change rules: there is one session model, with two transports.
+ */
+export const SESSION_SCOPES = ['WEB', 'ADMIN', 'MOBILE', 'ADMIN_MOBILE'] as const;
 
 export const sessions = pgTable(
   'sessions',
@@ -187,6 +192,10 @@ export const auditLogs = pgTable(
     ip: text(),
     userAgent: text(),
     requestId: text(),
+    /** Transport the action came through: WEB | MOBILE | ADMIN_MOBILE | SYSTEM (null on rows written before Phase 1). */
+    channel: text(),
+    /** Mobile device id (mobile_devices.id) for actions taken from the mobile apps. */
+    deviceId: uuid(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -240,13 +249,77 @@ export const deploymentEnvironment = pgTable(
 );
 
 /* ───────── Client idempotency keys (forms embed a key; retries return the original result) ───────── */
+export const IDEMPOTENCY_STATUSES = ['IN_PROGRESS', 'COMPLETED'] as const;
+
+/**
+ * Request-level idempotency for mobile API mutations (Phase 1). scope = "<actor or device>:<METHOD path>", key = the
+ * client's Idempotency-Key header. A replay with the same key and the same request returns the stored response; the
+ * same key with a different request is refused. Domain-level keys (checkoutKey, clientKey, journal idempotency keys)
+ * remain the authoritative money-safety mechanism; this table never replaces them.
+ */
 export const idempotencyKeys = pgTable(
   'idempotency_keys',
   {
     scope: text().notNull(),
     key: text().notNull(),
     resultRef: text(),
+    requestHash: text(),
+    status: text({ enum: IDEMPOTENCY_STATUSES }),
+    responseStatus: integer(),
+    responseBody: jsonb(),
+    expiresAt: ts(),
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.scope, t.key] })],
+);
+
+export const MOBILE_APPS = ['CUSTOMER', 'ADMIN'] as const;
+export const MOBILE_PLATFORMS = ['IOS', 'ANDROID'] as const;
+
+/**
+ * A mobile app installation bound to one session at a time. The client-generated installation id is never trusted as
+ * an identity: it only groups sessions, rate limits and audit rows per device. Revoking a device revokes its session.
+ */
+export const mobileDevices = pgTable(
+  'mobile_devices',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    app: text({ enum: MOBILE_APPS }).notNull(),
+    installationId: text().notNull(),
+    platform: text({ enum: MOBILE_PLATFORMS }).notNull(),
+    deviceName: text(),
+    appVersion: text(),
+    sessionId: text().references(() => sessions.id, { onDelete: 'set null' }),
+    createdAt: createdAt(),
+    lastSeenAt: ts().notNull().defaultNow(),
+    revokedAt: ts(),
+  },
+  (t) => [
+    index('mobile_devices_user_idx').on(t.userId),
+    uniqueIndex('mobile_devices_installation_uq').on(t.userId, t.app, t.installationId),
+    enumCheck('mobile_devices_app_chk', t.app, MOBILE_APPS),
+    enumCheck('mobile_devices_platform_chk', t.platform, MOBILE_PLATFORMS),
+  ],
+);
+
+/**
+ * Rotating refresh tokens (only the SHA-256 is stored). The family is the session: presenting a refresh token that was
+ * already rotated revokes the whole session (token theft detection).
+ */
+export const mobileRefreshTokens = pgTable(
+  'mobile_refresh_tokens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    sessionId: text()
+      .notNull()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    tokenHash: text().notNull(),
+    createdAt: createdAt(),
+    expiresAt: ts().notNull(),
+    usedAt: ts(),
+  },
+  (t) => [uniqueIndex('mobile_refresh_tokens_hash_uq').on(t.tokenHash), index('mobile_refresh_tokens_session_idx').on(t.sessionId)],
 );

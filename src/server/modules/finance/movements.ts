@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { hasPermission, requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import { hasPermission, requirePermission, requireStepUp, type Actor, requireAnyPermission } from '@/server/core/actor';
 import type { Permission } from '@/server/rbac/permissions';
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -133,7 +133,8 @@ export async function cancelMovementRequest(actor: Actor, requestId: string) {
   });
 }
 
-export async function openMovementRequests(entityIds?: string[]) {
+export async function openMovementRequests(actor: Actor, entityIds?: string[]) {
+  requireAnyPermission(actor, ['finance.view', 'finance.movement.request', 'refunds.pay', 'refunds.approve', 'deals.payout']);
   return db
     .select({ r: financialMovementRequests, maker: users.fullName })
     .from(financialMovementRequests)

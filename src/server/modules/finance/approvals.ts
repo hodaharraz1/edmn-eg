@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import { requirePermission, requireStepUp, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { enforce } from '@/server/auth/rate-limit';
 import { forbidden, invalidState, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -145,6 +145,7 @@ export async function approvalsFor(entityType: string, entityIds: string[]) {
     .orderBy(desc(financialApprovals.createdAt));
 }
 
-export async function recentApprovals(limit = 50, offset = 0) {
+export async function recentApprovals(actor: Actor, limit = 50, offset = 0) {
+  requireAnyPermission(actor, ['finance.view', 'finance.controls']);
   return db.select().from(financialApprovals).orderBy(desc(financialApprovals.createdAt), desc(financialApprovals.id)).limit(limit).offset(offset);
 }

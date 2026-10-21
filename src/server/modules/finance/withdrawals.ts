@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { withdrawalMachine } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireSeller, requireStepUp, SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
+import { requirePermission, requireSeller, requireStepUp, SYSTEM_ACTOR, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -848,7 +848,8 @@ export async function markDealPayoutPaid(actor: Actor, payoutId: string, referen
   throw invalidState('مستحقات الصفقات المحمية تُصرف فقط عبر طلب سحب من البائع إلى وجهة صرف متحقق منها');
 }
 
-export async function withdrawalQueue(statuses: string[], limit = 50, offset = 0) {
+export async function withdrawalQueue(actor: Actor, statuses: string[], limit = 50, offset = 0) {
+  requireAnyPermission(actor, ['withdrawals.view']);
   return db
     .select({ w: withdrawalRequests, seller: { id: sellers.id, legalName: sellers.legalName, status: sellers.status, payoutHoldUntil: sellers.payoutHoldUntil }, requester: users.fullName })
     .from(withdrawalRequests)

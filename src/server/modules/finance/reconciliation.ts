@@ -1,6 +1,6 @@
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, type Actor } from '@/server/core/actor';
+import { requirePermission, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { conflict, DomainError, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
@@ -155,7 +155,8 @@ export async function setReconState(actor: Actor, externalId: string, to: 'UNMAT
   });
 }
 
-export async function reconQueue(states: ReconState[], limit = 50, offset = 0) {
+export async function reconQueue(actor: Actor, states: ReconState[], limit = 50, offset = 0) {
+  requireAnyPermission(actor, ['reconciliation.manage', 'finance.view']);
   return db
     .select()
     .from(externalTransactions)

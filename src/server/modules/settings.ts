@@ -148,6 +148,9 @@ export const SETTINGS_SCHEMA = {
    * Rules without an override use their documented operational default (see alerts/rules.ts).
    */
   'alerts.rules': z.record(z.string(), z.object({ preHours: z.number().min(0).max(720).optional(), cooldownHours: z.number().min(1).max(720).optional(), agingHours: z.number().min(0).max(2160).optional(), enabled: z.boolean().optional() })).default({}),
+  /** Mobile apps (Phase 1): builds below these versions are told to update (GET /api/v1/app/config). */
+  'mobile.minVersion.customer': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  'mobile.minVersion.admin': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -217,6 +220,12 @@ export async function getAllSettings(conn: DbOrTx = db): Promise<{ [K in Setting
     out[key] = parsed.success ? parsed.data : settingDefault(key);
   }
   return out as { [K in SettingKey]: SettingValue<K> };
+}
+
+/** Admin settings screen read: every setting including sensitive ones, behind settings.manage. */
+export async function adminSettingsView(actor: Actor) {
+  requirePermission(actor, 'settings.manage');
+  return getAllSettings();
 }
 
 export async function updateSetting(actor: Actor, key: SettingKey, value: unknown, reason: string): Promise<void> {

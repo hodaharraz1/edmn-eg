@@ -14,7 +14,7 @@ export const metadata = { title: 'طلبات إغلاق الحسابات' };
 export default async function Closures() {
   const { actor, allowed } = await adminWith(['customers.manage', 'customers.view']);
   if (!allowed) return <Forbidden />;
-  const rows = await pendingClosures();
+  const rows = await pendingClosures(actor);
   const withBlockers = await Promise.all(rows.map(async (r) => ({ ...r, blockers: await closureBlockers(db, r.r.userId) })));
   const can = hasPermission(actor, 'customers.manage');
   return (

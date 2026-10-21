@@ -3,6 +3,7 @@ import { runAlertSweep } from '@/server/modules/alerts/engine';
 import { logger, safeErrorMessage } from '@/server/core/logger';
 import { db } from '@/server/db/client';
 import { jobs } from '@/server/db/schema';
+import { pruneApiIdempotencyKeys } from '@/server/api/idempotency';
 import { pruneRateLimits } from '@/server/auth/rate-limit';
 import { expireOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
 import { flagMissingDeliveryEvents, flagMissingDeliveryEvidence, flagSellerSlaBreaches, processBuyerResponseTimeouts } from '@/server/modules/commerce/fulfilment';
@@ -42,6 +43,7 @@ export const SCHEDULE: ScheduledJob[] = [
   // Message push retries + delayed email fallback (re-checks read state, preferences and cooldown first).
   { name: 'notify.dispatch', everyMs: 60_000, run: () => dispatchDeliveries() },
   { name: 'rate_limits.prune', everyMs: 6 * 60 * 60_000, run: () => pruneRateLimits() },
+  { name: 'idempotency.prune', everyMs: 6 * 60 * 60_000, run: async () => void (await pruneApiIdempotencyKeys()) },
   // Proactive alerts: notifications only — never moves money or changes a business record.
   { name: 'alerts.sweep', everyMs: 5 * 60_000, run: () => runAlertSweep() },
   { name: 'outbound.redact_secrets', everyMs: 10 * 60_000, run: () => redactExpiredSecrets() },

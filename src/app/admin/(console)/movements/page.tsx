@@ -14,7 +14,7 @@ const linkFor = (entityType: string, entityId: string, kind: string) =>
 export default async function Movements() {
   const { actor, allowed } = await adminWith(['finance.view', 'finance.movement.request']);
   if (!allowed) return <Forbidden />;
-  const rows = await openMovementRequests();
+  const rows = await openMovementRequests(actor);
   return (
     <div className="space-y-4">
       <PageHeader title="حركات مالية بانتظار معتمد" description="كل حركة مالية فعلية تحتاج شخصين مختلفين: منشئ طلبها، ومعتمد آخر ينفذها من صفحة الكيان نفسه. لا يوجد حد أدنى للمبلغ يعفي من ذلك." />

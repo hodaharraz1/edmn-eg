@@ -19,7 +19,7 @@ export default async function Withdrawals(props: PageProps<'/admin/withdrawals'>
   const { actor, allowed } = await adminWith('withdrawals.view');
   if (!allowed) return <Forbidden />;
   const tab = String((await props.searchParams).tab ?? 'open');
-  const rows = await withdrawalQueue(GROUPS[tab] ?? GROUPS.open, 200);
+  const rows = await withdrawalQueue(actor, GROUPS[tab] ?? GROUPS.open, 200);
   const now = new Date();
   const live = await realMoneyEnabled();
   const sla = await getSetting('withdrawals.slaBusinessHours');

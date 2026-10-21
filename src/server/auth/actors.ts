@@ -11,6 +11,8 @@ export interface RequestContext {
   requestId?: string;
   sessionId?: string;
   stepUpAt?: Date | null;
+  channel?: 'WEB' | 'MOBILE' | 'ADMIN_MOBILE' | null;
+  deviceId?: string | null;
 }
 
 export function customerActor(userId: string, ctx: RequestContext = {}): Actor {

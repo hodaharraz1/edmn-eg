@@ -23,6 +23,9 @@ const LOCK_MINUTES = 15;
 export interface RequestMeta {
   ip?: string | null;
   userAgent?: string | null;
+  /** Transport attribution for audit rows (Phase 1). Absent = WEB (unchanged behaviour). */
+  channel?: 'WEB' | 'MOBILE' | 'ADMIN_MOBILE' | null;
+  deviceId?: string | null;
 }
 
 const anon = (meta: RequestMeta): Actor => ({ type: 'ANONYMOUS', userId: null, permissions: new Set(), ...meta });
@@ -34,7 +37,7 @@ export const registerSchema = z.object({
   password: z.string().min(1),
 });
 
-export async function register(input: z.input<typeof registerSchema>, meta: RequestMeta) {
+export async function register(input: z.input<typeof registerSchema>, meta: RequestMeta, scope: 'WEB' | 'MOBILE' = 'WEB') {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) throw validation('راجع البيانات اللي كتبتها', z.flattenError(parsed.error).fieldErrors as Record<string, string[]>);
   const { fullName, email, password } = parsed.data;
@@ -54,16 +57,19 @@ export async function register(input: z.input<typeof registerSchema>, meta: Requ
   return db.transaction(async (tx) => {
     const [user] = await tx.insert(users).values({ fullName, email, phone, passwordHash }).returning();
     await audit(tx, { ...anon(meta), userId: user.id, type: 'CUSTOMER' }, { action: 'auth.register', entityType: 'user', entityId: user.id });
-    const token = await createSession(tx, user.id, 'WEB', meta);
+    const token = await createSession(tx, user.id, scope, meta);
     return { user, token };
   });
 }
 
-type Scope = 'WEB' | 'ADMIN';
+/** WEB / ADMIN = browser cookie sessions; MOBILE / ADMIN_MOBILE = EDMN Customer / Admin App device sessions. */
+export type Scope = 'WEB' | 'ADMIN' | 'MOBILE' | 'ADMIN_MOBILE';
+/** Staff scopes: staff-only accounts, mandatory MFA, idle timeout, short absolute lifetime. */
+export const isStaffScope = (s: Scope) => s === 'ADMIN' || s === 'ADMIN_MOBILE';
 
 export async function createSession(conn: Parameters<typeof audit>[0], userId: string, scope: Scope, meta: RequestMeta) {
   const token = randomToken(32);
-  const ttlHours = scope === 'ADMIN' ? env().ADMIN_SESSION_TTL_HOURS : env().SESSION_TTL_HOURS;
+  const ttlHours = isStaffScope(scope) ? env().ADMIN_SESSION_TTL_HOURS : env().SESSION_TTL_HOURS;
   await conn.insert(sessions).values({
     id: sha256(token),
     // Application clock (not the DB transaction start) so it is always >= a passwordChangedAt set in the same flow.
@@ -81,10 +87,12 @@ export async function createSession(conn: Parameters<typeof audit>[0], userId: s
  * Credential login. Always issues a brand-new session id (prevents session fixation).
  * For ADMIN scope the session starts un-elevated (mfaVerifiedAt = null) until TOTP is verified.
  */
-export async function login(identifier: string, password: string, scope: Scope, meta: RequestMeta) {
+export async function login(identifier: string, password: string, scope: Scope, meta: RequestMeta, opts: { ipLimit?: number } = {}) {
   const ident = identifier.trim().toLowerCase().slice(0, 254);
   const phone = normalizeEgyptMobile(ident);
-  await enforce(`login-ip:${meta.ip ?? 'unknown'}`, 30, 900);
+  // Mobile networks put many customers behind one carrier IP (CGNAT): the mobile API passes a higher per-IP ceiling and
+  // adds its own per-device limit; the per-identifier limit below is unchanged for every transport.
+  await enforce(`login-ip:${meta.ip ?? 'unknown'}`, opts.ipLimit ?? 30, 900);
   // Key on the canonical identifier so "010-1234-5678", "+20 10…" and Arabic digits share one bucket.
   await enforce(`login-id:${phone ?? ident}`, 10, 900);
   if (password.length > 256) throw new DomainError('UNAUTHENTICATED', 'بيانات الدخول غير صحيحة');
@@ -119,14 +127,14 @@ export async function login(identifier: string, password: string, scope: Scope, 
     throw generic;
   }
   if (user.status !== 'ACTIVE') throw new DomainError('FORBIDDEN', 'الحساب ده مش مفعّل. تواصل مع الدعم');
-  if (scope === 'ADMIN' && !user.isStaff) throw generic; // one hash already ran: equal timing
+  if (isStaffScope(scope) && !user.isStaff) throw generic; // one hash already ran: equal timing
   // Production never accepts a credential that is public in this repository (demo / test fixtures).
   if (isProductionDeployment() && PUBLIC_FIXTURE_PASSWORDS.includes(password)) throw generic;
   return db.transaction(async (tx) => {
     await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
     const token = await createSession(tx, user.id, scope, meta);
-    await audit(tx, { ...anon(meta), userId: user.id, type: scope === 'ADMIN' ? 'ADMIN' : 'CUSTOMER' }, {
-      action: scope === 'ADMIN' ? 'auth.admin_login_password' : 'auth.login',
+    await audit(tx, { ...anon(meta), userId: user.id, type: isStaffScope(scope) ? 'ADMIN' : 'CUSTOMER' }, {
+      action: isStaffScope(scope) ? 'auth.admin_login_password' : 'auth.login',
       entityType: 'user',
       entityId: user.id,
     });
@@ -142,7 +150,16 @@ export function adminIdleTimeoutMs(raw: Record<string, string | undefined> = pro
 
 export async function resolveSession(token: string | undefined | null, scope: Scope) {
   if (!token || token.length < 20 || token.length > 100) return null;
-  const id = sha256(token);
+  return resolveSessionById(sha256(token), scope);
+}
+
+/**
+ * Same checks as resolveSession, by session id (sha256 of the session token). Used by the mobile transport, whose signed
+ * access token carries the session id instead of the raw session token. Revocation, expiry, user status, password
+ * change and staff idle timeout apply identically to every transport.
+ */
+export async function resolveSessionById(id: string, scope: Scope) {
+  if (!/^[a-f0-9]{64}$/.test(id)) return null;
   const [row] = await db
     .select({ session: sessions, user: users })
     .from(sessions)
@@ -152,7 +169,7 @@ export async function resolveSession(token: string | undefined | null, scope: Sc
   if (row.user.passwordChangedAt && row.session.createdAt < row.user.passwordChangedAt) return null;
   // Batch 2: staff sessions (Admin / Finance / KYC reviewers) end after inactivity; the session is revoked, not just hidden.
   // lastSeenAt is touched every 5 minutes, so the effective timeout is the configured value + ≤ 5 minutes.
-  if (scope === 'ADMIN' && Date.now() - row.session.lastSeenAt.getTime() > adminIdleTimeoutMs()) {
+  if (isStaffScope(scope) && Date.now() - row.session.lastSeenAt.getTime() > adminIdleTimeoutMs()) {
     await db.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.id, id));
     return null;
   }

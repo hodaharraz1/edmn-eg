@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { refundMachine, type RefundStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireStepUp, type Actor } from '@/server/core/actor';
+import { requirePermission, requireStepUp, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { resolveAttribution, stageOfSellerOrder } from '@/server/modules/pricing/refund-policy';
 import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
@@ -581,7 +581,8 @@ export async function revokeRefund(actor: Actor, refundId: string, input: { reas
 
 /* ───────── Reads ───────── */
 
-export async function refundQueue(statuses: RefundStatus[], limit = 50, offset = 0) {
+export async function refundQueue(actor: Actor, statuses: RefundStatus[], limit = 50, offset = 0) {
+  requireAnyPermission(actor, ['refunds.pay', 'refunds.approve', 'deals.payout', 'finance.view']);
   return db
     .select({ r: refunds, customer: users.fullName, orderNumber: orders.number, suffix: sellerOrders.suffix })
     .from(refunds)
@@ -598,7 +599,8 @@ export async function refundsForSellerOrder(conn: DbOrTx, soId: string) {
   return conn.select().from(refunds).where(eq(refunds.sellerOrderId, soId)).orderBy(desc(refunds.createdAt));
 }
 
-export async function refundDetail(refundId: string) {
+export async function refundDetail(actor: Actor, refundId: string) {
+  requireAnyPermission(actor, ['refunds.pay', 'refunds.approve', 'deals.payout', 'finance.view']);
   const [r] = await db.select().from(refunds).where(eq(refunds.id, refundId));
   if (!r) throw notFound('الاسترداد');
   const lines = await db

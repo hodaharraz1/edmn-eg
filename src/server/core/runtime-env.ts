@@ -46,6 +46,9 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'DATA_ENCRYPTION_KEY', classification: 'REQUIRED', secret: true, purpose: 'AES-256-GCM primary key (national IDs, payout details, TOTP)' },
   { name: 'DATA_ENCRYPTION_KEY_ID', classification: 'OPTIONAL', secret: false, purpose: 'Key id of the primary key; when set, new ciphertexts are written as v2.<kid>' },
   { name: 'DATA_ENCRYPTION_KEYS_PREVIOUS', classification: 'OPTIONAL', secret: true, purpose: 'Decrypt-only previous keys "kid:base64,…" during a rotation' },
+  // Phase 1 (mobile): dedicated key material, separate from login/session and data-at-rest keys (src/server/core/keys.ts).
+  { name: 'DELIVERY_OTP_KEY', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Protected Deal delivery OTP HMAC + buyer sealed copy (never SESSION_SECRET)' },
+  { name: 'MOBILE_TOKEN_KEY', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Signs EDMN mobile app access tokens (never SESSION_SECRET)' },
   { name: 'EDMN_ENVIRONMENT', classification: 'REQUIRED', secret: false, requiredIn: HOSTED, purpose: 'Deployment kind (never implied)' },
   { name: 'APP_URL', classification: 'REQUIRED', secret: false, requiredIn: HOSTED, purpose: 'Public https URL' },
   { name: 'CRON_SECRET', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Authenticates the scheduler (/api/cron/tick)' },
@@ -133,6 +136,15 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
     // An ephemeral serverless filesystem would silently lose National ID scans and payment proofs.
     if (raw.VERCEL && (raw.STORAGE_DRIVER ?? 'local') === 'local') fail('STORAGE_DRIVER=local is ephemeral on Vercel (use database or an object store)');
     if (present('CRON_SECRET') && raw.CRON_SECRET!.length < 24) fail('CRON_SECRET is too short (≥ 24 chars)');
+    // Key separation (Phase 1): each dedicated key is long, not a placeholder and never equal to another secret.
+    for (const n of ['DELIVERY_OTP_KEY', 'MOBILE_TOKEN_KEY']) {
+      if (!present(n)) continue;
+      if (raw[n]!.length < 32) errors.push(`${n} is too short (≥ 32 chars)`);
+      if (looksPlaceholder(raw[n]!)) errors.push(`${n} is a public/placeholder value`);
+      for (const other of ['SESSION_SECRET', 'DATA_ENCRYPTION_KEY', 'CRON_SECRET', 'DELIVERY_OTP_KEY', 'MOBILE_TOKEN_KEY']) {
+        if (other !== n && present(other) && raw[other] === raw[n]) errors.push(`${n} must be a different secret from ${other}`);
+      }
+    }
   }
   if (kind === 'PRODUCTION') {
     if (raw.MAIL_DRIVER !== 'smtp') errors.push('MAIL_DRIVER=smtp is required in PRODUCTION');

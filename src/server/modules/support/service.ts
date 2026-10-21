@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { TICKET_TYPES, ticketMachine, type TicketStatus } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
-import { hasPermission, requirePermission, requireStepUp, requireUser, type Actor } from '@/server/core/actor';
+import { hasPermission, requirePermission, requireStepUp, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { supportMessages, supportSlaCycles, supportTickets, users } from '@/server/db/schema';
@@ -150,7 +150,8 @@ export async function myTickets(userId: string) {
   return db.select().from(supportTickets).where(eq(supportTickets.requesterUserId, userId)).orderBy(desc(supportTickets.updatedAt));
 }
 
-export async function ticketQueue(statuses: TicketStatus[]) {
+export async function ticketQueue(actor: Actor, statuses: TicketStatus[]) {
+  requireAnyPermission(actor, ['support.manage']);
   return db
     .select({ t: supportTickets, requester: users.fullName })
     .from(supportTickets)
