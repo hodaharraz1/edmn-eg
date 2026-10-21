@@ -11,6 +11,7 @@ import { requestRefundTx } from '@/server/modules/finance/refunds';
 import { notify } from '@/server/modules/notifications/notify';
 import { getSetting } from '@/server/modules/settings';
 import { storeUpload } from '@/server/storage/uploads';
+import { formatEGP } from '@/lib/format';
 import { PROTECTED_REASONS, type ReturnPolicySnapshot } from '@/domain/return-policy';
 import { parse, requireReason, transition } from '../_shared';
 
@@ -199,24 +200,43 @@ export async function acceptReturnRefund(actor: Actor, returnId: string, input: 
   });
 }
 
-export async function acceptReturnRefundTx(tx: DbOrTx, actor: Actor, r: Return, input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string; shippingAmount?: number }) {
+export async function acceptReturnRefundTx(
+  tx: DbOrTx,
+  actor: Actor,
+  r: Return,
+  input: { amount?: number; includeShipping?: boolean; restock?: boolean; note?: string; shippingAmount?: number; authorizedAmount?: number },
+) {
   const rItems = await tx.select().from(returnItems).where(eq(returnItems.returnId, r.id));
   const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId)).for('update');
   const { refundableOf } = await import('@/server/modules/finance/refunds');
   const left = await refundableOf(tx, so);
-  const shipping = input.shippingAmount ?? (input.includeShipping ? left.shipping : 0);
-  const refund = await requestRefundTx(tx, actor, {
-    sellerOrderId: r.sellerOrderId,
-    sourceType: 'RETURN',
-    sourceId: r.id,
-    items: rItems.map((ri) => ({ orderItemId: ri.orderItemId, quantity: ri.quantity })),
-    shippingAmount: shipping,
-    reason: `إرجاع #${r.number}${input.note ? ` — ${input.note}` : ''}`,
-  });
-  if (input.amount !== undefined && input.amount !== refund.amount) {
-    throw validation(`مبلغ الاسترداد للوحدات المرتجعة ${refund.amount / 100} ج.م (محسوب من سعر الشراء المسجل)`);
+  const reason = `إرجاع #${r.number}${input.note ? ` — ${input.note}` : ''}`;
+  let refund;
+  if (input.authorizedAmount !== undefined) {
+    // An authorized decision (dispute PARTIAL_REFUND) fixes the amount: refund EXACTLY that — principal only,
+    // never replaced by the returned units' value, never inflated by shipping or fees. Capped by the returned units.
+    const amount = input.authorizedAmount;
+    const { items: unitsValue } = await returnRefundCeiling(tx, r, false);
+    if (!Number.isSafeInteger(amount) || amount <= 0) throw validation('المبلغ المقرر للاسترداد غير صحيح');
+    if (amount > unitsValue) throw validation(`المبلغ المقرر أكبر من قيمة الوحدات المرتجعة (${formatEGP(unitsValue)})`);
+    const sellerFee = Math.min(left.sellerFee, Math.round((left.sellerFee * amount) / Math.max(1, left.principal)));
+    refund = await requestRefundTx(tx, actor, { sellerOrderId: r.sellerOrderId, sourceType: 'RETURN', sourceId: r.id, principalAmount: amount, shippingAmount: 0, buyerFeeRefund: 0, sellerFeeReversal: sellerFee, reason });
+    if (refund.amount !== amount) throw invalidState('مبلغ الاسترداد الناتج لا يطابق المبلغ المقرر. لم يتم إنشاء أي استرداد');
+  } else {
+    const shipping = input.shippingAmount ?? (input.includeShipping ? left.shipping : 0);
+    refund = await requestRefundTx(tx, actor, {
+      sellerOrderId: r.sellerOrderId,
+      sourceType: 'RETURN',
+      sourceId: r.id,
+      items: rItems.map((ri) => ({ orderItemId: ri.orderItemId, quantity: ri.quantity })),
+      shippingAmount: shipping,
+      reason,
+    });
+    if (input.amount !== undefined && input.amount !== refund.amount) {
+      throw validation(`مبلغ الاسترداد للوحدات المرتجعة ${refund.amount / 100} ج.م (محسوب من سعر الشراء المسجل)`);
+    }
   }
-  await moveReturn(tx, actor, r, 'REFUND_PENDING', { refundAmount: refund.amount, includeShipping: shipping > 0, inspectionNote: input.note ?? r.inspectionNote }, input.note);
+  await moveReturn(tx, actor, r, 'REFUND_PENDING', { refundAmount: refund.amount, includeShipping: refund.shippingAmount > 0, inspectionNote: input.note ?? r.inspectionNote }, input.note);
   for (const ri of rItems) {
     const [it] = await tx.select().from(orderItems).where(eq(orderItems.id, ri.orderItemId)).for('update');
     await tx.update(orderItems).set({ returnedQuantity: it.returnedQuantity + ri.quantity }).where(eq(orderItems.id, it.id));

@@ -23,7 +23,7 @@ export const metadata = { title: 'المستردات ومستحقات الصفق
 
 const TABS: { key: string; label: string; statuses: RefundStatus[] }[] = [
   { key: 'requested', label: 'بانتظار الاعتماد', statuses: ['REQUESTED', 'UNDER_REVIEW'] },
-  { key: 'payout', label: 'معتمدة — بانتظار الصرف', statuses: ['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'] },
+  { key: 'payout', label: 'معتمدة — بانتظار الصرف', statuses: ['APPROVED', 'PROCESSING', 'FAILED', 'TRANSFER_UNCERTAIN', 'PENDING'] },
   { key: 'done', label: 'مصروفة', statuses: ['COMPLETED', 'PAID'] },
   { key: 'closed', label: 'مرفوضة/ملغاة', statuses: ['REJECTED', 'CANCELLED'] },
 ];
@@ -100,19 +100,41 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
                   </div>
                 </details>
               )}
-              {['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status) && (canPay || canApprove || canOverride) && (
+              {['APPROVED', 'PROCESSING', 'FAILED', 'TRANSFER_UNCERTAIN', 'PENDING'].includes(r.status) && (canPay || canApprove || canOverride) && (
                 <div className="mt-3 space-y-2 border-t border-line pt-3">
-                  {canPay && <ActionForm action={refundDecisionAction} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                  {(r.status === 'FAILED' || r.status === 'TRANSFER_UNCERTAIN') && (
+                    <Alert tone="warning">
+                      {r.status === 'FAILED'
+                        ? 'محاولة التحويل اتسجلت فاشلة — ممنوع أي تحويل جديد قبل ما شخص تاني يثبت بالدليل إن التحويل ما خرجش.'
+                        : 'نتيجة التحويل غير مؤكدة — ممنوع أي تحويل جديد. لو التحويل خرج فعلًا سجّل الصرف بمرجعه، ولو ما خرجش شخص تاني يثبت ده بالدليل.'}
+                    </Alert>
+                  )}
+                  {canPay && r.status !== 'FAILED' && <ActionForm action={refundDecisionAction} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                     <input type="hidden" name="op" value="pay" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
                     <Input name="reference" required minLength={3} placeholder="مرجع التحويل" className="ltr" aria-label="مرجع التحويل" />
                     <FileInput name="proof" label="إثبات (اختياري)" accept="image/jpeg,image/png,image/webp,application/pdf" />
                     <SubmitButton size="sm">تسجيل صرف {formatEGP(r.amount)}</SubmitButton>
                   </ActionForm>}
-                  {canPay && r.status !== 'FAILED' && (
+                  {canPay && ['APPROVED', 'PROCESSING', 'PENDING'].includes(r.status) && (
                     <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="op" value="failed" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
                       <Input name="reason" required minLength={3} placeholder="سبب فشل التحويل" aria-label="سبب فشل التحويل" className="w-56" />
                       <SubmitButton size="sm" variant="outline">تسجيل فشل التحويل (المبلغ يفضل مستحق)</SubmitButton>
+                    </ActionForm>
+                  )}
+                  {canPay && ['APPROVED', 'PROCESSING', 'PENDING'].includes(r.status) && (
+                    <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2" data-testid="refund-uncertain">
+                      <input type="hidden" name="op" value="uncertain" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
+                      <Input name="reason" required minLength={3} placeholder="سبب عدم التأكد من التحويل" aria-label="سبب عدم التأكد من التحويل" className="w-56" />
+                      <SubmitButton size="sm" variant="outline">نتيجة التحويل غير مؤكدة (يوقف أي صرف جديد)</SubmitButton>
+                    </ActionForm>
+                  )}
+                  {canApprove && (r.status === 'FAILED' || r.status === 'TRANSFER_UNCERTAIN') && (
+                    <ActionForm action={refundDecisionAction} className="flex flex-wrap items-end gap-2" data-testid="refund-resolve-not-sent">
+                      <input type="hidden" name="op" value="resolve_not_sent" /><input type="hidden" name="refundId" value={r.id} /><input type="hidden" name="back" value={back} />
+                      <Input name="evidence" required minLength={3} placeholder="دليل عدم خروج التحويل (كشف/رد المزود)" aria-label="دليل عدم خروج التحويل" className="w-56" />
+                      <Input name="reason" required minLength={5} placeholder="سبب الحسم" aria-label="سبب الحسم" className="w-48" />
+                      <SubmitButton size="sm" variant="outline">إثبات أن التحويل لم يخرج (2FA)</SubmitButton>
                     </ActionForm>
                   )}
                   {r.destinationReapprovalRequired && canApprove && r.destinationChangedBy !== actor.userId && (

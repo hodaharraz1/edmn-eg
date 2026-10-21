@@ -38,7 +38,7 @@ export default async function ApprovalCenter() {
     (select count(*) from payments where status in ('PAYMENT_SUBMITTED','UNDER_REVIEW')) payments,
     (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) withdrawals,
     (select coalesce(sum(amount),0) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) withdrawals_amount,
-    (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')) refunds,
+    (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','TRANSFER_UNCERTAIN','PENDING')) refunds,
     (select count(*) from deal_payouts where status = 'PENDING') deal_payouts,
     (select count(*) from seller_orders where status = 'DELIVERED' and funds_released_at is null) + (select count(*) from external_deals where status in ('BUYER_CONFIRMED_RECEIPT','ENTITLED_AWAITING_RELEASE')) releases,
     (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments,

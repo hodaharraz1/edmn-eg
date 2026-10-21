@@ -152,7 +152,7 @@ describe('cancellations & refunds', () => {
 });
 
 async function outstandingRefunds() {
-  const r = await db.execute<{ s: string }>(sql`select coalesce(sum(amount),0) s from refunds where status in ('PENDING','APPROVED','PROCESSING','FAILED')`);
+  const r = await db.execute<{ s: string }>(sql`select coalesce(sum(amount),0) s from refunds where status in ('PENDING','APPROVED','PROCESSING','FAILED','TRANSFER_UNCERTAIN')`);
   return Number(r.rows[0].s);
 }
 

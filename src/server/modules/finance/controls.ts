@@ -35,27 +35,30 @@ export async function assertFinancialSafety(conn: DbOrTx): Promise<void> {
   if (fp.status === 'VIOLATION' || (fp.status === 'UNVERIFIED' && fp.runtime === 'PRODUCTION')) {
     throw new DomainError('INVALID_STATE', 'الحركات المالية موقوفة: إعدادات البيئة (قاعدة البيانات/التخزين/مفاتيح التشفير) غير متطابقة. مفيش أي حركة اتعملت.');
   }
-  let globalPaused: boolean;
-  try {
-    globalPaused = await getSetting('killswitch.global', conn);
-  } catch {
-    globalPaused = true;
-  }
-  if (globalPaused) throw new DomainError('INVALID_STATE', 'كل الحركات المالية الجديدة موقوفة مؤقتًا (إيقاف طوارئ من الإدارة). مفيش أي حركة اتعملت — الدخول والدعم والسجل والنزاعات شغالين عادي.');
+  if (await killSwitchEngaged(conn, 'killswitch.global')) throw new DomainError('INVALID_STATE', 'كل الحركات المالية الجديدة موقوفة مؤقتًا (إيقاف طوارئ من الإدارة). مفيش أي حركة اتعملت — الدخول والدعم والسجل والنزاعات شغالين عادي.');
   const { assertLedgerHealthy } = await import('./ledger-health');
   await assertLedgerHealthy(conn);
 }
 
-/** Throws when a financial kill switch is engaged. Fails CLOSED: an unreadable switch counts as paused. */
+/**
+ * Strict kill-switch read. Only an explicit stored JSON `false` means "running": a missing row, any other value
+ * (malformed, string, null…) or a read failure means PAUSED. Safety configuration never falls back to a lenient
+ * default (migration 0020 stores the explicit running state for every switch).
+ */
+export async function killSwitchEngaged(conn: DbOrTx, key: KillSwitch): Promise<boolean> {
+  try {
+    // Decided in SQL on the stored JSON itself: the driver's jsonb mapping would turn a JSON string "false" into false.
+    const r = await conn.execute<{ running: unknown }>(sql`select (jsonb_typeof(value) = 'boolean' and value = 'false'::jsonb) running from system_settings where key = ${key}`);
+    return r.rows[0]?.running !== true;
+  } catch {
+    return true;
+  }
+}
+
+/** Throws when a financial kill switch is engaged. Fails CLOSED: a missing/unreadable/ambiguous switch counts as paused. */
 export async function assertNotPaused(conn: DbOrTx, key: KillSwitch): Promise<void> {
   await assertFinancialSafety(conn);
-  let paused: boolean;
-  try {
-    paused = await getSetting(key, conn);
-  } catch {
-    paused = true;
-  }
-  if (paused) {
+  if (await killSwitchEngaged(conn, key)) {
     throw new DomainError('INVALID_STATE', `«${KILL_SWITCHES[key]}» موقوف مؤقتًا من الإدارة. مفيش أي حركة مالية اتعملت — حاول تاني بعد إعادة التشغيل.`);
   }
 }
@@ -63,13 +66,7 @@ export async function assertNotPaused(conn: DbOrTx, key: KillSwitch): Promise<vo
 export async function killSwitchStates(conn: DbOrTx = db) {
   const out: { key: KillSwitch; label: string; paused: boolean }[] = [];
   for (const key of Object.keys(KILL_SWITCHES) as KillSwitch[]) {
-    let paused = true;
-    try {
-      paused = await getSetting(key, conn);
-    } catch {
-      /* fail closed */
-    }
-    out.push({ key, label: KILL_SWITCHES[key], paused });
+    out.push({ key, label: KILL_SWITCHES[key], paused: await killSwitchEngaged(conn, key) });
   }
   return out;
 }
@@ -86,7 +83,7 @@ export async function setKillSwitch(actor: Actor, key: KillSwitch, paused: boole
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر السبب');
   if (key === 'killswitch.global') return setGlobalKillSwitch(actor, paused, reason.trim());
   await db.transaction(async (tx) => {
-    const old = await getSetting(key, tx);
+    const old = await killSwitchEngaged(tx, key);
     await tx
       .insert(systemSettings)
       .values({ key, value: paused as unknown as object, updatedBy: actor.userId })
@@ -108,7 +105,7 @@ async function writeSetting(tx: DbOrTx, actor: Actor, key: SettingKey, value: un
 async function setGlobalKillSwitch(actor: Actor, paused: boolean, reason: string): Promise<'ENGAGED' | 'RELEASED' | 'RELEASE_REQUESTED'> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('killswitch.global'))`);
-    const engaged = await getSetting('killswitch.global', tx);
+    const engaged = await killSwitchEngaged(tx, 'killswitch.global');
     const request = await getSetting('killswitch.globalReleaseRequest', tx);
     if (paused) {
       await writeSetting(tx, actor, 'killswitch.global', true);
@@ -535,7 +532,7 @@ export async function goLiveGate(conn: DbOrTx = db) {
   const { ensureFingerprint } = await import('@/server/db/fingerprint');
   const fp = await ensureFingerprint();
   if (fp.status !== 'OK') blockers.push({ code: 'ENV_FINGERPRINT', label: `بصمة البيئة غير متحققة (${fp.status})` });
-  if (await getSetting('killswitch.global', conn)) blockers.push({ code: 'GLOBAL_KILL_SWITCH', label: 'إيقاف الطوارئ المالي مفعّل' });
+  if (await killSwitchEngaged(conn, 'killswitch.global')) blockers.push({ code: 'GLOBAL_KILL_SWITCH', label: 'إيقاف الطوارئ المالي مفعّل' });
   const lh = await rows<{ status: string; fresh: boolean }>(conn, sql`select status, checked_at > now() - interval '2 hours' fresh from ledger_health_checks order by checked_at desc limit 1`);
   if (!lh.length || !lh[0].fresh || lh[0].status === 'CRITICAL') blockers.push({ code: 'LEDGER_HEALTH', label: 'لا يوجد فحص سلامة دفتر حديث (خلال ساعتين) بنتيجة غير حرجة' });
   // Every critical schedule must exist AND have succeeded recently (a job that never ran is not healthy).

@@ -168,11 +168,11 @@ export const ALERT_RULES: AlertRule[] = [
     code: 'REFUND_FAILED',
     category: 'REFUND',
     title: 'فشل تحويل استرداد',
-    body: 'تعذّر تحويل الاسترداد {{ref}} — المبلغ ما زال مستحقًا للعميل.',
+    body: 'تحويل الاسترداد {{ref}} فشل أو نتيجته غير مؤكدة — المبلغ ما زال مستحقًا، ولا صرف جديد قبل حسم المحاولة.',
     staffPermission: 'refunds.pay',
     severity: 'HIGH',
     defaults: { preHours: 0, cooldownHours: 24, agingHours: 0 },
-    candidates: async (c) => toCandidates(await q<Row>(c, sql`select r.id, r.updated_at::text due, '#' || r.number ref from refunds r where r.status = 'FAILED'`), 'refund', () => '/admin/refunds', false),
+    candidates: async (c) => toCandidates(await q<Row>(c, sql`select r.id, r.updated_at::text due, '#' || r.number ref from refunds r where r.status in ('FAILED', 'TRANSFER_UNCERTAIN')`), 'refund', () => '/admin/refunds', false),
   },
   /* ───── Seller finance / Maker-Checker ───── */
   {

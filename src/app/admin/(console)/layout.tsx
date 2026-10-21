@@ -126,7 +126,7 @@ export default async function AdminConsoleLayout({ children }: { children: React
     (select count(*) from payments where status in ('PAYMENT_SUBMITTED','UNDER_REVIEW')) payments,
     (select count(*) from disputes where status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION')) disputes,
     (select count(*) from withdrawal_requests where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','TRANSFER_UNCERTAIN')) withdrawals,
-    (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')) + (select count(*) from deal_payouts where status = 'PENDING') refunds,
+    (select count(*) from refunds where status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','TRANSFER_UNCERTAIN','PENDING')) + (select count(*) from deal_payouts where status = 'PENDING') refunds,
     (select count(*) from support_tickets where status in ('OPEN','ESCALATED')) tickets,
     (select count(*) from ledger_adjustments where status = 'PENDING_APPROVAL') adjustments,
     (select count(*) from user_identity_verifications where status = 'PENDING_REVIEW') identity,

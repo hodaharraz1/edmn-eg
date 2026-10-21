@@ -404,16 +404,18 @@ export async function dealHoldAction(_p: ActionState, fd: FormData) {
 
 /* ═════════════ Production hardening: approvals, releases, refunds, controls ═════════════ */
 
-/** Refund workflow: approve (reversal journal) / reject / record payout / failed / destination exception. */
+/** Refund workflow: approve (reversal journal) / reject / record payout / failed / uncertain / resolve attempt / destination exception. */
 export async function refundDecisionAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const op = str(fd, 'op');
     const id = str(fd, 'refundId');
-    const { approveRefund, markRefundFailed, overrideRefundDestination, reapproveRefundDestination, rejectRefund, recordRefundPayout, revokeRefund } = await import('@/server/modules/finance/refunds');
+    const { approveRefund, markRefundFailed, markRefundTransferUncertain, overrideRefundDestination, reapproveRefundDestination, rejectRefund, recordRefundPayout, resolveRefundTransferNotSent, revokeRefund } = await import('@/server/modules/finance/refunds');
     if (op === 'approve') await approveRefund(a, id, { expectedAmount: Number(str(fd, 'expectedAmount')), reason: str(fd, 'reason') });
     else if (op === 'reject') await rejectRefund(a, id, str(fd, 'reason'));
     else if (op === 'pay') await recordRefundPayout(a, id, str(fd, 'reference'), await fileOf(fd, 'proof'));
     else if (op === 'failed') await markRefundFailed(a, id, str(fd, 'reason'));
+    else if (op === 'uncertain') await markRefundTransferUncertain(a, id, str(fd, 'reason'));
+    else if (op === 'resolve_not_sent') await resolveRefundTransferNotSent(a, id, { reason: str(fd, 'reason'), evidence: str(fd, 'evidence') });
     else if (op === 'destination') await overrideRefundDestination(a, id, { method: str(fd, 'method'), details: str(fd, 'details') }, str(fd, 'reason'));
     else if (op === 'destination_reapprove') await reapproveRefundDestination(a, id, str(fd, 'reason'));
     else if (op === 'revoke') await revokeRefund(a, id, { reason: str(fd, 'reason') });

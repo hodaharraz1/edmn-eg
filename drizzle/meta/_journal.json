@@ -141,6 +141,13 @@
       "when": 1792407958311,
       "tag": "0019_used_trusted_commerce",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792518600964,
+      "tag": "0020_b1_financial_fail_closed",
+      "breakpoints": true
     }
   ]
 }

@@ -39,7 +39,7 @@ export async function closureBlockers(conn: DbOrTx, userId: string): Promise<{ c
       where o.customer_id = ${userId} and so.status not in ('COMPLETED','CANCELLED','DELIVERY_FAILED')
     union all select 'PAYMENT_REVIEW', count(*)::text from payments where payer_user_id = ${userId} and status in ('AWAITING_PAYMENT','PAYMENT_SUBMITTED','UNDER_REVIEW')
     union all select 'OPEN_RETURNS', count(*)::text from returns where customer_id = ${userId} and status not in ('REFUNDED','REJECTED')
-    union all select 'OPEN_REFUNDS', count(*)::text from refunds where customer_id = ${userId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')
+    union all select 'OPEN_REFUNDS', count(*)::text from refunds where customer_id = ${userId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','TRANSFER_UNCERTAIN','PENDING')
     union all select 'OPEN_DISPUTES', count(*)::text from disputes where (claimant_user_id = ${userId} or respondent_user_id = ${userId}) and status in ('OPEN','UNDER_REVIEW','AWAITING_INFORMATION')
     union all select 'ACTIVE_DEALS', count(*)::text from external_deals where (buyer_id = ${userId} or seller_user_id = ${userId}) and status not in ('DRAFT','COMPLETED','CANCELLED','REFUNDED')
     union all select 'PENDING_DEAL_PAYOUTS', count(*)::text from deal_payouts where payee_user_id = ${userId} and status = 'PENDING'

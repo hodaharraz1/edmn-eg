@@ -7,8 +7,9 @@ import { financialInvariants } from './controls';
 
 /**
  * CONTINUOUS LEDGER HEALTH (Batch 2). READ-ONLY: it runs the financial invariants and records a snapshot.
- * It never posts, edits, reverses or "auto-fixes" anything. A CRITICAL snapshot blocks NEW money movements
- * (assertFinancialSafety) until a later snapshot is no longer critical — investigation is human (FINANCIAL_DRIFT runbook).
+ * It never posts, edits, reverses or "auto-fixes" anything. NEW money movements (assertFinancialSafety) need a
+ * recent non-critical snapshot: a CRITICAL, missing, stale or unreadable one blocks them until a later healthy
+ * snapshot exists — investigation is human (FINANCIAL_DRIFT runbook).
  *
  * CRITICAL = the books themselves cannot be trusted (imbalance, drift, duplicate events, money leaving beyond
  * its source). WARNING = operational follow-up that does not make a further movement unsafe.
@@ -47,10 +48,49 @@ export async function latestLedgerHealth(conn: DbOrTx = db): Promise<LedgerHealt
   return row ?? null;
 }
 
-/** Throws when the most recent snapshot is CRITICAL (fail closed for new money movements only). */
-export async function assertLedgerHealthy(conn: DbOrTx): Promise<void> {
-  const r = await conn.execute<{ status: string; critical: unknown }>(sql`select status, critical_checks critical from ledger_health_checks order by checked_at desc limit 1`);
-  if (r.rows[0]?.status === 'CRITICAL') {
-    throw new DomainError('INVALID_STATE', 'الحركات المالية الجديدة موقوفة تلقائيًا: فحص سلامة دفتر الأستاذ اكتشف مخالفة حرجة. مفيش أي حركة اتعملت — فريق المالية بيراجع.');
+/**
+ * A money movement needs a RECENT, positively readable snapshot. The scheduler records one every 30 minutes;
+ * the window matches the go-live gate (2 hours). A snapshot dated beyond the tolerated clock skew is not trusted.
+ */
+export const LEDGER_HEALTH_MAX_AGE_MINUTES = 120;
+const LEDGER_HEALTH_FUTURE_SKEW_MINUTES = 5;
+/** Only these results permit a new movement; anything else (CRITICAL, unknown) blocks it. */
+const MOVEMENT_PERMITTING_STATUSES: ReadonlySet<string> = new Set(['OK', 'WARNING']);
+
+export type LedgerHealthBlock = 'UNREADABLE' | 'MISSING' | 'STALE' | 'CRITICAL' | 'INDETERMINATE';
+
+const BLOCK_MESSAGES: Record<LedgerHealthBlock, string> = {
+  CRITICAL: 'الحركات المالية الجديدة موقوفة تلقائيًا: فحص سلامة دفتر الأستاذ اكتشف مخالفة حرجة. مفيش أي حركة اتعملت — فريق المالية بيراجع.',
+  MISSING: 'الحركات المالية الجديدة موقوفة: مفيش أي فحص لسلامة دفتر الأستاذ متسجل. مفيش أي حركة اتعملت — شغّل فحص السلامة الأول.',
+  STALE: `الحركات المالية الجديدة موقوفة: آخر فحص لسلامة دفتر الأستاذ أقدم من ${LEDGER_HEALTH_MAX_AGE_MINUTES / 60} ساعة (أو تاريخه غير منطقي). مفيش أي حركة اتعملت — شغّل فحص السلامة من جديد.`,
+  UNREADABLE: 'الحركات المالية الجديدة موقوفة: تعذّر قراءة نتيجة فحص سلامة دفتر الأستاذ. مفيش أي حركة اتعملت.',
+  INDETERMINATE: 'الحركات المالية الجديدة موقوفة: نتيجة فحص سلامة دفتر الأستاذ غير مفهومة. مفيش أي حركة اتعملت — فريق المالية بيراجع.',
+};
+
+/**
+ * Why a new money movement must not happen right now, or null when the latest snapshot positively permits it.
+ * FAIL CLOSED: a missing, stale, future-dated, CRITICAL, unknown or unreadable result all block.
+ */
+export async function ledgerHealthBlock(conn: DbOrTx): Promise<LedgerHealthBlock | null> {
+  let row: { status: unknown; fresh: unknown; future: unknown } | undefined;
+  try {
+    const r = await conn.execute<{ status: unknown; fresh: unknown; future: unknown }>(sql`select status,
+      checked_at > now() - ${sql.raw(`interval '${LEDGER_HEALTH_MAX_AGE_MINUTES} minutes'`)} fresh,
+      checked_at > now() + ${sql.raw(`interval '${LEDGER_HEALTH_FUTURE_SKEW_MINUTES} minutes'`)} future
+      from ledger_health_checks order by checked_at desc limit 1`);
+    row = r.rows[0];
+  } catch {
+    return 'UNREADABLE';
   }
+  if (!row) return 'MISSING';
+  if (row.status === 'CRITICAL') return 'CRITICAL';
+  if (row.fresh !== true || row.future !== false) return 'STALE';
+  if (typeof row.status !== 'string' || !MOVEMENT_PERMITTING_STATUSES.has(row.status)) return 'INDETERMINATE';
+  return null;
+}
+
+/** Throws unless the latest ledger-health snapshot positively permits a new money movement (fail closed). */
+export async function assertLedgerHealthy(conn: DbOrTx): Promise<void> {
+  const block = await ledgerHealthBlock(conn);
+  if (block) throw new DomainError('INVALID_STATE', BLOCK_MESSAGES[block]);
 }

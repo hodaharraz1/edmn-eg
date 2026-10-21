@@ -224,6 +224,10 @@ export async function seedDemo() {
   await assertNotProductionDatabase(db, 'seed demo data');
   const [already] = await db.select().from(users).where(eq(users.email, 'admin@edmn.local'));
   if (already) return { skipped: true };
+  // Money movements need a recent ledger-health snapshot (fail closed). The scheduler records one in a running
+  // deployment; the demo seed runs the same REAL read-only check on the current books before its flows.
+  const { runLedgerHealthCheck } = await import('@/server/modules/finance/ledger-health');
+  await runLedgerHealthCheck('seed-demo');
 
   // ── Staff
   const admin = await user('admin@edmn.local', 'مدير النظام (تجريبي)', '+201000000001', { staff: true, roles: ['SUPER_ADMIN'], password: demoCredentials().adminPassword });

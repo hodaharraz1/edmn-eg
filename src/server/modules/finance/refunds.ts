@@ -7,7 +7,7 @@ import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { proportion } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import { journalEntries, journalLines, ledgerAccounts, orderItems, orders, paymentSubmissions, payments, refundItems, refunds, sellerOrders, users } from '@/server/db/schema';
+import { journalEntries, journalLines, ledgerAccounts, orderItems, orders, paymentSubmissions, payments, refundItems, refunds, sellerOrders, statusHistory, users } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
 import { takeMovementRequest, completeMovementRequest } from './movements';
 import { storeUpload } from '@/server/storage/uploads';
@@ -314,7 +314,16 @@ export async function rejectRefund(actor: Actor, refundId: string, reason: strin
   });
 }
 
-/** Payout attempt failed / bounced: nothing is reversed — the customer liability stays until paid. */
+/** Statuses from which a payout attempt is still pending (an attempt can be recorded as failed/uncertain). */
+const PAYOUT_ATTEMPT_STATUSES: readonly RefundStatus[] = ['APPROVED', 'PROCESSING', 'PENDING'];
+/** Statuses that hold an UNRESOLVED payout attempt: never payable again until resolved by a second person. */
+const UNRESOLVED_ATTEMPT_STATUSES: readonly RefundStatus[] = ['FAILED', 'TRANSFER_UNCERTAIN'];
+
+/**
+ * Payout attempt failed / bounced: nothing is reversed — the customer liability stays. The refund is NOT payable
+ * again until a second person establishes, with evidence, that no money left (resolveRefundTransferNotSent).
+ * Idempotent.
+ */
 export async function markRefundFailed(actor: Actor, refundId: string, reason: string) {
   requirePermission(actor, 'refunds.pay');
   requireStepUp(actor);
@@ -322,10 +331,80 @@ export async function markRefundFailed(actor: Actor, refundId: string, reason: s
   await db.transaction(async (tx) => {
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
+    if (r.status === 'FAILED') return;
     if (r.customerId === actor.userId) throw forbidden('لا يمكنك تعديل استرداد يخصك');
+    if (r.status === 'TRANSFER_UNCERTAIN') throw invalidState('نتيجة التحويل غير مؤكدة: يلزم إثبات عدم خروج التحويل من شخص آخر، أو تسجيل الصرف لو التحويل خرج فعلًا');
+    if (!PAYOUT_ATTEMPT_STATUSES.includes(r.status)) throw invalidState('تسجيل فشل التحويل متاح لاسترداد معتمد بانتظار الصرف فقط');
     await transition(tx, actor, refundMachine, r.id, r.status, 'FAILED', reason);
     await tx.update(refunds).set({ status: 'FAILED', failureReason: reason }).where(eq(refunds.id, r.id));
-    await audit(tx, actor, { action: 'refund.payout_failed', entityType: 'refund', entityId: r.id, reason });
+    await audit(tx, actor, { action: 'refund.payout_failed', entityType: 'refund', entityId: r.id, oldValues: { status: r.status }, newValues: { status: 'FAILED', payable: false }, reason });
+  });
+}
+
+/**
+ * The executor cannot tell whether the refund transfer left EDMN (provider timeout, unclear statement…). Moves NO
+ * money and blocks any further payout attempt: the outcome must be established first — either the transfer went
+ * out (recordRefundPayout records it ONCE) or a second person proves it did not (resolveRefundTransferNotSent).
+ * Idempotent.
+ */
+export async function markRefundTransferUncertain(actor: Actor, refundId: string, reason: string) {
+  requirePermission(actor, 'refunds.pay');
+  requireStepUp(actor);
+  const why = reason?.trim();
+  if (!why || why.length < 3) throw validation('اكتب سبب عدم التأكد من نتيجة التحويل');
+  await db.transaction(async (tx) => {
+    const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
+    if (!r) throw notFound('الاسترداد');
+    if (r.status === 'TRANSFER_UNCERTAIN') return;
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك تعديل استرداد يخصك');
+    if (!PAYOUT_ATTEMPT_STATUSES.includes(r.status)) throw invalidState('نتيجة التحويل غير المؤكدة تُسجل لاسترداد معتمد بانتظار الصرف فقط');
+    await transition(tx, actor, refundMachine, r.id, r.status, 'TRANSFER_UNCERTAIN', why);
+    await tx.update(refunds).set({ status: 'TRANSFER_UNCERTAIN' }).where(eq(refunds.id, r.id));
+    await audit(tx, actor, { action: 'refund.transfer_uncertain', entityType: 'refund', entityId: r.id, oldValues: { status: r.status }, newValues: { status: 'TRANSFER_UNCERTAIN', payable: false }, reason: why });
+  });
+}
+
+/**
+ * Authorized resolution of a FAILED / TRANSFER_UNCERTAIN payout attempt: it is established, with external evidence
+ * (bank statement, provider rejection…), that NO money left EDMN. Only then does the refund become payable again
+ * (→ APPROVED). Needs refunds.approve, fresh 2FA and a SECOND person — never the one who recorded the failed or
+ * uncertain attempt, nor the customer or a member of the seller's store. Moves no money; idempotent.
+ */
+export async function resolveRefundTransferNotSent(actor: Actor, refundId: string, input: { reason: string; evidence: string }) {
+  requirePermission(actor, 'refunds.approve');
+  requireStepUp(actor);
+  const why = input.reason?.trim();
+  if (!why || why.length < 5) throw validation('اكتب سبب حسم نتيجة التحويل');
+  const evidence = input.evidence?.trim();
+  if (!evidence || evidence.length < 3) throw validation('مرجع/دليل عدم خروج التحويل مطلوب (كشف الحساب أو رد مزود الدفع)');
+  await db.transaction(async (tx) => {
+    const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
+    if (!r) throw notFound('الاسترداد');
+    if (r.status === 'APPROVED') return;
+    if (!UNRESOLVED_ATTEMPT_STATUSES.includes(r.status)) throw invalidState('الحسم متاح لاسترداد فشل تحويله أو نتيجته غير مؤكدة فقط');
+    if (r.customerId === actor.userId) throw forbidden('لا يمكنك حسم استرداد يخصك');
+    const [flagged] = await tx
+      .select({ by: statusHistory.actorUserId })
+      .from(statusHistory)
+      .where(and(eq(statusHistory.entityType, refundMachine.name), eq(statusHistory.entityId, r.id), eq(statusHistory.toStatus, r.status)))
+      .orderBy(desc(statusHistory.id))
+      .limit(1);
+    if (!flagged?.by) throw invalidState('لا يوجد سجل لمن سجّل محاولة التحويل. لا يمكن الحسم');
+    if (flagged.by === actor.userId) throw forbidden('حسم نتيجة التحويل يجب أن يتم بواسطة شخص غير من سجّل الفشل أو عدم التأكد');
+    if (r.sellerOrderId) {
+      const [so] = await tx.select({ sellerId: sellerOrders.sellerId }).from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId));
+      await assertNotSelfDealing(tx, actor, so.sellerId);
+    }
+    await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', why, { resolution: 'NOT_TRANSFERRED', evidence });
+    await tx.update(refunds).set({ status: 'APPROVED' }).where(eq(refunds.id, r.id));
+    await audit(tx, actor, {
+      action: 'refund.transfer_resolved_not_sent',
+      entityType: 'refund',
+      entityId: r.id,
+      oldValues: { status: r.status, flaggedBy: flagged.by },
+      newValues: { status: 'APPROVED', payable: true, evidence },
+      reason: why,
+    });
   });
 }
 
@@ -395,7 +474,10 @@ export async function recordRefundPayout(actor: Actor, refundId: string, referen
     const [r] = await tx.select().from(refunds).where(eq(refunds.id, refundId)).for('update');
     if (!r) throw notFound('الاسترداد');
     if (r.status === 'PAID' || r.status === 'COMPLETED') return;
-    if (!['APPROVED', 'PROCESSING', 'FAILED', 'PENDING'].includes(r.status)) throw invalidState('يجب اعتماد الاسترداد قبل تسجيل صرفه');
+    // A FAILED attempt is never paid again until a second person establishes no money left (it may have landed).
+    if (r.status === 'FAILED') throw invalidState('محاولة تحويل سابقة لهذا الاسترداد اتسجلت فاشلة ولم تُحسم بعد. يلزم إثبات عدم خروج التحويل من شخص آخر قبل أي صرف جديد');
+    // TRANSFER_UNCERTAIN → recording the payout = the uncertain transfer is established to have gone out (recorded once).
+    if (!['APPROVED', 'PROCESSING', 'PENDING', 'TRANSFER_UNCERTAIN'].includes(r.status)) throw invalidState('يجب اعتماد الاسترداد قبل تسجيل صرفه');
     await assertNotPaused(tx, 'killswitch.payouts');
     if (r.customerId === actor.userId) throw forbidden('لا يمكنك صرف استرداد لنفسك');
     // Destination integrity (C4): only to the destination frozen by the approval, never one changed after it.
@@ -612,7 +694,7 @@ export async function refundDetail(refundId: string) {
 
 export async function openRefundTotal(conn: DbOrTx, userId: string) {
   const res = await conn.execute<{ n: string }>(
-    sql`select count(*)::text n from refunds where customer_id = ${userId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','PENDING')`,
+    sql`select count(*)::text n from refunds where customer_id = ${userId} and status in ('REQUESTED','UNDER_REVIEW','APPROVED','PROCESSING','FAILED','TRANSFER_UNCERTAIN','PENDING')`,
   );
   return Number(res.rows[0]?.n ?? 0);
 }

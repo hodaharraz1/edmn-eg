@@ -85,7 +85,10 @@ export async function deepHealth() {
   if (over(outbox.due, thresholds.outboxBacklog)) alerts.push(`رسائل متأخرة في الطابور: ${outbox.due}`);
   if (over(Number(x.errors_1h), thresholds.errorEventsPerHour)) alerts.push(`أخطاء في آخر ساعة: ${x.errors_1h}`);
   if (over((scanner.counts.QUARANTINED ?? 0) + (scanner.counts.SCAN_FAILED ?? 0), thresholds.quarantinedFiles)) alerts.push('ملفات محجوزة بانتظار الفحص');
-  if (ledger?.status === 'CRITICAL') alerts.push('سلامة دفتر الأستاذ: مخالفة حرجة — الحركات المالية الجديدة موقوفة');
+  const { ledgerHealthBlock } = await import('@/server/modules/finance/ledger-health');
+  const ledgerBlock = await ledgerHealthBlock(db);
+  if (ledgerBlock === 'CRITICAL') alerts.push('سلامة دفتر الأستاذ: مخالفة حرجة — الحركات المالية الجديدة موقوفة');
+  else if (ledgerBlock) alerts.push(`سلامة دفتر الأستاذ: لا يوجد فحص حديث مقروء (${ledgerBlock}) — الحركات المالية الجديدة موقوفة`);
   if (fp.status !== 'OK') alerts.push(`بصمة البيئة: ${fp.status}`);
   return {
     environment: env.environment,

@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     globalSetup: ['tests/helpers/global-setup.ts'],
-    setupFiles: ['tests/helpers/setup-env.ts'],
+    setupFiles: ['tests/helpers/setup-env.ts', 'tests/helpers/ledger-health-setup.ts'],
     // Integration tests share one PostgreSQL database → run files sequentially.
     fileParallelism: false,
     testTimeout: 60_000,

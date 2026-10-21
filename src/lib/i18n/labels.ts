@@ -156,6 +156,7 @@ const STATUS_BY_KIND: Record<StatusKind, Record<string, { ar: string; tone: Tone
     APPROVED: { ar: 'تم اعتماد الاسترداد — لم يُحوَّل بعد', tone: 'warning' },
     PROCESSING: { ar: 'جارٍ تحويل الاسترداد — لم يكتمل', tone: 'info' },
     FAILED: { ar: 'تعذّر تحويل الاسترداد — المبلغ ما زال مستحقًا', tone: 'danger' },
+    TRANSFER_UNCERTAIN: { ar: 'نتيجة تحويل الاسترداد غير مؤكدة — قيد المراجعة', tone: 'danger' },
     COMPLETED: { ar: 'تم تحويل الاسترداد', tone: 'success' },
     PAID: { ar: 'تم تحويل الاسترداد', tone: 'success' },
     PENDING: { ar: 'استرداد معلّق — لم يُحوَّل بعد', tone: 'warning' },

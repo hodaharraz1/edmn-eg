@@ -243,7 +243,8 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
       await tx.update(returns).set({ status: 'APPROVED' }).where(eq(returns.id, ret.id));
       await transition(tx, actor, returnMachine, ret.id, 'APPROVED', 'RECEIVED', 'قرار نزاع');
       await tx.update(returns).set({ status: 'RECEIVED' }).where(eq(returns.id, ret.id));
-      await acceptReturnRefundTx(tx, actor, { ...approved, status: 'RECEIVED' }, { includeShipping: decision === 'FULL_REFUND', note });
+      // FULL_REFUND refunds the returned units (+ shipping); PARTIAL_REFUND refunds EXACTLY the decided amount.
+      await acceptReturnRefundTx(tx, actor, { ...approved, status: 'RECEIVED' }, decision === 'PARTIAL_REFUND' ? { authorizedAmount: refundAmount, note } : { includeShipping: true, note });
     } else if (decision === 'RETURN_REQUIRED') {
       await transition(tx, actor, returnMachine, ret.id, ret.status, 'APPROVED', note);
       await tx.update(returns).set({ status: 'APPROVED' }).where(eq(returns.id, ret.id));
@@ -266,7 +267,9 @@ async function applyOrderDecision(tx: DbOrTx, actor: Actor, dispute: Dispute, de
   } else if (decision === 'PARTIAL_REFUND' && refundAmount > 0) {
     // Compensation not tied to units: principal only; fee reversal proportional to the principal share.
     const sellerFee = Math.min(left.sellerFee, Math.round((left.sellerFee * refundAmount) / Math.max(1, left.principal)));
-    await requestRefundTx(tx, actor, { sellerOrderId: so.id, sourceType: 'DISPUTE', sourceId: dispute.id, principalAmount: refundAmount, buyerFeeRefund: 0, sellerFeeReversal: sellerFee, reason: note });
+    // shippingAmount 0 explicitly: a published shipping rule must never inflate the decided amount.
+    const refund = await requestRefundTx(tx, actor, { sellerOrderId: so.id, sourceType: 'DISPUTE', sourceId: dispute.id, principalAmount: refundAmount, shippingAmount: 0, buyerFeeRefund: 0, sellerFeeReversal: sellerFee, reason: note });
+    if (refund.amount !== refundAmount) throw invalidState('مبلغ الاسترداد الناتج لا يطابق المبلغ المقرر في النزاع. لم يتم إنشاء أي استرداد');
   } else if (decision === 'RETURN_REQUIRED') {
     // Open an approved return for all remaining items so the normal return workflow takes over.
     const { orderItems } = await import('@/server/db/schema');

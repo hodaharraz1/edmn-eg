@@ -100,8 +100,9 @@ export const SETTINGS_SCHEMA = {
   'sla.shipGraceDays': z.number().int().min(0).max(30).default(1),
   /** Days after the shipping ETA without an authoritative delivery event before Operations is alerted. */
   'delivery.eventMissingGraceDays': z.number().int().min(0).max(60).default(3),
-  // ── Financial kill switches (true = PAUSED). Server-side, audited, safe-by-default: an unreadable
-  //    switch is treated as paused. They stop NEW actions only; history is never touched.
+  // ── Financial kill switches (true = PAUSED). Server-side, audited, safe-by-default: the money gate reads them
+  //    strictly (killSwitchEngaged) — a missing, malformed or unreadable switch is treated as PAUSED; the schema
+  //    defaults below are display-only. They stop NEW actions only; history is never touched.
   'killswitch.paymentConfirmation': z.boolean().default(false),
   'killswitch.sellerRelease': z.boolean().default(false),
   'killswitch.refunds': z.boolean().default(false),

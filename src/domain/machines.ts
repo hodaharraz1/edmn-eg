@@ -236,27 +236,32 @@ export const REFUND_STATUSES = [
   // Legacy (pre-hardening) records: PENDING = reversal already posted, awaiting payout; PAID = paid out.
   'PENDING',
   'PAID',
+  // The executor cannot tell whether a payout transfer left EDMN (timeout, unclear statement…).
+  'TRANSFER_UNCERTAIN',
 ] as const;
 export type RefundStatus = (typeof REFUND_STATUSES)[number];
 /**
  * REQUESTED → (Admin approval: reversal journal) APPROVED → PROCESSING → (execution evidence: payout journal) COMPLETED.
- * Nothing moves money before APPROVED; a FAILED payout keeps the liability and can be retried after reconciliation.
+ * Nothing moves money before APPROVED. A FAILED or TRANSFER_UNCERTAIN attempt keeps the liability but is NOT
+ * payable again: it returns to APPROVED only when a second person establishes, with evidence, that no money
+ * left (resolveRefundTransferNotSent). An uncertain transfer that did go out is recorded once (→ COMPLETED).
  */
 export const refundMachine = defineMachine<RefundStatus>('refund', REFUND_STATUSES, {
   REQUESTED: ['UNDER_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'],
   UNDER_REVIEW: ['APPROVED', 'REJECTED'],
   // APPROVED → CANCELLED = two-person revocation before any money moved (compensating journal, Batch 1.5).
-  APPROVED: ['PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED'],
-  PROCESSING: ['COMPLETED', 'FAILED'],
-  FAILED: ['PROCESSING', 'COMPLETED'],
-  PENDING: ['PAID', 'PROCESSING', 'FAILED', 'COMPLETED'],
+  APPROVED: ['PROCESSING', 'COMPLETED', 'FAILED', 'TRANSFER_UNCERTAIN', 'CANCELLED'],
+  PROCESSING: ['COMPLETED', 'FAILED', 'TRANSFER_UNCERTAIN'],
+  FAILED: ['APPROVED'],
+  TRANSFER_UNCERTAIN: ['COMPLETED', 'APPROVED'],
+  PENDING: ['PAID', 'PROCESSING', 'FAILED', 'TRANSFER_UNCERTAIN', 'COMPLETED'],
   COMPLETED: [],
   PAID: [],
   REJECTED: [],
   CANCELLED: [],
 });
 /** Refund statuses in which money is still owed to the customer or about to be (blocks closure / completion). */
-export const REFUND_OPEN_STATUSES: readonly RefundStatus[] = ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'FAILED', 'PENDING'];
+export const REFUND_OPEN_STATUSES: readonly RefundStatus[] = ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PROCESSING', 'FAILED', 'TRANSFER_UNCERTAIN', 'PENDING'];
 
 /* ───────────────────────── External protected deal ───────────────────────── */
 export const DEAL_STATUSES = [
