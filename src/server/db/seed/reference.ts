@@ -259,10 +259,27 @@ export const POLICY_RULES: ['BLOCK_KEYWORD' | 'REVIEW_KEYWORD', string, string][
   ['REVIEW_KEYWORD', 'دواء', 'MEDICAL'],
 ];
 
-export async function seedReference() {
+/**
+ * Reference data in one of two modes:
+ *
+ *   bootstrap       developer / test / isolated preview databases. Also corrects seeded rows (governorate names,
+ *                   promotes untouched seeded legal drafts, legacy CMS copy fix).
+ *   insert-missing  STAGING and PRODUCTION (and the migrate step everywhere): ONLY inserts rows that do not exist.
+ *                   It never updates, re-currents, replaces or deletes an existing row, so admin edits always win.
+ *                   On an empty database it produces the same reference set as bootstrap
+ *                   (tests/integration/deployment-safety.test.ts proves both properties).
+ *
+ * Both modes: SUPER_ADMIN always holds every permission (that role is not editable by design — rbac/staff.ts), and
+ * permissions introduced later are granted once per grant id (rbac.additiveGrants), never re-added after removal.
+ */
+export type ReferenceMode = 'bootstrap' | 'insert-missing';
+
+export async function seedReference(opts: { mode?: ReferenceMode } = {}) {
+  const insertOnly = opts.mode === 'insert-missing';
   // Governorates
   for (const [i, [code, ar, en]] of GOVERNORATES.entries()) {
-    await db.insert(governorates).values({ id: i + 1, code, nameAr: ar, nameEn: en, sortOrder: i }).onConflictDoUpdate({ target: governorates.id, set: { code, nameAr: ar, nameEn: en } });
+    const q = db.insert(governorates).values({ id: i + 1, code, nameAr: ar, nameEn: en, sortOrder: i });
+    await (insertOnly ? q.onConflictDoNothing() : q.onConflictDoUpdate({ target: governorates.id, set: { code, nameAr: ar, nameEn: en } }));
   }
   // Roles & permissions
   for (const [code, r] of Object.entries(DEFAULT_ROLES)) {
@@ -355,6 +372,60 @@ export async function seedReference() {
     if (!exists) await db.insert(listingPolicyRules).values({ kind, pattern, reasonCode });
   }
 
+  if (insertOnly) await insertMissingLegalDocuments();
+  else await bootstrapLegalDocuments();
+
+  // Homepage trust copy that described the old automatic release (content only; edited text is left alone).
+  if (!insertOnly) {
+    await db.execute(sql`update cms_blocks set data = replace(data::text, ${OLD_TRUST_COPY}, ${NEW_TRUST_COPY})::jsonb
+    where data::text like ${'%' + OLD_TRUST_COPY + '%'}`);
+  }
+  await seedCmsAndPolicies();
+  return { categories: ids.size, attributes: attrIds.size };
+}
+
+const OLD_TRUST_COPY = 'بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.';
+const NEW_TRUST_COPY = 'تأكيدك للاستلام يثبت استحقاق البائع، والإدارة توافق يدويًا على إتاحة المبلغ له.';
+
+/** Seeded legal versions per document, oldest first, with the status each is written with. */
+function seededLegalVersions(code: LegalCode): { version: string; title: string; body: string; status: 'APPROVED' | 'DRAFT' }[] {
+  const out: { version: string; title: string; body: string; status: 'APPROVED' | 'DRAFT' }[] = [];
+  if (LEGAL_TEXTS[code]) out.push({ version: LEGAL_VERSION, title: LEGAL_CODES[code].title, body: LEGAL_TEXTS[code], status: 'APPROVED' });
+  if (LEGAL_TEXTS_V11[code]) out.push({ version: LEGAL_V11_VERSION, title: LEGAL_CODES[code].title, body: LEGAL_TEXTS_V11[code]!, status: 'DRAFT' });
+  if (LEGAL_TEXTS_V12[code]) out.push({ version: LEGAL_V12_VERSION, title: LEGAL_CODES[code].title, body: LEGAL_TEXTS_V12[code]!, status: 'DRAFT' });
+  return out;
+}
+
+/**
+ * insert-missing legal documents: missing seeded versions are added as NON-current rows; a document gets a current
+ * version only when it has none at all (fresh install: the newest seeded version, exactly as bootstrap ends up).
+ * The current version of an existing installation is never changed — publishing is an admin / counsel decision.
+ */
+async function insertMissingLegalDocuments() {
+  for (const code of Object.keys(LEGAL_CODES) as LegalCode[]) {
+    const versions = seededLegalVersions(code);
+    if (!versions.length) continue;
+    await db.transaction(async (tx) => {
+      const rows = await tx.select().from(legalDocuments).where(eq(legalDocuments.code, code));
+      const hasCurrent = rows.some((r) => r.isCurrent);
+      const newest = versions[versions.length - 1];
+      for (const v of versions) {
+        if (rows.some((r) => r.version === v.version)) continue;
+        const makeCurrent = !hasCurrent && v === newest;
+        await tx.insert(legalDocuments).values({ code, version: v.version, title: v.title, body: v.body, status: v.status, isCurrent: makeCurrent, approvedAt: v.status === 'APPROVED' ? new Date() : null });
+        await audit(tx, SYSTEM_ACTOR, {
+          action: 'legal.reference_version_added',
+          entityType: 'legal_document',
+          entityId: `${code}@${v.version}`,
+          newValues: { status: v.status, current: makeCurrent },
+          reason: 'Reference data (insert-missing): seeded version added without changing the published version',
+        });
+      }
+    });
+  }
+}
+
+async function bootstrapLegalDocuments() {
   // Versions this seed writes; anything else was published by an admin and is left untouched.
   const SEEDED_LEGAL_VERSIONS: string[] = ['0.1-draft', '0.2-draft', LEGAL_VERSION, LEGAL_V11_VERSION, LEGAL_V12_VERSION];
   // Legal documents — DRAFT placeholders only (never fabricated final legal text)
@@ -398,10 +469,10 @@ export async function seedReference() {
       await audit(tx, SYSTEM_ACTOR, { action: 'legal.draft_published_for_review', entityType: 'legal_document', entityId: `${code}@${LEGAL_V12_VERSION}`, newValues: { status: 'DRAFT', previous: current ? `${current.version}/${current.status}` : null }, reason: 'Fee engine: dynamic service/protection fees, transfer costs, fee refund attribution — LEGAL REVIEW REQUIRED' });
     });
   }
-  // Homepage trust copy that described the old automatic release (content only; edited text is left alone).
-  await db.execute(sql`update cms_blocks set data = replace(data::text, ${'بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.'}, ${'تأكيدك للاستلام يثبت استحقاق البائع، والإدارة توافق يدويًا على إتاحة المبلغ له.'})::jsonb
-    where data::text like ${'%بعد ما تأكد الاستلام فقط يصبح صافي مستحق البائع متاحاً للسحب.%'}`);
+}
 
+/** Insert-only in both modes: CMS defaults on an empty homepage, pricing drafts, payout channels, policies. */
+async function seedCmsAndPolicies() {
   // Homepage CMS defaults (editable from Admin → CMS)
   const [anyBlock] = await db.select({ id: cmsBlocks.id }).from(cmsBlocks).limit(1);
   if (!anyBlock) {
@@ -441,5 +512,4 @@ export async function seedReference() {
   await seedOwnerApprovedDrafts();
   await seedPayoutChannels();
   await seedRefundPolicyDraft();
-  return { categories: ids.size, attributes: attrIds.size };
 }

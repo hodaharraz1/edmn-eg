@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { Client, Pool, type PoolClient, type PoolConfig } from 'pg';
+import { deploymentContext, resolveDatabaseUrl, runtimeMayUse, type DatabaseMarker } from '@/server/core/deploy-policy';
 import * as schema from './schema';
 
 export type DB = NodePgDatabase<typeof schema>;
@@ -10,16 +11,73 @@ export type DbOrTx = DB | Tx;
 
 const globalForDb = globalThis as unknown as { __edmnPool?: Pool; __edmnDb?: DB; __edmnUrl?: string };
 
+/** DATABASE_URL, or PREVIEW_DATABASE_URL in a preview (which never reads the shared URLs) — see deploy-policy.ts. */
 function databaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL is not configured');
-  return url;
+  return resolveDatabaseUrl(process.env);
+}
+
+/**
+ * Preview runtime guard: before the FIRST connection is handed out (to queries, transactions and migrations alike),
+ * the database must prove it is an explicitly initialised PREVIEW database. Anything else — the shared staging or
+ * production database, an unmarked database — fails every connection of the process, so a preview can neither read
+ * nor write it. Checked on a separate connection, outside the pool.
+ */
+let previewInitInProgress = false;
+/**
+ * Only scripts/preview-db-init.ts calls this, after proving the target database is EMPTY: it lets that one process
+ * migrate the unmarked database before marking it PREVIEW. Deliberately not reachable from an environment variable.
+ */
+export function allowUnmarkedPreviewDatabaseForInit() {
+  previewInitInProgress = true;
+}
+
+class PreviewGuardedPool extends Pool {
+  private verified: Promise<void> | null = null;
+  constructor(private readonly guardConfig: PoolConfig) {
+    super(guardConfig);
+  }
+
+  private verify(): Promise<void> {
+    this.verified ??= (async () => {
+      const c = new Client({ connectionString: this.guardConfig.connectionString, connectionTimeoutMillis: this.guardConfig.connectionTimeoutMillis });
+      await c.connect();
+      let marker: DatabaseMarker = null;
+      try {
+        const r = await c.query<{ e: DatabaseMarker }>('select environment as e from deployment_environment where id');
+        marker = r.rows[0]?.e ?? null;
+      } catch {
+        marker = null; // not migrated / not initialised
+      } finally {
+        await c.end().catch(() => undefined);
+      }
+      if (previewInitInProgress && marker === null) return;
+      const ok = runtimeMayUse(marker);
+      if (!ok.ok) throw new Error(`preview database refused: ${ok.reason}`);
+    })().catch((e) => {
+      this.verified = null; // re-checked on the next attempt; still refused unless the database is PREVIEW
+      throw e;
+    });
+    return this.verified;
+  }
+
+  // pg-pool calls connect() for query() as well (callback form), so this guards every path.
+  override connect(): Promise<PoolClient>;
+  override connect(cb: (err: Error | undefined, client: PoolClient | undefined, done: (release?: unknown) => void) => void): void;
+  override connect(cb?: (err: Error | undefined, client: PoolClient | undefined, done: (release?: unknown) => void) => void): Promise<PoolClient> | void {
+    const p = this.verify().then(() => super.connect());
+    if (!cb) return p;
+    p.then(
+      (client) => cb(undefined, client, (release) => client.release(release as boolean | Error | undefined)),
+      (err: Error) => cb(err, undefined, () => undefined),
+    );
+  }
 }
 
 export function getPool(): Pool {
   const url = databaseUrl();
   if (!globalForDb.__edmnPool || globalForDb.__edmnUrl !== url) {
-    globalForDb.__edmnPool = new Pool({
+    const PoolClass = deploymentContext(process.env) === 'PREVIEW' ? PreviewGuardedPool : Pool;
+    globalForDb.__edmnPool = new PoolClass({
       connectionString: url,
       max: Number(process.env.DATABASE_POOL_MAX ?? 10),
       idleTimeoutMillis: 30_000,

@@ -131,8 +131,10 @@ describe('docker-compose.prod.yml', () => {
     expect(cmd('web')).toMatch(/next\/dist\/bin\/next start/);
     expect(cmd('worker')).toMatch(/scripts\/worker\.ts$/);
   });
-  it('migrate / seed exist only as explicit one-off ops services (profile "ops", restart "no")', () => {
-    for (const s of ['migrate', 'migrate-preflight', 'seed', 'acceptance']) {
+  it('migrate exists only as an explicit one-off ops service (profile "ops", restart "no"); production has no seed service', () => {
+    expect(doc.services.seed).toBeUndefined();
+    expect(cmd('migrate')).toMatch(/--authorize=production/);
+    for (const s of ['migrate', 'migrate-preflight', 'acceptance']) {
       expect(doc.services[s].profiles, s).toEqual(['ops']);
       expect(doc.services[s].restart, s).toBe('no');
     }
@@ -140,7 +142,7 @@ describe('docker-compose.prod.yml', () => {
   });
   it('only web publishes a port, and only on loopback; postgres / clamd / scanner publish nothing', () => {
     expect(doc.services.web.ports).toEqual(['127.0.0.1:${EDMN_WEB_PORT:-3000}:3000']);
-    for (const s of ['worker', 'postgres', 'clamd', 'scanner', 'migrate', 'seed']) expect(doc.services[s].ports, s).toBeUndefined();
+    for (const s of ['worker', 'postgres', 'clamd', 'scanner', 'migrate']) expect(doc.services[s].ports, s).toBeUndefined();
     for (const s of ['postgres', 'scanner']) expect(doc.services[s].networks, s).toEqual(['backend']);
     expect(doc.networks.backend).toMatchObject({ internal: true });
   });
@@ -187,7 +189,7 @@ describe('start.sh refuses PRODUCTION (it would migrate on every start)', () => 
 describe('deploy.sh', () => {
   const s = read('deploy/scripts/deploy.sh');
   it('runs the steps in the mandated order', () => {
-    const order = ['1/12 PRECHECK', '2/12 BACKUP', '3/12 VERIFY BACKUP', '5/12 MIGRATION PREFLIGHT', '6/12 EXPLICIT MIGRATION', '7/12 REFERENCE SEED', '8/12 START WEB / WORKER', '9/12 /api/health', '10/12 /api/ready', '11/12 SMOKE', '12/12 FINANCIAL INVARIANTS', 'SUCCESS'];
+    const order = ['1/12 PRECHECK', '2/12 BACKUP', '3/12 VERIFY BACKUP', '5/12 MIGRATION PREFLIGHT', '6/12 EXPLICIT MIGRATION', '7/12 REFERENCE DATA', '8/12 START WEB / WORKER', '9/12 /api/health', '10/12 /api/ready', '11/12 SMOKE', '12/12 FINANCIAL INVARIANTS', 'SUCCESS'];
     const idx = order.map((o) => s.indexOf(`step "${o}`));
     expect(idx.every((i) => i > 0), JSON.stringify(idx)).toBe(true);
     expect([...idx].sort((a, b) => a - b)).toEqual(idx);

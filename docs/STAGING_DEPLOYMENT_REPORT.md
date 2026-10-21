@@ -30,7 +30,7 @@ Rejected options:
 
 ```
 GitHub hodaharraz1/edmn-eg @ claude/great-tesla-nor0wt  (Vercel production branch)
-  └─ Vercel build: scripts/vercel-build.sh
+  └─ Vercel build: `npm run build` only (since 2026-10-21; migrations are a separate authorized step)
        migrate (direct Neon URL) → reference seed → staging demo seed (idempotent) → next build
   └─ Runtime: serverless functions, pooled Neon URL, DATABASE_POOL_MAX=3
        background work: after-response tick (INLINE_WORKER, ≤ 1 pass/min/instance)
@@ -173,8 +173,8 @@ Files are stored in PostgreSQL, so they survive redeploys.
 
 ## 11. Redeploy / rollback
 
-- **Redeploy:** push to `claude/great-tesla-nor0wt`, and Vercel rebuilds automatically.
-  Migrations and seeds are idempotent.
+- **Redeploy (superseded 2026-10-21 — docs/runbooks/DEPLOYMENT_SAFETY.md):** Vercel only builds; it never migrates
+  or seeds. Run the authorized staging migration for the commit FIRST, then push to `claude/great-tesla-nor0wt`.
 - **Rollback:** Vercel → project `edmn-staging` → Deployments → previous deployment → "Promote to
   Production". The database is not rolled back; migrations are additive. Use Neon restore if
   needed.

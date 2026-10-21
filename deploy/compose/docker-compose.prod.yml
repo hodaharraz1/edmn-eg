@@ -3,7 +3,7 @@
 #   docker compose -f deploy/compose/docker-compose.prod.yml --env-file /etc/edmn/compose.env up -d web worker
 #
 # • web and worker run the SAME immutable image: ${EDMN_IMAGE}:${EDMN_IMAGE_TAG} (tag = git commit SHA, required).
-# • NEITHER service runs scripts/start.sh: a (re)start never migrates or seeds. Migrations / reference seed are the
+# • NEITHER service runs scripts/start.sh: a (re)start never migrates or seeds. Migrations (with insert-missing reference data) are the
 #   explicit one-off services `migrate` / `seed` (profile "ops"), run only by deploy/scripts/deploy.sh after a backup.
 # • Secrets come only from files outside the repository (/etc/edmn/*.env, mode 0600). Nothing secret is in this file.
 # • Only the web container publishes a port, and only on 127.0.0.1 (the reverse proxy is the public entry point).
@@ -74,7 +74,8 @@ services:
       - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
       - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
         required: false
-    command: ["node", "--import", "tsx", "scripts/migrate.ts"]
+    # Schema + reference data (insert-missing). Authorized per release by deploy.sh (EDMN_DB_CHANGE_AUTHORIZATION).
+    command: ["node", "--import", "tsx", "scripts/migrate.ts", "--authorize=production"]
   migrate-preflight:
     <<: *app
     profiles: ["ops"]
@@ -84,15 +85,8 @@ services:
       - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
         required: false
     command: ["node", "--import", "tsx", "scripts/migrate.ts", "--preflight"]
-  seed:
-    <<: *app
-    profiles: ["ops"]
-    restart: "no"
-    env_file:
-      - ${EDMN_APP_ENV_FILE:-/etc/edmn/production.env}
-      - path: ${EDMN_MIGRATE_ENV_FILE:-/etc/edmn/migrate.env}
-        required: false
-    command: ["node", "--import", "tsx", "scripts/seed.ts"]
+  # No `seed` service: production never runs a seed (scripts/seed.ts refuses PRODUCTION). Reference data ships with
+  # the `migrate` step, insert-missing only.
   acceptance:
     <<: *app
     profiles: ["ops"]

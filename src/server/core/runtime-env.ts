@@ -92,6 +92,10 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'SEED_DEMO', classification: 'STAGING_ONLY', secret: false, purpose: 'Seeds demo data at staging build' },
   { name: 'E2E_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'E2E database (test tooling only)' },
   { name: 'TEST_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'Vitest database (test tooling only)' },
+  // Deployment safety (deploy-policy.ts): preview isolation and per-step database-change authorization.
+  { name: 'PREVIEW_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'Isolated preview database (the ONLY database a preview may use; never DATABASE_URL)' },
+  { name: 'EDMN_DEPLOYMENT', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: '"preview" outside Vercel (Vercel previews are detected from VERCEL_ENV)' },
+  { name: 'EDMN_DB_CHANGE_AUTHORIZATION', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'Per-step <env>:<release> tripwire for migrate / seed — passed to that one step, never kept in a runtime environment' },
   { name: 'E2E_BASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'E2E target (test tooling only)' },
 ];
 
@@ -301,7 +305,7 @@ export function smsAvailable(raw: Record<string, string | undefined> = process.e
 
 /* ═══════════════ Database / storage fingerprint compatibility ═══════════════ */
 
-export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' | null;
+export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' | 'PREVIEW' | null;
 
 /**
  * Which database markers a runtime may use. PRODUCTION accepts only a PRODUCTION database (an unmarked or
@@ -309,6 +313,8 @@ export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' |
  * runtime may never use a hosted (STAGING) database: no silent fallback to staging.
  */
 export function databaseCompatible(runtime: RuntimeEnvironment, marker: DatabaseMarker): { ok: boolean; reason?: string } {
+  // An isolated preview database is only ever used by a preview (deploy-policy.ts runtimeMayUse), never by these runtimes.
+  if (marker === 'PREVIEW') return { ok: false, reason: `${runtime} runtime refuses a PREVIEW database` };
   if (runtime === 'PRODUCTION') return marker === 'PRODUCTION' ? { ok: true } : { ok: false, reason: `PRODUCTION runtime refuses a ${marker ?? 'UNMARKED'} database` };
   if (marker === 'PRODUCTION') return { ok: false, reason: `${runtime} runtime refuses a PRODUCTION database` };
   if (runtime === 'STAGING') return marker === 'DEVELOPMENT' || marker === 'TEST' ? { ok: false, reason: `STAGING runtime refuses a ${marker} database` } : { ok: true };

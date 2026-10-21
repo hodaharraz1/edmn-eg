@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { deploymentContext, runtimeMayUse, type DatabaseMarker } from '@/server/core/deploy-policy';
 import { databaseCompatible, runtimeEnvironment } from '@/server/core/runtime-env';
 import { getDb, getPool } from './client';
 import { environmentMarker, markDeploymentEnvironment } from './environment';
@@ -67,17 +68,20 @@ export async function pendingMigrations(folder = FOLDER): Promise<JournalEntry[]
   return journal(folder).filter((e) => e.when > applied);
 }
 
-export async function preflight(folder = FOLDER): Promise<{ pending: string[]; problems: string[] }> {
+export async function preflight(folder = FOLDER, opts: { initPreview?: boolean } = {}): Promise<{ pending: string[]; problems: string[] }> {
   const problems: string[] = [];
   const runtime = runtimeEnvironment();
   try {
     const r = await getDb().execute<{ e: string | null }>(sql`select (select environment from deployment_environment where id) e`);
-    const marker = (r.rows[0]?.e ?? null) as Parameters<typeof databaseCompatible>[1];
-    const c = databaseCompatible(runtime, marker);
+    const marker = (r.rows[0]?.e ?? null) as DatabaseMarker;
+    // A preview may only migrate a database explicitly initialised as PREVIEW (deploy-policy.ts).
+    const c = deploymentContext() === 'PREVIEW' ? runtimeMayUse(marker) : databaseCompatible(runtime, marker);
     // A first-time PRODUCTION database is unmarked until this very run marks it.
-    if (!c.ok && !(runtime === 'PRODUCTION' && marker === null)) problems.push(c.reason!);
+    if (!c.ok && !(runtime === 'PRODUCTION' && marker === null) && !(opts.initPreview && marker === null)) problems.push(c.reason!);
   } catch {
-    /* fresh database: nothing marked yet */
+    // Fresh database: nothing marked yet. A preview never migrates an unmarked database unless it is the explicit,
+    // emptiness-checked initialisation (scripts/preview-db-init.ts).
+    if (deploymentContext() === 'PREVIEW' && !opts.initPreview) problems.push('this database was never initialised as PREVIEW (run scripts/preview-db-init.ts on an EMPTY database)');
   }
   const pending = await pendingMigrations(folder);
   for (const p of pending) {
@@ -115,11 +119,11 @@ export async function withMigrationLock<T>(fn: () => Promise<T>, opts: { timeout
   }
 }
 
-export async function runMigrations(opts: { folder?: string; lockTimeoutMs?: number; log?: (m: string) => void } = {}) {
+export async function runMigrations(opts: { folder?: string; lockTimeoutMs?: number; log?: (m: string) => void; initPreview?: boolean } = {}) {
   const log = opts.log ?? (() => {});
   const folder = opts.folder ?? FOLDER;
   return withMigrationLock(async () => {
-    const pf = await preflight(folder);
+    const pf = await preflight(folder, { initPreview: opts.initPreview });
     if (pf.problems.length) throw new Error(`migration preflight refused:\n${pf.problems.join('\n')}`);
     log(`preflight ok (${pf.pending.length} pending: ${pf.pending.join(', ') || 'none'})`);
     await migrate(getDb(), { migrationsFolder: folder });

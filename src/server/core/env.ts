@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deploymentContext } from './deploy-policy';
 import { validateEnvironment } from './runtime-env';
 
 /**
@@ -78,7 +79,10 @@ export function unsafeProductionConfig(e: Env, raw: Record<string, string | unde
 
 export function env(): Env {
   if (cached) return cached;
-  const parsed = schema.safeParse(process.env);
+  // A preview validates (and only ever uses) its own isolated database URL — deploy-policy.ts.
+  const source: Record<string, string | undefined> =
+    deploymentContext(process.env) === 'PREVIEW' ? { ...process.env, DATABASE_URL: process.env.PREVIEW_DATABASE_URL, DATABASE_URL_UNPOOLED: undefined } : process.env;
+  const parsed = schema.safeParse(source);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
@@ -86,7 +90,7 @@ export function env(): Env {
   const e = parsed.data;
   // Batch 2: the variable policy (classification, forbidden/staging-only variables, public secrets). Never prints values.
   // (Inside the automated test process the policy is exercised by its own tests, not enforced at every env() call.)
-  const problems = [...unsafeProductionConfig(e), ...(e.NODE_ENV === 'test' ? [] : validateEnvironment(process.env).errors)];
+  const problems = [...unsafeProductionConfig(e), ...(e.NODE_ENV === 'test' ? [] : validateEnvironment(source).errors)];
   if (problems.length) throw new Error(`Unsafe production configuration:\n${problems.join('\n')}`);
   cached = e;
   return e;

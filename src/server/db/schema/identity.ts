@@ -237,7 +237,7 @@ export const systemSettings = pgTable('system_settings', {
  * marked PRODUCTION it can never be re-marked, and DB triggers refuse demo/test fixtures in it
  * (accounts on `.local` domains, TEST payment destinations) whatever the application believes.
  */
-export const DEPLOYMENT_ENVIRONMENTS = ['DEVELOPMENT', 'TEST', 'STAGING', 'PRODUCTION'] as const;
+export const DEPLOYMENT_ENVIRONMENTS = ['DEVELOPMENT', 'TEST', 'STAGING', 'PRODUCTION', 'PREVIEW'] as const;
 export const deploymentEnvironment = pgTable(
   'deployment_environment',
   {
