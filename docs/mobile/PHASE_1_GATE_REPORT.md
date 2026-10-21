@@ -1,8 +1,32 @@
-# Phase 1 acceptance gate report — S1 + S2 foundations
+# Phase 1 acceptance gate report — S1 + S2 foundations (CLOSED)
 
-Branch `claude/awesome-davinci-ojxuul` (Marketplace baseline `48ae40c` + Phase 0 docs `9ad58d0` + Phase 1 commits).
-**Phase 2 has not been started.** Production was not touched, nothing was deployed (staging included), and Real Money
-is unchanged (OFF).
+Branch `claude/awesome-davinci-ojxuul` = Marketplace baseline `48ae40c` + Phase 0 docs `9ad58d0` + Phase 1 commits
+`ce1762e` (backend), `f7a3d25` (Flutter + docs), `1df5d47` (deployment safety) + this closure commit.
+**Phase 1 is closed. Phase 2 has not been started.** Production was not touched. Nothing was deployed to staging. Real
+Money is OFF.
+
+## Final status (2026-10-21)
+
+| Item | Status |
+|---|---|
+| Backend tests (Vitest, real PostgreSQL 16) | **705 / 705 passing** (47 files) |
+| Flutter tests | **31 / 31 passing** (core 13, api 2, design 4, Customer App 8, Admin App 4) |
+| TypeScript (`next typegen && tsc --noEmit`) | **clean** |
+| ESLint (`eslint .`) | **clean** |
+| `flutter analyze` (5 projects) | **clean** (no issues) |
+| OpenAPI / Dart contract drift checks | clean (`scripts/openapi.ts --check`, `scripts/generate-dart-api.ts --check`) |
+| Vercel Preview of `1df5d47` (`edmn-staging`) | **Ready** — 3m 6s, verified by the owner (§13) |
+| Build performs migrations or seeds | **No** — `npm run build` → `next build` only (§13) |
+| Current mobile API endpoints | **27** (16 Customer App, 11 Admin App) |
+| Money-moving mobile APIs | **None** |
+| Migrations 0020 / 0021 applied to staging | **NOT applied** |
+| `DELIVERY_OTP_KEY` in Vercel | **NOT added** |
+| `MOBILE_TOKEN_KEY` in Vercel | **NOT added** |
+| Real Money | **OFF** |
+| HawkScan DAST | **NOT RUN** — `HAWK_API_KEY` unavailable. Not passed, not failed: no result exists |
+| System A | **untouched** |
+| Marketplace branch `claude/great-tesla-nor0wt` | **untouched by Phase 1** (it moved independently — §14) |
+| `main` | **untouched** (still `f70d40b`) |
 
 ## 1. Scope delivered (approved priority order)
 
@@ -168,7 +192,8 @@ contract test enforces this.
 |---|---|
 | `eslint .` | exit 0 |
 | `next typegen && tsc --noEmit` | exit 0 |
-| `vitest run` (all unit + integration) | **45 files / 681 tests, all passing** (618 baseline + 63 new) |
+| `vitest run` (all unit + integration) | **47 files / 705 tests, all passing** (618 baseline + 63 Phase 1 + 24 deployment safety) |
+| `flutter analyze` / `flutter test` (5 projects) | clean / **31 / 31** |
 | Baseline before Phase 1 (pristine worktree) | 40 files / 618 tests, all passing |
 
 Existing tests changed, all because of a new required secret or an approved decision (no assertion weakened):
@@ -197,10 +222,24 @@ Verification:
 - **Forward migration of the pristine baseline database:** preflight OK, applied in 172 ms; 1,081 users, 25 sessions
   and 49 existing OTPs (now version 1) preserved; scope constraint verified.
 
+`drizzle/0021_preview_database_marker.sql` (additive, deployment safety):
+- `deployment_environment_chk` widened with `PREVIEW`
+- the marker guard trigger now refuses any conversion to or from PREVIEW, and deleting a PREVIEW marker
+- a new `BEFORE INSERT` trigger refuses a PREVIEW marker on a database that holds users
+
+Upgrade verified: a database built by the committed `f7a3d25` code (through 0020, with demo users, orders and deals)
+migrated to 0021 with the new code. Only the migration count changed. Legal documents and governorates were
+byte-identical (hashes), and the users, orders, deals and journal counts were unchanged.
+
+**Neither 0020 nor 0021 has been applied to staging.** See §14 for a numbering conflict that must be resolved first.
+
 ## 8. Staging
 
-**Not run — not authorized.** Nothing was deployed. Before any staging deploy, `DELIVERY_OTP_KEY` and
-`MOBILE_TOKEN_KEY` must be provisioned (see `MAINLINE_MIGRATION_PLAN.md`).
+**Not deployed — not authorized.**
+- No staging deploy, staging migration or seed was run by Phase 1.
+- `DELIVERY_OTP_KEY` and `MOBILE_TOKEN_KEY` have **not** been added to Vercel. Both must be provisioned before any
+  staging deploy of this code (`MAINLINE_MIGRATION_PLAN.md`, `docs/runbooks/DEPLOYMENT_SAFETY.md`).
+- The only Vercel activity was the automatic Preview builds of this branch (§13).
 
 ## 9. Financial invariant regression
 
@@ -245,8 +284,8 @@ release itself still requires `finance.release` plus maker/checker.
    *warning* (house policy for new rules), but using those features fails closed at runtime. On PRODUCTION it is a
    boot error.
 9. **Recovery point is a branch, not a tag.** The tag push was refused by the git proxy.
-10. **HawkScan DAST was not run.** `HAWK_API_KEY` is not configured in this environment and no app instance was
-    deployed.
+10. **HawkScan DAST: NOT RUN.** `HAWK_API_KEY` is unavailable in this environment and no app instance was deployed for
+    scanning. There is no result, so it must not be reported as passed.
 
 ## 12. Files changed
 
@@ -260,5 +299,89 @@ See `git diff --name-status 9ad58d0..HEAD`. Summary:
 | Tests | 5 new, 3 updated |
 | Mobile | `apps/customer_mobile`, `apps/admin_mobile`, `packages/edmn_core`, `packages/edmn_api`, `packages/edmn_design`, `apps/README.md` |
 | Docs | this report, `docs/mobile/MAINLINE_MIGRATION_PLAN.md` |
+| Deployment safety (`1df5d47`) | new `src/server/core/deploy-policy.ts`, `scripts/_db-change.ts`, `scripts/preview-db-init.ts`, `drizzle/0021_preview_database_marker.sql`, `.github/workflows/migrate-staging.yml`, `docs/runbooks/DEPLOYMENT_SAFETY.md`, 2 test files + 1 probe helper; modified `vercel.json`, `scripts/{migrate,seed}.ts`, `scripts/start.sh`, `src/server/db/{client,environment,fingerprint,migrations}.ts`, `src/server/db/seed/reference.ts`, `src/server/core/{env,runtime-env}.ts`, `deploy/scripts/deploy.sh`, `deploy/compose/docker-compose.prod.yml`, `Dockerfile` (comment), docs; deleted `scripts/vercel-build.sh` |
 
-**STOP — awaiting explicit approval before Phase 2.**
+## 13. Deployment safety (`1df5d47`) and the real Vercel verification
+
+### Incident and root cause
+
+Pushing `ce1762e` triggered a Vercel Preview build of `edmn-staging`. The old build command `sh scripts/vercel-build.sh`
+ran `migrate → seed → demo seed → next build`. The build failed with
+`✗ migration failed DATABASE_URL is not configured`: Preview had no database variables, so no seed ran and no database
+was reached. The design flaw was that any deployment with credentials would change its database before building.
+
+### Fix
+
+Details: `docs/runbooks/DEPLOYMENT_SAFETY.md`.
+
+- **Build:** a plain `next build`; `scripts/vercel-build.sh` was deleted.
+  - Proven locally to build with no database variables.
+  - Proven to build as a Preview with leaked staging-style credentials while making **0 database connections**
+    (PostgreSQL connection logging).
+- **Policy (`deploy-policy.ts`):** `migrate`, `seed` and `preview-db-init` exit with code 78 **before connecting**
+  when run:
+  - inside `next build`
+  - from npm install, build or start hooks
+  - anywhere on Vercel
+- **Authorization:**
+  - STAGING needs `--authorize=staging` plus `EDMN_DB_CHANGE_AUTHORIZATION` bound to the checked-out commit.
+  - PRODUCTION migrate is release-bound.
+  - PRODUCTION seeds are refused.
+- **Previews:**
+  - Detected from `VERCEL_ENV`.
+  - Use `PREVIEW_DATABASE_URL` only, never `DATABASE_URL*`.
+  - Every runtime connection is refused unless the database was explicitly initialised as PREVIEW.
+  - Only an empty database can become PREVIEW, enforced by the script and by database triggers.
+- **Reference data:**
+  - `insert-missing` mode never updates, deletes or re-currents existing rows.
+  - It ships with the explicit migrate step.
+  - On an empty database it equals the bootstrap set; on an existing one, admin edits survive.
+  - Production has no seed step or service.
+  - `start.sh` changes a database only for LOCAL containers.
+- **Tests:** `tests/unit/deploy-policy.test.ts` (11) and `tests/integration/deployment-safety.test.ts` (13).
+
+### Real Vercel verification (owner-verified, 2026-10-21)
+
+| Check | Result |
+|---|---|
+| Commit | `1df5d47b359aeb590f0f56d3c443c606518c4f72` |
+| Deployment | Preview of `edmn-staging`, triggered automatically by the push (no manual deploy or redeploy) |
+| Result | **Ready**, build duration **3m 6s** |
+| Build path | `Running "npm run build"` → `> next build` → `✓ Compiled successfully in 88s` → `Build Completed in /vercel/output [3m]` → `Deployment completed` |
+| Strings absent from the full build log | `migrate`, `seed`, `DATABASE_URL`, `vercel-build.sh`, `reference data` |
+| Migrations / seeds run | **none** |
+| Database connections by the build | **none** |
+| Vercel settings changed during verification | none |
+| Preview environment | no variables at all (no `DATABASE_URL*`, `EDMN_ENVIRONMENT`, `STAGING_*`); `SEED_DEMO` deleted from the project |
+
+No Preview database credentials were added. A Preview without `PREVIEW_DATABASE_URL` builds and serves pages, but
+any page that needs the database is refused at runtime. This is intended.
+
+## 14. Open items carried forward (blockers before any staging deploy or merge)
+
+1. **Migration-number conflict with the Marketplace branch.**
+   - `claude/great-tesla-nor0wt` advanced independently from `48ae40c` to `03ea2ed` ("B1 financial fail-closed",
+     2026-10-21 08:45 UTC). This was not pushed by Phase 1 work.
+   - That commit adds `drizzle/0020_b1_financial_fail_closed` (journal time 2026-10-20 17:50 UTC).
+   - Phase 1's `0020_mobile_api_foundation` carries an **earlier** journal time (2026-10-20 12:17 UTC).
+   - Drizzle applies only migrations newer than the last applied one. On a database that already has `0020_b1`, the
+     mobile migration would be **silently skipped**.
+   - Before any merge or staging migration, rebase Phase 1 onto the current Marketplace head and regenerate its
+     migrations so they sort after `0020_b1` (they become 0021 and 0022). Then re-verify migrations on fresh and
+     upgraded databases.
+2. **Staging database state is unverified.**
+   - `03ea2ed` sits on the staging production branch, whose committed build command at that commit is still
+     `sh scripts/vercel-build.sh`.
+   - Whether that deployment migrated or seeded the staging database is outside Phase 1's knowledge.
+   - A read-only check of `drizzle.__drizzle_migrations` on staging is recommended before planning the merge.
+3. **Deployment-safety fix is only on this branch.** The Marketplace branch keeps the old build script until Phase 1 (or
+   the fix alone) is merged into it.
+4. **External configuration still pending:**
+   - DML-only staging runtime role in Neon
+   - GitHub `staging` environment with required reviewers and the `STAGING_MIGRATION_DATABASE_URL` secret
+   - `DELIVERY_OTP_KEY` and `MOBILE_TOKEN_KEY` in Vercel before a staging deploy
+   - an optional isolated preview database
+5. **HawkScan:** run once `HAWK_API_KEY` and a scannable deployment exist.
+6. **Phase 2 backlog:** see §11.
+
+**PHASE 1 CLOSED — STOP. Awaiting explicit approval before Phase 2.**
