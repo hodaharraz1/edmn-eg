@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { RequestContext } from '@/server/auth/actors';
 import type { Actor } from '@/server/core/actor';
@@ -34,6 +34,20 @@ export interface HandlerInput<P, Q, B> {
   /** Request attribution for services that take RequestMeta (login, refresh, MFA). */
   meta: RequestContext & { installationId: string | null };
   deviceId: string | null;
+  /** Uploaded files by form field (multipart routes only). Bytes are validated by the storage layer, never trusted. */
+  files: Record<string, UploadedFile[]>;
+}
+
+export interface UploadedFile {
+  data: Buffer;
+  name: string;
+}
+
+/** A private file returned by a `binary` route (authorization already enforced by the service). */
+export interface BinaryResult {
+  data: Buffer | Uint8Array;
+  contentType: string;
+  filename: string;
 }
 
 export interface RouteDef<P extends z.ZodType = z.ZodType, Q extends z.ZodType = z.ZodType, B extends z.ZodType = z.ZodType, R extends z.ZodType = z.ZodType> {
@@ -58,6 +72,13 @@ export interface RouteDef<P extends z.ZodType = z.ZodType, Q extends z.ZodType =
   status?: 200 | 201 | 202;
   /** Public reads only: allow shared caches for this many seconds. */
   cacheSeconds?: number;
+  /**
+   * multipart/form-data route: text fields are validated by `body` (use z.coerce for numbers); each listed file field
+   * accepts up to `max` files. JSON bodies are refused on such a route and vice versa.
+   */
+  multipart?: { files: Record<string, { max: number; required?: boolean }> };
+  /** The handler returns a BinaryResult (private file download); `response` only documents the JSON error shape. */
+  binary?: true;
   handler: (input: HandlerInput<z.output<P>, z.output<Q>, z.output<B>>) => Promise<z.input<R>>;
 }
 
@@ -85,6 +106,43 @@ async function readBody(req: Request): Promise<unknown> {
   }
 }
 
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+
+async function readMultipart(req: Request, spec: NonNullable<RouteDef['multipart']>): Promise<{ fields: Record<string, string>; files: Record<string, UploadedFile[]>; digest: unknown }> {
+  if (!/^multipart\/form-data\b/i.test(req.headers.get('content-type') ?? '')) throw new ApiError('validation_failed', undefined, { issues: [{ path: '', code: 'unsupported_media_type' }] });
+  const declared = Number(req.headers.get('content-length') ?? 0);
+  if (declared > MAX_UPLOAD_BYTES) throw new ApiError('validation_failed', undefined, { issues: [{ path: '', code: 'too_big' }] });
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    throw new ApiError('validation_failed', undefined, { issues: [{ path: '', code: 'invalid_multipart' }] });
+  }
+  const fields: Record<string, string> = {};
+  const files: Record<string, UploadedFile[]> = {};
+  const digest: Record<string, string[]> = {};
+  let total = 0;
+  for (const [key, value] of form.entries()) {
+    if (typeof value === 'string') {
+      fields[key] = value;
+      continue;
+    }
+    const rule = spec.files[key];
+    if (!rule) throw new ApiError('validation_failed', undefined, { issues: [{ path: key, code: 'unexpected_file' }] });
+    const data = Buffer.from(await value.arrayBuffer());
+    total += data.length;
+    if (total > MAX_UPLOAD_BYTES) throw new ApiError('validation_failed', undefined, { issues: [{ path: key, code: 'too_big' }] });
+    if (!data.length) continue;
+    (files[key] ??= []).push({ data, name: (value.name || 'upload').slice(0, 200) });
+    (digest[key] ??= []).push(createHash('sha256').update(data).digest('hex'));
+    if (files[key].length > rule.max) throw new ApiError('validation_failed', undefined, { issues: [{ path: key, code: 'too_many_files' }] });
+  }
+  for (const [key, rule] of Object.entries(spec.files)) {
+    if (rule.required && !files[key]?.length) throw new ApiError('validation_failed', undefined, { issues: [{ path: key, code: 'required' }] });
+  }
+  return { fields, files, digest: { fields, files: digest } };
+}
+
 type NextCtx = { params: Promise<Record<string, string | string[] | undefined>> };
 
 /** Next.js route handler for a definition. */
@@ -104,8 +162,19 @@ export function toHandler(def: RouteDef) {
       const params = def.params ? def.params.parse(rawParams) : {};
       const url = new URL(req.url);
       const query = def.query ? def.query.parse(Object.fromEntries(url.searchParams)) : {};
-      const rawBody = def.method === 'GET' || def.method === 'DELETE' ? undefined : await readBody(req);
-      const body = def.body ? def.body.parse(rawBody ?? {}) : undefined;
+      let rawBody: unknown;
+      let files: Record<string, UploadedFile[]> = {};
+      let bodyInput: unknown;
+      if (def.multipart) {
+        const m = await readMultipart(req, def.multipart);
+        files = m.files;
+        bodyInput = m.fields;
+        rawBody = m.digest; // idempotency hash covers the fields and the SHA-256 of every file
+      } else {
+        rawBody = def.method === 'GET' || def.method === 'DELETE' ? undefined : await readBody(req);
+        bodyInput = rawBody ?? {};
+      }
+      const body = def.body ? def.body.parse(bodyInput) : undefined;
 
       if (def.idempotency === 'required') {
         const owner = auth.userId ? `u:${auth.userId}` : installationId ? `i:${installationId}` : null;
@@ -123,7 +192,22 @@ export function toHandler(def: RouteDef) {
         actor: auth.actor,
         meta: { ...meta, channel: auth.actor?.channel ?? null, deviceId: auth.deviceId },
         deviceId: auth.deviceId,
+        files,
       });
+      if (def.binary) {
+        const b = out as unknown as BinaryResult;
+        return new Response(new Uint8Array(b.data), {
+          status: 200,
+          headers: {
+            ...base,
+            'content-type': b.contentType,
+            'content-disposition': `inline; filename="${b.filename.replace(/[^\w.-]/g, '_')}"`,
+            'cache-control': 'private, no-store',
+            'x-content-type-options': 'nosniff',
+            'content-security-policy': "default-src 'none'; sandbox",
+          },
+        });
+      }
       const status = def.status ?? 200;
       const payload = def.response.parse(out);
       if (claim) await completeIdempotent(claim, status, payload);

@@ -84,6 +84,20 @@ function parametersFrom(c: Components, schema: z.ZodType | undefined, where: 'pa
   });
 }
 
+function requestBodyOf(c: Components, def: RouteDef): Json {
+  if (def.multipart) {
+    const base = (def.body ? c.convert(def.body, 'input') : { type: 'object', properties: {} }) as { properties?: Record<string, Json>; required?: string[] };
+    const properties: Record<string, Json> = { ...(base.properties ?? {}) };
+    const required = [...(base.required ?? [])];
+    for (const [name, rule] of Object.entries(def.multipart.files)) {
+      properties[name] = rule.max > 1 ? { type: 'array', maxItems: rule.max, items: { type: 'string', format: 'binary' } } : { type: 'string', format: 'binary' };
+      if (rule.required) required.push(name);
+    }
+    return { requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', properties, ...(required.length ? { required } : {}) } } } } };
+  }
+  return def.body ? { requestBody: { required: true, content: { 'application/json': { schema: c.convert(def.body, 'input') } } } } : {};
+}
+
 function operation(c: Components, def: RouteDef): Json {
   const params: Json[] = [...parametersFrom(c, def.params, 'path'), ...parametersFrom(c, def.query, 'query')];
   if (def.auth === 'none' || def.auth === 'optional-customer') {
@@ -93,7 +107,9 @@ function operation(c: Components, def: RouteDef): Json {
     params.push({ name: 'Idempotency-Key', in: 'header', required: true, description: 'Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).', schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{16,128}$' } });
   }
   const responses: Json = {
-    [String(def.status ?? 200)]: { description: 'OK', content: { 'application/json': { schema: c.convert(def.response, 'output') } } },
+    [String(def.status ?? 200)]: def.binary
+      ? { description: 'File bytes', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } }
+      : { description: 'OK', content: { 'application/json': { schema: c.convert(def.response, 'output') } } },
   };
   const byStatus = new Map<number, ApiErrorCode[]>();
   for (const code of errorCodesFor(def)) byStatus.set(STATUS_OF(code), [...(byStatus.get(STATUS_OF(code)) ?? []), code]);
@@ -113,7 +129,7 @@ function operation(c: Components, def: RouteDef): Json {
     tags: def.tags,
     security: def.auth === 'none' ? [] : def.auth === 'optional-customer' ? [{}, { bearer: [] }] : [{ bearer: [] }],
     ...(params.length ? { parameters: params } : {}),
-    ...(def.body ? { requestBody: { required: true, content: { 'application/json': { schema: c.convert(def.body, 'input') } } } } : {}),
+    ...requestBodyOf(c, def),
     responses,
     'x-auth-mode': def.auth,
     'x-rate-limit': { tier: def.rate, perUser: tier.user, perInstallation: tier.installation, perIp: tier.ip },
