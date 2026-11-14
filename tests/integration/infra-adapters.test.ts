@@ -335,6 +335,7 @@ describe('production environment isolation', () => {
     DATABASE_URL: 'postgresql://app:pw@ep-prod-123-pooler.eu-central-1.aws.neon.tech/edmn?sslmode=require',
     DATABASE_URL_UNPOOLED: 'postgresql://app:pw@ep-prod-123.eu-central-1.aws.neon.tech/edmn?sslmode=require',
     SESSION_SECRET: randomBytes(32).toString('base64'), DATA_ENCRYPTION_KEY: KEY, DATA_ENCRYPTION_KEY_ID: 'prod2026a', CRON_SECRET: randomBytes(32).toString('hex'),
+    DELIVERY_OTP_KEY: randomBytes(36).toString('base64'), MOBILE_TOKEN_KEY: randomBytes(36).toString('base64'),
     APP_URL: 'https://www.edmneg.com', ADMIN_APP_URL: 'https://admin.edmneg.com', ADMIN_HOST: 'admin.edmneg.com', ENFORCE_ADMIN_HOST: 'true',
     STORAGE_DRIVER: 'database', MAIL_DRIVER: 'smtp', SMTP_HOST: 'smtp.provider.example', MAIL_FROM: 'اضمن إي جي <info@edmneg.com>',
     VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv', VAPID_SUBJECT: 'mailto:info@edmneg.com', INLINE_WORKER: 'true',

@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { and, eq, inArray, sql } from 'drizzle-orm';
 import { BadgeCheck, CalendarDays, RotateCcw, Star, Truck } from 'lucide-react';
-import { db } from '@/server/db/client';
-import { categories, files, products, sellers, stores } from '@/server/db/schema';
+import { publicStoreBySlug } from '@/server/modules/catalog/public-read';
 import { sellerReviewsPublic, reviewerDisplayName } from '@/server/modules/reviews/service';
 import { formatDate } from '@/lib/format';
 import { Listing, type SP } from '@/app/_components/listing';
@@ -11,15 +9,8 @@ import { Stars, mediaUrl } from '@/ui/commerce';
 import { Breadcrumbs, Tabs } from '@/ui/data';
 import { EmptyState } from '@/ui/feedback';
 
-async function load(slug: string) {
-  const [row] = await db
-    .select({ store: stores, seller: sellers })
-    .from(stores)
-    .innerJoin(sellers, eq(sellers.id, stores.sellerId))
-    .where(eq(stores.slug, decodeURIComponent(slug)));
-  if (!row || !['APPROVED', 'RESTRICTED'].includes(row.seller.status)) return null;
-  return row;
-}
+/** Visibility (APPROVED / RESTRICTED sellers only) and the read model live in the shared catalog read service. */
+const load = (slug: string) => publicStoreBySlug(decodeURIComponent(slug));
 
 export async function generateMetadata(props: PageProps<'/store/[slug]'>): Promise<Metadata> {
   const r = await load((await props.params).slug);
@@ -33,14 +24,10 @@ export default async function StorePage(props: PageProps<'/store/[slug]'>) {
   const sp = (await props.searchParams) as SP;
   const tab = typeof sp.tab === 'string' ? sp.tab : 'products';
   const { store, seller } = r;
-  const [logo] = store.logoFileId ? await db.select({ key: files.storageKey }).from(files).where(eq(files.id, store.logoFileId)) : [];
-  const [banner] = store.bannerFileId ? await db.select({ key: files.storageKey }).from(files).where(eq(files.id, store.bannerFileId)) : [];
-  const cats = await db
-    .selectDistinct({ nameAr: categories.nameAr, slug: categories.slug })
-    .from(products)
-    .innerJoin(categories, eq(categories.id, products.categoryId))
-    .where(and(eq(products.sellerId, seller.id), eq(products.status, 'LIVE')));
-  const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(and(eq(products.sellerId, seller.id), inArray(products.status, ['LIVE'])));
+  const logo = r.logoKey ? { key: r.logoKey } : undefined;
+  const banner = r.bannerKey ? { key: r.bannerKey } : undefined;
+  const cats = r.categories;
+  const count = r.productCount;
   const positive = seller.ratingCount ? Math.round((seller.positiveCount / seller.ratingCount) * 100) : null;
   const base = `/store/${store.slug}`;
   return (

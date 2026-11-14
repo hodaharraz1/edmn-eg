@@ -25,6 +25,8 @@ export async function audit(tx: DbOrTx, actor: Actor, input: AuditInput): Promis
     ip: actor.ip ?? null,
     userAgent: actor.userAgent ? actor.userAgent.slice(0, 300) : null,
     requestId: actor.requestId ?? null,
+    channel: actor.channel ?? null,
+    deviceId: actor.deviceId ?? null,
   });
 }
 

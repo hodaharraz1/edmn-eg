@@ -16,7 +16,7 @@
 `.github/workflows/ci.yml` (manual/PR): `npm ci` → `npm run lint` → `npm run typecheck` → `npx vitest run` (Postgres service) → `npx tsx scripts/secret-scan.ts`. Full E2E (`npx playwright test`) runs locally before any push (docs/TESTING_POLICY.md). A red gate blocks the deploy.
 
 ## 3. Deploy
-- Build: `scripts/vercel-build.sh` → `scripts/migrate.ts` (preflight: environment marker compatible **before DDL**; destructive statements refused unless the migration carries `-- edmn:allow-destructive: <reason>`; advisory lock so two deploys never migrate concurrently) → reference seed (demo seed only when `EDMN_ENVIRONMENT=staging` and `SEED_DEMO=true`) → `next build`.
+- Build: `next build` only — no database access (docs/runbooks/DEPLOYMENT_SAFETY.md). Migrations run separately and deliberately: `scripts/migrate.ts` (preflight: environment marker compatible **before DDL**; destructive statements refused unless the migration carries `-- edmn:allow-destructive: <reason>`; advisory lock so two deploys never migrate concurrently) with reference data insert-missing; production never runs a seed.
 - Migrations are **expand → migrate → contract**: add columns/tables (old code keeps working), backfill in a job, switch reads, and only in a later release drop the old shape (reviewed contract migration).
 - After deploy: `/api/ready` must be 200 with all checks `ok`; `/admin/ops` fingerprint OK; run a manual ledger health check; targeted smoke specs only.
 

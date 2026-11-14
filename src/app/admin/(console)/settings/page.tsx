@@ -1,6 +1,6 @@
 import { settingAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
-import { getAllSettings, RESTRICTED_SETTINGS, SENSITIVE_SETTINGS, SETTINGS_SCHEMA, type SettingKey } from '@/server/modules/settings';
+import { adminSettingsView, RESTRICTED_SETTINGS, SENSITIVE_SETTINGS, SETTINGS_SCHEMA, type SettingKey } from '@/server/modules/settings';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
 import { Alert, Badge } from '@/ui/feedback';
@@ -27,9 +27,9 @@ const HINTS: Partial<Record<SettingKey, string>> = {
 };
 
 export default async function Settings() {
-  const { allowed } = await adminWith('settings.manage');
+  const { actor, allowed } = await adminWith('settings.manage');
   if (!allowed) return <Forbidden />;
-  const all = await getAllSettings();
+  const all = await adminSettingsView(actor);
   // Restricted keys (kill switches, owner approvals) change only through their dedicated, separately-authorized screens.
   const keys = (Object.keys(SETTINGS_SCHEMA) as SettingKey[]).filter((k) => !RESTRICTED_SETTINGS.includes(k));
   return (

@@ -46,6 +46,9 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'DATA_ENCRYPTION_KEY', classification: 'REQUIRED', secret: true, purpose: 'AES-256-GCM primary key (national IDs, payout details, TOTP)' },
   { name: 'DATA_ENCRYPTION_KEY_ID', classification: 'OPTIONAL', secret: false, purpose: 'Key id of the primary key; when set, new ciphertexts are written as v2.<kid>' },
   { name: 'DATA_ENCRYPTION_KEYS_PREVIOUS', classification: 'OPTIONAL', secret: true, purpose: 'Decrypt-only previous keys "kid:base64,…" during a rotation' },
+  // Phase 1 (mobile): dedicated key material, separate from login/session and data-at-rest keys (src/server/core/keys.ts).
+  { name: 'DELIVERY_OTP_KEY', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Protected Deal delivery OTP HMAC + buyer sealed copy (never SESSION_SECRET)' },
+  { name: 'MOBILE_TOKEN_KEY', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Signs EDMN mobile app access tokens (never SESSION_SECRET)' },
   { name: 'EDMN_ENVIRONMENT', classification: 'REQUIRED', secret: false, requiredIn: HOSTED, purpose: 'Deployment kind (never implied)' },
   { name: 'APP_URL', classification: 'REQUIRED', secret: false, requiredIn: HOSTED, purpose: 'Public https URL' },
   { name: 'CRON_SECRET', classification: 'REQUIRED', secret: true, requiredIn: HOSTED, purpose: 'Authenticates the scheduler (/api/cron/tick)' },
@@ -89,6 +92,10 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'SEED_DEMO', classification: 'STAGING_ONLY', secret: false, purpose: 'Seeds demo data at staging build' },
   { name: 'E2E_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'E2E database (test tooling only)' },
   { name: 'TEST_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'Vitest database (test tooling only)' },
+  // Deployment safety (deploy-policy.ts): preview isolation and per-step database-change authorization.
+  { name: 'PREVIEW_DATABASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: true, purpose: 'Isolated preview database (the ONLY database a preview may use; never DATABASE_URL)' },
+  { name: 'EDMN_DEPLOYMENT', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: '"preview" outside Vercel (Vercel previews are detected from VERCEL_ENV)' },
+  { name: 'EDMN_DB_CHANGE_AUTHORIZATION', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'Per-step <env>:<release> tripwire for migrate / seed — passed to that one step, never kept in a runtime environment' },
   { name: 'E2E_BASE_URL', classification: 'FORBIDDEN_IN_PRODUCTION', secret: false, purpose: 'E2E target (test tooling only)' },
 ];
 
@@ -133,6 +140,15 @@ export function validateEnvironment(raw: Raw = process.env, kind: RuntimeEnviron
     // An ephemeral serverless filesystem would silently lose National ID scans and payment proofs.
     if (raw.VERCEL && (raw.STORAGE_DRIVER ?? 'local') === 'local') fail('STORAGE_DRIVER=local is ephemeral on Vercel (use database or an object store)');
     if (present('CRON_SECRET') && raw.CRON_SECRET!.length < 24) fail('CRON_SECRET is too short (≥ 24 chars)');
+    // Key separation (Phase 1): each dedicated key is long, not a placeholder and never equal to another secret.
+    for (const n of ['DELIVERY_OTP_KEY', 'MOBILE_TOKEN_KEY']) {
+      if (!present(n)) continue;
+      if (raw[n]!.length < 32) errors.push(`${n} is too short (≥ 32 chars)`);
+      if (looksPlaceholder(raw[n]!)) errors.push(`${n} is a public/placeholder value`);
+      for (const other of ['SESSION_SECRET', 'DATA_ENCRYPTION_KEY', 'CRON_SECRET', 'DELIVERY_OTP_KEY', 'MOBILE_TOKEN_KEY']) {
+        if (other !== n && present(other) && raw[other] === raw[n]) errors.push(`${n} must be a different secret from ${other}`);
+      }
+    }
   }
   if (kind === 'PRODUCTION') {
     if (raw.MAIL_DRIVER !== 'smtp') errors.push('MAIL_DRIVER=smtp is required in PRODUCTION');
@@ -289,7 +305,7 @@ export function smsAvailable(raw: Record<string, string | undefined> = process.e
 
 /* ═══════════════ Database / storage fingerprint compatibility ═══════════════ */
 
-export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' | null;
+export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' | 'PREVIEW' | null;
 
 /**
  * Which database markers a runtime may use. PRODUCTION accepts only a PRODUCTION database (an unmarked or
@@ -297,6 +313,8 @@ export type DatabaseMarker = 'DEVELOPMENT' | 'TEST' | 'STAGING' | 'PRODUCTION' |
  * runtime may never use a hosted (STAGING) database: no silent fallback to staging.
  */
 export function databaseCompatible(runtime: RuntimeEnvironment, marker: DatabaseMarker): { ok: boolean; reason?: string } {
+  // An isolated preview database is only ever used by a preview (deploy-policy.ts runtimeMayUse), never by these runtimes.
+  if (marker === 'PREVIEW') return { ok: false, reason: `${runtime} runtime refuses a PREVIEW database` };
   if (runtime === 'PRODUCTION') return marker === 'PRODUCTION' ? { ok: true } : { ok: false, reason: `PRODUCTION runtime refuses a ${marker ?? 'UNMARKED'} database` };
   if (marker === 'PRODUCTION') return { ok: false, reason: `${runtime} runtime refuses a PRODUCTION database` };
   if (runtime === 'STAGING') return marker === 'DEVELOPMENT' || marker === 'TEST' ? { ok: false, reason: `STAGING runtime refuses a ${marker} database` } : { ok: true };

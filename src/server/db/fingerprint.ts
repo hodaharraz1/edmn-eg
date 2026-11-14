@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { keyCheckValue, primaryKeyId } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { logger } from '@/server/core/logger';
+import { deploymentContext, runtimeMayUse } from '@/server/core/deploy-policy';
 import { databaseCompatible, runtimeEnvironment, type DatabaseMarker, type RuntimeEnvironment } from '@/server/core/runtime-env';
 import { db, type DbOrTx } from './client';
 import { secretCheckValue } from '@/server/core/known-nonprod';
@@ -99,7 +100,7 @@ export async function verifyRuntimeFingerprint(conn: DbOrTx = db, raw: Record<st
     reasons.push('database unreachable or not migrated');
     return out;
   }
-  const dbc = databaseCompatible(runtime, out.database);
+  const dbc = deploymentContext(raw) === 'PREVIEW' ? runtimeMayUse(out.database as DatabaseMarker, raw) : databaseCompatible(runtime, out.database);
   if (!dbc.ok) reasons.push(dbc.reason!);
   const st = await storageFingerprint(runtime, raw);
   out.storage = st.storage;

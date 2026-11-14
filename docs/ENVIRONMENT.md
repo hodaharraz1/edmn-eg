@@ -18,7 +18,9 @@ lives in the database and is managed in the Admin with audit (see ARCHITECTURE.m
 | `SELLER_HOST` | `seller.edmneg.com` | with `ENFORCE_HOSTS` | Seller Center host name |
 | `ADMIN_HOST` | `admin.edmneg.com` | with `ENFORCE_HOSTS` | Admin host name |
 | `DATABASE_URL` | — | ✅ | PostgreSQL connection string |
-| `DATABASE_URL_UNPOOLED` | — | | Direct (non-pooler) URL used for migrations/seeds by `scripts/vercel-build.sh` |
+| `DATABASE_URL_UNPOOLED` | — | | Direct (non-pooler) URL used by the explicit migration step (never by a build — docs/runbooks/DEPLOYMENT_SAFETY.md) |
+| `PREVIEW_DATABASE_URL` | — | | The ONLY database a preview may use (isolated, initialised by `scripts/preview-db-init.ts`); forbidden in production |
+| `EDMN_DB_CHANGE_AUTHORIZATION` | — | | `<env>:<commit>` tripwire passed to one migrate / seed step; never kept in a runtime environment |
 | `DATABASE_POOL_MAX` | `10` | | Pool size per process (use 2–3 on serverless) |
 | `TEST_DATABASE_URL` | — | tests only | Database **wiped** by the Vitest suite |
 | `E2E_DATABASE_URL` | `…/edmn_e2e` | E2E only | Database **reset and re-seeded** by Playwright |
@@ -48,7 +50,7 @@ Staging-only variables (a public staging deployment must never reuse the reposit
 | Variable | Description |
 |---|---|
 | `EDMN_ENVIRONMENT` | `staging` marks a public test deployment: visible staging banner, `noindex` + `robots.txt: Disallow /`, demo seed allowed with `NODE_ENV=production` |
-| `SEED_DEMO` | `true` → `scripts/start.sh` runs the (idempotent) demo seed on boot; staging only |
+| `SEED_DEMO` | `true` → a LOCAL container (`scripts/start.sh`) loads demo data on boot. Never read on Vercel, staging or production |
 | `STAGING_DEMO_PASSWORD` | password for all staging demo customers/sellers (≥ 10 chars, generated) |
 | `STAGING_ADMIN_PASSWORD` | password for all staging staff accounts (≥ 14 chars, generated) |
 | `STAGING_TOTP_SECRET` | base32 TOTP secret for staging staff 2FA (≥ 32 chars, generated); add it to an authenticator app |

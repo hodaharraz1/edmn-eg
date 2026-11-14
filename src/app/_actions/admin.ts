@@ -5,11 +5,12 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { CATEGORY_NAV_TAG } from '@/server/web/context';
 import { and, eq } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
+import { addRiskFlag, resolveRiskFlag } from '@/server/modules/risk/service';
 import { requirePermission, requireStepUp } from '@/server/core/actor';
 import { parseEgp, parsePercentToBps } from '@/server/core/money';
 import { validation } from '@/server/core/errors';
 import { db } from '@/server/db/client';
-import { riskFlags, users, notificationTemplates } from '@/server/db/schema';
+import { users, notificationTemplates } from '@/server/db/schema';
 import { addPolicyRule, saveAttribute, saveBrand, saveCategory, setCategoryAttribute, togglePolicyRule } from '@/server/modules/catalog/taxonomy';
 import { moderateProduct, moderateRevision, type ModerationDecision } from '@/server/modules/catalog/products';
 import {
@@ -67,25 +68,12 @@ export async function verifyPayoutAction(_p: ActionState, fd: FormData) {
 }
 export async function riskFlagAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
+    // Authorization, conflict of interest, step-up and the atomic audit live in the risk service (S-H1).
     if (str(fd, 'op') === 'resolve') {
-      const [flag] = await db.select().from(riskFlags).where(eq(riskFlags.id, str(fd, 'flagId')));
-      if (!flag) throw validation('المؤشر غير موجود');
-      // Deal delivery-review flags hold money: resolving one needs deal authority + a fresh 2FA and a reason.
-      if (flag.entityType === 'external_deal') {
-        requirePermission(a, 'deals.manage');
-        requireStepUp(a);
-        if (str(fd, 'reason').length < 3) throw validation('اكتب سبب إغلاق المؤشر');
-      } else requirePermission(a, 'sellers.suspend');
-      await db.update(riskFlags).set({ status: 'RESOLVED', resolvedBy: a.userId, resolvedAt: new Date() }).where(and(eq(riskFlags.id, flag.id), eq(riskFlags.status, 'OPEN')));
-      await audit(db, a, { action: 'risk.flag_resolved', entityType: flag.entityType, entityId: flag.entityId, newValues: { flagId: flag.id, code: flag.code }, reason: str(fd, 'reason') || null });
+      await resolveRiskFlag(a, str(fd, 'flagId'), str(fd, 'reason'));
       return done('تم إغلاق المؤشر');
-    } else {
-      requirePermission(a, 'sellers.suspend');
-      const note = str(fd, 'note');
-      if (note.length < 3) throw validation('اكتب الملاحظة');
-      await db.insert(riskFlags).values({ entityType: str(fd, 'entityType'), entityId: str(fd, 'entityId'), code: str(fd, 'code') || 'MANUAL', severity: str(fd, 'severity') || 'MEDIUM', note, createdBy: a.userId });
     }
-    await audit(db, a, { action: 'risk.flag_' + (str(fd, 'op') || 'added'), entityType: str(fd, 'entityType'), entityId: str(fd, 'entityId') });
+    await addRiskFlag(a, { entityType: str(fd, 'entityType'), entityId: str(fd, 'entityId'), code: str(fd, 'code') || undefined, severity: (str(fd, 'severity') || undefined) as 'MEDIUM' | undefined, note: str(fd, 'note') });
     return done();
   }, [str(fd, 'back')]);
 }

@@ -1,0 +1,52 @@
+# Explicit, authorized STAGING database migration (deployment safety — docs/runbooks/DEPLOYMENT_SAFETY.md).
+#
+# The ONLY place staging DDL credentials exist: the "staging" GitHub Environment secret
+# STAGING_MIGRATION_DATABASE_URL (schema owner role). Vercel holds only the DML-only runtime role.
+# Run manually: Actions → "Migrate staging database" → choose the commit that is about to be deployed.
+# Configure the "staging" environment with required reviewers so a second person approves every run.
+name: Migrate staging database
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Full commit SHA whose migrations are applied (must be the commit you deploy next)
+        required: true
+      reference_seed:
+        description: Also add missing reference rows (insert-missing; never overwrites)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    env:
+      EDMN_ENVIRONMENT: staging
+      DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
+      EDMN_DB_CHANGE_AUTHORIZATION: staging:${{ inputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Preflight (read-only)
+        run: npx tsx scripts/migrate.ts --preflight
+      - name: Migrate (schema${{ inputs.reference_seed && ' + reference insert-missing' || ' only' }})
+        run: npx tsx scripts/migrate.ts --authorize=staging ${{ !inputs.reference_seed && '--schema-only' || '' }}
+      - name: Ledger invariants (read-only)
+        run: npm run -s ledger:check

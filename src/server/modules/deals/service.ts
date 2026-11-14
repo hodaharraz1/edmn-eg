@@ -8,7 +8,7 @@ import { requireStepUp, requireUser, SYSTEM_ACTOR, type Actor, hasPermission } f
 import { decryptJson, encryptJson, randomToken, sha256 } from '@/server/core/crypto';
 import { randomUUID } from 'node:crypto';
 import { enforce, hit } from '@/server/auth/rate-limit';
-import { deliveryCodeHash, deliveryCodeMatches, deliveryOtpTestMode, generateDeliveryCode } from './delivery-otp';
+import { CURRENT_OTP_HASH_VERSION, deliveryCodeHash, deliveryCodeMatches, deliveryOtpTestMode, generateDeliveryCode, openBuyerCode, sealBuyerCode } from './delivery-otp';
 import { formatDate } from '@/lib/format';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
@@ -816,7 +816,9 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
     dealId: deal.id,
     buyerId: deal.buyerId,
     deliveryAttempt: Math.max(1, deal.deliveryAttempt),
-    codeHash: deliveryCodeHash(deal.id, id, code),
+    codeHash: deliveryCodeHash(deal.id, id, code, CURRENT_OTP_HASH_VERSION),
+    codeHashVersion: CURRENT_OTP_HASH_VERSION,
+    buyerCodeEnc: sealBuyerCode(deal.id, id, code),
     testCodeEnc: deliveryOtpTestMode() ? encryptJson(code) : null,
     expiresAt,
     maxAttempts,
@@ -886,7 +888,7 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
       return { ok: false, error: invalidState('انتهت صلاحية رمز الاستلام. اطلب رمز جديد') };
     }
     const attempts = otp.attempts + 1;
-    if (!deliveryCodeMatches(otp.codeHash, deal.id, otp.id, candidate)) {
+    if (!deliveryCodeMatches(otp.codeHash, deal.id, otp.id, candidate, otp.codeHashVersion)) {
       const locked = attempts >= otp.maxAttempts;
       await tx
         .update(dealDeliveryOtps)
@@ -931,6 +933,32 @@ export async function deliveryOtpForBuyer(actor: Actor, dealId: string) {
     attemptsLeft: otp.maxAttempts - otp.attempts,
     testCode: !expired && deliveryOtpTestMode() && otp.testCodeEnc ? decryptJson<string>(otp.testCodeEnc) : null,
   };
+}
+
+/**
+ * The authenticated BUYER's in-app view of the CURRENT handover code (Phase 1 product decision: the code is available
+ * inside the EDMN Customer App; SMS stays a fallback channel). Buyer only — never the seller, staff or support (a staff
+ * actor is refused even with every permission). Rate-limited per buyer and per deal; the reveal is audited WITHOUT the
+ * code. Returns null when there is no usable code (not shipped yet, used, expired, locked or a legacy code issued
+ * before the sealed copy existed — the buyer then uses SMS or asks for a new code).
+ */
+export async function revealDeliveryOtpForBuyer(actor: Actor, dealId: string) {
+  if (actor.type !== 'CUSTOMER') throw forbidden('رمز الاستلام متاح للمشتري نفسه فقط');
+  const userId = requireUser(actor);
+  const [d] = await db.select({ buyerId: externalDeals.buyerId }).from(externalDeals).where(eq(externalDeals.id, dealId));
+  if (!d) throw notFound('الصفقة');
+  if (d.buyerId !== userId) throw forbidden('رمز الاستلام متاح للمشتري نفسه فقط');
+  await enforce(`deal-otp-reveal-user:${userId}`, 20, 900);
+  await enforce(`deal-otp-reveal:${dealId}`, 10, 900);
+  return db.transaction(async (tx) => {
+    const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, dealId));
+    if (deal.status !== 'DELIVERED') return null;
+    const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id));
+    if (!otp || otp.buyerId !== userId || !otp.buyerCodeEnc || otp.expiresAt <= new Date()) return null;
+    const code = openBuyerCode(deal.id, otp.id, otp.buyerCodeEnc);
+    await audit(tx, actor, { action: 'deal.delivery_otp_viewed_by_buyer', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id } });
+    return { code, expiresAt: otp.expiresAt, attemptsLeft: otp.maxAttempts - otp.attempts };
+  });
 }
 
 /** Handover evidence for parties / staff — never includes the code or its hash. */

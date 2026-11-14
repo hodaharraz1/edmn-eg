@@ -240,7 +240,14 @@ export const dealDeliveryOtps = pgTable(
       .references(() => users.id),
     deliveryAttempt: integer().notNull(),
     codeHash: text().notNull(),
+    /** 1 = legacy HMAC keyed with SESSION_SECRET (verify-only until expiry); 2 = dedicated DELIVERY_OTP_KEY material. */
+    codeHashVersion: integer().notNull().default(1),
     testCodeEnc: text(),
+    /**
+     * The code sealed for the BUYER's in-app view (AES-256-GCM under the dedicated OTP encryption key, never the data key).
+     * The database clears it the moment the code is used or invalidated (trigger edmn_delivery_otp_guard).
+     */
+    buyerCodeEnc: text(),
     expiresAt: ts().notNull(),
     attempts: integer().notNull().default(0),
     maxAttempts: integer().notNull(),

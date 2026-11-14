@@ -28,6 +28,8 @@ function goodEnv(): Record<string, string> {
     DATABASE_URL: `postgres://edmn_app:${rnd(30, 'aP4x')}@postgres:5432/edmn?sslmode=disable`,
     SESSION_SECRET: rnd(60, 'sEs7'),
     CRON_SECRET: rnd(60, 'cRo3'),
+    DELIVERY_OTP_KEY: rnd(60, 'oTp5'),
+    MOBILE_TOKEN_KEY: rnd(60, 'mTk8'),
     DATA_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString('base64'),
     DATA_ENCRYPTION_KEY_ID: 'prod1',
     WORKER_DEDICATED: 'true',

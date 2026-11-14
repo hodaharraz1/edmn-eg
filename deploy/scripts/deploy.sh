@@ -137,11 +137,12 @@ dc --profile ops run --rm --no-deps -T migrate-preflight || stop "migration pref
 
 # ── 6. EXPLICIT MIGRATION ───────────────────────────────────────────────────────────────────────────────────────
 step "6/12 EXPLICIT MIGRATION (advisory-locked; schema owner role)"
-dc --profile ops run --rm --no-deps -T migrate || stop "migration failed — the previous release is still running; DB NOT rolled back (see backup ${BACKUP_FILE:-n/a})"
+# Release-bound authorization (deploy-policy.ts): the migrate service only runs for THIS release, deliberately.
+dc --profile ops run --rm --no-deps -T -e EDMN_RELEASE="$TAG" -e EDMN_DB_CHANGE_AUTHORIZATION="production:$TAG" migrate || stop "migration failed — the previous release is still running; DB NOT rolled back (see backup ${BACKUP_FILE:-n/a})"
 
 # ── 7. REFERENCE SEED ───────────────────────────────────────────────────────────────────────────────────────────
-step "7/12 REFERENCE SEED (idempotent reference data only — never demo data)"
-dc --profile ops run --rm --no-deps -T seed || stop "reference seed failed"
+step "7/12 REFERENCE DATA (applied by step 6, insert-missing only — production never runs a seed)"
+log "reference data was applied by the migrate step without overwriting existing rows"
 
 # ── 8. START WEB / WORKER ───────────────────────────────────────────────────────────────────────────────────────
 step "8/12 START WEB / WORKER on $TAG"

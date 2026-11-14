@@ -21,6 +21,10 @@ export interface Actor {
   requestId?: string;
   /** time of last step-up re-authentication for highly sensitive operations */
   stepUpAt?: Date | null;
+  /** Transport the request came through (audit attribution). Absent = web. */
+  channel?: 'WEB' | 'MOBILE' | 'ADMIN_MOBILE' | null;
+  /** mobile_devices.id of the EDMN app installation (mobile transport only). */
+  deviceId?: string | null;
 }
 
 export const SYSTEM_ACTOR: Actor = { type: 'SYSTEM', userId: null, permissions: new Set() };
@@ -33,6 +37,12 @@ export function requireUser(actor: Actor): string {
 export function requirePermission(actor: Actor, permission: Permission): void {
   if (actor.type === 'SYSTEM') return;
   if (actor.type !== 'ADMIN' || !actor.permissions.has(permission)) throw forbidden();
+}
+
+/** Any one of the permissions (the read-side equivalent of the console pages' adminWith([...]) checks). */
+export function requireAnyPermission(actor: Actor, permissions: readonly Permission[]): void {
+  if (actor.type === 'SYSTEM') return;
+  if (actor.type !== 'ADMIN' || !permissions.some((p) => actor.permissions.has(p))) throw forbidden();
 }
 
 export function hasPermission(actor: Actor, permission: Permission): boolean {

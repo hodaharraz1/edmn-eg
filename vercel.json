@@ -2,11 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm ci",
-  "buildCommand": "sh scripts/vercel-build.sh",
+  "buildCommand": "npm run build",
   "crons": [
     {
       "path": "/api/cron/tick",
       "schedule": "17 3 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/edmn-mobile-integration": false
+    }
+  }
 }

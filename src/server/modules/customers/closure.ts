@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireUser, type Actor } from '@/server/core/actor';
+import { requirePermission, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { accountClosureRequests, addresses, sessions, users } from '@/server/db/schema';
@@ -128,7 +128,8 @@ export async function latestClosureRequest(userId: string) {
   return r ?? null;
 }
 
-export async function pendingClosures(limit = 50, offset = 0) {
+export async function pendingClosures(actor: Actor, limit = 50, offset = 0) {
+  requireAnyPermission(actor, ['customers.manage', 'customers.view']);
   return db
     .select({ r: accountClosureRequests, fullName: users.fullName, email: users.email })
     .from(accountClosureRequests)

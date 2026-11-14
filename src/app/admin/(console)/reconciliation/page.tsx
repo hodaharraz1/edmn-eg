@@ -24,7 +24,7 @@ export default async function Reconciliation(props: PageProps<'/admin/reconcilia
   const sp = await props.searchParams;
   const state = (STATES.includes(sp.state as ReconState) ? sp.state : 'SUGGESTED_MATCH') as ReconState;
   const { limit, offset, page } = pageOf(sp.page);
-  const [rows, counts, imports] = await Promise.all([reconQueue([state], limit, offset), reconCounts(), reconImportsList(5)]);
+  const [rows, counts, imports] = await Promise.all([reconQueue(actor, [state], limit, offset), reconCounts(), reconImportsList(5)]);
   const can = hasPermission(actor, 'reconciliation.manage');
   const back = `/admin/reconciliation?state=${state}`;
   return (

@@ -1,6 +1,6 @@
 # EDMN Marketplace — production/staging container image.
 # One image runs the Next.js server and the background worker.
-#   staging / single-container hosts: CMD scripts/start.sh (migrates + seeds, then web + worker)
+#   single-container hosts: CMD scripts/start.sh (web + worker; only a LOCAL container migrates/seeds its own DB)
 #   PRODUCTION (self-hosted): deploy/compose/docker-compose.prod.yml runs web / worker directly and migrations
 #   explicitly; scripts/start.sh refuses EDMN_ENVIRONMENT=production.
 FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS deps

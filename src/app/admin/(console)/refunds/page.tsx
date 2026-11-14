@@ -36,14 +36,14 @@ export default async function Refunds(props: PageProps<'/admin/refunds'>) {
   const tab = String(sp.tab ?? 'requested');
   const { limit, offset, page } = pageOf(sp.page);
   const def = TABS.find((t) => t.key === tab);
-  const refundRows = def ? await refundQueue(def.statuses, limit, offset) : [];
+  const refundRows = def ? await refundQueue(actor, def.statuses, limit, offset) : [];
   const showPaid = sp.paid === '1';
   const payoutRows = tab === 'deals' ? await db.select({ p: dealPayouts, deal: externalDeals }).from(dealPayouts).innerJoin(externalDeals, eq(externalDeals.id, dealPayouts.dealId)).where(eq(dealPayouts.status, showPaid ? 'PAID' : 'PENDING')).orderBy(desc(dealPayouts.createdAt), desc(dealPayouts.id)).limit(limit).offset(offset) : [];
   const canApprove = hasPermission(actor, 'refunds.approve');
   const canPay = hasPermission(actor, 'refunds.pay');
   const canOverride = hasPermission(actor, 'refunds.destination.override');
   const back = `/admin/refunds?tab=${tab}`;
-  const openReqs = refundRows.length ? await openMovementRequests(refundRows.map((x) => x.r.id)) : [];
+  const openReqs = refundRows.length ? await openMovementRequests(actor, refundRows.map((x) => x.r.id)) : [];
   const openFor = (kind: 'REFUND_APPROVAL' | 'REFUND_REVOCATION', id: string) => openReqs.find((o) => o.r.kind === kind && o.r.entityId === id) ?? null;
   return (
     <div className="space-y-3">

@@ -1,10 +1,23 @@
 import './_env';
-import { closeDb } from '../src/server/db/client';
+import { requireDatabaseChange } from './_db-change';
+import { assertMarkerAllowsChange } from '../src/server/core/deploy-policy';
+import { closeDb, getDb } from '../src/server/db/client';
+import { databaseEnvironment } from '../src/server/db/environment';
 import { seedReference } from '../src/server/db/seed/reference';
+
+/**
+ * Explicit operator step — never run by a build, an install hook or a container start.
+ *   LOCAL / TEST / initialised PREVIEW   reference bootstrap (+ --demo)
+ *   STAGING                              --authorize=staging + EDMN_DB_CHANGE_AUTHORIZATION; reference insert-missing only
+ *   PRODUCTION                           refused (reference data ships with the migrate step)
+ */
+const policy = requireDatabaseChange(process.argv.includes('--demo') ? 'seed-demo' : 'seed-reference');
 
 async function main() {
   const demo = process.argv.includes('--demo');
-  const ref = await seedReference();
+  assertMarkerAllowsChange(demo ? 'seed-demo' : 'seed-reference', await databaseEnvironment(getDb()).catch(() => null));
+  const ref = await seedReference({ mode: policy.referenceMode });
+  console.log(`• reference mode: ${policy.referenceMode}`);
   console.log('✓ reference data', ref);
   // Batch 1.5 legacy KYC mapping (idempotent, additive): existing seller applications that already hold a legal
   // name, an encrypted National ID and front/back scans get a user-level identity case in PENDING_REVIEW that

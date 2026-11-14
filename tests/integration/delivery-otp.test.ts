@@ -98,23 +98,30 @@ describe('delivery OTP — generation, storage, lifecycle', () => {
     expect(await status(d.dealId)).toBe('DELIVERED');
   });
 
-  it('production keeps no recoverable copy of the code', async () => {
+  it('production keeps no TEST copy of the code (only the buyer-bound sealed copy under the dedicated OTP key)', async () => {
     // The deal is created first (new deals are refused in production until real money is enabled — final audit);
-    // the delivery step then runs as production with a declared SMS provider.
+    // the delivery step then runs as production with a declared SMS provider and dedicated OTP key material.
+    // Phase 1 decision 2: the authenticated buyer sees the code in the Customer App, so a sealed copy is kept until
+    // the code is used or invalidated (the database then destroys it) — see tests/integration/mobile-otp-security.
     const d = await activeDeal();
     const prev = process.env.EDMN_ENVIRONMENT;
     const prevSms = process.env.SMS_DRIVER;
+    const prevKey = process.env.DELIVERY_OTP_KEY;
     process.env.EDMN_ENVIRONMENT = 'production';
     process.env.SMS_DRIVER = 'http';
+    process.env.DELIVERY_OTP_KEY = 'production-test-delivery-otp-key-0123456789abcdef';
     try {
       expect(deliveryOtpTestMode()).toBe(false);
       await markDealDelivered(d.seller, d.dealId, 'شحن');
       const [row] = await db.select().from(dealDeliveryOtps).where(eq(dealDeliveryOtps.dealId, d.dealId));
       expect(row.testCodeEnc).toBeNull();
+      expect(row.buyerCodeEnc).toMatch(/^o1\./);
       expect((await deliveryOtpForBuyer(d.buyer, d.dealId))!.testCode).toBeNull();
     } finally {
       process.env.EDMN_ENVIRONMENT = prev;
       process.env.SMS_DRIVER = prevSms;
+      if (prevKey === undefined) delete process.env.DELIVERY_OTP_KEY;
+      else process.env.DELIVERY_OTP_KEY = prevKey;
     }
   });
 

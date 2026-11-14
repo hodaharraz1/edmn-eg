@@ -26,7 +26,7 @@ export default async function FinanceControl() {
     financialInvariants(),
     killSwitchStates(),
     goLiveGate(),
-    recentApprovals(30),
+    recentApprovals(actor, 30),
     db.select().from(financialCloses).orderBy(desc(financialCloses.businessDate)).limit(10),
   ]);
   const jobs = (await db.execute<{ failed: string; pending_old: string }>(sql`select

@@ -13,7 +13,7 @@ export default async function AdminSupport(props: PageProps<'/admin/support'>) {
   const { actor, allowed } = await adminWith('support.manage');
   if (!allowed) return <Forbidden />;
   const tab = String((await props.searchParams).tab ?? 'open');
-  const rows = await ticketQueue(tab === 'closed' ? ['RESOLVED', 'CLOSED'] : ['OPEN', 'IN_PROGRESS', 'WAITING_CUSTOMER', 'WAITING_SELLER', 'ESCALATED']);
+  const rows = await ticketQueue(actor, tab === 'closed' ? ['RESOLVED', 'CLOSED'] : ['OPEN', 'IN_PROGRESS', 'WAITING_CUSTOMER', 'WAITING_SELLER', 'ESCALATED']);
   const list = tab === 'mine' ? rows.filter((r) => r.t.assigneeId === actor.userId) : rows;
   return (
     <div>
