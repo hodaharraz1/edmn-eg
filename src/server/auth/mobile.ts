@@ -368,3 +368,39 @@ export async function myProfile(actor: Actor) {
     permissions: actor.type === 'ADMIN' ? [...actor.permissions].sort() : [],
   };
 }
+
+/** Update the signed-in account's display name (audited; the web action wrote it without an audit row). */
+export async function updateMyProfile(actor: Actor, input: { fullName: string }) {
+  const userId = requireUser(actor);
+  const fullName = (input.fullName ?? '').trim();
+  if (fullName.length < 3) throw validation('الاسم قصير أوي');
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ fullName: fullName.slice(0, 120) }).where(eq(users.id, userId));
+    await audit(tx, actor, { action: 'account.profile_updated', entityType: 'user', entityId: userId });
+  });
+  return myProfile(actor);
+}
+
+/**
+ * Change the password from the Customer App. Same rules as the web (changePassword): EVERY session on every device is
+ * revoked. The app that made the change gets a fresh device-bound session for the installation it is already bound to,
+ * so the user is not thrown out of the device they just used.
+ */
+export async function mobileChangePassword(actor: Actor, current: string, next: string, meta: RequestMeta): Promise<MobileTokens> {
+  const userId = requireUser(actor);
+  if (!actor.deviceId) throw forbidden();
+  const [device] = await db.select().from(mobileDevices).where(and(eq(mobileDevices.id, actor.deviceId), eq(mobileDevices.userId, userId)));
+  if (!device || device.app !== 'CUSTOMER') throw forbidden();
+  const { changePassword, createSession, logout } = await import('./service');
+  const { token: webToken } = await changePassword(userId, current, next, { ...meta, channel: 'MOBILE' });
+  await logout(webToken); // changePassword always opens a WEB session; this app does not use it
+  const sessionToken = await createSession(db, userId, 'MOBILE', { ...meta, channel: 'MOBILE' });
+  const bound = await bindDevice(
+    sessionToken,
+    userId,
+    'CUSTOMER',
+    { installationId: device.installationId, platform: device.platform as 'IOS' | 'ANDROID', deviceName: device.deviceName ?? undefined, appVersion: device.appVersion ?? undefined },
+    { ...meta, channel: 'MOBILE' },
+  );
+  return bound.tokens;
+}

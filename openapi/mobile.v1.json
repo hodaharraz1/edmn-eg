@@ -348,6 +348,244 @@
         }
       }
     },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "operationId": "forgotPassword",
+        "summary": "Request a password-reset link (always answers the same, whether or not the account exists)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-EDMN-Installation",
+            "in": "header",
+            "required": false,
+            "description": "App installation id (per-installation rate limits).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "identifier": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "identifier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "none",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "resetPassword",
+        "summary": "Set a new password with the token from the reset link (every session is signed out)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-EDMN-Installation",
+            "in": "header",
+            "required": false,
+            "description": "App installation id (per-installation rate limits).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 200
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "token",
+                  "newPassword"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "none",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
     "/api/v1/auth/register": {
       "post": {
         "operationId": "register",
@@ -630,6 +868,558 @@
           "perIp": [
             300,
             300
+          ]
+        }
+      }
+    },
+    "/api/v1/cart": {
+      "get": {
+        "operationId": "getCart",
+        "summary": "My cart, grouped by seller and priced by the server",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "governorateId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/cart/acknowledge-prices": {
+      "post": {
+        "operationId": "acknowledgeCartPrices",
+        "summary": "I have seen the changed prices (clears PRICE_CHANGED so checkout can continue)",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "summary": "Add a product variant to my cart (quantity is added to what is already there)",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "variantId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 99
+                  }
+                },
+                "required": [
+                  "variantId",
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "quantity": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "quantity"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, insufficient_stock, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "insufficient_stock",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/cart/items/{variantId}": {
+      "put": {
+        "operationId": "setCartItemQuantity",
+        "summary": "Set the quantity of a cart line (0 removes it)",
+        "tags": [
+          "Cart"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "variantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 99
+                  }
+                },
+                "required": [
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: insufficient_stock",
+            "x-error-codes": [
+              "insufficient_stock"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
           ]
         }
       }
@@ -1286,6 +2076,132 @@
         }
       }
     },
+    "/api/v1/checkout": {
+      "get": {
+        "operationId": "getCheckout",
+        "summary": "Checkout quote for one of my addresses: priced cart, payment methods, payment window",
+        "tags": [
+          "Checkout"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checkout"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
     "/api/v1/content/legal/{slug}": {
       "get": {
         "operationId": "getLegalDocument",
@@ -1387,6 +2303,133 @@
           }
         },
         "x-auth-mode": "none",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/files/{fileId}": {
+      "get": {
+        "operationId": "getFile",
+        "summary": "Download a private file I am authorized to read (uniform 404 otherwise)",
+        "tags": [
+          "Files"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File bytes",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
         "x-rate-limit": {
           "tier": "read",
           "perUser": [
@@ -1630,6 +2673,966 @@
           "perIp": [
             1200,
             60
+          ]
+        }
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "summary": "Update my display name",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "fullName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/me/addresses": {
+      "get": {
+        "operationId": "listAddresses",
+        "summary": "My saved addresses",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Address"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      },
+      "post": {
+        "operationId": "createAddress",
+        "summary": "Save a new address",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "recipientName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  },
+                  "phone": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 20
+                  },
+                  "governorateId": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "district": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "street": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "building": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "floor": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "apartment": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "landmark": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipientName",
+                  "phone",
+                  "governorateId",
+                  "city",
+                  "street"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress",
+            "x-error-codes": [
+              "idempotency_in_progress"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/me/addresses/{addressId}": {
+      "put": {
+        "operationId": "updateAddress",
+        "summary": "Update one of my addresses (past orders keep their own snapshot)",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "recipientName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 120
+                  },
+                  "phone": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 20
+                  },
+                  "governorateId": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 100
+                  },
+                  "district": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "street": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "building": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "floor": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "apartment": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "landmark": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "recipientName",
+                  "phone",
+                  "governorateId",
+                  "city",
+                  "street"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      },
+      "delete": {
+        "operationId": "deleteAddress",
+        "summary": "Remove one of my addresses",
+        "tags": [
+          "Addresses"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "addressId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress",
+            "x-error-codes": [
+              "idempotency_in_progress"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/me/password": {
+      "post": {
+        "operationId": "changePassword",
+        "summary": "Change my password (signs out every other device; this device gets new tokens)",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "current": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "next": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "current",
+                  "next"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
           ]
         }
       }
@@ -2060,6 +4063,2075 @@
         "x-idempotency": "required"
       }
     },
+    "/api/v1/me/verification/confirm": {
+      "post": {
+        "operationId": "confirmVerificationCode",
+        "summary": "Confirm my email or phone with the code",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "EMAIL",
+                      "PHONE"
+                    ]
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "channel",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/me/verification/send": {
+      "post": {
+        "operationId": "sendVerificationCode",
+        "summary": "Send a 6-digit verification code to my email or phone",
+        "description": "Phone codes need an SMS provider; when none can deliver, the request is refused instead of pretending a code was sent.",
+        "tags": [
+          "Account"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "EMAIL",
+                      "PHONE"
+                    ]
+                  }
+                },
+                "required": [
+                  "channel"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "operationId": "placeOrder",
+        "summary": "Place the order for my cart (one order, one sub-order per seller)",
+        "description": "checkoutKey is the idempotency key of THIS checkout: retrying with the same key returns the same order. expectedTotal / expectedPricingVersionId are the values the buyer saw; if the server now computes something else the order is refused (conflict) and the app must show the new quote.",
+        "tags": [
+          "Checkout"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "addressId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": [
+                      "BANK_TRANSFER",
+                      "INSTAPAY",
+                      "VODAFONE_CASH"
+                    ]
+                  },
+                  "checkoutKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{16,100}$"
+                  },
+                  "expectedTotalPiastres": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expectedPricingVersionId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "addressId",
+                  "paymentMethod",
+                  "checkoutKey",
+                  "expectedTotalPiastres"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orderId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "created": {
+                      "type": "boolean",
+                      "description": "false = this checkoutKey already produced this order (retry)"
+                    }
+                  },
+                  "required": [
+                    "orderId",
+                    "created"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, identity_required",
+            "x-error-codes": [
+              "forbidden",
+              "identity_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, insufficient_stock, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "insufficient_stock",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      },
+      "get": {
+        "operationId": "listOrders",
+        "summary": "My orders (newest first)",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "number": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "grandTotalPiastres": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          "placedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "paymentStatus": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "paymentDueAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "number",
+                          "status",
+                          "grandTotalPiastres",
+                          "placedAt",
+                          "paymentStatus",
+                          "paymentDueAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "page",
+                    "pageSize",
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/orders/{orderId}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "One of my orders with its seller sub-orders, shipment tracking, payment and allowed actions",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "cancelUnpaidOrder",
+        "summary": "Cancel my order before any payment proof was sent",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/payments/{paymentId}": {
+      "get": {
+        "operationId": "getPayment",
+        "summary": "Transfer instructions, due time and proof history of one of my payments",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "BANK_TRANSFER",
+                        "INSTAPAY",
+                        "VODAFONE_CASH"
+                      ]
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "amountDuePiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "dueAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "isTest": {
+                      "type": "boolean",
+                      "description": "true while Real Money is OFF: a TEST payment, never a real transfer."
+                    },
+                    "confirmedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "destinations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "details": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "instructionsAr": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "isTest": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "details",
+                          "instructionsAr",
+                          "isTest"
+                        ]
+                      }
+                    },
+                    "submissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "claimedAmountPiastres": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          "reference": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "submittedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "reviewReasonAr": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "proofFileId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "claimedAmountPiastres",
+                          "reference",
+                          "submittedAt",
+                          "reviewReasonAr",
+                          "proofFileId"
+                        ]
+                      }
+                    },
+                    "lastRejectionReasonAr": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "allowedActions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "SUBMIT_PROOF"
+                        ]
+                      }
+                    },
+                    "orderId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "dealId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "orderNumber": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "method",
+                    "status",
+                    "amountDuePiastres",
+                    "dueAt",
+                    "isTest",
+                    "confirmedAt",
+                    "destinations",
+                    "submissions",
+                    "lastRejectionReasonAr",
+                    "allowedActions",
+                    "orderId",
+                    "dealId",
+                    "orderNumber"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/payments/{paymentId}/proof": {
+      "post": {
+        "operationId": "submitPaymentProof",
+        "summary": "Upload the transfer receipt (queues the payment for staff verification; never marks it paid)",
+        "description": "multipart/form-data. clientKey is the idempotency key of this submission: a retry with the same key is accepted once.",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "claimedAmount": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20,
+                    "description": "Amount transferred in EGP as typed by the buyer, e.g. \"1250.50\" (parsed and checked by the server)."
+                  },
+                  "reference": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "payerName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "clientKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{16,100}$"
+                  },
+                  "proof": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "claimedAmount",
+                  "clientKey",
+                  "proof"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller-orders/{sellerOrderId}/cancellation-request": {
+      "post": {
+        "operationId": "requestCancellation",
+        "summary": "Ask to cancel a sub-order before it ships",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sellerOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "note"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "CANCELLED",
+                        "PENDING"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/seller-orders/{sellerOrderId}/confirm-receipt": {
+      "post": {
+        "operationId": "confirmReceipt",
+        "summary": "I received this shipment (establishes the seller entitlement; moves no money by itself)",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sellerOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alreadyConfirmed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "alreadyConfirmed"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/seller-orders/{sellerOrderId}/problem": {
+      "post": {
+        "operationId": "reportOrderProblem",
+        "summary": "Report that the shipment did not arrive or has a problem (opens a protective hold and a case)",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sellerOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "NOT_RECEIVED",
+                      "PRODUCT_PROBLEM"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "kind",
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
     "/api/v1/stores/{slug}": {
       "get": {
         "operationId": "getStore",
@@ -2182,6 +6254,87 @@
   },
   "components": {
     "schemas": {
+      "Address": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "governorateId": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "city": {
+            "type": "string"
+          },
+          "district": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "street": {
+            "type": "string"
+          },
+          "building": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "floor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "apartment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "landmark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "recipientName",
+          "phone",
+          "governorateId",
+          "city",
+          "district",
+          "street",
+          "building",
+          "floor",
+          "apartment",
+          "landmark",
+          "isDefault"
+        ]
+      },
       "AppConfig": {
         "type": "object",
         "properties": {
@@ -2251,6 +6404,310 @@
           "deliveryOtp"
         ]
       },
+      "Cart": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "store": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "slug",
+                    "verified"
+                  ]
+                },
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "variantId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "productSlug": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "variantLabel": {
+                        "type": "string"
+                      },
+                      "condition": {
+                        "type": "string"
+                      },
+                      "imageUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "unitPricePiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      "compareAtPricePiastres": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "priceSeenPiastres": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "lineTotalPiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      "buyerFeePiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      "issues": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "UNAVAILABLE",
+                            "INSUFFICIENT_STOCK",
+                            "PRICE_CHANGED",
+                            "SELLER_UNAVAILABLE",
+                            "NO_SHIPPING"
+                          ]
+                        }
+                      },
+                      "returnPolicy": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/ReturnPolicy"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "variantId",
+                      "productSlug",
+                      "title",
+                      "variantLabel",
+                      "condition",
+                      "imageUrl",
+                      "unitPricePiastres",
+                      "compareAtPricePiastres",
+                      "priceSeenPiastres",
+                      "quantity",
+                      "lineTotalPiastres",
+                      "buyerFeePiastres",
+                      "issues",
+                      "returnPolicy"
+                    ]
+                  }
+                },
+                "merchandiseSubtotalPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "shippingFeePiastres": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "null = not priced yet (no governorate) or the seller does not ship there"
+                },
+                "freeShippingApplied": {
+                  "type": "boolean"
+                },
+                "etaMinDays": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "etaMaxDays": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "processingDays": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "buyerFeePiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "totalPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                }
+              },
+              "required": [
+                "store",
+                "lines",
+                "merchandiseSubtotalPiastres",
+                "shippingFeePiastres",
+                "freeShippingApplied",
+                "etaMinDays",
+                "etaMaxDays",
+                "processingDays",
+                "buyerFeePiastres",
+                "totalPiastres"
+              ]
+            }
+          },
+          "merchandiseTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "shippingTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "discountTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "buyerFeeTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "grandTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "itemCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "hasIssues": {
+            "type": "boolean"
+          },
+          "shippingResolved": {
+            "type": "boolean"
+          },
+          "pricingVersionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pricingUnavailableAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "canCheckout": {
+            "type": "boolean",
+            "description": "Server verdict. The app never decides this itself."
+          }
+        },
+        "required": [
+          "groups",
+          "merchandiseTotalPiastres",
+          "shippingTotalPiastres",
+          "discountTotalPiastres",
+          "buyerFeeTotalPiastres",
+          "grandTotalPiastres",
+          "itemCount",
+          "hasIssues",
+          "shippingResolved",
+          "pricingVersionId",
+          "pricingUnavailableAr",
+          "canCheckout"
+        ]
+      },
       "Category": {
         "type": "object",
         "properties": {
@@ -2288,6 +6745,86 @@
           "nameEn",
           "icon",
           "children"
+        ]
+      },
+      "Checkout": {
+        "type": "object",
+        "properties": {
+          "selectedAddressId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            }
+          },
+          "cart": {
+            "$ref": "#/components/schemas/Cart"
+          },
+          "paymentMethods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "BANK_TRANSFER",
+                    "INSTAPAY",
+                    "VODAFONE_CASH"
+                  ]
+                },
+                "nameAr": {
+                  "type": "string"
+                },
+                "nameEn": {
+                  "type": "string"
+                },
+                "instructionsAr": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "code",
+                "nameAr",
+                "nameEn",
+                "instructionsAr"
+              ]
+            }
+          },
+          "paymentWindowHours": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "realMoneyEnabled": {
+            "type": "boolean"
+          },
+          "mandatoryRightsNoticeAr": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "selectedAddressId",
+          "addresses",
+          "cart",
+          "paymentMethods",
+          "paymentWindowHours",
+          "realMoneyEnabled",
+          "mandatoryRightsNoticeAr"
         ]
       },
       "DeviceInfo": {
@@ -2473,6 +7010,717 @@
         },
         "required": [
           "ok"
+        ]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "shippingAddress": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "customerNote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "merchandiseTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "shippingTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "discountTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "buyerFeeTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "grandTotalPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "cancelReasonAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CANCEL_UNPAID"
+              ]
+            }
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Payment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sellerOrders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "store": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "slug"
+                  ]
+                },
+                "merchandiseSubtotalPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "shippingFeePiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "buyerFeePiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "grossTotalPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "refundedTotalPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "shippingEtaMinDays": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "shippingEtaMaxDays": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "shippedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "deliveredAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "buyerResponseDueAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "receiptBasis": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cancelledAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cancelReasonAr": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cancellationPending": {
+                  "type": "boolean"
+                },
+                "openDispute": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "productId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "variantLabel": {
+                        "type": "string"
+                      },
+                      "condition": {
+                        "type": "string"
+                      },
+                      "imageUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "unitPricePiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "lineTotalPiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      "refundedQuantity": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "returnedQuantity": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "returnPolicy": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/components/schemas/ReturnPolicy"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "productId",
+                      "title",
+                      "variantLabel",
+                      "condition",
+                      "imageUrl",
+                      "unitPricePiastres",
+                      "quantity",
+                      "lineTotalPiastres",
+                      "refundedQuantity",
+                      "returnedQuantity",
+                      "returnPolicy"
+                    ]
+                  }
+                },
+                "shipment": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string"
+                        },
+                        "carrierName": {
+                          "type": "string"
+                        },
+                        "trackingNumber": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "shippedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "expectedDeliveryAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "events": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "occurredAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "description",
+                              "occurredAt"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "carrierName",
+                        "trackingNumber",
+                        "shippedAt",
+                        "expectedDeliveryAt",
+                        "events"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "disputes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "number": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "status": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "number",
+                      "status"
+                    ]
+                  }
+                },
+                "returns": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "number": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "status": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "number",
+                      "status"
+                    ]
+                  }
+                },
+                "refunds": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "status": {
+                        "type": "string",
+                        "description": "Includes TRANSFER_UNCERTAIN: neither paid nor failed — shown as \"being verified\"."
+                      },
+                      "amountPiastres": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status",
+                      "amountPiastres"
+                    ]
+                  }
+                },
+                "allowedActions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "REQUEST_CANCELLATION",
+                      "CONFIRM_RECEIPT",
+                      "REPORT_PROBLEM",
+                      "OPEN_DISPUTE",
+                      "CONFIRM_ORDER",
+                      "START_PROCESSING",
+                      "MARK_READY_TO_SHIP",
+                      "SAVE_SHIPMENT",
+                      "MARK_SHIPPED",
+                      "ADD_TRACKING_EVENT",
+                      "SUBMIT_DELIVERY_EVIDENCE",
+                      "ACCEPT_CANCELLATION"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "number",
+                "status",
+                "store",
+                "merchandiseSubtotalPiastres",
+                "shippingFeePiastres",
+                "buyerFeePiastres",
+                "grossTotalPiastres",
+                "refundedTotalPiastres",
+                "shippingEtaMinDays",
+                "shippingEtaMaxDays",
+                "shippedAt",
+                "deliveredAt",
+                "buyerResponseDueAt",
+                "receiptBasis",
+                "cancelledAt",
+                "cancelReasonAr",
+                "cancellationPending",
+                "openDispute",
+                "items",
+                "shipment",
+                "disputes",
+                "returns",
+                "refunds",
+                "allowedActions"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "placedAt",
+          "paymentMethod",
+          "shippingAddress",
+          "customerNote",
+          "merchandiseTotalPiastres",
+          "shippingTotalPiastres",
+          "discountTotalPiastres",
+          "buyerFeeTotalPiastres",
+          "grandTotalPiastres",
+          "cancelReasonAr",
+          "allowedActions",
+          "payment",
+          "sellerOrders"
+        ]
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "BANK_TRANSFER",
+              "INSTAPAY",
+              "VODAFONE_CASH"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "amountDuePiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isTest": {
+            "type": "boolean",
+            "description": "true while Real Money is OFF: a TEST payment, never a real transfer."
+          },
+          "confirmedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "details": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "instructionsAr": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "isTest": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "label",
+                "details",
+                "instructionsAr",
+                "isTest"
+              ]
+            }
+          },
+          "submissions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "claimedAmountPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "reviewReasonAr": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "proofFileId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "claimedAmountPiastres",
+                "reference",
+                "submittedAt",
+                "reviewReasonAr",
+                "proofFileId"
+              ]
+            }
+          },
+          "lastRejectionReasonAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "SUBMIT_PROOF"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "method",
+          "status",
+          "amountDuePiastres",
+          "dueAt",
+          "isTest",
+          "confirmedAt",
+          "destinations",
+          "submissions",
+          "lastRejectionReasonAr",
+          "allowedActions"
         ]
       },
       "Problem": {
@@ -3134,6 +8382,53 @@
           "isStaff",
           "totpEnrolled",
           "permissions"
+        ]
+      },
+      "ReturnPolicy": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "VOLUNTARY",
+              "NONE"
+            ]
+          },
+          "windowDays": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "shippingPayer": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "summaryAr": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "windowDays",
+          "conditions",
+          "shippingPayer",
+          "notes",
+          "summaryAr"
         ]
       },
       "Review": {

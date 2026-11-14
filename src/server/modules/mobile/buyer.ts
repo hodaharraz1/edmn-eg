@@ -6,7 +6,7 @@ import { addresses, cancellationRequests, disputes, files, governorates, orders,
 import { returnPolicySummary, type ReturnPolicy } from '@/domain/return-policy';
 import { sellerOrderAllowedActions } from '@/server/modules/allowed-actions';
 import { publicMediaUrl } from '@/server/modules/catalog/public-read';
-import { cartView } from '@/server/modules/commerce/cart';
+import { acknowledgePrices, cartView } from '@/server/modules/commerce/cart';
 import { customerOrders, orderForCustomer, orderLabel } from '@/server/modules/commerce/orders';
 import type { PricedCart } from '@/server/modules/commerce/pricing';
 import { myAddresses } from '@/server/modules/customers/addresses';
@@ -153,7 +153,7 @@ async function paymentOut(p: PaymentRow | null) {
       proofFileId: s.proofFileId,
     })),
     lastRejectionReasonAr: last?.status === 'REJECTED' ? last.reviewReason : null,
-    allowedActions: canSubmit ? (['SUBMIT_PROOF'] as const) : [],
+    allowedActions: canSubmit ? ['SUBMIT_PROOF' as const] : [],
   };
 }
 
@@ -211,7 +211,7 @@ export async function buyerOrder(actor: Actor, orderId: string) {
     buyerFeeTotalPiastres: o.buyerFeeTotal,
     grandTotalPiastres: o.grandTotal,
     cancelReasonAr: o.cancelReason,
-    allowedActions: cancellableUnpaid ? (['CANCEL_UNPAID'] as const) : [],
+    allowedActions: cancellableUnpaid ? ['CANCEL_UNPAID' as const] : [],
     payment: await paymentOut(g.payment),
     sellerOrders: g.sellerOrders.map(({ so, storeName, storeSlug, items }) => {
       const ship = ships.find((s) => s.sellerOrderId === so.id) ?? null;
@@ -280,4 +280,25 @@ export async function buyerPayment(actor: Actor, paymentId: string) {
   if (p.payerUserId !== userId) throw forbidden();
   const [o] = p.orderId ? await db.select({ number: orders.number }).from(orders).where(eq(orders.id, p.orderId)) : [];
   return { ...(await paymentOut(p))!, orderId: p.orderId, dealId: p.dealId, orderNumber: o ? orderLabel(o.number) : null };
+}
+
+export async function acknowledgeCartPrices(actor: Actor) {
+  await acknowledgePrices(db, { userId: requireUser(actor) });
+}
+
+/**
+ * A private file the signed-in user may read, as buyer or — when they belong to a store — as that store's member.
+ * Authorization is the storage layer's (readPrivateFile); anything else is the same 404.
+ */
+export async function downloadMyFile(actor: Actor, fileId: string) {
+  const userId = requireUser(actor);
+  const { readPrivateFile } = await import('@/server/storage/access');
+  const { sellerActor } = await import('@/server/auth/actors');
+  const asSeller = await sellerActor(userId, { ip: actor.ip, userAgent: actor.userAgent, channel: actor.channel, deviceId: actor.deviceId });
+  for (const candidate of [actor, asSeller]) {
+    if (!candidate) continue;
+    const res = await readPrivateFile(candidate, fileId);
+    if (res) return { data: res.data, contentType: res.file.mimeType, filename: `${res.file.id}.${res.file.mimeType === 'application/pdf' ? 'pdf' : 'webp'}` };
+  }
+  throw notFound('الملف');
 }
