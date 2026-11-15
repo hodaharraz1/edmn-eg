@@ -31,9 +31,11 @@ class AppShell extends ConsumerWidget {
         ),
       );
     }
+    if (cfg != null && cfg.realMoneyEnabled) return child;
+    // The status bar area belongs to the banner; screens below must not add the top inset again.
     return Column(children: [
-      if (cfg == null || !cfg.realMoneyEnabled) const SafeArea(bottom: false, child: TestMoneyBanner()),
-      Expanded(child: child),
+      const ColoredBox(color: EdmnColors.warningLight, child: SafeArea(bottom: false, child: TestMoneyBanner())),
+      Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: child)),
     ]);
   }
 }

@@ -11,7 +11,7 @@
   "passwordLabel": "كلمة المرور",
   "fieldRequired": "الحقل ده مطلوب",
   "home": "الرئيسية",
-  "categories": "التصنيفات",
+  "categories": "الأقسام",
   "searchHint": "ابحث عن منتج",
   "noResults": "مفيش نتائج",
   "inStock": "متوفر",
@@ -22,7 +22,13 @@
   "signOutDevice": "خروج من الجهاز ده",
   "signOutOtherDevices": "خروج من كل الأجهزة التانية",
   "signedOutOthers": "{count, plural, =0{مفيش أجهزة تانية} =1{تم الخروج من جهاز واحد} =2{تم الخروج من جهازين} few{تم الخروج من {count} أجهزة} many{تم الخروج من {count} جهاز} other{تم الخروج من {count} جهاز}}",
-  "@signedOutOthers": { "placeholders": { "count": { "type": "int" } } },
+  "@signedOutOthers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "testMoneyBanner": "وضع تجريبي: المدفوعات تجريبية ولا يتم تحويل أموال حقيقية",
   "updateRequiredTitle": "تحديث مطلوب",
   "updateRequiredBody": "النسخة دي من التطبيق قديمة. حدّث التطبيق علشان تكمل.",
@@ -48,7 +54,370 @@
   "errorIdempotency": "الطلب ده بيتنفّذ أو اتنفّذ قبل كده",
   "errorInternal": "حصلت مشكلة غير متوقعة. جرّب تاني",
   "errorReference": "رقم المرجع: {reference}",
-  "@errorReference": { "placeholders": { "reference": { "type": "String" } } },
+  "@errorReference": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
   "errorNetwork": "مفيش اتصال بالإنترنت. اتأكد من الشبكة وجرّب تاني",
-  "errorUnknown": "حصلت مشكلة. جرّب تاني"
+  "errorUnknown": "حصلت مشكلة. جرّب تاني",
+  "loading": "جاري التحميل…",
+  "loadMore": "عرض المزيد",
+  "stateOfflineTitle": "مفيش اتصال بالإنترنت",
+  "stateSessionExpiredTitle": "انتهت جلستك",
+  "stateNoPermissionTitle": "مش مسموح لك تشوف الصفحة دي",
+  "stateNotFoundTitle": "مش موجود",
+  "stateErrorTitle": "حصلت مشكلة",
+  "marketLabel": "ماركت",
+  "appTagline": "تسوق بأمان\nوضمان حقيقي",
+  "onboardingShopTitle": "تسوق بأمان\nوضمان حقيقي",
+  "onboardingProtectTitle": "فلوسك محفوظة\nلحد ما تستلم",
+  "onboardingDealTitle": "أضمن صفقة\nلأي بيع وشراء",
+  "startNow": "ابدأ الآن",
+  "skip": "تخطي",
+  "next": "التالي",
+  "haveAccount": "لديك حساب بالفعل؟",
+  "welcomeTitle": "مرحباً بك في أضمن ماركت",
+  "welcomeSubtitle": "سجّل دخولك لمتابعة التسوق\nوإدارة طلباتك بسهولة",
+  "phoneHint": "رقم الهاتف أو البريد",
+  "forgotPassword": "نسيت كلمة المرور؟",
+  "or": "أو",
+  "noAccount": "ليس لديك حساب؟",
+  "createAccount": "إنشاء حساب جديد",
+  "registerTitle": "إنشاء حساب",
+  "fullNameHint": "الاسم بالكامل",
+  "phoneOnlyHint": "رقم الموبايل (01xxxxxxxxx)",
+  "emailOptionalHint": "البريد الإلكتروني",
+  "newPasswordHint": "كلمة المرور (8 حروف على الأقل)",
+  "acceptTerms": "بإنشاء الحساب أنت موافق على الشروط وسياسة الخصوصية",
+  "invalidPhone": "رقم موبايل مصري غير صحيح",
+  "passwordTooShort": "كلمة المرور لازم تكون 8 حروف على الأقل",
+  "nameTooShort": "اكتب اسمك بالكامل",
+  "forgotTitle": "استعادة كلمة المرور",
+  "forgotBody": "اكتب رقم موبايلك أو بريدك، وهنبعتلك رابط تغيير كلمة المرور لو الحساب موجود.",
+  "sendResetLink": "إرسال الرابط",
+  "resetLinkSent": "لو الحساب موجود، هيوصلك رابط تغيير كلمة المرور خلال دقائق.",
+  "verifyTitle": "تأكيد الحساب",
+  "verifyPhoneBody": "بعتنالك كود من 6 أرقام على رقمك. اكتبه هنا.",
+  "verifyEmailBody": "بعتنالك كود من 6 أرقام على بريدك. اكتبه هنا.",
+  "codeHint": "الكود (6 أرقام)",
+  "resendCode": "إعادة إرسال الكود",
+  "resendIn": "إعادة الإرسال بعد {seconds} ث",
+  "@resendIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "codeSent": "تم إرسال الكود",
+  "verified": "تم التأكيد",
+  "verifyPhone": "تأكيد رقم الموبايل",
+  "verifyEmail": "تأكيد البريد الإلكتروني",
+  "notVerified": "غير مؤكد",
+  "signOutConfirm": "عايز تسجل خروج من الجهاز ده؟",
+  "continueAsGuest": "تصفح بدون تسجيل",
+  "homeTagline": "توصيل سريع وآمن",
+  "shopSafeBadge": "تسوق بأمان\nوضمان حقيقي",
+  "searchProductsHint": "ابحث عن منتج أو متجر أو علامة تجارية",
+  "searchCategoryHint": "ابحث عن قسم أو منتج",
+  "featuredProducts": "منتجات مميزة",
+  "latestProducts": "أحدث المنتجات",
+  "seeAll": "عرض الكل",
+  "add": "أضف",
+  "addToCart": "أضف إلى السلة",
+  "addedToCart": "اتضاف للسلة",
+  "protectedDealBannerTitle": "أضمن صفقة",
+  "protectedDealBannerBody": "تسوق بأمان وضمان حقيقي",
+  "shopNow": "تسوق الآن",
+  "selectGovernorate": "اختار المحافظة",
+  "deliverTo": "التوصيل إلى",
+  "productTitle": "المنتج",
+  "brandLabel": "العلامة التجارية: {name}",
+  "@brandLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "soldBy": "البائع: {name}",
+  "@soldBy": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "verifiedSeller": "بائع موثّق",
+  "available": "متوفر",
+  "unavailable": "غير متوفر",
+  "productDescription": "وصف المنتج",
+  "specifications": "المواصفات",
+  "conditionNew": "جديد",
+  "conditionUsed": "مستعمل",
+  "conditionNotes": "حالة المنتج",
+  "defects": "العيوب",
+  "includedAccessories": "الملحقات",
+  "warranty": "الضمان",
+  "returnPolicy": "سياسة الاسترجاع",
+  "processingDays": "التجهيز خلال {days} يوم",
+  "@processingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reviews": "التقييمات",
+  "noReviews": "لسه مفيش تقييمات",
+  "chooseVariant": "اختار النوع",
+  "share": "مشاركة",
+  "sortBy": "ترتيب",
+  "sortNewest": "الأحدث",
+  "sortPriceAsc": "السعر: من الأقل",
+  "sortPriceDesc": "السعر: من الأعلى",
+  "sortRating": "الأعلى تقييماً",
+  "filterCondition": "الحالة",
+  "all": "الكل",
+  "noProductsTitle": "مفيش منتجات هنا",
+  "noProductsBody": "جرّب كلمة تانية أو قسم تاني.",
+  "recentSearches": "عمليات البحث الأخيرة",
+  "clear": "مسح",
+  "searchTitle": "البحث",
+  "subcategories": "الأقسام الفرعية",
+  "reorder": "إعادة الطلب",
+  "myOrders": "طلباتي",
+  "cartTitle": "السلة",
+  "cartCount": "({count} منتجات)",
+  "@cartCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cartEmptyTitle": "السلة فاضية",
+  "cartEmptyBody": "ضيف منتجات من الأقسام وارجع هنا.",
+  "browseProducts": "تصفح المنتجات",
+  "subtotal": "الإجمالي الفرعي",
+  "shippingFee": "رسوم التوصيل",
+  "buyerFee": "رسوم الخدمة",
+  "discount": "الخصم",
+  "total": "الإجمالي",
+  "checkoutCta": "إتمام الشراء",
+  "shippingNotPriced": "هيتحدد بعد اختيار العنوان",
+  "noShippingToArea": "البائع مش بيوصّل للمحافظة دي",
+  "issueUnavailable": "غير متوفر حالياً",
+  "issueInsufficientStock": "الكمية المطلوبة مش متوفرة",
+  "issuePriceChanged": "السعر اتغير من {old}",
+  "@issuePriceChanged": {
+    "placeholders": {
+      "old": {}
+    }
+  },
+  "issueSellerUnavailable": "البائع مش متاح حالياً",
+  "acknowledgePrices": "موافق على الأسعار الجديدة",
+  "remove": "حذف",
+  "removeFromCartConfirm": "تحذف المنتج من السلة؟",
+  "signInToCheckout": "سجّل دخولك علشان تكمل الشراء",
+  "checkoutTitle": "إتمام الطلب",
+  "stepAddress": "العنوان",
+  "stepDelivery": "التوصيل",
+  "stepPayment": "الدفع",
+  "stepConfirm": "تأكيد",
+  "deliveryAddress": "عنوان التوصيل",
+  "addAddress": "إضافة عنوان",
+  "paymentMethod": "طريقة الدفع",
+  "orderSummary": "ملخص الطلب",
+  "itemsTotal": "إجمالي المنتجات",
+  "placeOrder": "تأكيد الطلب",
+  "continueLabel": "متابعة",
+  "paymentWindow": "لازم تحوّل المبلغ خلال {hours} ساعة، وبعدها الطلب بيتلغي تلقائياً.",
+  "@paymentWindow": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "priceChangedReview": "الإجمالي اتغير. راجع السعر الجديد قبل التأكيد.",
+  "orderPlacedTitle": "تم إنشاء طلبك",
+  "orderPlacedBody": "حوّل المبلغ وارفع الإيصال علشان نراجع الدفع.",
+  "deliveryEta": "التوصيل خلال {min}–{max} يوم",
+  "@deliveryEta": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "noAddressesTitle": "مفيش عناوين محفوظة",
+  "addressesTitle": "عناوين التوصيل",
+  "addressLabelHint": "اسم العنوان (البيت، الشغل…)",
+  "recipientHint": "اسم المستلم",
+  "governorate": "المحافظة",
+  "cityHint": "المدينة / المنطقة",
+  "districtHint": "الحي (اختياري)",
+  "streetHint": "الشارع",
+  "buildingHint": "رقم العمارة",
+  "floorHint": "الدور",
+  "apartmentHint": "الشقة",
+  "landmarkHint": "علامة مميزة (اختياري)",
+  "defaultAddress": "العنوان الأساسي",
+  "save": "حفظ",
+  "saved": "تم الحفظ",
+  "edit": "تعديل",
+  "delete": "حذف",
+  "deleteAddressConfirm": "تحذف العنوان ده؟ الطلبات القديمة مش هتتأثر.",
+  "ordersEmptyTitle": "لسه مفيش طلبات",
+  "searchOrdersHint": "ابحث في طلباتك",
+  "filterInProgress": "قيد التنفيذ",
+  "filterDelivered": "تم التوصيل",
+  "filterCancelled": "ملغي",
+  "orderDetails": "تفاصيل الطلب",
+  "trackOrder": "تتبع الطلب",
+  "orderStatus": "حالة الطلب",
+  "cancelOrder": "إلغاء الطلب",
+  "cancelOrderConfirm": "تلغي الطلب؟ المنتجات هترجع للبائع ومفيش فلوس اتدفعت.",
+  "orderCancelled": "تم إلغاء الطلب",
+  "payNow": "ادفع وارفع الإيصال",
+  "paymentTitle": "الدفع",
+  "transferTo": "حوّل المبلغ على",
+  "amountDue": "المبلغ المطلوب",
+  "payBefore": "ادفع قبل {date}",
+  "@payBefore": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "testPaymentNotice": "دفعة تجريبية: الأموال الحقيقية مقفولة. متحوّلش أي فلوس حقيقية.",
+  "uploadReceipt": "إيصال التحويل",
+  "uploadReceiptHint": "اختار صورة أو PDF للإيصال",
+  "claimedAmountHint": "المبلغ اللي حوّلته (ج.م)",
+  "referenceHint": "رقم العملية (اختياري)",
+  "payerNameHint": "اسم المحوِّل (اختياري)",
+  "submitReceipt": "إرسال الإيصال للمراجعة",
+  "receiptSubmitted": "الإيصال وصل وتحت المراجعة. الدفع مش هيتأكد غير بعد مراجعة فريق أضمن.",
+  "receiptUnderReview": "الإيصال تحت المراجعة",
+  "receiptRejected": "الإيصال اترفض: {reason}",
+  "@receiptRejected": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "paymentConfirmed": "تم تأكيد الدفع",
+  "paymentExpired": "انتهت مهلة الدفع",
+  "submissions": "الإيصالات المرسلة",
+  "confirmReceipt": "تأكيد الاستلام",
+  "confirmReceiptConfirm": "أكّد إنك استلمت الشحنة دي وكل حاجة سليمة؟ ده بيبدأ مستحقات البائع.",
+  "receiptConfirmed": "تم تأكيد الاستلام",
+  "requestCancellation": "طلب إلغاء",
+  "cancellationReasonHint": "سبب الإلغاء",
+  "cancellationRequested": "اتبعت طلب الإلغاء للبائع",
+  "reportProblem": "الإبلاغ عن مشكلة",
+  "problemNotReceived": "الشحنة موصلتش",
+  "problemProductIssue": "مشكلة في المنتج",
+  "problemDescriptionHint": "اوصف المشكلة بالتفصيل (10 حروف على الأقل)",
+  "problemReported": "اتسجلت المشكلة وفريق أضمن هيتابع معاك",
+  "sellerOrderLabel": "شحنة من {store}",
+  "@sellerOrderLabel": {
+    "placeholders": {
+      "store": {}
+    }
+  },
+  "trackingNumber": "رقم الشحنة: {number}",
+  "@trackingNumber": {
+    "placeholders": {
+      "number": {}
+    }
+  },
+  "refundStatus": "حالة الاسترداد",
+  "refundUncertain": "جاري التحقق من التحويل",
+  "disputeOpen": "في نزاع مفتوح",
+  "shippingAddress": "عنوان الشحن",
+  "statusPendingPayment": "في انتظار الدفع",
+  "statusPaymentUnderReview": "الدفع تحت المراجعة",
+  "statusPaid": "تم الدفع",
+  "statusProcessing": "قيد التنفيذ",
+  "statusCompleted": "مكتمل",
+  "statusPartiallyCompleted": "مكتمل جزئياً",
+  "statusClosedUnfulfilled": "مغلق دون تنفيذ",
+  "statusCancelled": "ملغي",
+  "stepOrderPlaced": "تم إنشاء الطلب",
+  "stepPaymentConfirmed": "تم تأكيد الدفع",
+  "stepOrderConfirmed": "تم تأكيد الطلب",
+  "stepPreparing": "جاري تجهيز الطلب",
+  "stepShipped": "تم الشحن",
+  "stepOnTheWay": "في طريقه إليك",
+  "stepDelivered": "تم التوصيل",
+  "stepReceiptConfirmed": "تأكيد الاستلام",
+  "stepCompleted": "اكتمال الطلب",
+  "accountTitle": "حسابي",
+  "personalInfo": "البيانات الشخصية",
+  "paymentMethods": "طرق الدفع",
+  "wallet": "المحفظة",
+  "notifications": "الإشعارات",
+  "helpSupport": "المساعدة والدعم",
+  "aboutEdmn": "عن أضمن ماركت",
+  "security": "الأمان",
+  "changePassword": "تغيير كلمة المرور",
+  "currentPasswordHint": "كلمة المرور الحالية",
+  "passwordChanged": "تم تغيير كلمة المرور وتم تسجيل الخروج من الأجهزة التانية",
+  "sellerCenter": "مركز البائع",
+  "protectedDeal": "أضمن صفقة",
+  "legal": "الشروط والسياسات",
+  "signInPromptTitle": "سجّل دخولك",
+  "signInPromptBody": "سجّل دخولك علشان تتابع طلباتك وعناويـنك.",
+  "comingFromServer": "الخدمة دي لسه مش متاحة في التطبيق",
+  "notAvailableYetBody": "الخدمة دي شغالة على موقع أضمن، ولسه بنجهز لها واجهة في التطبيق.",
+  "openOnWebsite": "افتح على الموقع",
+  "emailHint": "البريد الإلكتروني",
+  "deliveryFailed": "فشل التوصيل",
+  "paymentRejected": "الإيصال اترفض",
+  "refundCompleted": "تم الاسترداد",
+  "refundNotPaid": "لم يتم الاسترداد",
+  "refundInProgress": "الاسترداد جاري",
+  "sendCode": "إرسال الكود",
+  "productsCount": "منتج",
+  "storeReturns": "المتجر بيقبل الاسترجاع خلال {days} يوم",
+  "@storeReturns": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "storeNoVoluntaryReturns": "المتجر مش بيقبل استرجاع اختياري، وحقوقك القانونية محفوظة",
+  "superseded": "مستبدل",
+  "reorderEmptyTitle": "مفيش طلبات مكتملة لسه",
+  "reorderEmptyBody": "لما طلب يكتمل هتقدر تطلبه تاني من هنا بضغطة.",
+  "reorderNotice": "إعادة الطلب بتضيف نفس المنتجات للسلة بسعر النهارده، وتقدر تراجعها قبل الدفع.",
+  "orderAgain": "اطلب تاني",
+  "reorderAdded": "اتضاف {count} منتج للسلة",
+  "@reorderAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reorderPartial": "اتضاف {added} منتج، و{failed} مش متاح حالياً",
+  "@reorderPartial": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "paymentMethodsNote": "بتختار طريقة الدفع مع كل طلب. أضمن مش بيحفظ بيانات أي كارت.",
+  "destBankName": "البنك",
+  "destAccountName": "اسم الحساب",
+  "destAccountNumber": "رقم الحساب",
+  "destInstapayAddress": "عنوان إنستاباي",
+  "destWalletNumber": "رقم المحفظة"
 }

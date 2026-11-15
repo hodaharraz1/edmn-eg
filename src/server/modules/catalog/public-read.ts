@@ -45,8 +45,17 @@ export async function publicGovernorates(conn: DbOrTx = db) {
     .orderBy(asc(governorates.sortOrder));
 }
 
-export async function publicProductSearch(query: SearchQuery) {
-  const r = await searchProducts(query);
+export async function publicProductSearch(query: SearchQuery & { storeSlug?: string }) {
+  const { storeSlug, ...rest } = query;
+  // A store filter only ever narrows to a publicly visible store; an unknown or hidden store is an empty page.
+  if (storeSlug) {
+    const store = await publicStoreBySlug(storeSlug);
+    if (!store) return { items: [], page: 1, pageSize: rest.pageSize ?? 24, total: 0, pages: 0 };
+    rest.sellerId = store.seller.id;
+  } else {
+    delete rest.sellerId;
+  }
+  const r = await searchProducts(rest);
   return {
     items: r.items.map((p) => ({
       id: p.id,

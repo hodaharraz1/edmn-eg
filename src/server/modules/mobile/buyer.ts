@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { requireUser, type Actor } from '@/server/core/actor';
 import { forbidden, notFound } from '@/server/core/errors';
 import { db } from '@/server/db/client';
-import { addresses, cancellationRequests, disputes, files, governorates, orders, paymentSubmissions, payments, refunds, returns, shipments, trackingEvents } from '@/server/db/schema';
+import { addresses, cancellationRequests, disputes, files, governorates, orderItems, orders, paymentSubmissions, payments, products, refunds, returns, sellerOrders, shipments, trackingEvents } from '@/server/db/schema';
 import { returnPolicySummary, type ReturnPolicy } from '@/domain/return-policy';
 import { sellerOrderAllowedActions } from '@/server/modules/allowed-actions';
 import { publicMediaUrl } from '@/server/modules/catalog/public-read';
@@ -161,6 +161,26 @@ export async function buyerOrders(actor: Actor, page: number) {
   const rows = await customerOrders(requireUser(actor), page);
   const pays = rows.length ? await db.select({ orderId: payments.orderId, status: payments.status }).from(payments).where(inArray(payments.orderId, rows.map((o) => o.id))) : [];
   const byOrder = new Map(pays.map((p) => [p.orderId, p.status]));
+  // Thumbnails and item counts for the list cards (board "طلباتي"): read-only, from the order's own snapshots.
+  const lines = rows.length
+    ? await db
+        .select({ orderId: sellerOrders.orderId, imageFileId: orderItems.imageFileId, quantity: orderItems.quantity })
+        .from(orderItems)
+        .innerJoin(sellerOrders, eq(sellerOrders.id, orderItems.sellerOrderId))
+        .where(inArray(sellerOrders.orderId, rows.map((o) => o.id)))
+    : [];
+  const imageIds = [...new Set(lines.map((l) => l.imageFileId).filter((x): x is string => !!x))];
+  const images = imageIds.length ? await db.select({ id: files.id, key: files.storageKey }).from(files).where(inArray(files.id, imageIds)) : [];
+  const imageKey = new Map(images.map((f) => [f.id, f.key]));
+  const thumbs = new Map<string, string[]>();
+  const counts = new Map<string, number>();
+  for (const l of lines) {
+    counts.set(l.orderId, (counts.get(l.orderId) ?? 0) + l.quantity);
+    const url = publicMediaUrl(l.imageFileId ? imageKey.get(l.imageFileId) : null, 'thumb');
+    const list = thumbs.get(l.orderId) ?? [];
+    if (url && list.length < 3 && !list.includes(url)) list.push(url);
+    thumbs.set(l.orderId, list);
+  }
   return {
     page,
     pageSize: 20,
@@ -172,6 +192,8 @@ export async function buyerOrders(actor: Actor, page: number) {
       placedAt: o.placedAt.toISOString(),
       paymentStatus: byOrder.get(o.id) ?? null,
       paymentDueAt: o.paymentDueAt.toISOString(),
+      itemCount: counts.get(o.id) ?? 0,
+      thumbnails: thumbs.get(o.id) ?? [],
     })),
   };
 }
@@ -194,6 +216,9 @@ export async function buyerOrder(actor: Actor, orderId: string) {
   const imageIds = [...new Set(g.sellerOrders.flatMap((s) => s.items.map((i) => i.imageFileId)).filter((x): x is string => !!x))];
   const images = imageIds.length ? await db.select({ id: files.id, key: files.storageKey }).from(files).where(inArray(files.id, imageIds)) : [];
   const imageKey = new Map(images.map((f) => [f.id, f.key]));
+  const productIds = [...new Set(g.sellerOrders.flatMap((s) => s.items.map((i) => i.productId)))];
+  const slugs = productIds.length ? await db.select({ id: products.id, slug: products.slug }).from(products).where(inArray(products.id, productIds)) : [];
+  const slugOf = new Map(slugs.map((p) => [p.id, p.slug]));
   const OPEN_DISPUTE = ['OPEN', 'UNDER_REVIEW', 'AWAITING_INFORMATION'];
   const o = g.order;
   const cancellableUnpaid = (o.status === 'PENDING_PAYMENT' || o.status === 'PAYMENT_UNDER_REVIEW') && (!g.payment || g.payment.status === 'AWAITING_PAYMENT' || g.payment.status === 'REJECTED');
@@ -242,6 +267,8 @@ export async function buyerOrder(actor: Actor, orderId: string) {
         items: items.map((i) => ({
           id: i.id,
           productId: i.productId,
+          productSlug: slugOf.get(i.productId) ?? null,
+          variantId: i.variantId,
           title: i.titleSnapshot,
           variantLabel: i.variantLabel,
           condition: i.conditionSnapshot,

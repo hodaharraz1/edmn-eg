@@ -109,7 +109,8 @@ class Gen {
       lines.push(`  final ${f.dart} ${f.name};`);
     }
     lines.push('');
-    lines.push(`  Map<String, dynamic> toJson() => {${fields.map((f) => `'${f.key}': ${f.to}`).join(', ')}};`);
+    // An optional (non-nullable) property is OMITTED when unset: the API rejects an explicit null for it.
+    lines.push(`  Map<String, dynamic> toJson() => {${fields.map((f) => (f.optional ? `if (${f.name} != null) '${f.key}': ${f.to}` : `'${f.key}': ${f.to}`)).join(', ')}};`);
     lines.push('}');
     this.classes.set(name, lines.join('\n'));
   }

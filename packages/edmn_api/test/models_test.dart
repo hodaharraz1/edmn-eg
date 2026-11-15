@@ -24,4 +24,14 @@ void main() {
     expect(MobileApiPaths.getProduct.path, '/api/v1/catalog/products/{slug}');
     expect(MobileApiPaths.revokeMySession.method, 'DELETE');
   });
+
+  test('optional request fields are omitted when unset (the API rejects an explicit null)', () {
+    const d = DeviceInfo(installationId: 'abcdefghijklmnop', platform: 'IOS');
+    expect(d.toJson(), {'installationId': 'abcdefghijklmnop', 'platform': 'IOS'});
+    const a = CreateAddressRequest(recipientName: 'منى', phone: '01012345678', governorateId: 1, city: 'القاهرة', street: 'شارع');
+    expect(a.toJson().containsKey('label'), isFalse);
+    expect(a.toJson().containsKey('isDefault'), isFalse);
+    final r = PlaceOrderRequest(addressId: 'a', paymentMethod: 'INSTAPAY', checkoutKey: 'k' * 20, expectedTotalPiastres: 100);
+    expect(r.toJson().containsKey('expectedPricingVersionId'), isFalse);
+  });
 }

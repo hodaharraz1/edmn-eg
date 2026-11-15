@@ -150,7 +150,7 @@ class DeviceInfo {
 
   final String? appVersion;
 
-  Map<String, dynamic> toJson() => {'installationId': installationId, 'platform': platform, 'deviceName': deviceName, 'appVersion': appVersion};
+  Map<String, dynamic> toJson() => {'installationId': installationId, 'platform': platform, if (deviceName != null) 'deviceName': deviceName, if (appVersion != null) 'appVersion': appVersion};
 }
 
 class DeviceSession {
@@ -227,7 +227,7 @@ class Problem {
 
   final List<ProblemIssuesItem>? issues;
 
-  Map<String, dynamic> toJson() => {'type': type, 'title': title, 'status': status, 'code': code, 'detail': detail, 'reference': reference, 'fieldErrors': fieldErrors, 'issues': issues?.map((e) => e.toJson()).toList()};
+  Map<String, dynamic> toJson() => {'type': type, 'title': title, 'status': status, 'code': code, if (detail != null) 'detail': detail, if (reference != null) 'reference': reference, if (fieldErrors != null) 'fieldErrors': fieldErrors, if (issues != null) 'issues': issues?.map((e) => e.toJson()).toList()};
 }
 
 class ProblemIssuesItem {

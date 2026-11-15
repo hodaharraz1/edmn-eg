@@ -3,8 +3,8 @@ import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../common/ui.dart';
 import '../../providers.dart';
 
 final mySessionsProvider = FutureProvider<List<DeviceSession>>((ref) async => (await ref.watch(mobileApiProvider).mySessions()).items);
@@ -23,57 +23,49 @@ class DevicesScreen extends ConsumerWidget {
       try {
         await action();
       } catch (e) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(apiErrorMessage(context, e))));
+        if (context.mounted) showEdmnMessage(context, apiErrorMessage(context, e), error: true);
       }
       ref.invalidate(mySessionsProvider);
     }
 
-    return Scaffold(
-      appBar: AppBar(title: Text(t.devices), actions: [
-        IconButton(
-          tooltip: t.signOut,
-          icon: const Icon(Icons.logout),
-          onPressed: () async {
-            await api.logout().catchError((_) {});
-            ref.read(signedInProvider.notifier).set(false);
-            if (context.mounted) context.go('/');
-          },
-        ),
-      ]),
-      body: sessions.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(mySessionsProvider)),
-        data: (items) => ListView(children: [
-          for (final s in items)
-            ListTile(
-              key: Key('session-${s.id}'),
-              leading: Icon(s.device == null ? Icons.language : Icons.smartphone),
-              title: Text(s.device?.name ?? s.device?.platform ?? s.userAgent ?? s.scope),
-              subtitle: Text(s.current ? t.thisDevice : s.lastSeenAt),
-              trailing: s.current
-                  ? null
-                  : IconButton(
-                      tooltip: t.signOutDevice,
-                      icon: const Icon(Icons.close),
-                      onPressed: () {
-                        final key = newIdempotencyKey();
-                        run(() => api.revokeSession(s.id, idempotencyKey: key));
-                      },
-                    ),
-            ),
-          Padding(
-            padding: const EdgeInsetsDirectional.all(16),
-            child: OutlinedButton(
-              key: const Key('revoke-others'),
-              onPressed: () {
-                final key = newIdempotencyKey();
-                run(() async {
-                  final n = await api.revokeOtherSessions(idempotencyKey: key);
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.signedOutOthers(n))));
-                });
-              },
-              child: Text(t.signOutOtherDevices),
-            ),
+    return EdmnAppScaffold(
+      title: t.devices,
+      body: AsyncView(
+        value: sessions,
+        skeleton: true,
+        onRetry: () => ref.invalidate(mySessionsProvider),
+        data: (items) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
+          EdmnMenuGroup(children: [
+            for (final s in items)
+              EdmnMenuItem(
+                key: Key('session-${s.id}'),
+                icon: s.device == null ? Icons.language_rounded : Icons.smartphone_rounded,
+                title: s.device?.name ?? s.device?.platform ?? s.userAgent ?? s.scope,
+                subtitle: s.current ? t.thisDevice : formatDateTime(context, s.lastSeenAt),
+                trailing: s.current
+                    ? EdmnStatusChip(label: t.thisDevice, tone: EdmnTone.success)
+                    : IconButton(
+                        tooltip: t.signOutDevice,
+                        icon: const Icon(Icons.logout_rounded, color: EdmnColors.error),
+                        onPressed: () {
+                          final key = newIdempotencyKey();
+                          run(() => api.revokeSession(s.id, idempotencyKey: key));
+                        },
+                      ),
+              ),
+          ]),
+          const SizedBox(height: EdmnSpacing.md),
+          EdmnSecondaryButton(
+            key: const Key('revoke-others'),
+            label: t.signOutOtherDevices,
+            destructive: true,
+            onPressed: () {
+              final key = newIdempotencyKey();
+              run(() async {
+                final n = await api.revokeOtherSessions(idempotencyKey: key);
+                if (context.mounted) showEdmnMessage(context, t.signedOutOthers(n));
+              });
+            },
           ),
         ]),
       ),

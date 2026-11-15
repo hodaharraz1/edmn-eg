@@ -7,6 +7,7 @@ import { PUT as setCartItemRoute } from '@/app/api/v1/cart/items/[variantId]/rou
 import { POST as addCartItemRoute } from '@/app/api/v1/cart/items/route';
 import { GET as cartRoute } from '@/app/api/v1/cart/route';
 import { GET as checkoutRoute } from '@/app/api/v1/checkout/route';
+import { GET as searchRoute } from '@/app/api/v1/catalog/products/route';
 import { GET as fileRoute } from '@/app/api/v1/files/[fileId]/route';
 import { DELETE as deleteAddressRoute, PUT as updateAddressRoute } from '@/app/api/v1/me/addresses/[addressId]/route';
 import { GET as addressesRoute, POST as createAddressRoute } from '@/app/api/v1/me/addresses/route';
@@ -20,7 +21,7 @@ import { GET as paymentRoute } from '@/app/api/v1/payments/[paymentId]/route';
 import { POST as confirmReceiptRoute } from '@/app/api/v1/seller-orders/[sellerOrderId]/confirm-receipt/route';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { auditLogs, journalEntries, orders, paymentSubmissions, payments, productVariants, sessions } from '@/server/db/schema';
+import { auditLogs, journalEntries, orders, paymentSubmissions, payments, productVariants, sessions, stores } from '@/server/db/schema';
 import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, png, sellerOrdersOf } from '../helpers/factory';
 
 /**
@@ -160,6 +161,13 @@ describe('cart and checkout', () => {
 
     const list = await call(ordersRoute, '/orders', { token: b.token });
     expect(list.body.items.map((x: { id: string }) => x.id)).toEqual([placed.body.orderId]);
+    expect(list.body.items[0].itemCount).toBe(3);
+    expect(Array.isArray(list.body.items[0].thumbnails)).toBe(true);
+    expect(list.body.items[0].thumbnails.length).toBeLessThanOrEqual(3);
+    // "Order again" needs the variant (the server re-prices it) and the current product slug.
+    const items = o.body.sellerOrders.flatMap((so: { items: { variantId: string; productSlug: string | null }[] }) => so.items);
+    expect(items.map((i: { variantId: string }) => i.variantId).sort()).toEqual([p1.variantId, p2.variantId].sort());
+    expect(items.every((i: { productSlug: string | null }) => typeof i.productSlug === 'string')).toBe(true);
     const empty = await call(cartRoute, '/cart', { token: b.token });
     expect(empty.body.itemCount).toBe(0);
   });
@@ -309,6 +317,24 @@ describe('orders, payment proof and files: ownership', () => {
     const o = await call(orderRoute, `/orders/${orderId}`, { token: a.token, params: { orderId } });
     expect(o.body.status).toBe('CANCELLED');
     expect(o.body.allowedActions).toEqual([]);
+  });
+});
+
+describe('public store page products', () => {
+  it('storeSlug narrows search to that public store only; an unknown store is an empty page', async () => {
+    const s1 = await makeSeller(admin);
+    const s2 = await makeSeller(admin);
+    const p1 = await makeProduct(s1.actor, admin, { stock: 3 });
+    await makeProduct(s2.actor, admin, { stock: 3 });
+    const [st] = await db.select().from(stores).where(eq(stores.sellerId, s1.actor.sellerId!));
+    const r = await call(searchRoute, `/catalog/products?storeSlug=${encodeURIComponent(st.slug)}&pageSize=48`);
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.items.length).toBeGreaterThan(0);
+    expect(r.body.items.every((x: { store: { slug: string } }) => x.store.slug === st.slug)).toBe(true);
+    expect(r.body.items.map((x: { id: string }) => x.id)).toContain(p1.productId);
+    const none = await call(searchRoute, '/catalog/products?storeSlug=no-such-store-xyz');
+    expect(none.status).toBe(200);
+    expect(none.body).toMatchObject({ items: [], total: 0 });
   });
 });
 

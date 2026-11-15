@@ -22,10 +22,14 @@ String apiErrorMessage(BuildContext context, Object error) {
     ApiErrorCode.stepUpRequired => t.errorStepUpRequired,
     ApiErrorCode.identityRequired => t.errorIdentityRequired,
     ApiErrorCode.sellerRequired => t.errorSellerRequired,
-    ApiErrorCode.idempotencyKeyRequired || ApiErrorCode.idempotencyKeyReused || ApiErrorCode.idempotencyInProgress => t.errorIdempotency,
+    ApiErrorCode.idempotencyKeyRequired ||
+    ApiErrorCode.idempotencyKeyReused ||
+    ApiErrorCode.idempotencyInProgress => t.errorIdempotency,
     ApiErrorCode.internalError => t.errorInternal,
     ApiErrorCode.network => t.errorNetwork,
     ApiErrorCode.unknown => t.errorUnknown,
   };
-  return error.reference == null ? base : '$base\n${t.errorReference(error.reference!)}';
+  return error.reference == null
+      ? base
+      : '$base\n${t.errorReference(error.reference!)}';
 }

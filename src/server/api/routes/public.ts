@@ -84,6 +84,7 @@ export const searchProducts = defineRoute({
       .pipe(z.array(z.uuid()).max(10).optional())
       .meta({ description: 'Comma-separated brand ids' }),
     condition: z.enum(['NEW', 'USED']).optional(),
+    storeSlug: slug.optional().meta({ description: 'Only products of this public store (store page).' }),
     minPrice: int(0, 1_000_000_000).optional().meta({ description: 'piastres' }),
     maxPrice: int(0, 1_000_000_000).optional().meta({ description: 'piastres' }),
     minRating: int(1, 5).optional(),

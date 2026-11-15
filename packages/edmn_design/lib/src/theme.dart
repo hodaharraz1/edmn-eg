@@ -1,39 +1,185 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// Brand tokens mirrored from the web (src/app/globals.css). Egyptian identity: EDMN blue + Egyptian red accent,
-/// no Gulf palette or imagery.
-abstract final class EdmnColors {
-  static const brand950 = Color(0xFF061A3D);
-  static const brand900 = Color(0xFF0A2A5E);
-  static const brand700 = Color(0xFF0F3F8C);
-  static const brand600 = Color(0xFF1452B3);
-  static const brand500 = Color(0xFF1E66D0);
-  static const brand100 = Color(0xFFE6EEFB);
-  static const brand50 = Color(0xFFF3F7FD);
-  static const accent600 = Color(0xFFD7263D);
-  static const accent100 = Color(0xFFFDE6E9);
-  static const ink = Color(0xFF0F172A);
-}
+import 'tokens.dart';
 
-/// Font stack of the web: IBM Plex Sans Arabic, falling back to the platform's Arabic font until the font files are
-/// bundled (Phase 2 — fonts are an asset decision recorded in the brand document).
-const _fontFallback = ['IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Roboto'];
+export 'tokens.dart';
 
+/// Bundled font family (packaged fonts are addressed as `packages/<package>/<family>`).
+const edmnFontFamily = 'packages/${EdmnType.package}/${EdmnType.fontFamily}';
+
+/// The EDMN Market theme. Every Material default the board overrides is set here, so screens stay token-free.
 ThemeData edmnTheme({Brightness brightness = Brightness.light}) {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: EdmnColors.brand600,
-    brightness: brightness,
-    primary: brightness == Brightness.light ? EdmnColors.brand600 : EdmnColors.brand100,
-    secondary: EdmnColors.accent600,
-    error: EdmnColors.accent600,
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: EdmnColors.primary,
+        brightness: brightness,
+      ).copyWith(
+        primary: EdmnColors.primary,
+        onPrimary: EdmnColors.onPrimary,
+        primaryContainer: EdmnColors.primaryLight,
+        onPrimaryContainer: EdmnColors.primaryDark,
+        secondary: EdmnColors.accentCyan,
+        onSecondary: EdmnColors.onPrimary,
+        tertiary: EdmnColors.brandRed,
+        error: EdmnColors.error,
+        onError: EdmnColors.onPrimary,
+        surface: EdmnColors.surface,
+        onSurface: EdmnColors.textPrimary,
+        onSurfaceVariant: EdmnColors.textSecondary,
+        outline: EdmnColors.border,
+        outlineVariant: EdmnColors.border,
+        surfaceContainerLowest: EdmnColors.surface,
+        surfaceContainerLow: EdmnColors.subtle,
+        surfaceContainer: EdmnColors.subtle,
+        surfaceContainerHigh: EdmnColors.subtle,
+      );
+
+  TextStyle t(TextStyle s, [Color c = EdmnColors.textPrimary]) =>
+      s.copyWith(color: c);
+  final textTheme = TextTheme(
+    headlineSmall: t(EdmnType.pageTitle),
+    titleLarge: t(EdmnType.section),
+    titleMedium: t(EdmnType.cardTitle),
+    titleSmall: t(EdmnType.bodyStrong),
+    bodyLarge: t(EdmnType.body),
+    bodyMedium: t(EdmnType.body),
+    bodySmall: t(EdmnType.secondary, EdmnColors.textSecondary),
+    labelLarge: t(EdmnType.button),
+    labelMedium: t(EdmnType.caption),
+    labelSmall: t(EdmnType.caption, EdmnColors.textSecondary),
   );
+
+  const stadium = StadiumBorder();
+  final fieldBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(EdmnRadii.field),
+    borderSide: const BorderSide(color: EdmnColors.border),
+  );
+
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    fontFamilyFallback: _fontFallback,
-    scaffoldBackgroundColor: brightness == Brightness.light ? EdmnColors.brand50 : EdmnColors.brand950,
-    appBarTheme: AppBarTheme(backgroundColor: scheme.surface, foregroundColor: scheme.onSurface, centerTitle: false),
-    inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
-    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48))),
+    fontFamily: edmnFontFamily,
+    textTheme: textTheme,
+    scaffoldBackgroundColor: EdmnColors.background,
+    dividerTheme: const DividerThemeData(
+      color: EdmnColors.border,
+      thickness: 1,
+      space: 1,
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: EdmnColors.primaryDark,
+      foregroundColor: EdmnColors.onPrimary,
+      centerTitle: true,
+      elevation: 0,
+      titleTextStyle: t(
+        EdmnType.headerTitle,
+        EdmnColors.onPrimary,
+      ).copyWith(fontFamily: edmnFontFamily),
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: EdmnColors.surface,
+      contentPadding: const EdgeInsetsDirectional.symmetric(
+        horizontal: EdmnSpacing.md,
+        vertical: 14,
+      ),
+      hintStyle: t(EdmnType.body, EdmnColors.textSecondary),
+      prefixIconColor: EdmnColors.textPrimary,
+      suffixIconColor: EdmnColors.textSecondary,
+      border: fieldBorder,
+      enabledBorder: fieldBorder,
+      focusedBorder: fieldBorder.copyWith(
+        borderSide: const BorderSide(color: EdmnColors.primary, width: 1.5),
+      ),
+      errorBorder: fieldBorder.copyWith(
+        borderSide: const BorderSide(color: EdmnColors.error),
+      ),
+      focusedErrorBorder: fieldBorder.copyWith(
+        borderSide: const BorderSide(color: EdmnColors.error, width: 1.5),
+      ),
+      disabledBorder: fieldBorder,
+      errorStyle: t(EdmnType.secondary, EdmnColors.error),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(EdmnSizes.buttonHeight),
+        shape: stadium,
+        backgroundColor: EdmnColors.primary,
+        foregroundColor: EdmnColors.onPrimary,
+        disabledBackgroundColor: EdmnColors.border,
+        disabledForegroundColor: EdmnColors.disabled,
+        textStyle: EdmnType.button.copyWith(fontFamily: edmnFontFamily),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(EdmnSizes.secondaryButtonHeight),
+        shape: stadium,
+        foregroundColor: EdmnColors.primary,
+        side: const BorderSide(color: EdmnColors.primary, width: 1.2),
+        textStyle: EdmnType.button.copyWith(fontFamily: edmnFontFamily),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: EdmnColors.primary,
+        textStyle: EdmnType.bodyStrong.copyWith(fontFamily: edmnFontFamily),
+      ),
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected)
+            ? EdmnColors.primary
+            : EdmnColors.disabled,
+      ),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? EdmnColors.primary : null,
+      ),
+    ),
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: EdmnColors.primary,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: EdmnColors.textPrimary,
+      contentTextStyle: t(EdmnType.body, EdmnColors.onPrimary),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(EdmnRadii.small),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: EdmnColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(EdmnRadii.sheet),
+        ),
+      ),
+      showDragHandle: true,
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: EdmnColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(EdmnRadii.card),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      shape: stadium,
+      side: const BorderSide(color: EdmnColors.border),
+      selectedColor: EdmnColors.primary,
+      backgroundColor: EdmnColors.surface,
+      labelStyle: t(
+        EdmnType.bodyStrong,
+        EdmnColors.primaryDark,
+      ).copyWith(fontFamily: edmnFontFamily),
+      secondaryLabelStyle: t(
+        EdmnType.bodyStrong,
+        EdmnColors.onPrimary,
+      ).copyWith(fontFamily: edmnFontFamily),
+      showCheckmark: false,
+    ),
   );
 }

@@ -128,6 +128,8 @@ const orderSummary = z.object({
   placedAt: isoDateTime,
   paymentStatus: z.string().nullable(),
   paymentDueAt: isoDateTime,
+  itemCount: z.number().int(),
+  thumbnails: z.array(z.string()).max(3),
 });
 
 const order = z
@@ -172,6 +174,8 @@ const order = z
           z.object({
             id: uuid,
             productId: uuid,
+            productSlug: z.string().nullable().meta({ description: 'Current product slug (the product may no longer be listed; then the detail route answers 404).' }),
+            variantId: uuid.meta({ description: 'For "order again": the server re-prices it when added to the cart.' }),
             title: z.string(),
             variantLabel: z.string(),
             condition: z.string(),

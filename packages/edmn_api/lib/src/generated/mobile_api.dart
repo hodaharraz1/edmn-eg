@@ -397,7 +397,7 @@ class CreateAddressRequest {
 
   final bool? isDefault;
 
-  Map<String, dynamic> toJson() => {'label': label, 'recipientName': recipientName, 'phone': phone, 'governorateId': governorateId, 'city': city, 'district': district, 'street': street, 'building': building, 'floor': floor, 'apartment': apartment, 'landmark': landmark, 'isDefault': isDefault};
+  Map<String, dynamic> toJson() => {if (label != null) 'label': label, 'recipientName': recipientName, 'phone': phone, 'governorateId': governorateId, 'city': city, if (district != null) 'district': district, 'street': street, if (building != null) 'building': building, if (floor != null) 'floor': floor, if (apartment != null) 'apartment': apartment, if (landmark != null) 'landmark': landmark, if (isDefault != null) 'isDefault': isDefault};
 }
 
 class CreateAddressResponse {
@@ -425,7 +425,7 @@ class DeviceInfo {
 
   final String? appVersion;
 
-  Map<String, dynamic> toJson() => {'installationId': installationId, 'platform': platform, 'deviceName': deviceName, 'appVersion': appVersion};
+  Map<String, dynamic> toJson() => {'installationId': installationId, 'platform': platform, if (deviceName != null) 'deviceName': deviceName, if (appVersion != null) 'appVersion': appVersion};
 }
 
 class DeviceSession {
@@ -652,9 +652,9 @@ class ListOrdersResponse {
 }
 
 class ListOrdersResponseItemsItem {
-  const ListOrdersResponseItemsItem({required this.id, required this.number, required this.status, required this.grandTotalPiastres, required this.placedAt, required this.paymentStatus, required this.paymentDueAt});
+  const ListOrdersResponseItemsItem({required this.id, required this.number, required this.status, required this.grandTotalPiastres, required this.placedAt, required this.paymentStatus, required this.paymentDueAt, required this.itemCount, required this.thumbnails});
 
-  factory ListOrdersResponseItemsItem.fromJson(Map<String, dynamic> json) => ListOrdersResponseItemsItem(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, grandTotalPiastres: (json['grandTotalPiastres'] as num).toInt(), placedAt: json['placedAt'] as String, paymentStatus: json['paymentStatus'] as String?, paymentDueAt: json['paymentDueAt'] as String);
+  factory ListOrdersResponseItemsItem.fromJson(Map<String, dynamic> json) => ListOrdersResponseItemsItem(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, grandTotalPiastres: (json['grandTotalPiastres'] as num).toInt(), placedAt: json['placedAt'] as String, paymentStatus: json['paymentStatus'] as String?, paymentDueAt: json['paymentDueAt'] as String, itemCount: (json['itemCount'] as num).toInt(), thumbnails: (json['thumbnails'] as List).map((e) => e as String).toList());
 
   final String id;
 
@@ -671,7 +671,11 @@ class ListOrdersResponseItemsItem {
 
   final String paymentDueAt;
 
-  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'grandTotalPiastres': grandTotalPiastres, 'placedAt': placedAt, 'paymentStatus': paymentStatus, 'paymentDueAt': paymentDueAt};
+  final int itemCount;
+
+  final List<String> thumbnails;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'grandTotalPiastres': grandTotalPiastres, 'placedAt': placedAt, 'paymentStatus': paymentStatus, 'paymentDueAt': paymentDueAt, 'itemCount': itemCount, 'thumbnails': thumbnails.map((e) => e).toList()};
 }
 
 class ListProductReviewsResponse {
@@ -831,13 +835,19 @@ class OrderSellerOrdersItemDisputesItem {
 }
 
 class OrderSellerOrdersItemItemsItem {
-  const OrderSellerOrdersItemItemsItem({required this.id, required this.productId, required this.title, required this.variantLabel, required this.condition, required this.imageUrl, required this.unitPricePiastres, required this.quantity, required this.lineTotalPiastres, required this.refundedQuantity, required this.returnedQuantity, required this.returnPolicy});
+  const OrderSellerOrdersItemItemsItem({required this.id, required this.productId, required this.productSlug, required this.variantId, required this.title, required this.variantLabel, required this.condition, required this.imageUrl, required this.unitPricePiastres, required this.quantity, required this.lineTotalPiastres, required this.refundedQuantity, required this.returnedQuantity, required this.returnPolicy});
 
-  factory OrderSellerOrdersItemItemsItem.fromJson(Map<String, dynamic> json) => OrderSellerOrdersItemItemsItem(id: json['id'] as String, productId: json['productId'] as String, title: json['title'] as String, variantLabel: json['variantLabel'] as String, condition: json['condition'] as String, imageUrl: json['imageUrl'] as String?, unitPricePiastres: (json['unitPricePiastres'] as num).toInt(), quantity: (json['quantity'] as num).toInt(), lineTotalPiastres: (json['lineTotalPiastres'] as num).toInt(), refundedQuantity: (json['refundedQuantity'] as num).toInt(), returnedQuantity: (json['returnedQuantity'] as num).toInt(), returnPolicy: json['returnPolicy'] == null ? null : ReturnPolicy.fromJson(json['returnPolicy'] as Map<String, dynamic>));
+  factory OrderSellerOrdersItemItemsItem.fromJson(Map<String, dynamic> json) => OrderSellerOrdersItemItemsItem(id: json['id'] as String, productId: json['productId'] as String, productSlug: json['productSlug'] as String?, variantId: json['variantId'] as String, title: json['title'] as String, variantLabel: json['variantLabel'] as String, condition: json['condition'] as String, imageUrl: json['imageUrl'] as String?, unitPricePiastres: (json['unitPricePiastres'] as num).toInt(), quantity: (json['quantity'] as num).toInt(), lineTotalPiastres: (json['lineTotalPiastres'] as num).toInt(), refundedQuantity: (json['refundedQuantity'] as num).toInt(), returnedQuantity: (json['returnedQuantity'] as num).toInt(), returnPolicy: json['returnPolicy'] == null ? null : ReturnPolicy.fromJson(json['returnPolicy'] as Map<String, dynamic>));
 
   final String id;
 
   final String productId;
+
+  /// Current product slug (the product may no longer be listed; then the detail route answers 404).
+  final String? productSlug;
+
+  /// For "order again": the server re-prices it when added to the cart.
+  final String variantId;
 
   final String title;
 
@@ -861,7 +871,7 @@ class OrderSellerOrdersItemItemsItem {
 
   final ReturnPolicy? returnPolicy;
 
-  Map<String, dynamic> toJson() => {'id': id, 'productId': productId, 'title': title, 'variantLabel': variantLabel, 'condition': condition, 'imageUrl': imageUrl, 'unitPricePiastres': unitPricePiastres, 'quantity': quantity, 'lineTotalPiastres': lineTotalPiastres, 'refundedQuantity': refundedQuantity, 'returnedQuantity': returnedQuantity, 'returnPolicy': returnPolicy?.toJson()};
+  Map<String, dynamic> toJson() => {'id': id, 'productId': productId, 'productSlug': productSlug, 'variantId': variantId, 'title': title, 'variantLabel': variantLabel, 'condition': condition, 'imageUrl': imageUrl, 'unitPricePiastres': unitPricePiastres, 'quantity': quantity, 'lineTotalPiastres': lineTotalPiastres, 'refundedQuantity': refundedQuantity, 'returnedQuantity': returnedQuantity, 'returnPolicy': returnPolicy?.toJson()};
 }
 
 class OrderSellerOrdersItemRefundsItem {
@@ -1030,7 +1040,7 @@ class PlaceOrderRequest {
 
   final String? note;
 
-  Map<String, dynamic> toJson() => {'addressId': addressId, 'paymentMethod': paymentMethod, 'checkoutKey': checkoutKey, 'expectedTotalPiastres': expectedTotalPiastres, 'expectedPricingVersionId': expectedPricingVersionId, 'note': note};
+  Map<String, dynamic> toJson() => {'addressId': addressId, 'paymentMethod': paymentMethod, 'checkoutKey': checkoutKey, 'expectedTotalPiastres': expectedTotalPiastres, if (expectedPricingVersionId != null) 'expectedPricingVersionId': expectedPricingVersionId, if (note != null) 'note': note};
 }
 
 class PlaceOrderResponse {
@@ -1068,7 +1078,7 @@ class Problem {
 
   final List<ProblemIssuesItem>? issues;
 
-  Map<String, dynamic> toJson() => {'type': type, 'title': title, 'status': status, 'code': code, 'detail': detail, 'reference': reference, 'fieldErrors': fieldErrors, 'issues': issues?.map((e) => e.toJson()).toList()};
+  Map<String, dynamic> toJson() => {'type': type, 'title': title, 'status': status, 'code': code, if (detail != null) 'detail': detail, if (reference != null) 'reference': reference, if (fieldErrors != null) 'fieldErrors': fieldErrors, if (issues != null) 'issues': issues?.map((e) => e.toJson()).toList()};
 }
 
 class ProblemIssuesItem {
@@ -1664,7 +1674,7 @@ class UpdateAddressRequest {
 
   final bool? isDefault;
 
-  Map<String, dynamic> toJson() => {'label': label, 'recipientName': recipientName, 'phone': phone, 'governorateId': governorateId, 'city': city, 'district': district, 'street': street, 'building': building, 'floor': floor, 'apartment': apartment, 'landmark': landmark, 'isDefault': isDefault};
+  Map<String, dynamic> toJson() => {if (label != null) 'label': label, 'recipientName': recipientName, 'phone': phone, 'governorateId': governorateId, 'city': city, if (district != null) 'district': district, 'street': street, if (building != null) 'building': building, if (floor != null) 'floor': floor, if (apartment != null) 'apartment': apartment, if (landmark != null) 'landmark': landmark, if (isDefault != null) 'isDefault': isDefault};
 }
 
 class UpdateAddressResponse {

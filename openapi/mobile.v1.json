@@ -1582,6 +1582,17 @@
             }
           },
           {
+            "name": "storeSlug",
+            "in": "query",
+            "required": false,
+            "description": "Only products of this public store (store page).",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          {
             "name": "minPrice",
             "in": "query",
             "required": false,
@@ -4585,6 +4596,18 @@
                           "paymentDueAt": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "itemCount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "thumbnails": {
+                            "maxItems": 3,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           }
                         },
                         "required": [
@@ -4594,7 +4617,9 @@
                           "grandTotalPiastres",
                           "placedAt",
                           "paymentStatus",
-                          "paymentDueAt"
+                          "paymentDueAt",
+                          "itemCount",
+                          "thumbnails"
                         ]
                       }
                     }
@@ -7263,6 +7288,19 @@
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                       },
+                      "productSlug": {
+                        "description": "Current product slug (the product may no longer be listed; then the detail route answers 404).",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "variantId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "description": "For \"order again\": the server re-prices it when added to the cart."
+                      },
                       "title": {
                         "type": "string"
                       },
@@ -7319,6 +7357,8 @@
                     "required": [
                       "id",
                       "productId",
+                      "productSlug",
+                      "variantId",
                       "title",
                       "variantLabel",
                       "condition",

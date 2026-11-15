@@ -43,4 +43,47 @@ void main() {
     expect(EdmnLocales.resolve(null, const [Locale('fr')]), EdmnLocales.arabic);
     expect(EdmnLocales.resolve(const Locale('ar'), const [Locale('en')]), EdmnLocales.arabic);
   });
+
+  testWidgets('primary button: loading disables it so one tap can never send twice', (t) async {
+    var taps = 0;
+    await t.pumpWidget(_app(EdmnPrimaryButton(label: 'تأكيد', loading: true, onPressed: () => taps++)));
+    await t.tap(find.byType(FilledButton));
+    expect(taps, 0);
+    await t.pumpWidget(_app(EdmnPrimaryButton(label: 'تأكيد', onPressed: () => taps++)));
+    await t.tap(find.byType(FilledButton));
+    expect(taps, 1);
+  });
+
+  testWidgets('the original logo assets are bundled for every variant', (t) async {
+    for (final v in EdmnLogoVariant.values) {
+      await t.pumpWidget(_app(EdmnLogo(variant: v)));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    }
+  });
+
+  testWidgets('error state follows the error kind: offline, session expired (with sign-in), generic', (t) async {
+    await t.pumpWidget(_app(const EdmnErrorState(error: ApiFailure(code: ApiErrorCode.network))));
+    expect(find.text('مفيش اتصال بالإنترنت'), findsOneWidget);
+    var signIn = 0;
+    await t.pumpWidget(_app(EdmnErrorState(error: const ApiFailure(code: ApiErrorCode.unauthenticated, status: 401), onSignIn: () => signIn++)));
+    await t.tap(find.text('تسجيل الدخول'));
+    expect(signIn, 1);
+  });
+
+  testWidgets('tracking timeline renders done / current / pending / failed steps', (t) async {
+    await t.pumpWidget(_app(const EdmnTrackingTimeline(steps: [
+      EdmnTimelineStep(title: 'تم إنشاء الطلب', state: EdmnStepState.done, time: '1 يناير'),
+      EdmnTimelineStep(title: 'في طريقه إليك', state: EdmnStepState.current),
+      EdmnTimelineStep(title: 'تم التوصيل', state: EdmnStepState.pending),
+    ])));
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(find.text('في طريقه إليك'), findsOneWidget);
+  });
+
+  test('tokens: brand colors are the logo colors', () {
+    expect(EdmnColors.primary, const Color(0xFF1A57A1));
+    expect(EdmnColors.accentCyan, const Color(0xFF1FA7E1));
+    expect(EdmnColors.brandRed, const Color(0xFFED181E));
+  });
 }
