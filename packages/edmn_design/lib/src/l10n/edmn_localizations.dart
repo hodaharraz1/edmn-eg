@@ -2995,6 +2995,552 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'كمّل طلب البائع'**
   String get continueApplication;
+
+  /// No description provided for @acceptChange.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول التعديل'**
+  String get acceptChange;
+
+  /// No description provided for @acceptOffer.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول العرض'**
+  String get acceptOffer;
+
+  /// No description provided for @acceptOfferConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'بقبول العرض تصبح الشروط ملزمة للطرفين وتنتقل للدفع.'**
+  String get acceptOfferConfirm;
+
+  /// No description provided for @cancelDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الصفقة'**
+  String get cancelDeal;
+
+  /// No description provided for @changeMessageHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب التعديل المطلوب بوضوح'**
+  String get changeMessageHint;
+
+  /// No description provided for @codeWarning.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تعطِ الكود إلا عند استلام المنتج فعليًا وفحصه.'**
+  String get codeWarning;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ الرابط'**
+  String get copyLink;
+
+  /// No description provided for @dealAwaitingRelease.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار تحويل المبلغ للبائع'**
+  String get dealAwaitingRelease;
+
+  /// No description provided for @dealBuyerOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'المشتري هو من يبدأ الصفقة ثم يدعو البائع برابط.'**
+  String get dealBuyerOnly;
+
+  /// No description provided for @dealBuyerPays.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي ما تدفعه'**
+  String get dealBuyerPays;
+
+  /// No description provided for @dealChangeRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب تعديل'**
+  String get dealChangeRequested;
+
+  /// No description provided for @dealConfirmReceiptConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'بتأكيد الاستلام تقرّ بأن المنتج مطابق، ويُستحق المبلغ للبائع بعد مراجعة أضمن.'**
+  String get dealConfirmReceiptConfirm;
+
+  /// No description provided for @dealDeadlineHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدة التسليم بالأيام'**
+  String get dealDeadlineHint;
+
+  /// No description provided for @dealDelivered.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الشحن'**
+  String get dealDelivered;
+
+  /// No description provided for @dealDeliveryHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة التسليم (مندوب، شركة شحن، استلام يدوي)'**
+  String get dealDeliveryHint;
+
+  /// No description provided for @dealDescriptionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصف المنتج وحالته بالتفصيل'**
+  String get dealDescriptionHint;
+
+  /// No description provided for @dealDraft.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسودة'**
+  String get dealDraft;
+
+  /// No description provided for @dealFeesNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسوم الخدمة ومبلغ الشحن يحسبهما أضمن ويظهران قبل الدفع.'**
+  String get dealFeesNote;
+
+  /// No description provided for @dealFundsHeld.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ محجوز لدى أضمن'**
+  String get dealFundsHeld;
+
+  /// No description provided for @dealHubBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'ادفع بأمان لأي شخص خارج المتجر. أضمن يحجز المبلغ لحد ما تستلم.'**
+  String get dealHubBody;
+
+  /// No description provided for @dealInspection.
+  ///
+  /// In ar, this message translates to:
+  /// **'فترة الفحص'**
+  String get dealInspection;
+
+  /// No description provided for @dealInspectionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أيام الفحص بعد الاستلام'**
+  String get dealInspectionHint;
+
+  /// No description provided for @dealInvited.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت دعوة البائع'**
+  String get dealInvited;
+
+  /// No description provided for @dealLinkHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط الإعلان (اختياري)'**
+  String get dealLinkHint;
+
+  /// No description provided for @dealLocationPrivacy.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوانك لا يظهر للبائع إلا بعد الدفع.'**
+  String get dealLocationPrivacy;
+
+  /// No description provided for @dealMoneyNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبالغ محسوبة من أضمن ولا تتغير إلا بموافقة الطرفين.'**
+  String get dealMoneyNote;
+
+  /// No description provided for @dealNoReleaseNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل المبلغ أو استرداده يتم من فريق أضمن بعد المراجعة، وليس من التطبيق.'**
+  String get dealNoReleaseNote;
+
+  /// No description provided for @dealOfferPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض بانتظار ردك'**
+  String get dealOfferPending;
+
+  /// No description provided for @dealOnHold.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفقة موقوفة مؤقتًا للمراجعة.'**
+  String get dealOnHold;
+
+  /// No description provided for @dealRoleBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت المشتري'**
+  String get dealRoleBuyer;
+
+  /// No description provided for @dealRoleSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت البائع'**
+  String get dealRoleSeller;
+
+  /// No description provided for @dealSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ الصفقة'**
+  String get dealSaved;
+
+  /// No description provided for @dealSavedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'راجع التفاصيل ثم أرسل رابط الدعوة للبائع.'**
+  String get dealSavedBody;
+
+  /// No description provided for @dealSellerJoined.
+  ///
+  /// In ar, this message translates to:
+  /// **'انضم البائع'**
+  String get dealSellerJoined;
+
+  /// No description provided for @dealSellerNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم البائع'**
+  String get dealSellerNameHint;
+
+  /// No description provided for @dealSellerPhoneHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم موبايل البائع'**
+  String get dealSellerPhoneHint;
+
+  /// No description provided for @dealSellerReceives.
+  ///
+  /// In ar, this message translates to:
+  /// **'صافي ما تستلمه'**
+  String get dealSellerReceives;
+
+  /// No description provided for @dealStepDeliver.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسليم'**
+  String get dealStepDeliver;
+
+  /// No description provided for @dealStepDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسليم'**
+  String get dealStepDelivery;
+
+  /// No description provided for @dealStepHold.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجز المبلغ'**
+  String get dealStepHold;
+
+  /// No description provided for @dealStepItem.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتج'**
+  String get dealStepItem;
+
+  /// No description provided for @dealStepLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'العنوان'**
+  String get dealStepLocation;
+
+  /// No description provided for @dealStepPrice.
+  ///
+  /// In ar, this message translates to:
+  /// **'السعر'**
+  String get dealStepPrice;
+
+  /// No description provided for @dealStepRelease.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل للبائع'**
+  String get dealStepRelease;
+
+  /// No description provided for @dealTermsAccept.
+  ///
+  /// In ar, this message translates to:
+  /// **'أوافق على شروط أضمن صفقة.'**
+  String get dealTermsAccept;
+
+  /// No description provided for @dealTermsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'شروط إضافية (اختياري)'**
+  String get dealTermsHint;
+
+  /// No description provided for @dealTermsHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل الشروط'**
+  String get dealTermsHistory;
+
+  /// No description provided for @dealTimeline.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراحل الصفقة'**
+  String get dealTimeline;
+
+  /// No description provided for @dealTitleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المنتج'**
+  String get dealTitleHint;
+
+  /// No description provided for @dealTlAgreed.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتفاق الطرفين'**
+  String get dealTlAgreed;
+
+  /// No description provided for @dealTlConfirmed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد الاستلام'**
+  String get dealTlConfirmed;
+
+  /// No description provided for @dealTlCreated.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء الصفقة'**
+  String get dealTlCreated;
+
+  /// No description provided for @dealTlHandover.
+  ///
+  /// In ar, this message translates to:
+  /// **'التحقق من التسليم'**
+  String get dealTlHandover;
+
+  /// No description provided for @dealTlHeld.
+  ///
+  /// In ar, this message translates to:
+  /// **'حجز المبلغ'**
+  String get dealTlHeld;
+
+  /// No description provided for @dealTlInvited.
+  ///
+  /// In ar, this message translates to:
+  /// **'دعوة البائع'**
+  String get dealTlInvited;
+
+  /// No description provided for @dealTlPaid.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراجعة الدفع'**
+  String get dealTlPaid;
+
+  /// No description provided for @dealTlReleased.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل المبلغ'**
+  String get dealTlReleased;
+
+  /// No description provided for @dealTlShipped.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن'**
+  String get dealTlShipped;
+
+  /// No description provided for @dealUnitPriceHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر الوحدة بالجنيه'**
+  String get dealUnitPriceHint;
+
+  /// No description provided for @dealsActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارية'**
+  String get dealsActive;
+
+  /// No description provided for @dealsClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتهية'**
+  String get dealsClosed;
+
+  /// No description provided for @declineDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض الصفقة'**
+  String get declineDeal;
+
+  /// No description provided for @deliveryCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'كود التسليم'**
+  String get deliveryCode;
+
+  /// No description provided for @enterDeliveryCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدخال كود التسليم'**
+  String get enterDeliveryCode;
+
+  /// No description provided for @haveInvitation.
+  ///
+  /// In ar, this message translates to:
+  /// **'معايا رابط دعوة'**
+  String get haveInvitation;
+
+  /// No description provided for @howDealWorks.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزاي أضمن صفقة بتشتغل؟'**
+  String get howDealWorks;
+
+  /// No description provided for @howDealWorksBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'1. المشتري ينشئ الصفقة ويدعو البائع.\n2. البائع يرسل عرضه والمشتري يوافق.\n3. المشتري يدفع وأضمن يراجع الإيصال ويحجز المبلغ.\n4. البائع يشحن، والمشتري يعطيه كود التسليم.\n5. بعد الفحص والتأكيد يحوّل أضمن المبلغ للبائع.'**
+  String get howDealWorksBody;
+
+  /// No description provided for @inviteLinkHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصق رابط الدعوة'**
+  String get inviteLinkHint;
+
+  /// No description provided for @inviteLinkReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط الدعوة جاهز — أرسله للبائع فقط'**
+  String get inviteLinkReady;
+
+  /// No description provided for @inviteSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'دعوة البائع'**
+  String get inviteSeller;
+
+  /// No description provided for @joinDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'الانضمام للصفقة'**
+  String get joinDeal;
+
+  /// No description provided for @joinDealBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'لو البائع أنت، الصق الرابط اللي وصلك من المشتري.'**
+  String get joinDealBody;
+
+  /// No description provided for @makeOffer.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال عرض'**
+  String get makeOffer;
+
+  /// No description provided for @markShippedDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الشحن'**
+  String get markShippedDeal;
+
+  /// No description provided for @newDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفقة جديدة'**
+  String get newDeal;
+
+  /// No description provided for @newDeliveryCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال كود جديد'**
+  String get newDeliveryCode;
+
+  /// No description provided for @newInviteLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط دعوة جديد'**
+  String get newInviteLink;
+
+  /// No description provided for @noActiveCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد كود تسليم نشط حاليًا.'**
+  String get noActiveCode;
+
+  /// No description provided for @noDeals.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد صفقات'**
+  String get noDeals;
+
+  /// No description provided for @offerSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال العرض'**
+  String get offerSent;
+
+  /// No description provided for @quantityHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكمية'**
+  String get quantityHint;
+
+  /// No description provided for @rejectChange.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض التعديل'**
+  String get rejectChange;
+
+  /// No description provided for @rejectOffer.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض العرض'**
+  String get rejectOffer;
+
+  /// No description provided for @rejectOfferConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض العرض ينهي التفاوض على هذه الصفقة.'**
+  String get rejectOfferConfirm;
+
+  /// No description provided for @requestChange.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب تعديل'**
+  String get requestChange;
+
+  /// No description provided for @reviewDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراجعة الصفقة'**
+  String get reviewDeal;
+
+  /// No description provided for @revokeInvite.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء رابط الدعوة'**
+  String get revokeInvite;
+
+  /// No description provided for @sendOffer.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال العرض'**
+  String get sendOffer;
+
+  /// No description provided for @shipNoteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل الشحن (الشركة، رقم البوليصة)'**
+  String get shipNoteHint;
+
+  /// No description provided for @showDeliveryCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كود التسليم'**
+  String get showDeliveryCode;
+
+  /// No description provided for @codeExpires.
+  ///
+  /// In ar, this message translates to:
+  /// **'صالح حتى {time} · المحاولات المتبقية {attempts}'**
+  String codeExpires(String time, int attempts);
 }
 
 class _EdmnLocalizationsDelegate

@@ -2491,6 +2491,4127 @@
         }
       }
     },
+    "/api/v1/deal-invitations/claim": {
+      "post": {
+        "operationId": "claimDealInvitation",
+        "summary": "Seller: join the deal from the invitation link token",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/deals": {
+      "get": {
+        "operationId": "listDeals",
+        "summary": "My protected deals (as buyer or seller)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "ref": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "BUYER",
+                              "SELLER",
+                              "NONE"
+                            ]
+                          },
+                          "counterparty": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "totalPiastres": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "ref",
+                          "title",
+                          "status",
+                          "role",
+                          "counterparty",
+                          "totalPiastres",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      },
+      "post": {
+        "operationId": "createDeal",
+        "summary": "Start a protected deal as the buyer (step 1: item)",
+        "description": "Needs SMS delivery for the delivery code: when the server cannot send SMS the request is refused (invalid_state) instead of creating a deal that cannot complete.",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 200
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 4000
+                  },
+                  "productCategory": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": [
+                      "NEW",
+                      "USED"
+                    ]
+                  },
+                  "sourceUrl": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "categoryId": {
+                    "default": "",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "string",
+                        "const": ""
+                      }
+                    ]
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10000
+                  }
+                },
+                "required": [
+                  "title",
+                  "description",
+                  "condition",
+                  "quantity"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}": {
+      "get": {
+        "operationId": "getDeal",
+        "summary": "One deal (timeline, terms, money, allowed actions)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/deals/{dealId}/cancel": {
+      "post": {
+        "operationId": "cancelDeal",
+        "summary": "Buyer: cancel before the deal is paid",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/change-response": {
+      "post": {
+        "operationId": "respondDealChangeRequest",
+        "summary": "Seller: accept or reject the buyer's requested change (re-approval of material terms)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "ACCEPT",
+                      "REJECT"
+                    ]
+                  }
+                },
+                "required": [
+                  "version",
+                  "decision"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/confirm-receipt": {
+      "post": {
+        "operationId": "confirmDealReceipt",
+        "summary": "Buyer: I received and accept the item (release is then decided by EDMN)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/decline": {
+      "post": {
+        "operationId": "declineDealInvitation",
+        "summary": "Seller: decline the deal after joining",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "ref": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "BUYER",
+                              "SELLER",
+                              "NONE"
+                            ]
+                          },
+                          "counterparty": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "totalPiastres": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "ref",
+                          "title",
+                          "status",
+                          "role",
+                          "counterparty",
+                          "totalPiastres",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/delivery-code": {
+      "get": {
+        "operationId": "getDealDeliveryCode",
+        "summary": "Buyer only: the current delivery code to give the seller at handover (single use, expiring)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "attemptsLeft": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "available",
+                    "code",
+                    "expiresAt",
+                    "attemptsLeft"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/deals/{dealId}/delivery-code/regenerate": {
+      "post": {
+        "operationId": "regenerateDealDeliveryCode",
+        "summary": "Issue a new delivery code (rate-limited; lifetime guess cap)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/delivery-code/verify": {
+      "post": {
+        "operationId": "verifyDealDeliveryCode",
+        "summary": "Seller: enter the code the buyer gave at handover",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{4,8}$"
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/deals/{dealId}/invitation": {
+      "post": {
+        "operationId": "inviteDealSeller",
+        "summary": "Accept the protected-deal terms and create the invitation link for the seller",
+        "description": "Not idempotency-cached on purpose: the response carries a bearer link that must never be stored server-side. A retry issues a new link and revokes the previous one.",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "acceptTerms": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "acceptTerms"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "link": {
+                      "type": "string",
+                      "description": "Bearer link for the seller — show / share it, never log it."
+                    },
+                    "deal": {
+                      "$ref": "#/components/schemas/ProtectedDeal"
+                    }
+                  },
+                  "required": [
+                    "link",
+                    "deal"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/deals/{dealId}/invitation/refresh": {
+      "post": {
+        "operationId": "refreshDealInvitation",
+        "summary": "Issue a new invitation link (old one stops working; never idempotency-cached)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "link": {
+                      "type": "string",
+                      "description": "Bearer link for the seller — show / share it, never log it."
+                    },
+                    "deal": {
+                      "$ref": "#/components/schemas/ProtectedDeal"
+                    }
+                  },
+                  "required": [
+                    "link",
+                    "deal"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        }
+      }
+    },
+    "/api/v1/deals/{dealId}/invitation/revoke": {
+      "post": {
+        "operationId": "revokeDealInvitation",
+        "summary": "Revoke the invitation link (deal returns to draft)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/not-received": {
+      "post": {
+        "operationId": "reportDealNotReceived",
+        "summary": "Buyer: report the item was not received (opens a case; funds stay held)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/offer": {
+      "post": {
+        "operationId": "submitDealOffer",
+        "summary": "Seller: offer price, delivery, defects, return policy (first offer also needs details, pickup location and payout account)",
+        "description": "Requires a verified phone and an approved identity (server-checked). The payout account is verified by EDMN before any payout.",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "details": {
+                    "type": "object",
+                    "properties": {
+                      "fullName": {
+                        "type": "string"
+                      },
+                      "contactEmail": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "fullName"
+                    ]
+                  },
+                  "location": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    }
+                  },
+                  "payout": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "offer": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "string",
+                        "number"
+                      ]
+                    }
+                  },
+                  "returnPolicy": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "acceptTerms": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "offer",
+                  "returnPolicy",
+                  "acceptTerms"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, identity_required",
+            "x-error-codes": [
+              "forbidden",
+              "identity_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/offer-response": {
+      "post": {
+        "operationId": "respondDealOffer",
+        "summary": "Buyer: accept, request a change, or reject the seller offer (version = the terms version seen)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "ACCEPT",
+                      "REQUEST_CHANGE",
+                      "REJECT"
+                    ]
+                  },
+                  "change": {
+                    "type": "object",
+                    "properties": {
+                      "returnPolicy": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "message": {
+                        "type": "string",
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "returnPolicy",
+                      "message"
+                    ]
+                  }
+                },
+                "required": [
+                  "version",
+                  "decision"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, identity_required",
+            "x-error-codes": [
+              "forbidden",
+              "identity_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/payment": {
+      "post": {
+        "operationId": "startDealPayment",
+        "summary": "Buyer: open the manual payment (then upload the receipt via /payments/{id}/proof)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "BANK_TRANSFER",
+                      "INSTAPAY",
+                      "VODAFONE_CASH"
+                    ]
+                  }
+                },
+                "required": [
+                  "method"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "paymentId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "deal": {
+                      "$ref": "#/components/schemas/ProtectedDeal"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "deal"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/photos": {
+      "post": {
+        "operationId": "addDealPhotos",
+        "summary": "Add item photos (buyer, before the seller joins)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photos": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "photos"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/shipped": {
+      "post": {
+        "operationId": "markDealShipped",
+        "summary": "Seller: mark as shipped / handed over with proof (issues the buyer delivery code)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 1000
+                  },
+                  "proof": {
+                    "type": "array",
+                    "maxItems": 5,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "note"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/deals/{dealId}/steps/{step}": {
+      "put": {
+        "operationId": "saveDealStep",
+        "summary": "Save a draft step: 1 item · 2 price · 3 delivery · 4 terms · 5 buyer location (+ optional seller hints)",
+        "tags": [
+          "Protected Deal"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dealId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "step",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtectedDeal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      }
+    },
     "/api/v1/files/{fileId}": {
       "get": {
         "operationId": "getFile",
@@ -15599,6 +19720,494 @@
           "isStaff",
           "totpEnrolled",
           "permissions"
+        ]
+      },
+      "ProtectedDeal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "SELLER"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "wizardStep": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "sourceUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deliveryMethod": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deliveryDeadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspectionDays": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customTerms": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "buyerName": {
+            "type": "string"
+          },
+          "sellerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "money": {
+            "type": "object",
+            "properties": {
+              "unitPricePiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "shippingFeePiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "totalPiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "buyerFeePiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sellerFeePiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "buyerPaysPiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sellerReceivesPiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "unitPricePiastres",
+              "shippingFeePiastres",
+              "totalPiastres",
+              "buyerFeePiastres",
+              "sellerFeePiastres",
+              "buyerPaysPiastres",
+              "sellerReceivesPiastres"
+            ]
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "currentVersion": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "latestStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latestProposedBy": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "latestMessage": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "proposedBy": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "terms": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "proposedBy",
+                    "status",
+                    "message",
+                    "createdAt",
+                    "terms"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "currentVersion",
+              "latestStatus",
+              "latestProposedBy",
+              "latestMessage",
+              "history"
+            ]
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "amountDuePiastres": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  "isTest": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "status",
+                  "amountDuePiastres",
+                  "isTest"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidenceCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "payout": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "buyerLocation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "governorateId": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "street": {
+                    "type": "string"
+                  },
+                  "building": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "landmark": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "governorateId",
+                  "city",
+                  "street",
+                  "building",
+                  "landmark"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sellerLocation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "governorateId": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "street": {
+                    "type": "string"
+                  },
+                  "building": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "landmark": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "governorateId",
+                  "city",
+                  "street",
+                  "building",
+                  "landmark"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "handoverVerified": {
+            "type": "boolean"
+          },
+          "buyerResponseDueAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "financialHold": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "ref",
+          "role",
+          "status",
+          "wizardStep",
+          "title",
+          "description",
+          "condition",
+          "quantity",
+          "sourceUrl",
+          "deliveryMethod",
+          "deliveryDeadline",
+          "inspectionDays",
+          "customTerms",
+          "buyerName",
+          "sellerName",
+          "money",
+          "terms",
+          "payment",
+          "evidenceCount",
+          "payout",
+          "buyerLocation",
+          "sellerLocation",
+          "handoverVerified",
+          "buyerResponseDueAt",
+          "financialHold",
+          "createdAt",
+          "allowedActions"
         ]
       },
       "ReturnPolicy": {

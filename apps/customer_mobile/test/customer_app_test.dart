@@ -74,6 +74,24 @@ Map<String, dynamic> _order({String status = 'PENDING_PAYMENT', String soStatus 
       ],
     };
 
+Map<String, dynamic> _deal({String role = 'BUYER', String status = 'OFFER_PENDING_BUYER', List<String> actions = const ['RESPOND_TO_OFFER', 'CANCEL']}) => {
+      'id': 'd1', 'ref': 'PD-000001', 'role': role, 'status': status, 'wizardStep': 6, 'title': 'لابتوب مستعمل', 'description': 'حالة ممتازة', 'condition': 'USED',
+      'quantity': 1, 'sourceUrl': null, 'deliveryMethod': 'مندوب', 'deliveryDeadline': '2030-01-08T10:00:00Z', 'inspectionDays': 2, 'customTerms': null,
+      'buyerName': 'منى', 'sellerName': 'أحمد',
+      'money': {
+        'unitPricePiastres': 1500000, 'shippingFeePiastres': 5000, 'totalPiastres': 1505000, 'buyerFeePiastres': 15050, 'sellerFeePiastres': 22575,
+        'buyerPaysPiastres': 1520050, 'sellerReceivesPiastres': 1482425,
+      },
+      'terms': {
+        'currentVersion': 1, 'latestStatus': 'PENDING', 'latestProposedBy': 'SELLER', 'latestMessage': null,
+        'history': [
+          {'version': 1, 'proposedBy': 'SELLER', 'status': 'PENDING', 'message': null, 'createdAt': '2030-01-01T10:00:00Z', 'terms': <String, dynamic>{}},
+        ],
+      },
+      'payment': null, 'evidenceCount': 0, 'payout': null, 'buyerLocation': null, 'sellerLocation': null, 'handoverVerified': false,
+      'buyerResponseDueAt': null, 'financialHold': false, 'createdAt': '2030-01-01T10:00:00Z', 'allowedActions': actions,
+    };
+
 class FakeMobileApi extends MobileApi {
   FakeMobileApi({this.minVersion = '1.0.0', this.realMoney = false, this.loginError, this.productError})
       : super(ApiClient(config: _config, store: MemorySessionStore(), refreshPath: '/r', telemetry: Telemetry([])));
@@ -90,6 +108,36 @@ class FakeMobileApi extends MobileApi {
   List<String> soActions = const [];
   Map<String, dynamic> paymentJson = _payment();
   final confirmKeys = <String>[];
+  Map<String, dynamic> dealJson = _deal();
+  final dealDecisions = <(String, String)>[];
+  int inviteCalls = 0;
+  int codeReveals = 0;
+
+  @override
+  Future<ListDealsResponse> deals() async => ListDealsResponse.fromJson({
+        'items': [
+          {'id': 'd1', 'ref': 'PD-000001', 'title': 'لابتوب مستعمل', 'status': dealJson['status'], 'role': dealJson['role'], 'counterparty': 'أحمد', 'totalPiastres': 1520050, 'createdAt': '2030-01-01T10:00:00Z'},
+        ],
+      });
+  @override
+  Future<ProtectedDeal> deal(String id) async => ProtectedDeal.fromJson(dealJson);
+  @override
+  Future<ProtectedDeal> respondDealOffer(String id, int version, String decision, {Map<String, dynamic>? change, required String idempotencyKey}) async {
+    dealDecisions.add((decision, idempotencyKey));
+    dealJson = _deal(status: 'ACCEPTED', actions: const ['START_PAYMENT', 'CANCEL']);
+    return ProtectedDeal.fromJson(dealJson);
+  }
+  @override
+  Future<InviteDealSellerResponse> inviteDealSeller(String id) async {
+    inviteCalls++;
+    dealJson = _deal(status: 'INVITED', actions: const ['REFRESH_INVITATION', 'REVOKE_INVITATION', 'CANCEL']);
+    return InviteDealSellerResponse.fromJson({'link': 'https://edmn.local/deals/invite/abcdefghijklmnopqrstuvwxyz', 'deal': dealJson});
+  }
+  @override
+  Future<GetDealDeliveryCodeResponse> dealDeliveryCode(String id) async {
+    codeReveals++;
+    return GetDealDeliveryCodeResponse.fromJson({'available': true, 'code': '483920', 'expiresAt': '2030-01-02T10:00:00Z', 'attemptsLeft': 5});
+  }
 
   @override
   Future<AppConfig> appConfig() async => AppConfig(
@@ -505,6 +553,69 @@ void main() {
     expect(find.byKey(const Key('cancel-payout-w2')), findsOneWidget);
     expect(find.text('تم التحويل'), findsNothing);
     expect(find.byKey(const Key('new-payout')), findsOneWidget);
+  });
+
+  testWidgets('protected deal: buyer sees server money and accepts the offer only after confirming; no release/refund button exists', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals');
+    expect(find.byKey(const Key('deal-d1')), findsOneWidget);
+    await _go(t, '/deals/d1');
+    expect(find.text('15,200.5 ج.م'), findsWidgets); // buyerPays from the server
+    final accept = find.byKey(const Key('deal-accept'));
+    await _reveal(t, accept);
+    await t.tap(accept);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-cancel')));
+    await t.pumpAndSettle();
+    expect(api.dealDecisions, isEmpty);
+    await t.tap(accept);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.dealDecisions.single.$1, 'ACCEPT');
+    expect(find.byKey(const Key('deal-pay')), findsOneWidget);
+    expect(find.byKey(const Key('deal-accept')), findsNothing);
+    for (final k in ['deal-release', 'deal-refund', 'deal-payout']) {
+      expect(find.byKey(Key(k)), findsNothing);
+    }
+  });
+
+  testWidgets('protected deal: invitation link is shown to the buyer after inviting; seller actions follow allowedActions', (t) async {
+    final api = FakeMobileApi()..dealJson = _deal(status: 'DRAFT', actions: const ['INVITE_SELLER', 'CANCEL']);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals/d1');
+    final inv = find.byKey(const Key('deal-invite'));
+    await _reveal(t, inv);
+    await t.tap(inv);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.inviteCalls, 1);
+    await t.scrollUntilVisible(find.byKey(const Key('invite-link-card')), -250, scrollable: _mainList);
+    expect(find.byKey(const Key('invite-link-card')), findsOneWidget);
+    expect(find.textContaining('/deals/invite/'), findsOneWidget);
+
+    api.dealJson = _deal(role: 'SELLER', status: 'ACTIVE', actions: const ['MARK_SHIPPED']);
+    await _go(t, '/deals');
+    await _go(t, '/deals/d1');
+    await _reveal(t, find.byKey(const Key('deal-ship')));
+    expect(find.byKey(const Key('deal-ship')), findsOneWidget);
+    expect(find.byKey(const Key('deal-code')), findsNothing); // the delivery code is never shown to the seller
+    expect(find.byKey(const Key('deal-confirm')), findsNothing);
+  });
+
+  testWidgets('protected deal: the buyer reveals the delivery code from the server with expiry and attempts', (t) async {
+    final api = FakeMobileApi()..dealJson = _deal(status: 'DELIVERED', actions: const ['VIEW_DELIVERY_CODE', 'REPORT_NOT_RECEIVED']);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals/d1');
+    final b = find.byKey(const Key('deal-code'));
+    await _reveal(t, b);
+    await t.tap(b);
+    await t.pumpAndSettle();
+    expect(api.codeReveals, 1);
+    expect(find.byKey(const Key('delivery-code')), findsOneWidget);
+    expect(find.textContaining('المحاولات المتبقية 5'), findsOneWidget);
   });
 
   test('version comparison', () {

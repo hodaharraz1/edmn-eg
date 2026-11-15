@@ -13,6 +13,7 @@ import 'features/cart/cart_screen.dart';
 import 'features/catalog/browse_screens.dart';
 import 'features/catalog/catalog_home_screen.dart';
 import 'features/checkout/checkout_screen.dart';
+import 'features/deals/deals_screens.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
 import 'features/seller/seller_screens.dart';
@@ -68,7 +69,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/account/addresses/:id', builder: (c, s) => AddressFormScreen(address: s.extra as Address?)),
       GoRoute(path: '/legal/:slug', builder: (c, s) => LegalScreen(slug: s.pathParameters['slug']!)),
       // Services whose mobile API is not built yet: an honest screen, never a fake balance or list.
-      GoRoute(path: '/deals', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).protectedDeal, icon: Icons.verified_user_outlined)),
+      GoRoute(path: '/deals', builder: (c, s) => const DealsHubScreen()),
+      GoRoute(path: '/deals/new', builder: (c, s) => const NewDealScreen()),
+      GoRoute(path: '/deals/join', builder: (c, s) => JoinDealScreen(token: s.uri.queryParameters['token'])),
+      GoRoute(path: '/deals/:id', builder: (c, s) => DealScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/wallet', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).wallet, icon: Icons.account_balance_wallet_outlined)),
       GoRoute(path: '/seller', builder: (c, s) => const SellerCenterScreen()),
       GoRoute(path: '/seller/orders', builder: (c, s) => const SellerOrdersScreen()),

@@ -237,4 +237,47 @@ class MobileApi {
       await client.sendJson('POST', MobileApiPaths.createSellerPayoutRequest.path, body: {'amountPiastres': amountPiastres, 'clientKey': clientKey}));
   Future<ListSellerPayoutRequestsResponse> cancelPayoutRequest(String id, {required String idempotencyKey}) async => ListSellerPayoutRequestsResponse.fromJson(
       await client.sendJson('POST', fillPath(MobileApiPaths.cancelSellerPayoutRequest.path, {'requestId': id}), idempotencyKey: idempotencyKey));
+
+  // ── Protected Deal (أضمن صفقة) ───────────────────────────────────────────────────────────────────────────────
+  String _deal(String p, String id) => fillPath(p, {'dealId': id});
+  Future<ListDealsResponse> deals() async => ListDealsResponse.fromJson(await client.getJson(MobileApiPaths.listDeals.path));
+  Future<ProtectedDeal> deal(String id) async => ProtectedDeal.fromJson(await client.getJson(_deal(MobileApiPaths.getDeal.path, id)));
+  Future<ProtectedDeal> createDeal(Map<String, dynamic> step1, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', MobileApiPaths.createDeal.path, body: step1, idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> saveDealStep(String id, int step, Map<String, dynamic> body) async =>
+      ProtectedDeal.fromJson(await client.sendJson('PUT', fillPath(MobileApiPaths.saveDealStep.path, {'dealId': id, 'step': '$step'}), body: body));
+  Future<ProtectedDeal> addDealPhotos(String id, List<(Uint8List, String)> photos, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await _multipart(_deal(MobileApiPaths.addDealPhotos.path, id), fields: {}, files: {'photos': photos}, idempotencyKey: idempotencyKey));
+  /// Returns the bearer invitation link (share it; never log it).
+  Future<InviteDealSellerResponse> inviteDealSeller(String id) async =>
+      InviteDealSellerResponse.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.inviteDealSeller.path, id), body: {'acceptTerms': true}));
+  Future<RefreshDealInvitationResponse> refreshDealInvitation(String id) async =>
+      RefreshDealInvitationResponse.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.refreshDealInvitation.path, id)));
+  Future<ProtectedDeal> revokeDealInvitation(String id, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.revokeDealInvitation.path, id), idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> claimDealInvitation(String token) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', MobileApiPaths.claimDealInvitation.path, body: {'token': token}));
+  Future<void> declineDeal(String id, String reason, {required String idempotencyKey}) =>
+      client.sendJson('POST', _deal(MobileApiPaths.declineDealInvitation.path, id), body: {'reason': reason}, idempotencyKey: idempotencyKey);
+  Future<ProtectedDeal> submitDealOffer(String id, Map<String, dynamic> body, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.submitDealOffer.path, id), body: {...body, 'acceptTerms': true}, idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> respondDealOffer(String id, int version, String decision, {Map<String, dynamic>? change, required String idempotencyKey}) async => ProtectedDeal.fromJson(
+      await client.sendJson('POST', _deal(MobileApiPaths.respondDealOffer.path, id), body: {'version': version, 'decision': decision, 'change': ?change}, idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> respondDealChange(String id, int version, String decision, {required String idempotencyKey}) async => ProtectedDeal.fromJson(
+      await client.sendJson('POST', _deal(MobileApiPaths.respondDealChangeRequest.path, id), body: {'version': version, 'decision': decision}, idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> cancelDeal(String id, String reason, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.cancelDeal.path, id), body: {'reason': reason}, idempotencyKey: idempotencyKey));
+  Future<StartDealPaymentResponse> startDealPayment(String id, String method, {required String idempotencyKey}) async => StartDealPaymentResponse.fromJson(
+      await client.sendJson('POST', _deal(MobileApiPaths.startDealPayment.path, id), body: {'method': method}, idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> markDealShipped(String id, String note, List<(Uint8List, String)> proof, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await _multipart(_deal(MobileApiPaths.markDealShipped.path, id), fields: {'note': note}, files: {'proof': proof}, idempotencyKey: idempotencyKey));
+  Future<GetDealDeliveryCodeResponse> dealDeliveryCode(String id) async => GetDealDeliveryCodeResponse.fromJson(await client.getJson(_deal(MobileApiPaths.getDealDeliveryCode.path, id)));
+  Future<ProtectedDeal> regenerateDealDeliveryCode(String id, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.regenerateDealDeliveryCode.path, id), idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> verifyDealDeliveryCode(String id, String code) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.verifyDealDeliveryCode.path, id), body: {'code': code}));
+  Future<ProtectedDeal> confirmDealReceipt(String id, {required String idempotencyKey}) async =>
+      ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.confirmDealReceipt.path, id), idempotencyKey: idempotencyKey));
+  Future<ProtectedDeal> reportDealNotReceived(String id, String description, {required String idempotencyKey}) async => ProtectedDeal.fromJson(
+      await client.sendJson('POST', _deal(MobileApiPaths.reportDealNotReceived.path, id), body: {'description': description}, idempotencyKey: idempotencyKey));
 }

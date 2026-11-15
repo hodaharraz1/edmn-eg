@@ -1562,4 +1562,293 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get continueApplication => 'Continue seller application';
+
+  @override
+  String get acceptChange => 'Accept change';
+
+  @override
+  String get acceptOffer => 'Accept offer';
+
+  @override
+  String get acceptOfferConfirm =>
+      'Accepting makes the terms binding for both sides and moves to payment.';
+
+  @override
+  String get cancelDeal => 'Cancel deal';
+
+  @override
+  String get changeMessageHint => 'Describe the change you need';
+
+  @override
+  String get codeWarning =>
+      'Only give the code when you actually receive and check the item.';
+
+  @override
+  String get copyLink => 'Copy link';
+
+  @override
+  String get dealAwaitingRelease => 'Awaiting release to seller';
+
+  @override
+  String get dealBuyerOnly =>
+      'The buyer starts the deal, then invites the seller with a link.';
+
+  @override
+  String get dealBuyerPays => 'You pay';
+
+  @override
+  String get dealChangeRequested => 'Change requested';
+
+  @override
+  String get dealConfirmReceiptConfirm =>
+      'Confirming means the item matches; the amount becomes due to the seller after EDMN review.';
+
+  @override
+  String get dealDeadlineHint => 'Delivery time (days)';
+
+  @override
+  String get dealDelivered => 'Shipped';
+
+  @override
+  String get dealDeliveryHint =>
+      'Delivery method (courier, shipping company, in person)';
+
+  @override
+  String get dealDescriptionHint => 'Describe the item and its condition';
+
+  @override
+  String get dealDraft => 'Draft';
+
+  @override
+  String get dealFeesNote =>
+      'EDMN calculates service fees and shipping; you see them before paying.';
+
+  @override
+  String get dealFundsHeld => 'Funds held by EDMN';
+
+  @override
+  String get dealHubBody =>
+      'Pay anyone outside the store safely. EDMN holds the money until you receive.';
+
+  @override
+  String get dealInspection => 'Inspection period';
+
+  @override
+  String get dealInspectionHint => 'Inspection days after delivery';
+
+  @override
+  String get dealInvited => 'Seller invited';
+
+  @override
+  String get dealLinkHint => 'Listing link (optional)';
+
+  @override
+  String get dealLocationPrivacy =>
+      'Your address is shown to the seller only after payment.';
+
+  @override
+  String get dealMoneyNote =>
+      'Amounts are calculated by EDMN and change only with both parties’ approval.';
+
+  @override
+  String get dealNoReleaseNote =>
+      'Release or refund is done by the EDMN team after review, not from the app.';
+
+  @override
+  String get dealOfferPending => 'Offer awaiting reply';
+
+  @override
+  String get dealOnHold => 'This deal is on hold for review.';
+
+  @override
+  String get dealRoleBuyer => 'You are the buyer';
+
+  @override
+  String get dealRoleSeller => 'You are the seller';
+
+  @override
+  String get dealSaved => 'Deal saved';
+
+  @override
+  String get dealSavedBody =>
+      'Review the details, then send the invitation link to the seller.';
+
+  @override
+  String get dealSellerJoined => 'Seller joined';
+
+  @override
+  String get dealSellerNameHint => 'Seller name';
+
+  @override
+  String get dealSellerPhoneHint => 'Seller mobile number';
+
+  @override
+  String get dealSellerReceives => 'You receive';
+
+  @override
+  String get dealStepDeliver => 'Delivery';
+
+  @override
+  String get dealStepDelivery => 'Delivery';
+
+  @override
+  String get dealStepHold => 'Funds held';
+
+  @override
+  String get dealStepItem => 'Item';
+
+  @override
+  String get dealStepLocation => 'Address';
+
+  @override
+  String get dealStepPrice => 'Price';
+
+  @override
+  String get dealStepRelease => 'Release';
+
+  @override
+  String get dealTermsAccept => 'I agree to the Protected Deal terms.';
+
+  @override
+  String get dealTermsHint => 'Extra terms (optional)';
+
+  @override
+  String get dealTermsHistory => 'Terms history';
+
+  @override
+  String get dealTimeline => 'Deal timeline';
+
+  @override
+  String get dealTitleHint => 'Item name';
+
+  @override
+  String get dealTlAgreed => 'Both agreed';
+
+  @override
+  String get dealTlConfirmed => 'Receipt confirmed';
+
+  @override
+  String get dealTlCreated => 'Deal created';
+
+  @override
+  String get dealTlHandover => 'Handover verified';
+
+  @override
+  String get dealTlHeld => 'Funds held';
+
+  @override
+  String get dealTlInvited => 'Seller invited';
+
+  @override
+  String get dealTlPaid => 'Payment review';
+
+  @override
+  String get dealTlReleased => 'Funds released';
+
+  @override
+  String get dealTlShipped => 'Shipped';
+
+  @override
+  String get dealUnitPriceHint => 'Unit price (EGP)';
+
+  @override
+  String get dealsActive => 'Active';
+
+  @override
+  String get dealsClosed => 'Closed';
+
+  @override
+  String get declineDeal => 'Decline deal';
+
+  @override
+  String get deliveryCode => 'Delivery code';
+
+  @override
+  String get enterDeliveryCode => 'Enter delivery code';
+
+  @override
+  String get haveInvitation => 'I have an invitation';
+
+  @override
+  String get howDealWorks => 'How does it work?';
+
+  @override
+  String get howDealWorksBody =>
+      '1. The buyer creates the deal and invites the seller.\n2. The seller sends an offer and the buyer accepts.\n3. The buyer pays; EDMN reviews the receipt and holds the funds.\n4. The seller ships; the buyer gives the delivery code.\n5. After inspection and confirmation, EDMN releases the funds.';
+
+  @override
+  String get inviteLinkHint => 'Paste the invitation link';
+
+  @override
+  String get inviteLinkReady =>
+      'Invitation link ready — send it to the seller only';
+
+  @override
+  String get inviteSeller => 'Invite seller';
+
+  @override
+  String get joinDeal => 'Join deal';
+
+  @override
+  String get joinDealBody =>
+      'If you are the seller, paste the link the buyer sent you.';
+
+  @override
+  String get makeOffer => 'Make an offer';
+
+  @override
+  String get markShippedDeal => 'Mark as shipped';
+
+  @override
+  String get newDeal => 'New deal';
+
+  @override
+  String get newDeliveryCode => 'Send a new code';
+
+  @override
+  String get newInviteLink => 'New invitation link';
+
+  @override
+  String get noActiveCode => 'No active delivery code right now.';
+
+  @override
+  String get noDeals => 'No deals';
+
+  @override
+  String get offerSent => 'Offer sent';
+
+  @override
+  String get quantityHint => 'Quantity';
+
+  @override
+  String get rejectChange => 'Reject change';
+
+  @override
+  String get rejectOffer => 'Reject offer';
+
+  @override
+  String get rejectOfferConfirm => 'Rejecting ends negotiation on this deal.';
+
+  @override
+  String get requestChange => 'Request a change';
+
+  @override
+  String get reviewDeal => 'Review deal';
+
+  @override
+  String get revokeInvite => 'Revoke invitation';
+
+  @override
+  String get sendOffer => 'Send offer';
+
+  @override
+  String get shipNoteHint => 'Shipping details (company, waybill)';
+
+  @override
+  String get showDeliveryCode => 'Show delivery code';
+
+  @override
+  String codeExpires(String time, int attempts) {
+    return 'Valid until $time · $attempts attempts left';
+  }
 }

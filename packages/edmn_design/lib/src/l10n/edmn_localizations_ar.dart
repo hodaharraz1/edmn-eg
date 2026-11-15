@@ -1550,4 +1550,286 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get continueApplication => 'كمّل طلب البائع';
+
+  @override
+  String get acceptChange => 'قبول التعديل';
+
+  @override
+  String get acceptOffer => 'قبول العرض';
+
+  @override
+  String get acceptOfferConfirm =>
+      'بقبول العرض تصبح الشروط ملزمة للطرفين وتنتقل للدفع.';
+
+  @override
+  String get cancelDeal => 'إلغاء الصفقة';
+
+  @override
+  String get changeMessageHint => 'اكتب التعديل المطلوب بوضوح';
+
+  @override
+  String get codeWarning => 'لا تعطِ الكود إلا عند استلام المنتج فعليًا وفحصه.';
+
+  @override
+  String get copyLink => 'نسخ الرابط';
+
+  @override
+  String get dealAwaitingRelease => 'بانتظار تحويل المبلغ للبائع';
+
+  @override
+  String get dealBuyerOnly => 'المشتري هو من يبدأ الصفقة ثم يدعو البائع برابط.';
+
+  @override
+  String get dealBuyerPays => 'إجمالي ما تدفعه';
+
+  @override
+  String get dealChangeRequested => 'مطلوب تعديل';
+
+  @override
+  String get dealConfirmReceiptConfirm =>
+      'بتأكيد الاستلام تقرّ بأن المنتج مطابق، ويُستحق المبلغ للبائع بعد مراجعة أضمن.';
+
+  @override
+  String get dealDeadlineHint => 'مدة التسليم بالأيام';
+
+  @override
+  String get dealDelivered => 'تم الشحن';
+
+  @override
+  String get dealDeliveryHint => 'طريقة التسليم (مندوب، شركة شحن، استلام يدوي)';
+
+  @override
+  String get dealDescriptionHint => 'وصف المنتج وحالته بالتفصيل';
+
+  @override
+  String get dealDraft => 'مسودة';
+
+  @override
+  String get dealFeesNote =>
+      'رسوم الخدمة ومبلغ الشحن يحسبهما أضمن ويظهران قبل الدفع.';
+
+  @override
+  String get dealFundsHeld => 'المبلغ محجوز لدى أضمن';
+
+  @override
+  String get dealHubBody =>
+      'ادفع بأمان لأي شخص خارج المتجر. أضمن يحجز المبلغ لحد ما تستلم.';
+
+  @override
+  String get dealInspection => 'فترة الفحص';
+
+  @override
+  String get dealInspectionHint => 'أيام الفحص بعد الاستلام';
+
+  @override
+  String get dealInvited => 'تمت دعوة البائع';
+
+  @override
+  String get dealLinkHint => 'رابط الإعلان (اختياري)';
+
+  @override
+  String get dealLocationPrivacy => 'عنوانك لا يظهر للبائع إلا بعد الدفع.';
+
+  @override
+  String get dealMoneyNote =>
+      'المبالغ محسوبة من أضمن ولا تتغير إلا بموافقة الطرفين.';
+
+  @override
+  String get dealNoReleaseNote =>
+      'تحويل المبلغ أو استرداده يتم من فريق أضمن بعد المراجعة، وليس من التطبيق.';
+
+  @override
+  String get dealOfferPending => 'عرض بانتظار ردك';
+
+  @override
+  String get dealOnHold => 'الصفقة موقوفة مؤقتًا للمراجعة.';
+
+  @override
+  String get dealRoleBuyer => 'أنت المشتري';
+
+  @override
+  String get dealRoleSeller => 'أنت البائع';
+
+  @override
+  String get dealSaved => 'تم حفظ الصفقة';
+
+  @override
+  String get dealSavedBody => 'راجع التفاصيل ثم أرسل رابط الدعوة للبائع.';
+
+  @override
+  String get dealSellerJoined => 'انضم البائع';
+
+  @override
+  String get dealSellerNameHint => 'اسم البائع';
+
+  @override
+  String get dealSellerPhoneHint => 'رقم موبايل البائع';
+
+  @override
+  String get dealSellerReceives => 'صافي ما تستلمه';
+
+  @override
+  String get dealStepDeliver => 'التسليم';
+
+  @override
+  String get dealStepDelivery => 'التسليم';
+
+  @override
+  String get dealStepHold => 'حجز المبلغ';
+
+  @override
+  String get dealStepItem => 'المنتج';
+
+  @override
+  String get dealStepLocation => 'العنوان';
+
+  @override
+  String get dealStepPrice => 'السعر';
+
+  @override
+  String get dealStepRelease => 'تحويل للبائع';
+
+  @override
+  String get dealTermsAccept => 'أوافق على شروط أضمن صفقة.';
+
+  @override
+  String get dealTermsHint => 'شروط إضافية (اختياري)';
+
+  @override
+  String get dealTermsHistory => 'سجل الشروط';
+
+  @override
+  String get dealTimeline => 'مراحل الصفقة';
+
+  @override
+  String get dealTitleHint => 'اسم المنتج';
+
+  @override
+  String get dealTlAgreed => 'اتفاق الطرفين';
+
+  @override
+  String get dealTlConfirmed => 'تأكيد الاستلام';
+
+  @override
+  String get dealTlCreated => 'إنشاء الصفقة';
+
+  @override
+  String get dealTlHandover => 'التحقق من التسليم';
+
+  @override
+  String get dealTlHeld => 'حجز المبلغ';
+
+  @override
+  String get dealTlInvited => 'دعوة البائع';
+
+  @override
+  String get dealTlPaid => 'مراجعة الدفع';
+
+  @override
+  String get dealTlReleased => 'تحويل المبلغ';
+
+  @override
+  String get dealTlShipped => 'الشحن';
+
+  @override
+  String get dealUnitPriceHint => 'سعر الوحدة بالجنيه';
+
+  @override
+  String get dealsActive => 'جارية';
+
+  @override
+  String get dealsClosed => 'منتهية';
+
+  @override
+  String get declineDeal => 'رفض الصفقة';
+
+  @override
+  String get deliveryCode => 'كود التسليم';
+
+  @override
+  String get enterDeliveryCode => 'إدخال كود التسليم';
+
+  @override
+  String get haveInvitation => 'معايا رابط دعوة';
+
+  @override
+  String get howDealWorks => 'إزاي أضمن صفقة بتشتغل؟';
+
+  @override
+  String get howDealWorksBody =>
+      '1. المشتري ينشئ الصفقة ويدعو البائع.\n2. البائع يرسل عرضه والمشتري يوافق.\n3. المشتري يدفع وأضمن يراجع الإيصال ويحجز المبلغ.\n4. البائع يشحن، والمشتري يعطيه كود التسليم.\n5. بعد الفحص والتأكيد يحوّل أضمن المبلغ للبائع.';
+
+  @override
+  String get inviteLinkHint => 'الصق رابط الدعوة';
+
+  @override
+  String get inviteLinkReady => 'رابط الدعوة جاهز — أرسله للبائع فقط';
+
+  @override
+  String get inviteSeller => 'دعوة البائع';
+
+  @override
+  String get joinDeal => 'الانضمام للصفقة';
+
+  @override
+  String get joinDealBody => 'لو البائع أنت، الصق الرابط اللي وصلك من المشتري.';
+
+  @override
+  String get makeOffer => 'إرسال عرض';
+
+  @override
+  String get markShippedDeal => 'تم الشحن';
+
+  @override
+  String get newDeal => 'صفقة جديدة';
+
+  @override
+  String get newDeliveryCode => 'إرسال كود جديد';
+
+  @override
+  String get newInviteLink => 'رابط دعوة جديد';
+
+  @override
+  String get noActiveCode => 'لا يوجد كود تسليم نشط حاليًا.';
+
+  @override
+  String get noDeals => 'لا توجد صفقات';
+
+  @override
+  String get offerSent => 'تم إرسال العرض';
+
+  @override
+  String get quantityHint => 'الكمية';
+
+  @override
+  String get rejectChange => 'رفض التعديل';
+
+  @override
+  String get rejectOffer => 'رفض العرض';
+
+  @override
+  String get rejectOfferConfirm => 'رفض العرض ينهي التفاوض على هذه الصفقة.';
+
+  @override
+  String get requestChange => 'طلب تعديل';
+
+  @override
+  String get reviewDeal => 'مراجعة الصفقة';
+
+  @override
+  String get revokeInvite => 'إلغاء رابط الدعوة';
+
+  @override
+  String get sendOffer => 'إرسال العرض';
+
+  @override
+  String get shipNoteHint => 'تفاصيل الشحن (الشركة، رقم البوليصة)';
+
+  @override
+  String get showDeliveryCode => 'عرض كود التسليم';
+
+  @override
+  String codeExpires(String time, int attempts) {
+    return 'صالح حتى $time · المحاولات المتبقية $attempts';
+  }
 }

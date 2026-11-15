@@ -22,6 +22,13 @@ const APPLICATION_WRITES = new Set([
   'uploadSellerApplicationDocument', 'addSellerPayoutAccount', 'submitSellerApplication',
 ]);
 
+/** Protected Deal writes (buyer / seller of the deal, decided by the deal service). None releases or refunds money. */
+const DEAL_WRITES = new Set([
+  'createDeal', 'saveDealStep', 'addDealPhotos', 'inviteDealSeller', 'refreshDealInvitation', 'revokeDealInvitation', 'claimDealInvitation', 'declineDealInvitation',
+  'submitDealOffer', 'respondDealOffer', 'respondDealChangeRequest', 'cancelDeal', 'startDealPayment', 'markDealShipped', 'regenerateDealDeliveryCode',
+  'verifyDealDeliveryCode', 'confirmDealReceipt', 'reportDealNotReceived',
+]);
+
 /** The only payout-related routes on the mobile API (request side). */
 const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest', 'addSellerPayoutAccount']);
 
@@ -65,7 +72,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
 
   it('credential-returning endpoints are never idempotency-cached; session mutations are', () => {
     for (const r of ALL_API_ROUTES) {
-      const returnsTokens = /login|register|refresh/i.test(r.id);
+      const returnsTokens = /login|register|refresh|invite|invitation/i.test(r.id) && r.method !== 'GET' && !/revoke|claim|decline/i.test(r.id);
       if (returnsTokens) expect(r.idempotency, r.id).toBeUndefined();
       if (r.method === 'DELETE' || /revoke/i.test(r.id)) expect(r.idempotency, r.id).toBe('required');
     }
@@ -90,6 +97,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...BUYER_WRITES,
       ...SELLER_WRITES,
       ...APPLICATION_WRITES,
+      ...DEAL_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -107,7 +115,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }
-    for (const r of writes.filter((w) => APPLICATION_WRITES.has(w.id))) {
+    for (const r of writes.filter((w) => APPLICATION_WRITES.has(w.id) || DEAL_WRITES.has(w.id))) {
       expect(r.auth, r.id).toBe('customer');
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
