@@ -16,6 +16,7 @@ import 'features/checkout/checkout_screen.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
 import 'features/seller/seller_screens.dart';
+import 'features/seller/seller_setup_screens.dart';
 import 'providers.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
@@ -73,6 +74,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/orders', builder: (c, s) => const SellerOrdersScreen()),
       GoRoute(path: '/seller/orders/:id', builder: (c, s) => SellerOrderScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/seller/products', builder: (c, s) => const SellerProductsScreen()),
+      GoRoute(path: '/seller/products/new', builder: (c, s) => const NewProductScreen()),
+      GoRoute(path: '/seller/products/:id/edit', builder: (c, s) => ProductEditorScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/seller/apply', builder: (c, s) => const SellerApplicationScreen()),
+      GoRoute(path: '/seller/shipping', builder: (c, s) => const ShippingRatesScreen()),
+      GoRoute(path: '/seller/store', builder: (c, s) => const StoreSettingsScreen()),
+      GoRoute(path: '/seller/payouts', builder: (c, s) => const PayoutRequestsScreen()),
+      GoRoute(path: '/account/identity', builder: (c, s) => const IdentityScreen()),
       GoRoute(path: '/seller/funds', builder: (c, s) => const SellerFundsScreen()),
       GoRoute(path: '/notifications', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).notifications, icon: Icons.notifications_none_rounded)),
       GoRoute(path: '/support', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).helpSupport, icon: Icons.support_agent_rounded)),

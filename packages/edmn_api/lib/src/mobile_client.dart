@@ -166,4 +166,75 @@ class MobileApi {
 
   /// Read-only funds position (finance.view).
   Future<GetSellerFundsResponse> sellerFunds() async => GetSellerFundsResponse.fromJson(await client.getJson(MobileApiPaths.getSellerFunds.path));
+
+  // ── Seller setup: identity, application, products, shipping, store, payout REQUESTS ─────────────────────────
+  Future<Map<String, dynamic>> _multipart(String path, {required Map<String, String> fields, Map<String, List<(Uint8List, String)>> files = const {}, required String idempotencyKey}) =>
+      client.guard((d) async {
+        final form = FormData.fromMap(fields);
+        for (final e in files.entries) {
+          for (final (bytes, name) in e.value) {
+            form.files.add(MapEntry(e.key, MultipartFile.fromBytes(bytes, filename: name)));
+          }
+        }
+        return (await d.post<Map<String, dynamic>>(path, data: form, options: Options(contentType: 'multipart/form-data', headers: {'idempotency-key': idempotencyKey}))).data!;
+      });
+
+  Future<IdentityStatus> myIdentity() async => IdentityStatus.fromJson(await client.getJson(MobileApiPaths.getMyIdentity.path));
+  Future<IdentityStatus> submitIdentity({required String legalName, required String nationalId, (Uint8List, String)? front, (Uint8List, String)? back, required String idempotencyKey}) async =>
+      IdentityStatus.fromJson(await _multipart(MobileApiPaths.submitMyIdentity.path,
+          fields: {'legalName': legalName, 'nationalId': nationalId}, files: {'front': [?front], 'back': [?back]}, idempotencyKey: idempotencyKey));
+
+  Future<SellerApplication> sellerApplication() async => SellerApplication.fromJson(await client.getJson(MobileApiPaths.getSellerApplication.path));
+  Future<SellerApplication> startSellerApplication(String type) async =>
+      SellerApplication.fromJson(await client.sendJson('POST', MobileApiPaths.startSellerApplication.path, body: {'type': type}));
+  Future<SellerApplication> saveApplicationIdentity(Map<String, dynamic> body) async =>
+      SellerApplication.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerApplicationIdentity.path, body: body));
+  Future<SellerApplication> saveApplicationBusiness(Map<String, dynamic> body) async =>
+      SellerApplication.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerApplicationBusiness.path, body: body));
+  Future<SellerApplication> saveApplicationStore(Map<String, String> fields, {(Uint8List, String)? logo, required String idempotencyKey}) async =>
+      SellerApplication.fromJson(await _multipart(MobileApiPaths.saveSellerApplicationStore.path, fields: fields, files: {'logo': [?logo]}, idempotencyKey: idempotencyKey));
+  Future<SellerApplication> uploadApplicationDocument(String kind, (Uint8List, String) file, {required String idempotencyKey}) async =>
+      SellerApplication.fromJson(await _multipart(MobileApiPaths.uploadSellerApplicationDocument.path, fields: {'kind': kind}, files: {'file': [file]}, idempotencyKey: idempotencyKey));
+  Future<SellerApplication> addPayoutAccount(Map<String, dynamic> body, {required String idempotencyKey}) async =>
+      SellerApplication.fromJson(await client.sendJson('POST', MobileApiPaths.addSellerPayoutAccount.path, body: body, idempotencyKey: idempotencyKey));
+  Future<SellerApplication> submitSellerApplication({required String idempotencyKey}) async =>
+      SellerApplication.fromJson(await client.sendJson('POST', MobileApiPaths.submitSellerApplication.path, body: {'acceptAgreement': true}, idempotencyKey: idempotencyKey));
+
+  Future<GetCategoryAttributesResponse> categoryAttributes(String categoryId) async =>
+      GetCategoryAttributesResponse.fromJson(await client.getJson(fillPath(MobileApiPaths.getCategoryAttributes.path, {'categoryId': categoryId})));
+  Future<SellerProductEditor> sellerProduct(String id) async => SellerProductEditor.fromJson(await client.getJson(fillPath(MobileApiPaths.getSellerProduct.path, {'productId': id})));
+  Future<SellerProductEditor> createSellerProduct({required String categoryId, required String titleAr, required String condition, required String idempotencyKey}) async =>
+      SellerProductEditor.fromJson(await client.sendJson('POST', MobileApiPaths.createSellerProduct.path,
+          body: {'categoryId': categoryId, 'titleAr': titleAr, 'condition': condition}, idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> saveProductDetails(String id, Map<String, dynamic> body) async =>
+      SellerProductEditor.fromJson(await client.sendJson('PUT', fillPath(MobileApiPaths.saveSellerProductDetails.path, {'productId': id}), body: body));
+  Future<SellerProductEditor> saveProductLogistics(String id, Map<String, dynamic> body) async =>
+      SellerProductEditor.fromJson(await client.sendJson('PUT', fillPath(MobileApiPaths.saveSellerProductLogistics.path, {'productId': id}), body: body));
+  Future<SellerProductEditor> addProductImages(String id, List<(Uint8List, String)> images, {bool actualItem = false, required String idempotencyKey}) async =>
+      SellerProductEditor.fromJson(await _multipart(fillPath(MobileApiPaths.addSellerProductImages.path, {'productId': id}),
+          fields: {'isActualItem': '$actualItem'}, files: {'images': images}, idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> deleteProductImage(String id, String fileId, {required String idempotencyKey}) async => SellerProductEditor.fromJson(await client
+      .sendJson('DELETE', fillPath(MobileApiPaths.deleteSellerProductImage.path, {'productId': id, 'fileId': fileId}), idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> saveProductVariants(String id, List<Map<String, dynamic>> variants) async =>
+      SellerProductEditor.fromJson(await client.sendJson('PUT', fillPath(MobileApiPaths.saveSellerProductVariants.path, {'productId': id}), body: {'variants': variants}));
+  Future<SellerProductEditor> submitProduct(String id, {required String idempotencyKey}) async =>
+      SellerProductEditor.fromJson(await client.sendJson('POST', fillPath(MobileApiPaths.submitSellerProduct.path, {'productId': id}), idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> setProductListed(String id, bool listed, {required String idempotencyKey}) async => SellerProductEditor.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.setSellerProductVisibility.path, {'productId': id}), body: {'listed': listed}, idempotencyKey: idempotencyKey));
+
+  Future<GetSellerShippingRatesResponse> shippingRates() async => GetSellerShippingRatesResponse.fromJson(await client.getJson(MobileApiPaths.getSellerShippingRates.path));
+  Future<GetSellerShippingRatesResponse> saveShippingRates(List<Map<String, dynamic>> items) async =>
+      GetSellerShippingRatesResponse.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerShippingRates.path, body: {'items': items}));
+  Future<SellerStoreSettings> storeSettings() async => SellerStoreSettings.fromJson(await client.getJson(MobileApiPaths.getSellerStoreSettings.path));
+  Future<SellerStoreSettings> saveStoreSettings(Map<String, dynamic> body) async =>
+      SellerStoreSettings.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerStoreSettings.path, body: body));
+
+  /// Payout REQUESTS only — EDMN staff review (two people) and transfer; the app never moves money.
+  Future<ListSellerPayoutRequestsResponse> payoutRequests() async => ListSellerPayoutRequestsResponse.fromJson(await client.getJson(MobileApiPaths.listSellerPayoutRequests.path));
+  Future<PreviewSellerPayoutRequestResponse> previewPayout(int amountPiastres) async =>
+      PreviewSellerPayoutRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.previewSellerPayoutRequest.path, body: {'amountPiastres': amountPiastres}));
+  Future<CreateSellerPayoutRequestResponse> requestPayout(int amountPiastres, {required String clientKey}) async => CreateSellerPayoutRequestResponse.fromJson(
+      await client.sendJson('POST', MobileApiPaths.createSellerPayoutRequest.path, body: {'amountPiastres': amountPiastres, 'clientKey': clientKey}));
+  Future<ListSellerPayoutRequestsResponse> cancelPayoutRequest(String id, {required String idempotencyKey}) async => ListSellerPayoutRequestsResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.cancelSellerPayoutRequest.path, {'requestId': id}), idempotencyKey: idempotencyKey));
 }

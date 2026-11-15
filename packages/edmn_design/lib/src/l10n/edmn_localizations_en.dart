@@ -1237,4 +1237,329 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get roleSupport => 'Support';
+
+  @override
+  String get idApproved => 'Identity verified';
+
+  @override
+  String get idPending => 'Identity under review';
+
+  @override
+  String get idMoreInfo => 'More identity information needed';
+
+  @override
+  String get idRejected => 'Identity rejected';
+
+  @override
+  String get idIncomplete => 'Identity not verified yet';
+
+  @override
+  String get identityTitle => 'Identity verification';
+
+  @override
+  String get identityWhy =>
+      'ID verification is required before selling and some financial operations. EDMN reviews the photos; the national ID is stored encrypted and never shown again.';
+
+  @override
+  String identityLast4(Object last4) {
+    return 'Last 4 digits: $last4';
+  }
+
+  @override
+  String get legalNameHint => 'Full legal name (as on the ID)';
+
+  @override
+  String get nationalIdHint => 'National ID (14 digits)';
+
+  @override
+  String get idFront => 'ID front photo';
+
+  @override
+  String get idBack => 'ID back photo';
+
+  @override
+  String get pickImage => 'Choose a photo';
+
+  @override
+  String get pickDocument => 'Choose an image or PDF';
+
+  @override
+  String get submitForReview => 'Submit for review';
+
+  @override
+  String get sentForReview => 'Sent for review';
+
+  @override
+  String get becomeSeller => 'Start selling on EDMN';
+
+  @override
+  String get becomeSellerBody =>
+      'Open your store: choose seller type, verify your identity, add store details, documents and a payout account; EDMN then reviews the application.';
+
+  @override
+  String get checklist => 'Application steps';
+
+  @override
+  String get sellerTermsNote =>
+      'By submitting you accept the seller agreement, commissions and EDMN policies in force.';
+
+  @override
+  String get ownerDetails => 'Owner details';
+
+  @override
+  String get businessDetails => 'Business details';
+
+  @override
+  String get storeDetails => 'Store details';
+
+  @override
+  String get payoutAccount => 'Payout account';
+
+  @override
+  String get documents => 'Documents';
+
+  @override
+  String get sellerIndividual => 'Individual';
+
+  @override
+  String get sellerBusiness => 'Company / business';
+
+  @override
+  String get startApplication => 'Start application';
+
+  @override
+  String get acceptSellerAgreement => 'I accept the seller agreement';
+
+  @override
+  String get readAgreement => 'Read the agreement';
+
+  @override
+  String get applicationIncomplete =>
+      'Complete every step and verify your identity first';
+
+  @override
+  String get businessName => 'Business legal name';
+
+  @override
+  String get commercialRegistration => 'Commercial registration no.';
+
+  @override
+  String get taxRegistration => 'Tax registration no.';
+
+  @override
+  String get businessAddress => 'Business address';
+
+  @override
+  String get authorizedRepresentative => 'Authorized representative';
+
+  @override
+  String get storeName => 'Store name';
+
+  @override
+  String get storeDescription => 'Store description';
+
+  @override
+  String get returnAddress => 'Return address';
+
+  @override
+  String get supportPhone => 'Support phone (optional)';
+
+  @override
+  String get storeLogo => 'Store logo (optional)';
+
+  @override
+  String get upload => 'Upload';
+
+  @override
+  String get holderName => 'Account holder name';
+
+  @override
+  String get walletProvider => 'Wallet provider';
+
+  @override
+  String get mobileWallet => 'Mobile wallet';
+
+  @override
+  String get payoutAccountNote =>
+      'EDMN verifies the account before any transfer.';
+
+  @override
+  String get addProduct => 'Add product';
+
+  @override
+  String get productNameHint => 'Product name';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get editProduct => 'Edit product';
+
+  @override
+  String get moderationNote => 'Review note';
+
+  @override
+  String get revisionPending => 'An edit is under review';
+
+  @override
+  String get beforeSubmit => 'Before submitting';
+
+  @override
+  String get photos => 'Photos';
+
+  @override
+  String get tapToAdd => 'Tap to add';
+
+  @override
+  String get priceAndStock => 'Price & stock';
+
+  @override
+  String get setPrice => 'Set price & quantity';
+
+  @override
+  String get addVariant => 'Add variant (size / colour)';
+
+  @override
+  String productReturnCustom(int days) {
+    return 'Custom: returns within $days days';
+  }
+
+  @override
+  String get productReturnStoreDefault => 'Store default policy';
+
+  @override
+  String get returnPolicyNotSet => 'Return policy not set yet';
+
+  @override
+  String get hideProduct => 'Hide from store';
+
+  @override
+  String get showProduct => 'Show in store';
+
+  @override
+  String get viewAsBuyer => 'View as buyer';
+
+  @override
+  String get keyFeaturesHint => 'Key features (one per line)';
+
+  @override
+  String get variantLabelHint => 'Variant (e.g. black / 128GB)';
+
+  @override
+  String get priceEgp => 'Price (EGP)';
+
+  @override
+  String get compareAtEgp => 'Price before discount (optional)';
+
+  @override
+  String get customReturnPolicy => 'Product-specific return policy';
+
+  @override
+  String get acceptsReturns => 'Accepts voluntary returns';
+
+  @override
+  String get processingDaysHint => 'Processing days';
+
+  @override
+  String get returnDaysHint => 'Return window (days)';
+
+  @override
+  String get shippingRates => 'Shipping by governorate';
+
+  @override
+  String get checkRates => 'Check the numbers before saving';
+
+  @override
+  String get shippingRatesNote =>
+      'Enable the governorates you ship to and set fee and ETA. Buyers see these in the cart.';
+
+  @override
+  String get feeEgp => 'Fee';
+
+  @override
+  String get etaMin => 'Min days';
+
+  @override
+  String get etaMax => 'Max days';
+
+  @override
+  String get storeSettings => 'Store settings';
+
+  @override
+  String get payoutRequests => 'Payout requests';
+
+  @override
+  String get requestPayout => 'Request payout';
+
+  @override
+  String get payoutHistory => 'History';
+
+  @override
+  String get noPayouts => 'No payout requests';
+
+  @override
+  String get payoutRequestNote =>
+      'Each payout request is reviewed by two EDMN staff before any transfer. The app never moves money.';
+
+  @override
+  String get payoutUnderReview => 'Under review';
+
+  @override
+  String get payoutProcessing => 'Processing';
+
+  @override
+  String get payoutPaid => 'Paid';
+
+  @override
+  String get payoutUncertain => 'Transfer being verified';
+
+  @override
+  String get payoutRejected => 'Rejected';
+
+  @override
+  String get payoutNotTransferred => 'Not transferred';
+
+  @override
+  String get payoutUncertainNote =>
+      'It is not yet confirmed whether the transfer arrived. EDMN is verifying; nothing is re-sent until confirmed.';
+
+  @override
+  String paidReference(Object ref) {
+    return 'Transfer reference: $ref';
+  }
+
+  @override
+  String get cancelRequest => 'Cancel request';
+
+  @override
+  String get cancelPayoutConfirm => 'Cancel this payout request?';
+
+  @override
+  String maxWithdrawable(Object amount) {
+    return 'Maximum available: $amount';
+  }
+
+  @override
+  String get amountEgp => 'Amount (EGP)';
+
+  @override
+  String get transferCost => 'Transfer cost';
+
+  @override
+  String get youReceive => 'You receive';
+
+  @override
+  String get reviewAmount => 'Review amount';
+
+  @override
+  String get sendRequest => 'Send request';
+
+  @override
+  String get payoutRequested => 'Payout request sent for review';
+
+  @override
+  String get payoutAlreadyRequested => 'This request is already recorded';
+
+  @override
+  String get continueApplication => 'Continue seller application';
 }

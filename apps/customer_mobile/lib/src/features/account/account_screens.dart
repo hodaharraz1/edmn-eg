@@ -71,6 +71,7 @@ class AccountScreen extends ConsumerWidget {
                 const SizedBox(height: EdmnSpacing.md),
                 EdmnMenuGroup(children: [
                   languageRow(),
+                  EdmnMenuItem(key: const Key('menu-identity'), icon: Icons.badge_outlined, title: t.identityTitle, onTap: () => context.push('/account/identity')),
                   EdmnMenuItem(key: const Key('menu-security'), icon: Icons.lock_outline_rounded, title: t.security, onTap: () => context.push('/account/security')),
                   EdmnMenuItem(icon: Icons.gavel_rounded, title: t.legal, onTap: () => context.push('/legal/terms')),
                   EdmnMenuItem(

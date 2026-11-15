@@ -204,12 +204,31 @@ class FakeMobileApi extends MobileApi {
   }
 
   bool isSeller = false;
+  bool isOwner = false;
+
+  @override
+  Future<GetSellerFundsResponse> sellerFunds() async => GetSellerFundsResponse.fromJson({
+        'pendingPiastres': 50000, 'availablePiastres': 200000, 'heldPiastres': 50000, 'reservedForPayoutPiastres': 0, 'bookedDebtPiastres': 0,
+        'unsecuredClaimsPiastres': 0, 'withdrawablePiastres': 150000, 'openPayoutRequests': 1, 'blockReasonAr': null,
+      });
+
+  @override
+  Future<ListSellerPayoutRequestsResponse> payoutRequests() async => ListSellerPayoutRequestsResponse.fromJson({
+        'items': [
+          {'id': 'w1', 'amountPiastres': 100000, 'status': 'TRANSFER_UNCERTAIN', 'createdAt': '2030-01-01T10:00:00Z', 'paidAt': null, 'reference': null, 'reasonAr': null, 'cancellable': false},
+          {'id': 'w2', 'amountPiastres': 20000, 'status': 'REQUESTED', 'createdAt': '2030-01-02T10:00:00Z', 'paidAt': null, 'reference': null, 'reasonAr': null, 'cancellable': true},
+        ],
+      });
   final steps = <String>[];
 
   @override
   Future<GetMySellerMembershipResponse> sellerMembership() async => GetMySellerMembershipResponse.fromJson({
         'membership': isSeller
-            ? {'status': 'APPROVED', 'type': 'BUSINESS', 'role': 'ORDER_MANAGER', 'permissions': ['orders.manage', 'inventory.manage'], 'store': {'name': 'تك زون', 'slug': 'tech'}, 'canOperate': true}
+            ? {
+                'status': 'APPROVED', 'type': 'BUSINESS', 'role': isOwner ? 'STORE_OWNER' : 'ORDER_MANAGER',
+                'permissions': isOwner ? ['finance.view', 'finance.withdraw', 'orders.manage', 'store.manage'] : ['orders.manage', 'inventory.manage'],
+                'store': {'name': 'تك زون', 'slug': 'tech'}, 'canOperate': true,
+              }
             : null,
       });
 
@@ -473,6 +492,19 @@ void main() {
     expect(api.steps, ['CONFIRM_ORDER']);
     expect(find.byKey(const Key('step-START_PROCESSING')), findsOneWidget);
     expect(find.byKey(const Key('step-CONFIRM_ORDER')), findsNothing);
+  });
+
+  testWidgets('payouts: TRANSFER_UNCERTAIN is "being verified" (never failed, no cancel / re-send); a pending request can be cancelled', (t) async {
+    final api = FakeMobileApi()
+      ..isSeller = true
+      ..isOwner = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/seller/payouts');
+    expect(find.text('جاري التحقق من التحويل'), findsOneWidget);
+    expect(find.byKey(const Key('cancel-payout-w1')), findsNothing);
+    expect(find.byKey(const Key('cancel-payout-w2')), findsOneWidget);
+    expect(find.text('تم التحويل'), findsNothing);
+    expect(find.byKey(const Key('new-payout')), findsOneWidget);
   });
 
   test('version comparison', () {

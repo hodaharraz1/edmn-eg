@@ -60,7 +60,14 @@ class SellerCenterScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(sellerMembershipProvider),
         data: (membership) {
           if (membership == null) {
-            return EdmnEmptyState(key: const Key('not-a-seller'), icon: Icons.storefront_outlined, title: t.notSellerTitle, message: t.notSellerBody);
+            return EdmnEmptyState(
+              key: const Key('not-a-seller'),
+              icon: Icons.storefront_outlined,
+              title: t.notSellerTitle,
+              message: t.becomeSellerBody,
+              actionLabel: t.becomeSeller,
+              onAction: () => context.push('/seller/apply'),
+            );
           }
           if (!membership.canOperate) {
             return EdmnEmptyState(
@@ -68,6 +75,8 @@ class SellerCenterScreen extends ConsumerWidget {
               icon: Icons.hourglass_top_rounded,
               title: sellerStatusLabel(t, membership.status),
               message: t.sellerNotOperatingBody,
+              actionLabel: t.continueApplication,
+              onAction: () => context.push('/seller/apply'),
             );
           }
           return _SellerHome(membership: membership);
@@ -124,11 +133,12 @@ class _SellerHome extends ConsumerWidget {
             EdmnMenuItem(key: const Key('seller-products'), icon: Icons.inventory_2_outlined, title: t.manageProducts, onTap: () => context.push('/seller/products')),
           if (p.contains('orders.manage')) EdmnMenuItem(key: const Key('seller-orders'), icon: Icons.shopping_cart_outlined, title: t.sellerOrders, onTap: () => context.push('/seller/orders')),
           if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-funds'), icon: Icons.account_balance_wallet_outlined, title: t.earningsBalance, onTap: () => context.push('/seller/funds')),
+          if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-payouts'), icon: Icons.outbound_outlined, title: t.payoutRequests, onTap: () => context.push('/seller/payouts')),
+          if (p.contains('store.manage')) EdmnMenuItem(key: const Key('seller-shipping'), icon: Icons.local_shipping_outlined, title: t.shippingRates, onTap: () => context.push('/seller/shipping')),
+          if (p.contains('store.manage')) EdmnMenuItem(key: const Key('seller-store'), icon: Icons.settings_outlined, title: t.storeSettings, onTap: () => context.push('/seller/store')),
           if (membership.store != null)
             EdmnMenuItem(icon: Icons.storefront_outlined, title: t.viewMyStore, onTap: () => context.push('/stores/${Uri.encodeComponent(membership.store!.slug)}')),
         ]),
-        const SizedBox(height: EdmnSpacing.md),
-        EdmnNotice(message: t.sellerWebOnlyNote),
       ]),
     );
   }
@@ -408,18 +418,18 @@ class SellerProductsScreen extends ConsumerWidget {
     final list = ref.watch(sellerProductsProvider);
     return EdmnAppScaffold(
       title: t.manageProducts,
+      bottomBar: EdmnPrimaryButton(key: const Key('new-product'), label: t.addProduct, icon: Icons.add_rounded, onPressed: () => context.push('/seller/products/new')),
       body: AsyncView(
         value: list,
         skeleton: true,
         onRetry: () => ref.invalidate(sellerProductsProvider),
         data: (r) => r.items.isEmpty
-            ? EdmnEmptyState(icon: Icons.inventory_2_outlined, title: t.noProductsTitle, message: t.sellerWebOnlyNote)
+            ? EdmnEmptyState(icon: Icons.inventory_2_outlined, title: t.noProductsTitle)
             : ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
-                EdmnNotice(message: t.sellerWebOnlyNote),
-                const SizedBox(height: EdmnSpacing.sm),
                 for (final p in r.items)
                   EdmnCard(
                     key: Key('sp-${p.id}'),
+                    onTap: () => context.push('/seller/products/${p.id}/edit'),
                     margin: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.sm),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       Row(children: [
@@ -533,7 +543,7 @@ class SellerFundsScreen extends ConsumerWidget {
             ),
             if (f.openPayoutRequests > 0) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(message: t.openPayouts(f.openPayoutRequests), tone: EdmnTone.warning)],
             const SizedBox(height: EdmnSpacing.sm),
-            EdmnNotice(message: t.payoutOnWebNote),
+            EdmnSecondaryButton(key: const Key('to-payouts'), label: t.payoutRequests, icon: Icons.outbound_outlined, onPressed: () => context.push('/seller/payouts')),
           ]),
         ),
       ),

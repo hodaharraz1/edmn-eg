@@ -1227,4 +1227,327 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get roleSupport => 'الدعم';
+
+  @override
+  String get idApproved => 'الهوية موثّقة';
+
+  @override
+  String get idPending => 'الهوية تحت المراجعة';
+
+  @override
+  String get idMoreInfo => 'مطلوب استكمال بيانات الهوية';
+
+  @override
+  String get idRejected => 'اترفض توثيق الهوية';
+
+  @override
+  String get idIncomplete => 'الهوية لسه مش موثّقة';
+
+  @override
+  String get identityTitle => 'توثيق الهوية';
+
+  @override
+  String get identityWhy =>
+      'توثيق البطاقة مطلوب قبل البيع وبعض العمليات المالية. فريق أضمن بيراجع الصور، والرقم القومي بيتخزن مشفّر ومش بيظهر تاني.';
+
+  @override
+  String identityLast4(Object last4) {
+    return 'آخر 4 أرقام: $last4';
+  }
+
+  @override
+  String get legalNameHint => 'الاسم الكامل كما في البطاقة (ثلاثي)';
+
+  @override
+  String get nationalIdHint => 'الرقم القومي (14 رقم)';
+
+  @override
+  String get idFront => 'صورة البطاقة (الوجه)';
+
+  @override
+  String get idBack => 'صورة البطاقة (الظهر)';
+
+  @override
+  String get pickImage => 'اختار صورة';
+
+  @override
+  String get pickDocument => 'اختار صورة أو PDF';
+
+  @override
+  String get submitForReview => 'إرسال للمراجعة';
+
+  @override
+  String get sentForReview => 'اتبعت للمراجعة';
+
+  @override
+  String get becomeSeller => 'ابدأ البيع على أضمن';
+
+  @override
+  String get becomeSellerBody =>
+      'افتح متجرك: اختار نوع البائع، وثّق هويتك، ضيف بيانات المتجر والمستندات وحساب استلام الأموال، وبعدها فريق أضمن بيراجع الطلب.';
+
+  @override
+  String get checklist => 'خطوات الطلب';
+
+  @override
+  String get sellerTermsNote =>
+      'بإرسال الطلب أنت موافق على اتفاقية البائع والعمولات وسياسات أضمن السارية.';
+
+  @override
+  String get ownerDetails => 'بيانات صاحب المتجر';
+
+  @override
+  String get businessDetails => 'بيانات النشاط';
+
+  @override
+  String get storeDetails => 'بيانات المتجر';
+
+  @override
+  String get payoutAccount => 'حساب استلام الأموال';
+
+  @override
+  String get documents => 'المستندات';
+
+  @override
+  String get sellerIndividual => 'فرد';
+
+  @override
+  String get sellerBusiness => 'شركة / نشاط تجاري';
+
+  @override
+  String get startApplication => 'ابدأ الطلب';
+
+  @override
+  String get acceptSellerAgreement => 'أوافق على اتفاقية البائع';
+
+  @override
+  String get readAgreement => 'اقرأ الاتفاقية';
+
+  @override
+  String get applicationIncomplete => 'كمّل كل الخطوات ووثّق هويتك الأول';
+
+  @override
+  String get businessName => 'الاسم القانوني للنشاط';
+
+  @override
+  String get commercialRegistration => 'رقم السجل التجاري';
+
+  @override
+  String get taxRegistration => 'رقم البطاقة الضريبية';
+
+  @override
+  String get businessAddress => 'عنوان النشاط';
+
+  @override
+  String get authorizedRepresentative => 'الممثل القانوني';
+
+  @override
+  String get storeName => 'اسم المتجر';
+
+  @override
+  String get storeDescription => 'وصف المتجر';
+
+  @override
+  String get returnAddress => 'عنوان الإرجاع';
+
+  @override
+  String get supportPhone => 'رقم خدمة العملاء (اختياري)';
+
+  @override
+  String get storeLogo => 'شعار المتجر (اختياري)';
+
+  @override
+  String get upload => 'رفع';
+
+  @override
+  String get holderName => 'اسم صاحب الحساب';
+
+  @override
+  String get walletProvider => 'مزود المحفظة';
+
+  @override
+  String get mobileWallet => 'محفظة موبايل';
+
+  @override
+  String get payoutAccountNote => 'فريق أضمن بيتحقق من الحساب قبل أي تحويل.';
+
+  @override
+  String get addProduct => 'إضافة منتج';
+
+  @override
+  String get productNameHint => 'اسم المنتج';
+
+  @override
+  String get category => 'القسم';
+
+  @override
+  String get editProduct => 'تعديل المنتج';
+
+  @override
+  String get moderationNote => 'ملاحظة المراجعة';
+
+  @override
+  String get revisionPending => 'في تعديل تحت المراجعة';
+
+  @override
+  String get beforeSubmit => 'قبل الإرسال للمراجعة';
+
+  @override
+  String get photos => 'الصور';
+
+  @override
+  String get tapToAdd => 'اضغط للإضافة';
+
+  @override
+  String get priceAndStock => 'السعر والمخزون';
+
+  @override
+  String get setPrice => 'حدد السعر والكمية';
+
+  @override
+  String get addVariant => 'إضافة نوع (مقاس / لون)';
+
+  @override
+  String productReturnCustom(int days) {
+    return 'سياسة خاصة: إرجاع خلال $days يوم';
+  }
+
+  @override
+  String get productReturnStoreDefault => 'سياسة المتجر الافتراضية';
+
+  @override
+  String get returnPolicyNotSet => 'لسه ما اتحددتش سياسة الإرجاع';
+
+  @override
+  String get hideProduct => 'إخفاء المنتج من المتجر';
+
+  @override
+  String get showProduct => 'إظهار المنتج في المتجر';
+
+  @override
+  String get viewAsBuyer => 'عرض كمشتري';
+
+  @override
+  String get keyFeaturesHint => 'مميزات المنتج (سطر لكل ميزة)';
+
+  @override
+  String get variantLabelHint => 'النوع (مثلاً: أسود / 128GB)';
+
+  @override
+  String get priceEgp => 'السعر (ج.م)';
+
+  @override
+  String get compareAtEgp => 'السعر قبل الخصم (اختياري)';
+
+  @override
+  String get customReturnPolicy => 'سياسة إرجاع خاصة بالمنتج';
+
+  @override
+  String get acceptsReturns => 'بيقبل الإرجاع الاختياري';
+
+  @override
+  String get processingDaysHint => 'أيام التجهيز';
+
+  @override
+  String get returnDaysHint => 'مدة الإرجاع (أيام)';
+
+  @override
+  String get shippingRates => 'الشحن حسب المحافظة';
+
+  @override
+  String get checkRates => 'راجع الأرقام قبل الحفظ';
+
+  @override
+  String get shippingRatesNote =>
+      'فعّل المحافظات اللي بتشحن لها وحدد رسوم ومدة التوصيل. المشتري بيشوف الرسوم دي في السلة.';
+
+  @override
+  String get feeEgp => 'الرسوم';
+
+  @override
+  String get etaMin => 'من (يوم)';
+
+  @override
+  String get etaMax => 'إلى (يوم)';
+
+  @override
+  String get storeSettings => 'إعدادات المتجر';
+
+  @override
+  String get payoutRequests => 'طلبات السحب';
+
+  @override
+  String get requestPayout => 'طلب سحب';
+
+  @override
+  String get payoutHistory => 'سجل الطلبات';
+
+  @override
+  String get noPayouts => 'مفيش طلبات سحب';
+
+  @override
+  String get payoutRequestNote =>
+      'طلب السحب بيتراجع من شخصين في فريق أضمن قبل التحويل. التطبيق مش بيحوّل فلوس.';
+
+  @override
+  String get payoutUnderReview => 'تحت المراجعة';
+
+  @override
+  String get payoutProcessing => 'جاري التنفيذ';
+
+  @override
+  String get payoutPaid => 'تم التحويل';
+
+  @override
+  String get payoutUncertain => 'جاري التحقق من التحويل';
+
+  @override
+  String get payoutRejected => 'مرفوض';
+
+  @override
+  String get payoutNotTransferred => 'لم يتم التحويل';
+
+  @override
+  String get payoutUncertainNote =>
+      'مش واضح لسه إذا التحويل وصل. فريق أضمن بيتحقق، ومحدش هيعيد التحويل قبل التأكد.';
+
+  @override
+  String paidReference(Object ref) {
+    return 'مرجع التحويل: $ref';
+  }
+
+  @override
+  String get cancelRequest => 'إلغاء الطلب';
+
+  @override
+  String get cancelPayoutConfirm => 'تلغي طلب السحب ده؟';
+
+  @override
+  String maxWithdrawable(Object amount) {
+    return 'أقصى مبلغ متاح: $amount';
+  }
+
+  @override
+  String get amountEgp => 'المبلغ (ج.م)';
+
+  @override
+  String get transferCost => 'تكلفة التحويل';
+
+  @override
+  String get youReceive => 'هتستلم';
+
+  @override
+  String get reviewAmount => 'مراجعة المبلغ';
+
+  @override
+  String get sendRequest => 'إرسال الطلب';
+
+  @override
+  String get payoutRequested => 'اتبعت طلب السحب للمراجعة';
+
+  @override
+  String get payoutAlreadyRequested => 'الطلب ده متسجل بالفعل';
+
+  @override
+  String get continueApplication => 'كمّل طلب البائع';
 }

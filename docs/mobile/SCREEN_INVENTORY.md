@@ -1,75 +1,151 @@
-# Screen inventory — EDMN Market Customer App (buyer + seller in one app)
+# Screen inventory — 140 target IDs (B01–B42 · S01–S33 · D01–D35 · C01–C30)
 
-Status legend: **DONE** = implemented, wired to the real API, covered by tests and a real screenshot ·
-**HONEST-STUB** = route exists and says plainly the service is not in the app yet (no fake data, no fake buttons) ·
-**NOT STARTED**.
+Status: **Implemented** (own route, wired, tested) · **Reused** · **Merged** (covered inside another route — functions/states kept) · **Missing** · **Blocked by API** · **Blocked by Business Decision**.
+"Device" = verified on a physical device: none yet (no device/Xcode/APK in this environment). "Shot" = real screenshot exists in `docs/mobile/screenshots/`.
 
-## Source note — the 87-page Figma PDF
+Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reused 1, Blocked by API 1, Blocked by Business Decision 5.
 
-`Untitled.pdf` (87 pages) was **not available** in this environment (not in the repository, not in the session's
-files; no Mac folder is shared). The page-by-page table therefore uses the functional page ranges given in the
-directive (§9). Each range is mapped to screens and status; a per-page table (1 → 87) must be completed once the PDF
-is provided — that is listed as an open item in HANDOVER.
-
-| Pages | Functional area | Screens / routes | Status |
-|---|---|---|---|
-| 1–8 | Splash & onboarding | `/splash`, `/onboarding` | DONE |
-| 9–11 | Authentication & OTP | `/sign-in`, `/register`, `/forgot-password`, `/verify?channel=` | DONE (password-based login is the backend's; OTP = phone/email verification codes) |
-| 12–13 | Home & profile completion | `/` home, `/account/profile` (+ verification prompts) | DONE |
-| 14–20 | Guarantee creation & payment | Protected Deal | NOT STARTED (`/deals` HONEST-STUB) |
-| 21–30 | Orders, details, edits & approval | Marketplace orders: `/orders`, `/orders/:id`; deal edits/approval → Protected Deal | Marketplace part DONE; deal part NOT STARTED |
-| 31–36 | Contact center, chat, disputes & FAQ | report problem (DONE, opens a case server-side); disputes list/replies, support, FAQ | PARTIAL (`/support` HONEST-STUB) |
-| 37–41 | Delivery verification & completion | confirm receipt (DONE); delivery OTP for deals | Marketplace DONE; deal OTP NOT STARTED |
-| 42–50 | Wallet, deposit, withdrawal, payment methods | `/wallet` | HONEST-STUB; `/account/payment-methods` DONE (read-only, server methods) |
-| 51–57 | Account, profile, settings, legal, notifications | `/account`, `/account/profile`, `/account/security`, `/account/devices`, `/account/addresses`, `/legal/:slug`, language | DONE except notifications (HONEST-STUB) |
-| 58–69 | Alternative guarantee, approval, editing, rating | Protected Deal + ratings | NOT STARTED |
-| 70–76 | Withdrawals, bank transfers, deposit confirmation | Wallet / seller earnings | NOT STARTED |
-| 77–87 | Profile, cards, payment accounts, final states | Account (DONE); payout accounts (seller) | PARTIAL |
-
-## Buyer screens (this phase)
-
-| Screen | Route | API | UI states | Tests | Screenshot |
-|---|---|---|---|---|---|
-| Splash | `/splash` | token refresh | loading → route | widget (boot) | — |
-| Onboarding | `/onboarding` | — | pages, skip | — | buyer/01 |
-| Home | `/` (tab) | categories, products (recommended, newest) | skeleton, empty, error/retry, pull-to-refresh | widget | buyer/02, 03, 29 (EN) |
-| Categories | `/categories` (tab) | categories | skeleton, filtered-empty, error | — | buyer/04 |
-| Category products | `/categories/:id` | products?categoryId | sort, condition filter, pagination, empty | — | — |
-| Search | `/search` | products?q | recent searches, sort/filter, pagination, no results | — | buyer/05 |
-| Product | `/products/:slug` | product, reviews | gallery, variants, unavailable, error (404) | widget | buyer/06 |
-| Public store page | `/stores/:slug` | store, products?storeSlug | products, policy, error | backend integration | buyer/07 |
-| Sign in | `/sign-in` | login | validation, mapped errors, loading | widget | buyer/08 |
-| Register | `/register` | register | validation (EG phone), errors | — | — |
-| Forgot password | `/forgot-password` | password/forgot | sent state (no account disclosure) | — | — |
-| Verify phone/email | `/verify` | verification send/confirm | cooldown, wrong/expired code | — | — |
-| Cart | `/cart` | cart, set qty, acknowledge prices | signed-out, empty, per-seller groups, price-changed / stock / no-shipping issues, governorate pick, server totals | widget + backend | buyer/10, 11, 30 (EN) |
-| Checkout | `/checkout` | checkout, addresses, place order | 4 steps, add address, method radio, TEST notice, total-changed refusal, one checkout key | widget + backend | buyer/12–15 |
-| Order (tracking) | `/orders/:id` | order | placed notice, payment card, per-seller timeline, refunds (incl. TRANSFER_UNCERTAIN as "being verified"), server-allowed actions only | widget + backend | buyer/16, 17 |
-| Payment / receipt | `/payments/:id` | payment, proof upload (multipart) | TEST notice, destinations + copy, submissions, upload validation, submitted = under review (never "paid") | widget + backend | buyer/18–20 |
-| My orders | `/orders` (tab) | orders | search, status pills, pagination, empty, signed-out | widget | buyer/21 |
-| Reorder | `/reorder` (tab) | orders, order, add to cart | empty, partial-availability message | — | buyer/22 |
-| Account | `/account` | me | signed-out, verification prompt, sign-out confirm, language | widget | buyer/23, 28 (EN) |
-| Addresses | `/account/addresses(/new|/:id)` | address CRUD, governorates | empty, validation, delete confirm | backend | buyer/24, 25 |
-| Security | `/account/security` | change password | validation, success (others signed out) | backend | buyer/26 |
-| Devices | `/account/devices` | sessions, revoke | remote sign-out | widget | — |
-| Payment methods | `/account/payment-methods` | checkout (methods) | read-only | — | — |
-| Legal / about | `/legal/:slug` | content/legal | error | — | — |
-| Wallet, Protected Deal, Notifications, Support | `/wallet`, `/deals`, `/notifications`, `/support` | — | HONEST-STUB | widget (wallet: no fake balance) | buyer/27 |
-
-**Buyer screens DONE: 22 · HONEST-STUB: 4 (wallet, Protected Deal, notifications, support).**
-
-## Seller Center (same app, role-gated by the server membership)
-
-| Screen | Route | API | Permission | UI states | Tests | Screenshot |
+| ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
-| Seller gate / dashboard (board "مركز البائع") | `/seller` | `GET /me/seller`, `GET /seller/home` | membership; sales only with finance.view | not-a-seller, application status (pending/rejected/suspended), dashboard | widget + backend | seller/s01 |
-| Seller orders | `/seller/orders` | `GET /seller/orders?status` | orders.manage | status pills, empty, paid orders only | backend | seller/s02 |
-| Seller order | `/seller/orders/:id` | `GET /seller/orders/{id}`, `POST …/steps`, `POST …/shipment` (multipart waybill) | orders.manage | ship-to, items, seller net (finance.view), cancellation request, only allowed steps, confirm dialogs | widget + backend | seller/s03, s04 |
-| Products & stock | `/seller/products` | `GET /seller/products`, `PUT /seller/variants/{id}/stock` | products.manage / inventory.manage | stock / reserved / available, reserved floor validation | backend | seller/s05 |
-| Earnings & balance | `/seller/funds` | `GET /seller/funds` (read only) | finance.view | withdrawable vs pending / held / reserved / debt / uncovered claims, block reason, open payouts | backend | seller/s06 |
-| Public store page (buyers) | `/stores/:slug` | public | — | separate from the private dashboard | backend | buyer/07 |
+| B01 | Splash | /splash | Implemented | boot refresh | widget | yes |
+| B02 | Onboarding intro | /onboarding p1 | Implemented | — | — | yes |
+| B03 | Onboarding protection | /onboarding p2-3 | Merged | — | — | yes |
+| B04 | Sign in | /sign-in | Implemented | auth/login | widget+backend | yes |
+| B05 | Register | /register | Implemented | auth/register | backend | — |
+| B06 | OTP verification | /verify | Implemented | me/verification/* | backend | — |
+| B07 | Forgot password | /forgot-password | Implemented | auth/password/forgot | backend | — |
+| B08 | Reset password | — | Missing | auth/password/reset (API exists; needs deep-link screen) | backend | — |
+| B09 | Marketplace home | / | Implemented | catalog | widget | yes |
+| B10 | Location selection | governorate sheet + addresses | Merged | governorates | — | yes |
+| B11 | Categories | /categories | Implemented | catalog/categories | — | yes |
+| B12 | Subcategories | /categories/:id | Implemented | catalog | — | — |
+| B13 | Search | /search | Implemented | catalog/products?q | — | yes |
+| B14 | Search filters | /search pills | Merged | sort/condition | — | yes |
+| B15 | Search results | /search | Merged | catalog | — | yes |
+| B16 | Product listing | /categories/:id, /search | Reused | catalog (paginated) | — | — |
+| B17 | Product details | /products/:slug | Implemented | catalog/products/{slug} | widget | yes |
+| B18 | Product gallery | gallery in B17 (zoom missing) | Merged | — | — | yes |
+| B19 | Product reviews | reviews in B17 | Merged | …/reviews | — | yes |
+| B20 | Public seller store | /stores/:slug | Implemented | stores/{slug} | backend | yes |
+| B21 | Store products | /stores/:slug | Merged | catalog?storeSlug | backend | yes |
+| B22 | Wishlist | — | Blocked by API | no wishlist API | — | — |
+| B23 | Cart | /cart | Implemented | cart | widget+backend | yes |
+| B24 | Cart validation | /cart issues | Merged | cart, acknowledge-prices | backend | yes |
+| B25 | Checkout address | /checkout step 1 | Implemented | checkout, addresses | widget | yes |
+| B26 | Checkout shipping | /checkout step 2 | Implemented | checkout | widget | yes |
+| B27 | Checkout payment | /checkout step 3 | Implemented | checkout | widget | yes |
+| B28 | Checkout review | /checkout step 4 | Implemented | checkout | widget | yes |
+| B29 | Order confirmation | /orders/:id?placed=1 | Implemented | POST orders (checkoutKey) | widget+backend | yes |
+| B30 | Payment instructions | /payments/:id | Implemented | payments/{id} | widget | yes |
+| B31 | Upload receipt | /payments/:id | Implemented | payments/{id}/proof | widget+backend | yes |
+| B32 | Payment verification status | /payments/:id, /orders/:id | Merged | payments/{id} | widget | yes |
+| B33 | My orders | /orders | Implemented | orders | widget | yes |
+| B34 | Order details | /orders/:id | Implemented | orders/{id} | widget+backend | yes |
+| B35 | Shipment tracking | /orders/:id timeline | Merged | orders/{id} | — | yes |
+| B36 | Delivery confirmation | /orders/:id action | Merged | seller-orders/{id}/confirm-receipt | widget+backend | — |
+| B37 | Reorder | /reorder | Implemented | orders + cart | — | yes |
+| B38 | Cancel / request cancellation | /orders/:id actions | Merged | orders/{id}/cancel, cancellation-request | backend | — |
+| B39 | Return request | — | Missing | service requestReturn (no mobile route) | — | — |
+| B40 | Return tracking | — | Missing | returnGraph (no mobile route) | — | — |
+| B41 | Buyer rating | — | Missing | createProductReview/createSellerReview (no mobile route) | — | — |
+| B42 | Transaction result | inline notices | Merged | — | — | — |
+| S01 | Become a seller | /seller (not-a-seller) | Implemented | me/seller | widget | — |
+| S02 | Seller registration | — | Missing | startApplication/saveBusiness (no mobile route) | — | — |
+| S03 | Seller KYC | — | Missing | saveIdentity/uploadSellerDocument | — | — |
+| S04 | Store creation | — | Missing | saveStore | — | — |
+| S05 | Store branding | — | Missing | saveStore logo | — | — |
+| S06 | Application status | /seller (status) | Implemented | me/seller | — | — |
+| S07 | Terms acceptance | — | Missing | submitApplication | — | — |
+| S08 | Seller dashboard | /seller | Implemented | seller/home | widget+backend | yes |
+| S09 | Store profile | — | Missing | updateStoreSettings | — | — |
+| S10 | Store settings | — | Missing | updateStoreSettings | — | — |
+| S11 | Products list | /seller/products | Implemented | seller/products | backend | yes |
+| S12 | Add product | — | Missing | createDraft | — | — |
+| S13 | Product images | — | Missing | addImages/removeImage | — | — |
+| S14 | Category selection | — | Missing | categories | — | — |
+| S15 | Product details form | — | Missing | updateDetails | — | — |
+| S16 | Pricing | — | Missing | saveVariants | — | — |
+| S17 | Variants | — | Missing | saveVariants | — | — |
+| S18 | Inventory | /seller/products stock | Implemented | seller/variants/{id}/stock | backend | yes |
+| S19 | Product preview | — | Missing | productForSellerEdit | — | — |
+| S20 | Approval status | /seller/products chips | Merged | seller/products | — | yes |
+| S21 | Edit product | — | Missing | updateDetails/logistics | — | — |
+| S22 | Availability | — | Missing | setListingActive | — | — |
+| S23 | Shipping governorates | — | Missing | setShippingRates | — | — |
+| S24 | Shipping rates | — | Missing | setShippingRates | — | — |
+| S25 | Return policy | — | Missing | updateStoreSettings/logistics | — | — |
+| S26 | Seller orders | /seller/orders | Implemented | seller/orders | backend | yes |
+| S27 | Seller order details | /seller/orders/:id | Implemented | seller/orders/{id} | widget+backend | yes |
+| S28 | Fulfilment | /seller/orders/:id steps | Implemented | seller/orders/{id}/steps | widget+backend | yes |
+| S29 | Shipping proof | /seller/orders/:id shipment | Implemented | seller/orders/{id}/shipment | backend | — |
+| S30 | Returns & disputes | — | Missing | returnsForSeller/disputesAsRespondent | — | — |
+| S31 | Earnings | /seller/funds | Implemented | seller/funds | backend | yes |
+| S32 | Withdrawal request | — | Missing | requestWithdrawal (owner approved request-only in §20) | — | — |
+| S33 | Withdrawal history | — | Missing | sellerWithdrawals | — | — |
+| D01 | Deal hub | /deals stub | Missing | dealsForUser | — | — |
+| D02 | How it works | — | Missing | static | — | — |
+| D03 | Choose role | — | Missing | createDeal | — | — |
+| D04 | Transaction type | — | Missing | createDeal | — | — |
+| D05 | Counterparty | — | Missing | saveDealStep | — | — |
+| D06 | Invitation | — | Missing | inviteSeller/claimInvitation | — | — |
+| D07 | Deal details | — | Missing | saveDealStep/addDealPhotos | — | — |
+| D08 | Delivery terms | — | Missing | saveDealStep | — | — |
+| D09 | Fees | — | Missing | deal quote (server) | — | — |
+| D10 | Review | — | Missing | dealGraph | — | — |
+| D11 | Pending approval | — | Missing | dealGraph | — | — |
+| D12 | Accept/reject/counter | — | Missing | respondToOffer/submitSellerOffer | — | — |
+| D13 | Revision review | — | Missing | termsHistory/respondToChangeRequest | — | — |
+| D14 | Deal payment | — | Missing | startDealPayment + proof | — | — |
+| D15 | Payment held | — | Missing | dealGraph | — | — |
+| D16 | Deal timeline | — | Missing | dealGraph | — | — |
+| D17 | Delivery evidence | — | Missing | markDealDelivered | — | — |
+| D18 | Delivery OTP | — | Missing | verifyDeliveryOtp/deliveryOtpForBuyer | — | — |
+| D19 | Inspection & acceptance | — | Missing | confirmDealReceipt | — | — |
+| D20 | Deal dispute | — | Missing | openDispute | — | — |
+| D21 | Settlement status | — | Missing | dealGraph | — | — |
+| D22 | Completion | — | Missing | dealGraph | — | — |
+| D23 | Cancellation/refund | — | Missing | cancelDeal | — | — |
+| D24 | Wallet home | /wallet stub | Missing | sellerFinancialView / account withdrawals | — | — |
+| D25 | Balance breakdown | /seller/funds (seller) | Merged | seller/funds | backend | yes |
+| D26 | Transaction history | — | Missing | ledger statement | — | — |
+| D27 | Transaction detail | — | Missing | — | — | — |
+| D28 | Add funds | — | Blocked by Business Decision | no deposit service | — | — |
+| D29 | Deposit method | — | Blocked by Business Decision | no deposit service | — | — |
+| D30 | Deposit instructions | — | Blocked by Business Decision | no deposit service | — | — |
+| D31 | Deposit proof | — | Blocked by Business Decision | no deposit service | — | — |
+| D32 | Withdrawal | — | Missing | requestAccountWithdrawal/requestWithdrawal | — | — |
+| D33 | Payout accounts | — | Missing | addPayoutMethod | — | — |
+| D34 | Wallet transfer | — | Blocked by Business Decision | no wallet-to-wallet service | — | — |
+| D35 | Wallet result | — | Missing | — | — | — |
+| C01 | Inbox | — | Missing | listForUser/listForSeller | — | — |
+| C02 | New conversation | — | Missing | openSellerOrderConversation/openDealConversation | — | — |
+| C03 | Chat | — | Missing | participantThread/sendMessage | — | — |
+| C04 | Attachments | — | Missing | sendMessage attachment | — | — |
+| C05 | Media viewer | — | Missing | files/{id} | — | — |
+| C06 | Chat details | — | Missing | participantThread | — | — |
+| C07 | Chat notifications | — | Missing | unreadForUser | — | — |
+| C08 | Report | — | Missing | reportMessage | — | — |
+| C09 | Help center | /support stub | Missing | — | — | — |
+| C10 | FAQ | — | Missing | CMS content | — | — |
+| C11 | Tickets list | — | Missing | myTickets | — | — |
+| C12 | Create ticket | — | Missing | openTicket | — | — |
+| C13 | Support chat | — | Missing | replyToTicket | — | — |
+| C14 | Support attachments | — | Missing | openTicket/replyToTicket | — | — |
+| C15 | Ticket detail | — | Missing | ticketThread | — | — |
+| C16 | Resolution | — | Missing | rateTicket/reopenTicket | — | — |
+| C17 | Disputes list | — | Missing | disputesForUser | — | — |
+| C18 | Open dispute | — | Missing | openDispute | — | — |
+| C19 | Dispute evidence | — | Missing | addDisputeMessage | — | — |
+| C20 | Dispute conversation | — | Missing | disputeGraph | — | — |
+| C21 | Dispute timeline | — | Missing | disputeGraph | — | — |
+| C22 | Dispute decision | — | Missing | disputeGraph | — | — |
+| C23 | Account home | /account | Implemented | me | widget | yes |
+| C24 | Edit profile | /account/profile | Implemented | PATCH me | backend | — |
+| C25 | Addresses & contact | /account/addresses | Implemented | me/addresses | backend | yes |
+| C26 | Security | /account/security, /account/devices | Implemented | me/password, me/sessions | widget+backend | yes |
+| C27 | Notifications center | /notifications stub | Missing | notifications table / markRead | — | — |
+| C28 | Preferences & language | language in /account | Merged | prefsFor/savePrefs | widget | yes |
+| C29 | Legal & privacy | /legal/:slug | Implemented | content/legal | — | — |
+| C30 | Deletion & logout | logout in /account | Merged | logout; deletion API missing | — | — |
 
-**Seller screens DONE: 5.** Seller items still NOT STARTED in the app (web Seller Center only, stated in-app):
-registration & documents, store settings, product create/edit + photos + prices, shipping rates by governorate,
-returns/disputes handling, payout requests + history (needs an owner decision: the contract guard forbids any
-`withdraw` route on the mobile API — see HANDOVER).
+The 87-page Figma PDF was not provided to this environment; `FIGMA_87_PAGE_MAPPING.md` holds the page table template.

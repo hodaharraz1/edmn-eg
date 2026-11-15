@@ -7,8 +7,23 @@ import { buildOpenApi } from '@/server/api/openapi';
 import { ADMIN_API_ROUTES, ALL_API_ROUTES, MOBILE_API_ROUTES } from '@/server/api/routes';
 
 /** The committed OpenAPI documents are the reviewed contract: they must equal what the route definitions generate. */
-/** Seller fulfilment / inventory writes reviewed for the Customer App's Seller Center (no money movement). */
-const SELLER_WRITES = new Set(['runSellerOrderStep', 'saveSellerShipment', 'setSellerVariantStock']);
+/** Seller fulfilment / inventory / catalog / store writes reviewed for the Customer App's Seller Center (no money movement). */
+const SELLER_WRITES = new Set([
+  'runSellerOrderStep', 'saveSellerShipment', 'setSellerVariantStock',
+  'createSellerProduct', 'saveSellerProductDetails', 'saveSellerProductLogistics', 'addSellerProductImages', 'deleteSellerProductImage',
+  'saveSellerProductVariants', 'submitSellerProduct', 'setSellerProductVisibility', 'saveSellerShippingRates', 'saveSellerStoreSettings',
+  // Payout REQUESTS only (owner-approved). The request is a claim reviewed by EDMN Maker/Checker; nothing is transferred.
+  'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest',
+]);
+
+/** Seller application / identity writes: the applicant is a customer (no store membership yet). */
+const APPLICATION_WRITES = new Set([
+  'submitMyIdentity', 'startSellerApplication', 'saveSellerApplicationIdentity', 'saveSellerApplicationBusiness', 'saveSellerApplicationStore',
+  'uploadSellerApplicationDocument', 'addSellerPayoutAccount', 'submitSellerApplication',
+]);
+
+/** The only payout-related routes on the mobile API (request side). */
+const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest', 'addSellerPayoutAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
 const BUYER_WRITES = new Set([
@@ -57,7 +72,15 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
   });
 
   it('Phase 1 exposes no money-moving or privileged financial operation', () => {
-    for (const r of ALL_API_ROUTES) expect(r.path).not.toMatch(/withdraw|settle|payout|refund|release|ledger|journal|real-?money|kill-?switch/i);
+    // Money EXECUTION (release, settlement, refunds, ledger, transfers) never exists on the mobile API.
+    for (const r of ALL_API_ROUTES) expect(r.path, r.id).not.toMatch(/withdraw|settle|refund|release|ledger|journal|real-?money|kill-?switch|transfer|paid/i);
+    // Payout paths: ONLY the owner-approved REQUEST routes (spec §20 — "request only; transfer execution stays blocked").
+    for (const r of ALL_API_ROUTES.filter((x) => /payout/i.test(x.path))) {
+      expect(PAYOUT_REQUEST_ROUTES.has(r.id), `unreviewed payout route ${r.id}`).toBe(true);
+      expect(r.auth === 'seller' || r.id === 'addSellerPayoutAccount', r.id).toBe(true);
+    }
+    const create = ALL_API_ROUTES.find((r) => r.id === 'createSellerPayoutRequest')!;
+    expect(Object.keys((create.body as unknown as { shape: Record<string, unknown> }).shape).sort()).toEqual(['amountPiastres', 'clientKey']);
     // Every state-changing operation is listed here BY ID: a new write route fails this test until it is reviewed
     // and added on purpose. None of them moves money: proof upload only queues a TEST payment for staff review,
     // confirm-receipt only records the buyer's confirmation (release stays Maker/Checker in the admin console).
@@ -66,6 +89,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...ALL_API_ROUTES.filter((r) => r.method !== 'GET' && /Auth|Account|Security/.test(r.tags.join(' ')) && !BUYER_WRITES.has(r.id)).map((r) => r.id),
       ...BUYER_WRITES,
       ...SELLER_WRITES,
+      ...APPLICATION_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -80,6 +104,11 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
     for (const r of writes.filter((w) => SELLER_WRITES.has(w.id))) {
       // Seller writes act for the session user's own store only (auth `seller`), never for a client-named store.
       expect(r.auth, r.id).toBe('seller');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
+    }
+    for (const r of writes.filter((w) => APPLICATION_WRITES.has(w.id))) {
+      expect(r.auth, r.id).toBe('customer');
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }

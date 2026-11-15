@@ -5,26 +5,38 @@
 abstract final class MobileApiPaths {
   static const acknowledgeCartPrices = (method: 'POST', path: '/api/v1/cart/acknowledge-prices');
   static const addCartItem = (method: 'POST', path: '/api/v1/cart/items');
+  static const addSellerPayoutAccount = (method: 'POST', path: '/api/v1/seller/application/payout-account');
+  static const addSellerProductImages = (method: 'POST', path: '/api/v1/seller/products/{productId}/images');
+  static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
   static const cancelUnpaidOrder = (method: 'POST', path: '/api/v1/orders/{orderId}/cancel');
   static const changePassword = (method: 'POST', path: '/api/v1/me/password');
   static const confirmReceipt = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/confirm-receipt');
   static const confirmVerificationCode = (method: 'POST', path: '/api/v1/me/verification/confirm');
   static const createAddress = (method: 'POST', path: '/api/v1/me/addresses');
+  static const createSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests');
+  static const createSellerProduct = (method: 'POST', path: '/api/v1/seller/products');
   static const deleteAddress = (method: 'DELETE', path: '/api/v1/me/addresses/{addressId}');
+  static const deleteSellerProductImage = (method: 'DELETE', path: '/api/v1/seller/products/{productId}/images/{fileId}');
   static const forgotPassword = (method: 'POST', path: '/api/v1/auth/password/forgot');
   static const getAppConfig = (method: 'GET', path: '/api/v1/app/config');
   static const getCart = (method: 'GET', path: '/api/v1/cart');
+  static const getCategoryAttributes = (method: 'GET', path: '/api/v1/catalog/categories/{categoryId}/attributes');
   static const getCheckout = (method: 'GET', path: '/api/v1/checkout');
   static const getFile = (method: 'GET', path: '/api/v1/files/{fileId}');
   static const getLegalDocument = (method: 'GET', path: '/api/v1/content/legal/{slug}');
   static const getMe = (method: 'GET', path: '/api/v1/me');
+  static const getMyIdentity = (method: 'GET', path: '/api/v1/me/identity');
   static const getMySellerMembership = (method: 'GET', path: '/api/v1/me/seller');
   static const getOrder = (method: 'GET', path: '/api/v1/orders/{orderId}');
   static const getPayment = (method: 'GET', path: '/api/v1/payments/{paymentId}');
   static const getProduct = (method: 'GET', path: '/api/v1/catalog/products/{slug}');
+  static const getSellerApplication = (method: 'GET', path: '/api/v1/seller/application');
   static const getSellerFunds = (method: 'GET', path: '/api/v1/seller/funds');
   static const getSellerHome = (method: 'GET', path: '/api/v1/seller/home');
   static const getSellerOrder = (method: 'GET', path: '/api/v1/seller/orders/{sellerOrderId}');
+  static const getSellerProduct = (method: 'GET', path: '/api/v1/seller/products/{productId}');
+  static const getSellerShippingRates = (method: 'GET', path: '/api/v1/seller/shipping-rates');
+  static const getSellerStoreSettings = (method: 'GET', path: '/api/v1/seller/store');
   static const getStore = (method: 'GET', path: '/api/v1/stores/{slug}');
   static const listAddresses = (method: 'GET', path: '/api/v1/me/addresses');
   static const listCategories = (method: 'GET', path: '/api/v1/catalog/categories');
@@ -33,10 +45,12 @@ abstract final class MobileApiPaths {
   static const listOrders = (method: 'GET', path: '/api/v1/orders');
   static const listProductReviews = (method: 'GET', path: '/api/v1/catalog/products/{slug}/reviews');
   static const listSellerOrders = (method: 'GET', path: '/api/v1/seller/orders');
+  static const listSellerPayoutRequests = (method: 'GET', path: '/api/v1/seller/payout-requests');
   static const listSellerProducts = (method: 'GET', path: '/api/v1/seller/products');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
   static const placeOrder = (method: 'POST', path: '/api/v1/orders');
+  static const previewSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/preview');
   static const refreshToken = (method: 'POST', path: '/api/v1/auth/token/refresh');
   static const register = (method: 'POST', path: '/api/v1/auth/register');
   static const reportOrderProblem = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/problem');
@@ -45,14 +59,28 @@ abstract final class MobileApiPaths {
   static const revokeMyOtherSessions = (method: 'POST', path: '/api/v1/me/sessions/revoke-others');
   static const revokeMySession = (method: 'DELETE', path: '/api/v1/me/sessions/{sessionId}');
   static const runSellerOrderStep = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/steps');
+  static const saveSellerApplicationBusiness = (method: 'PUT', path: '/api/v1/seller/application/business');
+  static const saveSellerApplicationIdentity = (method: 'PUT', path: '/api/v1/seller/application/identity');
+  static const saveSellerApplicationStore = (method: 'POST', path: '/api/v1/seller/application/store');
+  static const saveSellerProductDetails = (method: 'PUT', path: '/api/v1/seller/products/{productId}/details');
+  static const saveSellerProductLogistics = (method: 'PUT', path: '/api/v1/seller/products/{productId}/logistics');
+  static const saveSellerProductVariants = (method: 'PUT', path: '/api/v1/seller/products/{productId}/variants');
   static const saveSellerShipment = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/shipment');
+  static const saveSellerShippingRates = (method: 'PUT', path: '/api/v1/seller/shipping-rates');
+  static const saveSellerStoreSettings = (method: 'PUT', path: '/api/v1/seller/store');
   static const searchProducts = (method: 'GET', path: '/api/v1/catalog/products');
   static const sendVerificationCode = (method: 'POST', path: '/api/v1/me/verification/send');
   static const setCartItemQuantity = (method: 'PUT', path: '/api/v1/cart/items/{variantId}');
+  static const setSellerProductVisibility = (method: 'POST', path: '/api/v1/seller/products/{productId}/visibility');
   static const setSellerVariantStock = (method: 'PUT', path: '/api/v1/seller/variants/{variantId}/stock');
+  static const startSellerApplication = (method: 'POST', path: '/api/v1/seller/application');
+  static const submitMyIdentity = (method: 'POST', path: '/api/v1/me/identity');
   static const submitPaymentProof = (method: 'POST', path: '/api/v1/payments/{paymentId}/proof');
+  static const submitSellerApplication = (method: 'POST', path: '/api/v1/seller/application/submit');
+  static const submitSellerProduct = (method: 'POST', path: '/api/v1/seller/products/{productId}/submit');
   static const updateAddress = (method: 'PUT', path: '/api/v1/me/addresses/{addressId}');
   static const updateMe = (method: 'PATCH', path: '/api/v1/me');
+  static const uploadSellerApplicationDocument = (method: 'POST', path: '/api/v1/seller/application/documents');
 }
 
 class AddCartItemRequest {
@@ -156,6 +184,42 @@ class AppConfigMinSupportedVersion {
   final String admin;
 
   Map<String, dynamic> toJson() => {'customer': customer, 'admin': admin};
+}
+
+class CancelSellerPayoutRequestResponse {
+  const CancelSellerPayoutRequestResponse({required this.items});
+
+  factory CancelSellerPayoutRequestResponse.fromJson(Map<String, dynamic> json) => CancelSellerPayoutRequestResponse(items: (json['items'] as List).map((e) => CancelSellerPayoutRequestResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<CancelSellerPayoutRequestResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class CancelSellerPayoutRequestResponseItemsItem {
+  const CancelSellerPayoutRequestResponseItemsItem({required this.id, required this.amountPiastres, required this.status, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.cancellable});
+
+  factory CancelSellerPayoutRequestResponseItemsItem.fromJson(Map<String, dynamic> json) => CancelSellerPayoutRequestResponseItemsItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = transfer not confirmed either way; never retried by the app.
+  final String status;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'status': status, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'cancellable': cancellable};
 }
 
 class Cart {
@@ -419,6 +483,71 @@ class CreateAddressResponse {
   Map<String, dynamic> toJson() => {'id': id};
 }
 
+class CreateSellerPayoutRequestRequest {
+  const CreateSellerPayoutRequestRequest({required this.amountPiastres, required this.clientKey});
+
+  factory CreateSellerPayoutRequestRequest.fromJson(Map<String, dynamic> json) => CreateSellerPayoutRequestRequest(amountPiastres: (json['amountPiastres'] as num).toInt(), clientKey: json['clientKey'] as String);
+
+  final int amountPiastres;
+
+  final String clientKey;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'clientKey': clientKey};
+}
+
+class CreateSellerPayoutRequestResponse {
+  const CreateSellerPayoutRequestResponse({required this.created, required this.request});
+
+  factory CreateSellerPayoutRequestResponse.fromJson(Map<String, dynamic> json) => CreateSellerPayoutRequestResponse(created: json['created'] as bool, request: CreateSellerPayoutRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final bool created;
+
+  final CreateSellerPayoutRequestResponseRequest request;
+
+  Map<String, dynamic> toJson() => {'created': created, 'request': request.toJson()};
+}
+
+class CreateSellerPayoutRequestResponseRequest {
+  const CreateSellerPayoutRequestResponseRequest({required this.id, required this.amountPiastres, required this.status, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.cancellable});
+
+  factory CreateSellerPayoutRequestResponseRequest.fromJson(Map<String, dynamic> json) => CreateSellerPayoutRequestResponseRequest(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = transfer not confirmed either way; never retried by the app.
+  final String status;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'status': status, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'cancellable': cancellable};
+}
+
+class CreateSellerProductRequest {
+  const CreateSellerProductRequest({required this.categoryId, required this.titleAr, required this.condition});
+
+  factory CreateSellerProductRequest.fromJson(Map<String, dynamic> json) => CreateSellerProductRequest(categoryId: json['categoryId'] as String, titleAr: json['titleAr'] as String, condition: json['condition'] as String);
+
+  final String categoryId;
+
+  final String titleAr;
+
+  /// One of: NEW, USED (kept as String for forward compatibility).
+  final String condition;
+
+  Map<String, dynamic> toJson() => {'categoryId': categoryId, 'titleAr': titleAr, 'condition': condition};
+}
+
 class DeviceInfo {
   const DeviceInfo({required this.installationId, required this.platform, this.deviceName, this.appVersion});
 
@@ -487,6 +616,48 @@ class ForgotPasswordRequest {
   final String identifier;
 
   Map<String, dynamic> toJson() => {'identifier': identifier};
+}
+
+class GetCategoryAttributesResponse {
+  const GetCategoryAttributesResponse({required this.items});
+
+  factory GetCategoryAttributesResponse.fromJson(Map<String, dynamic> json) => GetCategoryAttributesResponse(items: (json['items'] as List).map((e) => GetCategoryAttributesResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<GetCategoryAttributesResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class GetCategoryAttributesResponseItemsItem {
+  const GetCategoryAttributesResponseItemsItem({required this.code, required this.nameAr, required this.type, required this.required, required this.variantAxis, required this.options});
+
+  factory GetCategoryAttributesResponseItemsItem.fromJson(Map<String, dynamic> json) => GetCategoryAttributesResponseItemsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, type: json['type'] as String, required: json['required'] as bool, variantAxis: json['variantAxis'] as bool, options: (json['options'] as List).map((e) => GetCategoryAttributesResponseItemsItemOptionsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String code;
+
+  final String nameAr;
+
+  final String type;
+
+  final bool required;
+
+  final bool variantAxis;
+
+  final List<GetCategoryAttributesResponseItemsItemOptionsItem> options;
+
+  Map<String, dynamic> toJson() => {'code': code, 'nameAr': nameAr, 'type': type, 'required': required, 'variantAxis': variantAxis, 'options': options.map((e) => e.toJson()).toList()};
+}
+
+class GetCategoryAttributesResponseItemsItemOptionsItem {
+  const GetCategoryAttributesResponseItemsItemOptionsItem({required this.value, required this.labelAr});
+
+  factory GetCategoryAttributesResponseItemsItemOptionsItem.fromJson(Map<String, dynamic> json) => GetCategoryAttributesResponseItemsItemOptionsItem(value: json['value'] as String, labelAr: json['labelAr'] as String);
+
+  final String value;
+
+  final String labelAr;
+
+  Map<String, dynamic> toJson() => {'value': value, 'labelAr': labelAr};
 }
 
 class GetMySellerMembershipResponse {
@@ -723,6 +894,55 @@ class GetSellerHomeResponseSales {
   Map<String, dynamic> toJson() => {'todayPiastres': todayPiastres, 'last30DaysGrossPiastres': last30DaysGrossPiastres, 'last30DaysNetPiastres': last30DaysNetPiastres};
 }
 
+class GetSellerShippingRatesResponse {
+  const GetSellerShippingRatesResponse({required this.items});
+
+  factory GetSellerShippingRatesResponse.fromJson(Map<String, dynamic> json) => GetSellerShippingRatesResponse(items: (json['items'] as List).map((e) => GetSellerShippingRatesResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<GetSellerShippingRatesResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class GetSellerShippingRatesResponseItemsItem {
+  const GetSellerShippingRatesResponseItemsItem({required this.governorateId, required this.enabled, required this.feePiastres, required this.etaMinDays, required this.etaMaxDays});
+
+  factory GetSellerShippingRatesResponseItemsItem.fromJson(Map<String, dynamic> json) => GetSellerShippingRatesResponseItemsItem(governorateId: (json['governorateId'] as num).toInt(), enabled: json['enabled'] as bool, feePiastres: (json['feePiastres'] as num).toInt(), etaMinDays: (json['etaMinDays'] as num).toInt(), etaMaxDays: (json['etaMaxDays'] as num).toInt());
+
+  final int governorateId;
+
+  final bool enabled;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int feePiastres;
+
+  final int etaMinDays;
+
+  final int etaMaxDays;
+
+  Map<String, dynamic> toJson() => {'governorateId': governorateId, 'enabled': enabled, 'feePiastres': feePiastres, 'etaMinDays': etaMinDays, 'etaMaxDays': etaMaxDays};
+}
+
+class IdentityStatus {
+  const IdentityStatus({required this.status, required this.legalName, required this.last4, required this.hasFront, required this.hasBack, required this.reason});
+
+  factory IdentityStatus.fromJson(Map<String, dynamic> json) => IdentityStatus(status: json['status'] as String, legalName: json['legalName'] as String?, last4: json['last4'] as String?, hasFront: json['hasFront'] as bool, hasBack: json['hasBack'] as bool, reason: json['reason'] as String?);
+
+  final String status;
+
+  final String? legalName;
+
+  final String? last4;
+
+  final bool hasFront;
+
+  final bool hasBack;
+
+  final String? reason;
+
+  Map<String, dynamic> toJson() => {'status': status, 'legalName': legalName, 'last4': last4, 'hasFront': hasFront, 'hasBack': hasBack, 'reason': reason};
+}
+
 class LegalDocument {
   const LegalDocument({required this.code, required this.slug, required this.title, required this.version, required this.body, required this.approved, required this.updatedAt});
 
@@ -888,6 +1108,42 @@ class ListSellerOrdersResponseItemsItem {
   final int merchandiseSubtotalPiastres;
 
   Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'paidAt': paidAt, 'itemCount': itemCount, 'thumbnails': thumbnails.map((e) => e).toList(), 'merchandiseSubtotalPiastres': merchandiseSubtotalPiastres};
+}
+
+class ListSellerPayoutRequestsResponse {
+  const ListSellerPayoutRequestsResponse({required this.items});
+
+  factory ListSellerPayoutRequestsResponse.fromJson(Map<String, dynamic> json) => ListSellerPayoutRequestsResponse(items: (json['items'] as List).map((e) => ListSellerPayoutRequestsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ListSellerPayoutRequestsResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListSellerPayoutRequestsResponseItemsItem {
+  const ListSellerPayoutRequestsResponseItemsItem({required this.id, required this.amountPiastres, required this.status, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.cancellable});
+
+  factory ListSellerPayoutRequestsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListSellerPayoutRequestsResponseItemsItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = transfer not confirmed either way; never retried by the app.
+  final String status;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'status': status, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'cancellable': cancellable};
 }
 
 class ListSellerProductsResponse {
@@ -1317,6 +1573,37 @@ class PlaceOrderResponse {
   final bool created;
 
   Map<String, dynamic> toJson() => {'orderId': orderId, 'created': created};
+}
+
+class PreviewSellerPayoutRequestRequest {
+  const PreviewSellerPayoutRequestRequest({required this.amountPiastres});
+
+  factory PreviewSellerPayoutRequestRequest.fromJson(Map<String, dynamic> json) => PreviewSellerPayoutRequestRequest(amountPiastres: (json['amountPiastres'] as num).toInt());
+
+  final int amountPiastres;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres};
+}
+
+class PreviewSellerPayoutRequestResponse {
+  const PreviewSellerPayoutRequestResponse({required this.amountPiastres, required this.transferCostPiastres, required this.netPiastres, required this.warnings, required this.violations});
+
+  factory PreviewSellerPayoutRequestResponse.fromJson(Map<String, dynamic> json) => PreviewSellerPayoutRequestResponse(amountPiastres: (json['amountPiastres'] as num).toInt(), transferCostPiastres: (json['transferCostPiastres'] as num).toInt(), netPiastres: (json['netPiastres'] as num).toInt(), warnings: (json['warnings'] as List).map((e) => e as String).toList(), violations: (json['violations'] as List).map((e) => e as String).toList());
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int transferCostPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int netPiastres;
+
+  final List<String> warnings;
+
+  final List<String> violations;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'transferCostPiastres': transferCostPiastres, 'netPiastres': netPiastres, 'warnings': warnings.map((e) => e).toList(), 'violations': violations.map((e) => e).toList()};
 }
 
 class Problem {
@@ -1773,6 +2060,248 @@ class RunSellerOrderStepRequest {
   Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note};
 }
 
+class SaveSellerApplicationBusinessRequest {
+  const SaveSellerApplicationBusinessRequest({required this.businessLegalName, this.commercialRegistrationNo, this.taxRegistrationNo, required this.businessAddress, required this.authorizedRepresentative});
+
+  factory SaveSellerApplicationBusinessRequest.fromJson(Map<String, dynamic> json) => SaveSellerApplicationBusinessRequest(businessLegalName: json['businessLegalName'] as String, commercialRegistrationNo: json['commercialRegistrationNo'] == null ? null : json['commercialRegistrationNo'] as String, taxRegistrationNo: json['taxRegistrationNo'] == null ? null : json['taxRegistrationNo'] as String, businessAddress: json['businessAddress'] as String, authorizedRepresentative: json['authorizedRepresentative'] as String);
+
+  final String businessLegalName;
+
+  final String? commercialRegistrationNo;
+
+  final String? taxRegistrationNo;
+
+  final String businessAddress;
+
+  final String authorizedRepresentative;
+
+  Map<String, dynamic> toJson() => {'businessLegalName': businessLegalName, if (commercialRegistrationNo != null) 'commercialRegistrationNo': commercialRegistrationNo, if (taxRegistrationNo != null) 'taxRegistrationNo': taxRegistrationNo, 'businessAddress': businessAddress, 'authorizedRepresentative': authorizedRepresentative};
+}
+
+class SaveSellerApplicationIdentityRequest {
+  const SaveSellerApplicationIdentityRequest({required this.type, required this.legalName, required this.nationalId, required this.mobile, required this.email, required this.addressLine, required this.city, required this.governorateId});
+
+  factory SaveSellerApplicationIdentityRequest.fromJson(Map<String, dynamic> json) => SaveSellerApplicationIdentityRequest(type: json['type'] as String, legalName: json['legalName'] as String, nationalId: json['nationalId'] as String, mobile: json['mobile'] as String, email: json['email'] as String, addressLine: json['addressLine'] as String, city: json['city'] as String, governorateId: (json['governorateId'] as num).toInt());
+
+  /// One of: INDIVIDUAL, BUSINESS (kept as String for forward compatibility).
+  final String type;
+
+  final String legalName;
+
+  final String nationalId;
+
+  final String mobile;
+
+  final String email;
+
+  final String addressLine;
+
+  final String city;
+
+  final int governorateId;
+
+  Map<String, dynamic> toJson() => {'type': type, 'legalName': legalName, 'nationalId': nationalId, 'mobile': mobile, 'email': email, 'addressLine': addressLine, 'city': city, 'governorateId': governorateId};
+}
+
+class SaveSellerProductDetailsRequest {
+  const SaveSellerProductDetailsRequest({required this.titleAr, this.titleEn, required this.brandId, required this.categoryId, this.description, this.keyFeatures, required this.condition, required this.usedGrade, this.conditionNotes, this.defects, this.includedAccessories, this.usageInfo, this.warrantyInfo, this.attributes});
+
+  factory SaveSellerProductDetailsRequest.fromJson(Map<String, dynamic> json) => SaveSellerProductDetailsRequest(titleAr: json['titleAr'] as String, titleEn: json['titleEn'] == null ? null : json['titleEn'] as String, brandId: json['brandId'] as String?, categoryId: json['categoryId'] as String, description: json['description'] == null ? null : json['description'] as String, keyFeatures: json['keyFeatures'] == null ? null : (json['keyFeatures'] as List).map((e) => e as String).toList(), condition: json['condition'] as String, usedGrade: json['usedGrade'] as String?, conditionNotes: json['conditionNotes'] == null ? null : json['conditionNotes'] as String, defects: json['defects'] == null ? null : json['defects'] as String, includedAccessories: json['includedAccessories'] == null ? null : json['includedAccessories'] as String, usageInfo: json['usageInfo'] == null ? null : json['usageInfo'] as String, warrantyInfo: json['warrantyInfo'] == null ? null : json['warrantyInfo'] as String, attributes: json['attributes'] == null ? null : (json['attributes'] as Map<String, dynamic>).map((k, e) => MapEntry(k, (e as List).map((e) => e as String).toList())));
+
+  final String titleAr;
+
+  final String? titleEn;
+
+  final String? brandId;
+
+  final String categoryId;
+
+  final String? description;
+
+  final List<String>? keyFeatures;
+
+  /// One of: NEW, USED (kept as String for forward compatibility).
+  final String condition;
+
+  /// One of: LIKE_NEW, VERY_GOOD, GOOD, ACCEPTABLE (kept as String for forward compatibility).
+  final String? usedGrade;
+
+  final String? conditionNotes;
+
+  final String? defects;
+
+  final String? includedAccessories;
+
+  final String? usageInfo;
+
+  final String? warrantyInfo;
+
+  final Map<String, List<String>>? attributes;
+
+  Map<String, dynamic> toJson() => {'titleAr': titleAr, if (titleEn != null) 'titleEn': titleEn, 'brandId': brandId, 'categoryId': categoryId, if (description != null) 'description': description, if (keyFeatures != null) 'keyFeatures': keyFeatures?.map((e) => e).toList(), 'condition': condition, 'usedGrade': usedGrade, if (conditionNotes != null) 'conditionNotes': conditionNotes, if (defects != null) 'defects': defects, if (includedAccessories != null) 'includedAccessories': includedAccessories, if (usageInfo != null) 'usageInfo': usageInfo, if (warrantyInfo != null) 'warrantyInfo': warrantyInfo, if (attributes != null) 'attributes': attributes};
+}
+
+class SaveSellerProductLogisticsRequest {
+  const SaveSellerProductLogisticsRequest({required this.weightGrams, required this.lengthCm, required this.widthCm, required this.heightCm, required this.processingDays, required this.returnPolicyOverride, required this.acceptsVoluntaryReturns, required this.voluntaryReturnDays, this.returnConditionKeys, required this.returnShippingPayer, this.returnPolicyNotes, this.seoTitle, this.seoDescription});
+
+  factory SaveSellerProductLogisticsRequest.fromJson(Map<String, dynamic> json) => SaveSellerProductLogisticsRequest(weightGrams: (json['weightGrams'] as num?)?.toInt(), lengthCm: (json['lengthCm'] as num?)?.toInt(), widthCm: (json['widthCm'] as num?)?.toInt(), heightCm: (json['heightCm'] as num?)?.toInt(), processingDays: (json['processingDays'] as num?)?.toInt(), returnPolicyOverride: json['returnPolicyOverride'] as bool, acceptsVoluntaryReturns: json['acceptsVoluntaryReturns'] as bool?, voluntaryReturnDays: (json['voluntaryReturnDays'] as num?)?.toInt(), returnConditionKeys: json['returnConditionKeys'] == null ? null : (json['returnConditionKeys'] as List).map((e) => e as String).toList(), returnShippingPayer: json['returnShippingPayer'] as String?, returnPolicyNotes: json['returnPolicyNotes'] == null ? null : json['returnPolicyNotes'] as String, seoTitle: json['seoTitle'] == null ? null : json['seoTitle'] as String, seoDescription: json['seoDescription'] == null ? null : json['seoDescription'] as String);
+
+  final int? weightGrams;
+
+  final int? lengthCm;
+
+  final int? widthCm;
+
+  final int? heightCm;
+
+  final int? processingDays;
+
+  final bool returnPolicyOverride;
+
+  final bool? acceptsVoluntaryReturns;
+
+  final int? voluntaryReturnDays;
+
+  final List<String>? returnConditionKeys;
+
+  /// One of: SELLER, BUYER, BY_REASON (kept as String for forward compatibility).
+  final String? returnShippingPayer;
+
+  final String? returnPolicyNotes;
+
+  final String? seoTitle;
+
+  final String? seoDescription;
+
+  Map<String, dynamic> toJson() => {'weightGrams': weightGrams, 'lengthCm': lengthCm, 'widthCm': widthCm, 'heightCm': heightCm, 'processingDays': processingDays, 'returnPolicyOverride': returnPolicyOverride, 'acceptsVoluntaryReturns': acceptsVoluntaryReturns, 'voluntaryReturnDays': voluntaryReturnDays, if (returnConditionKeys != null) 'returnConditionKeys': returnConditionKeys?.map((e) => e).toList(), 'returnShippingPayer': returnShippingPayer, if (returnPolicyNotes != null) 'returnPolicyNotes': returnPolicyNotes, if (seoTitle != null) 'seoTitle': seoTitle, if (seoDescription != null) 'seoDescription': seoDescription};
+}
+
+class SaveSellerProductVariantsRequest {
+  const SaveSellerProductVariantsRequest({required this.variants});
+
+  factory SaveSellerProductVariantsRequest.fromJson(Map<String, dynamic> json) => SaveSellerProductVariantsRequest(variants: (json['variants'] as List).map((e) => SaveSellerProductVariantsRequestVariantsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<SaveSellerProductVariantsRequestVariantsItem> variants;
+
+  Map<String, dynamic> toJson() => {'variants': variants.map((e) => e.toJson()).toList()};
+}
+
+class SaveSellerProductVariantsRequestVariantsItem {
+  const SaveSellerProductVariantsRequestVariantsItem({this.id, required this.sku, this.barcode, this.options, required this.price, required this.compareAtPrice, required this.stockOnHand, this.lowStockThreshold, this.isActive});
+
+  factory SaveSellerProductVariantsRequestVariantsItem.fromJson(Map<String, dynamic> json) => SaveSellerProductVariantsRequestVariantsItem(id: json['id'] == null ? null : json['id'] as String, sku: json['sku'] as String, barcode: json['barcode'] == null ? null : json['barcode'] as String, options: json['options'] == null ? null : (json['options'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e as String)), price: (json['price'] as num).toInt(), compareAtPrice: (json['compareAtPrice'] as num?)?.toInt(), stockOnHand: (json['stockOnHand'] as num).toInt(), lowStockThreshold: json['lowStockThreshold'] == null ? null : (json['lowStockThreshold'] as num).toInt(), isActive: json['isActive'] == null ? null : json['isActive'] as bool);
+
+  final String? id;
+
+  final String sku;
+
+  final String? barcode;
+
+  final Map<String, String>? options;
+
+  final int price;
+
+  final int? compareAtPrice;
+
+  final int stockOnHand;
+
+  final int? lowStockThreshold;
+
+  final bool? isActive;
+
+  Map<String, dynamic> toJson() => {if (id != null) 'id': id, 'sku': sku, if (barcode != null) 'barcode': barcode, if (options != null) 'options': options, 'price': price, 'compareAtPrice': compareAtPrice, 'stockOnHand': stockOnHand, if (lowStockThreshold != null) 'lowStockThreshold': lowStockThreshold, if (isActive != null) 'isActive': isActive};
+}
+
+class SaveSellerShippingRatesRequest {
+  const SaveSellerShippingRatesRequest({required this.items});
+
+  factory SaveSellerShippingRatesRequest.fromJson(Map<String, dynamic> json) => SaveSellerShippingRatesRequest(items: (json['items'] as List).map((e) => SaveSellerShippingRatesRequestItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<SaveSellerShippingRatesRequestItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class SaveSellerShippingRatesRequestItemsItem {
+  const SaveSellerShippingRatesRequestItemsItem({required this.governorateId, required this.enabled, required this.feePiastres, required this.etaMinDays, required this.etaMaxDays});
+
+  factory SaveSellerShippingRatesRequestItemsItem.fromJson(Map<String, dynamic> json) => SaveSellerShippingRatesRequestItemsItem(governorateId: (json['governorateId'] as num).toInt(), enabled: json['enabled'] as bool, feePiastres: (json['feePiastres'] as num).toInt(), etaMinDays: (json['etaMinDays'] as num).toInt(), etaMaxDays: (json['etaMaxDays'] as num).toInt());
+
+  final int governorateId;
+
+  final bool enabled;
+
+  final int feePiastres;
+
+  final int etaMinDays;
+
+  final int etaMaxDays;
+
+  Map<String, dynamic> toJson() => {'governorateId': governorateId, 'enabled': enabled, 'feePiastres': feePiastres, 'etaMinDays': etaMinDays, 'etaMaxDays': etaMaxDays};
+}
+
+class SaveSellerShippingRatesResponse {
+  const SaveSellerShippingRatesResponse({required this.items});
+
+  factory SaveSellerShippingRatesResponse.fromJson(Map<String, dynamic> json) => SaveSellerShippingRatesResponse(items: (json['items'] as List).map((e) => SaveSellerShippingRatesResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<SaveSellerShippingRatesResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class SaveSellerShippingRatesResponseItemsItem {
+  const SaveSellerShippingRatesResponseItemsItem({required this.governorateId, required this.enabled, required this.feePiastres, required this.etaMinDays, required this.etaMaxDays});
+
+  factory SaveSellerShippingRatesResponseItemsItem.fromJson(Map<String, dynamic> json) => SaveSellerShippingRatesResponseItemsItem(governorateId: (json['governorateId'] as num).toInt(), enabled: json['enabled'] as bool, feePiastres: (json['feePiastres'] as num).toInt(), etaMinDays: (json['etaMinDays'] as num).toInt(), etaMaxDays: (json['etaMaxDays'] as num).toInt());
+
+  final int governorateId;
+
+  final bool enabled;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int feePiastres;
+
+  final int etaMinDays;
+
+  final int etaMaxDays;
+
+  Map<String, dynamic> toJson() => {'governorateId': governorateId, 'enabled': enabled, 'feePiastres': feePiastres, 'etaMinDays': etaMinDays, 'etaMaxDays': etaMaxDays};
+}
+
+class SaveSellerStoreSettingsRequest {
+  const SaveSellerStoreSettingsRequest({required this.name, this.description, required this.returnAddress, this.supportPhone, required this.acceptsVoluntaryReturns, required this.voluntaryReturnDays, this.returnConditions, this.returnConditionKeys, this.returnShippingPayer, this.shippingPolicy, required this.defaultProcessingDays, required this.freeShippingThreshold});
+
+  factory SaveSellerStoreSettingsRequest.fromJson(Map<String, dynamic> json) => SaveSellerStoreSettingsRequest(name: json['name'] as String, description: json['description'] == null ? null : json['description'] as String, returnAddress: json['returnAddress'] as String, supportPhone: json['supportPhone'] == null ? null : json['supportPhone'] as String, acceptsVoluntaryReturns: json['acceptsVoluntaryReturns'] as bool, voluntaryReturnDays: (json['voluntaryReturnDays'] as num?)?.toInt(), returnConditions: json['returnConditions'] == null ? null : json['returnConditions'] as String, returnConditionKeys: json['returnConditionKeys'] == null ? null : (json['returnConditionKeys'] as List).map((e) => e as String).toList(), returnShippingPayer: json['returnShippingPayer'] == null ? null : json['returnShippingPayer'] as String, shippingPolicy: json['shippingPolicy'] == null ? null : json['shippingPolicy'] as String, defaultProcessingDays: (json['defaultProcessingDays'] as num).toInt(), freeShippingThreshold: (json['freeShippingThreshold'] as num?)?.toInt());
+
+  final String name;
+
+  final String? description;
+
+  final String returnAddress;
+
+  final String? supportPhone;
+
+  final bool acceptsVoluntaryReturns;
+
+  final int? voluntaryReturnDays;
+
+  final String? returnConditions;
+
+  final List<String>? returnConditionKeys;
+
+  /// One of: SELLER, BUYER, BY_REASON (kept as String for forward compatibility).
+  final String? returnShippingPayer;
+
+  final String? shippingPolicy;
+
+  final int defaultProcessingDays;
+
+  final int? freeShippingThreshold;
+
+  Map<String, dynamic> toJson() => {'name': name, if (description != null) 'description': description, 'returnAddress': returnAddress, if (supportPhone != null) 'supportPhone': supportPhone, 'acceptsVoluntaryReturns': acceptsVoluntaryReturns, 'voluntaryReturnDays': voluntaryReturnDays, if (returnConditions != null) 'returnConditions': returnConditions, if (returnConditionKeys != null) 'returnConditionKeys': returnConditionKeys?.map((e) => e).toList(), if (returnShippingPayer != null) 'returnShippingPayer': returnShippingPayer, if (shippingPolicy != null) 'shippingPolicy': shippingPolicy, 'defaultProcessingDays': defaultProcessingDays, 'freeShippingThreshold': freeShippingThreshold};
+}
+
 class SearchProductsResponse {
   const SearchProductsResponse({required this.items, required this.page, required this.pageSize, required this.total, required this.pages});
 
@@ -1789,6 +2318,108 @@ class SearchProductsResponse {
   final int pages;
 
   Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'total': total, 'pages': pages};
+}
+
+class SellerApplication {
+  const SellerApplication({required this.seller, required this.checklist, required this.identity});
+
+  factory SellerApplication.fromJson(Map<String, dynamic> json) => SellerApplication(seller: json['seller'] == null ? null : SellerApplicationSeller.fromJson(json['seller'] as Map<String, dynamic>), checklist: (json['checklist'] as List).map((e) => SellerApplicationChecklistItem.fromJson(e as Map<String, dynamic>)).toList(), identity: IdentityStatus.fromJson(json['identity'] as Map<String, dynamic>));
+
+  final SellerApplicationSeller? seller;
+
+  final List<SellerApplicationChecklistItem> checklist;
+
+  final IdentityStatus identity;
+
+  Map<String, dynamic> toJson() => {'seller': seller?.toJson(), 'checklist': checklist.map((e) => e.toJson()).toList(), 'identity': identity.toJson()};
+}
+
+class SellerApplicationChecklistItem {
+  const SellerApplicationChecklistItem({required this.key, required this.label, required this.ok});
+
+  factory SellerApplicationChecklistItem.fromJson(Map<String, dynamic> json) => SellerApplicationChecklistItem(key: json['key'] as String, label: json['label'] as String, ok: json['ok'] as bool);
+
+  final String key;
+
+  final String label;
+
+  final bool ok;
+
+  Map<String, dynamic> toJson() => {'key': key, 'label': label, 'ok': ok};
+}
+
+class SellerApplicationSeller {
+  const SellerApplicationSeller({required this.status, required this.type, required this.statusReason, required this.editable, required this.legalName, required this.mobile, required this.email, required this.addressLine, required this.city, required this.governorateId, required this.hasNationalId, required this.businessLegalName, required this.businessAddress, required this.authorizedRepresentative, required this.store, required this.documents, required this.payout});
+
+  factory SellerApplicationSeller.fromJson(Map<String, dynamic> json) => SellerApplicationSeller(status: json['status'] as String, type: json['type'] as String, statusReason: json['statusReason'] as String?, editable: json['editable'] as bool, legalName: json['legalName'] as String?, mobile: json['mobile'] as String?, email: json['email'] as String?, addressLine: json['addressLine'] as String?, city: json['city'] as String?, governorateId: (json['governorateId'] as num?)?.toInt(), hasNationalId: json['hasNationalId'] as bool, businessLegalName: json['businessLegalName'] as String?, businessAddress: json['businessAddress'] as String?, authorizedRepresentative: json['authorizedRepresentative'] as String?, store: json['store'] == null ? null : SellerApplicationSellerStore.fromJson(json['store'] as Map<String, dynamic>), documents: (json['documents'] as List).map((e) => e as String).toList(), payout: json['payout'] == null ? null : SellerApplicationSellerPayout.fromJson(json['payout'] as Map<String, dynamic>));
+
+  final String status;
+
+  final String type;
+
+  final String? statusReason;
+
+  final bool editable;
+
+  final String? legalName;
+
+  final String? mobile;
+
+  final String? email;
+
+  final String? addressLine;
+
+  final String? city;
+
+  final int? governorateId;
+
+  final bool hasNationalId;
+
+  final String? businessLegalName;
+
+  final String? businessAddress;
+
+  final String? authorizedRepresentative;
+
+  final SellerApplicationSellerStore? store;
+
+  final List<String> documents;
+
+  final SellerApplicationSellerPayout? payout;
+
+  Map<String, dynamic> toJson() => {'status': status, 'type': type, 'statusReason': statusReason, 'editable': editable, 'legalName': legalName, 'mobile': mobile, 'email': email, 'addressLine': addressLine, 'city': city, 'governorateId': governorateId, 'hasNationalId': hasNationalId, 'businessLegalName': businessLegalName, 'businessAddress': businessAddress, 'authorizedRepresentative': authorizedRepresentative, 'store': store?.toJson(), 'documents': documents.map((e) => e).toList(), 'payout': payout?.toJson()};
+}
+
+class SellerApplicationSellerPayout {
+  const SellerApplicationSellerPayout({required this.type, required this.status, required this.masked});
+
+  factory SellerApplicationSellerPayout.fromJson(Map<String, dynamic> json) => SellerApplicationSellerPayout(type: json['type'] as String, status: json['status'] as String, masked: json['masked'] as String);
+
+  final String type;
+
+  final String status;
+
+  final String masked;
+
+  Map<String, dynamic> toJson() => {'type': type, 'status': status, 'masked': masked};
+}
+
+class SellerApplicationSellerStore {
+  const SellerApplicationSellerStore({required this.name, required this.slug, required this.description, required this.returnAddress, required this.supportPhone});
+
+  factory SellerApplicationSellerStore.fromJson(Map<String, dynamic> json) => SellerApplicationSellerStore(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, supportPhone: json['supportPhone'] as String?);
+
+  final String name;
+
+  final String slug;
+
+  final String? description;
+
+  final String? returnAddress;
+
+  final String? supportPhone;
+
+  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'supportPhone': supportPhone};
 }
 
 class SellerOrder {
@@ -1931,6 +2562,147 @@ class SellerOrderShipTo {
   Map<String, dynamic> toJson() => {'recipientName': recipientName, 'phone': phone, 'governorate': governorate, 'city': city, 'district': district, 'street': street, 'building': building, 'floor': floor, 'apartment': apartment, 'landmark': landmark};
 }
 
+class SellerProductEditor {
+  const SellerProductEditor({required this.id, required this.slug, required this.status, required this.isListed, required this.categoryId, required this.titleAr, required this.titleEn, required this.description, required this.keyFeatures, required this.condition, required this.usedGrade, required this.conditionNotes, required this.defects, required this.includedAccessories, required this.warrantyInfo, required this.processingDays, required this.returnPolicyConfirmed, required this.returnPolicyOverride, required this.acceptsVoluntaryReturns, required this.voluntaryReturnDays, required this.attributes, required this.images, required this.variants, required this.pendingRevision, required this.moderationNote, required this.submissionProblems});
+
+  factory SellerProductEditor.fromJson(Map<String, dynamic> json) => SellerProductEditor(id: json['id'] as String, slug: json['slug'] as String, status: json['status'] as String, isListed: json['isListed'] as bool, categoryId: json['categoryId'] as String?, titleAr: json['titleAr'] as String, titleEn: json['titleEn'] as String?, description: json['description'] as String?, keyFeatures: (json['keyFeatures'] as List).map((e) => e as String).toList(), condition: json['condition'] as String, usedGrade: json['usedGrade'] as String?, conditionNotes: json['conditionNotes'] as String?, defects: json['defects'] as String?, includedAccessories: json['includedAccessories'] as String?, warrantyInfo: json['warrantyInfo'] as String?, processingDays: (json['processingDays'] as num?)?.toInt(), returnPolicyConfirmed: json['returnPolicyConfirmed'] as bool, returnPolicyOverride: json['returnPolicyOverride'] as bool, acceptsVoluntaryReturns: json['acceptsVoluntaryReturns'] as bool?, voluntaryReturnDays: (json['voluntaryReturnDays'] as num?)?.toInt(), attributes: (json['attributes'] as Map<String, dynamic>).map((k, e) => MapEntry(k, (e as List).map((e) => e as String).toList())), images: (json['images'] as List).map((e) => SellerProductEditorImagesItem.fromJson(e as Map<String, dynamic>)).toList(), variants: (json['variants'] as List).map((e) => SellerProductEditorVariantsItem.fromJson(e as Map<String, dynamic>)).toList(), pendingRevision: json['pendingRevision'] as bool, moderationNote: json['moderationNote'] as String?, submissionProblems: (json['submissionProblems'] as List).map((e) => e as String).toList());
+
+  final String id;
+
+  final String slug;
+
+  final String status;
+
+  final bool isListed;
+
+  final String? categoryId;
+
+  final String titleAr;
+
+  final String? titleEn;
+
+  final String? description;
+
+  final List<String> keyFeatures;
+
+  final String condition;
+
+  final String? usedGrade;
+
+  final String? conditionNotes;
+
+  final String? defects;
+
+  final String? includedAccessories;
+
+  final String? warrantyInfo;
+
+  final int? processingDays;
+
+  final bool returnPolicyConfirmed;
+
+  final bool returnPolicyOverride;
+
+  final bool? acceptsVoluntaryReturns;
+
+  final int? voluntaryReturnDays;
+
+  final Map<String, List<String>> attributes;
+
+  final List<SellerProductEditorImagesItem> images;
+
+  final List<SellerProductEditorVariantsItem> variants;
+
+  final bool pendingRevision;
+
+  final String? moderationNote;
+
+  final List<String> submissionProblems;
+
+  Map<String, dynamic> toJson() => {'id': id, 'slug': slug, 'status': status, 'isListed': isListed, 'categoryId': categoryId, 'titleAr': titleAr, 'titleEn': titleEn, 'description': description, 'keyFeatures': keyFeatures.map((e) => e).toList(), 'condition': condition, 'usedGrade': usedGrade, 'conditionNotes': conditionNotes, 'defects': defects, 'includedAccessories': includedAccessories, 'warrantyInfo': warrantyInfo, 'processingDays': processingDays, 'returnPolicyConfirmed': returnPolicyConfirmed, 'returnPolicyOverride': returnPolicyOverride, 'acceptsVoluntaryReturns': acceptsVoluntaryReturns, 'voluntaryReturnDays': voluntaryReturnDays, 'attributes': attributes, 'images': images.map((e) => e.toJson()).toList(), 'variants': variants.map((e) => e.toJson()).toList(), 'pendingRevision': pendingRevision, 'moderationNote': moderationNote, 'submissionProblems': submissionProblems.map((e) => e).toList()};
+}
+
+class SellerProductEditorImagesItem {
+  const SellerProductEditorImagesItem({required this.fileId, required this.url, required this.isActualItem});
+
+  factory SellerProductEditorImagesItem.fromJson(Map<String, dynamic> json) => SellerProductEditorImagesItem(fileId: json['fileId'] as String, url: json['url'] as String?, isActualItem: json['isActualItem'] as bool);
+
+  final String fileId;
+
+  final String? url;
+
+  final bool isActualItem;
+
+  Map<String, dynamic> toJson() => {'fileId': fileId, 'url': url, 'isActualItem': isActualItem};
+}
+
+class SellerProductEditorVariantsItem {
+  const SellerProductEditorVariantsItem({required this.id, required this.sku, required this.options, required this.pricePiastres, required this.compareAtPricePiastres, required this.stockOnHand, required this.reserved, required this.lowStockThreshold, required this.isActive});
+
+  factory SellerProductEditorVariantsItem.fromJson(Map<String, dynamic> json) => SellerProductEditorVariantsItem(id: json['id'] as String, sku: json['sku'] as String, options: (json['options'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e as String)), pricePiastres: (json['pricePiastres'] as num).toInt(), compareAtPricePiastres: (json['compareAtPricePiastres'] as num?)?.toInt(), stockOnHand: (json['stockOnHand'] as num).toInt(), reserved: (json['reserved'] as num).toInt(), lowStockThreshold: (json['lowStockThreshold'] as num).toInt(), isActive: json['isActive'] as bool);
+
+  final String id;
+
+  final String sku;
+
+  final Map<String, String> options;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int pricePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? compareAtPricePiastres;
+
+  final int stockOnHand;
+
+  final int reserved;
+
+  final int lowStockThreshold;
+
+  final bool isActive;
+
+  Map<String, dynamic> toJson() => {'id': id, 'sku': sku, 'options': options, 'pricePiastres': pricePiastres, 'compareAtPricePiastres': compareAtPricePiastres, 'stockOnHand': stockOnHand, 'reserved': reserved, 'lowStockThreshold': lowStockThreshold, 'isActive': isActive};
+}
+
+class SellerStoreSettings {
+  const SellerStoreSettings({required this.name, required this.slug, required this.description, required this.returnAddress, required this.supportPhone, required this.acceptsVoluntaryReturns, required this.voluntaryReturnDays, required this.returnConditions, required this.returnConditionKeys, required this.returnShippingPayer, required this.shippingPolicy, required this.defaultProcessingDays, required this.freeShippingThresholdPiastres, required this.logoUrl, required this.bannerUrl});
+
+  factory SellerStoreSettings.fromJson(Map<String, dynamic> json) => SellerStoreSettings(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, supportPhone: json['supportPhone'] as String?, acceptsVoluntaryReturns: json['acceptsVoluntaryReturns'] as bool, voluntaryReturnDays: (json['voluntaryReturnDays'] as num?)?.toInt(), returnConditions: json['returnConditions'] as String?, returnConditionKeys: (json['returnConditionKeys'] as List).map((e) => e as String).toList(), returnShippingPayer: json['returnShippingPayer'] as String?, shippingPolicy: json['shippingPolicy'] as String?, defaultProcessingDays: (json['defaultProcessingDays'] as num?)?.toInt(), freeShippingThresholdPiastres: (json['freeShippingThresholdPiastres'] as num?)?.toInt(), logoUrl: json['logoUrl'] as String?, bannerUrl: json['bannerUrl'] as String?);
+
+  final String name;
+
+  final String slug;
+
+  final String? description;
+
+  final String? returnAddress;
+
+  final String? supportPhone;
+
+  final bool acceptsVoluntaryReturns;
+
+  final int? voluntaryReturnDays;
+
+  final String? returnConditions;
+
+  final List<String> returnConditionKeys;
+
+  final String? returnShippingPayer;
+
+  final String? shippingPolicy;
+
+  final int? defaultProcessingDays;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? freeShippingThresholdPiastres;
+
+  final String? logoUrl;
+
+  final String? bannerUrl;
+
+  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'supportPhone': supportPhone, 'acceptsVoluntaryReturns': acceptsVoluntaryReturns, 'voluntaryReturnDays': voluntaryReturnDays, 'returnConditions': returnConditions, 'returnConditionKeys': returnConditionKeys.map((e) => e).toList(), 'returnShippingPayer': returnShippingPayer, 'shippingPolicy': shippingPolicy, 'defaultProcessingDays': defaultProcessingDays, 'freeShippingThresholdPiastres': freeShippingThresholdPiastres, 'logoUrl': logoUrl, 'bannerUrl': bannerUrl};
+}
+
 class SendVerificationCodeRequest {
   const SendVerificationCodeRequest({required this.channel});
 
@@ -1994,6 +2766,16 @@ class SetCartItemQuantityRequest {
   Map<String, dynamic> toJson() => {'quantity': quantity};
 }
 
+class SetSellerProductVisibilityRequest {
+  const SetSellerProductVisibilityRequest({required this.listed});
+
+  factory SetSellerProductVisibilityRequest.fromJson(Map<String, dynamic> json) => SetSellerProductVisibilityRequest(listed: json['listed'] as bool);
+
+  final bool listed;
+
+  Map<String, dynamic> toJson() => {'listed': listed};
+}
+
 class SetSellerVariantStockRequest {
   const SetSellerVariantStockRequest({required this.stockOnHand});
 
@@ -2018,6 +2800,17 @@ class SetSellerVariantStockResponse {
   final int available;
 
   Map<String, dynamic> toJson() => {'id': id, 'stockOnHand': stockOnHand, 'reserved': reserved, 'available': available};
+}
+
+class StartSellerApplicationRequest {
+  const StartSellerApplicationRequest({required this.type});
+
+  factory StartSellerApplicationRequest.fromJson(Map<String, dynamic> json) => StartSellerApplicationRequest(type: json['type'] as String);
+
+  /// One of: INDIVIDUAL, BUSINESS (kept as String for forward compatibility).
+  final String type;
+
+  Map<String, dynamic> toJson() => {'type': type};
 }
 
 class Store {
@@ -2068,6 +2861,16 @@ class StoreCategoriesItem {
   final String slug;
 
   Map<String, dynamic> toJson() => {'nameAr': nameAr, 'slug': slug};
+}
+
+class SubmitSellerApplicationRequest {
+  const SubmitSellerApplicationRequest({required this.acceptAgreement});
+
+  factory SubmitSellerApplicationRequest.fromJson(Map<String, dynamic> json) => SubmitSellerApplicationRequest(acceptAgreement: json['acceptAgreement'] as bool);
+
+  final bool acceptAgreement;
+
+  Map<String, dynamic> toJson() => {'acceptAgreement': acceptAgreement};
 }
 
 class TokenPair {

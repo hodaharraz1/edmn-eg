@@ -2377,6 +2377,624 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'الدعم'**
   String get roleSupport;
+
+  /// No description provided for @idApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهوية موثّقة'**
+  String get idApproved;
+
+  /// No description provided for @idPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهوية تحت المراجعة'**
+  String get idPending;
+
+  /// No description provided for @idMoreInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب استكمال بيانات الهوية'**
+  String get idMoreInfo;
+
+  /// No description provided for @idRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'اترفض توثيق الهوية'**
+  String get idRejected;
+
+  /// No description provided for @idIncomplete.
+  ///
+  /// In ar, this message translates to:
+  /// **'الهوية لسه مش موثّقة'**
+  String get idIncomplete;
+
+  /// No description provided for @identityTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'توثيق الهوية'**
+  String get identityTitle;
+
+  /// No description provided for @identityWhy.
+  ///
+  /// In ar, this message translates to:
+  /// **'توثيق البطاقة مطلوب قبل البيع وبعض العمليات المالية. فريق أضمن بيراجع الصور، والرقم القومي بيتخزن مشفّر ومش بيظهر تاني.'**
+  String get identityWhy;
+
+  /// No description provided for @identityLast4.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر 4 أرقام: {last4}'**
+  String identityLast4(Object last4);
+
+  /// No description provided for @legalNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم الكامل كما في البطاقة (ثلاثي)'**
+  String get legalNameHint;
+
+  /// No description provided for @nationalIdHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرقم القومي (14 رقم)'**
+  String get nationalIdHint;
+
+  /// No description provided for @idFront.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة البطاقة (الوجه)'**
+  String get idFront;
+
+  /// No description provided for @idBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة البطاقة (الظهر)'**
+  String get idBack;
+
+  /// No description provided for @pickImage.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار صورة'**
+  String get pickImage;
+
+  /// No description provided for @pickDocument.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار صورة أو PDF'**
+  String get pickDocument;
+
+  /// No description provided for @submitForReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال للمراجعة'**
+  String get submitForReview;
+
+  /// No description provided for @sentForReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتبعت للمراجعة'**
+  String get sentForReview;
+
+  /// No description provided for @becomeSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ البيع على أضمن'**
+  String get becomeSeller;
+
+  /// No description provided for @becomeSellerBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتح متجرك: اختار نوع البائع، وثّق هويتك، ضيف بيانات المتجر والمستندات وحساب استلام الأموال، وبعدها فريق أضمن بيراجع الطلب.'**
+  String get becomeSellerBody;
+
+  /// No description provided for @checklist.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطوات الطلب'**
+  String get checklist;
+
+  /// No description provided for @sellerTermsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'بإرسال الطلب أنت موافق على اتفاقية البائع والعمولات وسياسات أضمن السارية.'**
+  String get sellerTermsNote;
+
+  /// No description provided for @ownerDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات صاحب المتجر'**
+  String get ownerDetails;
+
+  /// No description provided for @businessDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات النشاط'**
+  String get businessDetails;
+
+  /// No description provided for @storeDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات المتجر'**
+  String get storeDetails;
+
+  /// No description provided for @payoutAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'حساب استلام الأموال'**
+  String get payoutAccount;
+
+  /// No description provided for @documents.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستندات'**
+  String get documents;
+
+  /// No description provided for @sellerIndividual.
+  ///
+  /// In ar, this message translates to:
+  /// **'فرد'**
+  String get sellerIndividual;
+
+  /// No description provided for @sellerBusiness.
+  ///
+  /// In ar, this message translates to:
+  /// **'شركة / نشاط تجاري'**
+  String get sellerBusiness;
+
+  /// No description provided for @startApplication.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ الطلب'**
+  String get startApplication;
+
+  /// No description provided for @acceptSellerAgreement.
+  ///
+  /// In ar, this message translates to:
+  /// **'أوافق على اتفاقية البائع'**
+  String get acceptSellerAgreement;
+
+  /// No description provided for @readAgreement.
+  ///
+  /// In ar, this message translates to:
+  /// **'اقرأ الاتفاقية'**
+  String get readAgreement;
+
+  /// No description provided for @applicationIncomplete.
+  ///
+  /// In ar, this message translates to:
+  /// **'كمّل كل الخطوات ووثّق هويتك الأول'**
+  String get applicationIncomplete;
+
+  /// No description provided for @businessName.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم القانوني للنشاط'**
+  String get businessName;
+
+  /// No description provided for @commercialRegistration.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم السجل التجاري'**
+  String get commercialRegistration;
+
+  /// No description provided for @taxRegistration.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم البطاقة الضريبية'**
+  String get taxRegistration;
+
+  /// No description provided for @businessAddress.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان النشاط'**
+  String get businessAddress;
+
+  /// No description provided for @authorizedRepresentative.
+  ///
+  /// In ar, this message translates to:
+  /// **'الممثل القانوني'**
+  String get authorizedRepresentative;
+
+  /// No description provided for @storeName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المتجر'**
+  String get storeName;
+
+  /// No description provided for @storeDescription.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصف المتجر'**
+  String get storeDescription;
+
+  /// No description provided for @returnAddress.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان الإرجاع'**
+  String get returnAddress;
+
+  /// No description provided for @supportPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم خدمة العملاء (اختياري)'**
+  String get supportPhone;
+
+  /// No description provided for @storeLogo.
+  ///
+  /// In ar, this message translates to:
+  /// **'شعار المتجر (اختياري)'**
+  String get storeLogo;
+
+  /// No description provided for @upload.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفع'**
+  String get upload;
+
+  /// No description provided for @holderName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم صاحب الحساب'**
+  String get holderName;
+
+  /// No description provided for @walletProvider.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزود المحفظة'**
+  String get walletProvider;
+
+  /// No description provided for @mobileWallet.
+  ///
+  /// In ar, this message translates to:
+  /// **'محفظة موبايل'**
+  String get mobileWallet;
+
+  /// No description provided for @payoutAccountNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'فريق أضمن بيتحقق من الحساب قبل أي تحويل.'**
+  String get payoutAccountNote;
+
+  /// No description provided for @addProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة منتج'**
+  String get addProduct;
+
+  /// No description provided for @productNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المنتج'**
+  String get productNameHint;
+
+  /// No description provided for @category.
+  ///
+  /// In ar, this message translates to:
+  /// **'القسم'**
+  String get category;
+
+  /// No description provided for @editProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل المنتج'**
+  String get editProduct;
+
+  /// No description provided for @moderationNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة المراجعة'**
+  String get moderationNote;
+
+  /// No description provided for @revisionPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'في تعديل تحت المراجعة'**
+  String get revisionPending;
+
+  /// No description provided for @beforeSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل الإرسال للمراجعة'**
+  String get beforeSubmit;
+
+  /// No description provided for @photos.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصور'**
+  String get photos;
+
+  /// No description provided for @tapToAdd.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط للإضافة'**
+  String get tapToAdd;
+
+  /// No description provided for @priceAndStock.
+  ///
+  /// In ar, this message translates to:
+  /// **'السعر والمخزون'**
+  String get priceAndStock;
+
+  /// No description provided for @setPrice.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدد السعر والكمية'**
+  String get setPrice;
+
+  /// No description provided for @addVariant.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة نوع (مقاس / لون)'**
+  String get addVariant;
+
+  /// No description provided for @productReturnCustom.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة خاصة: إرجاع خلال {days} يوم'**
+  String productReturnCustom(int days);
+
+  /// No description provided for @productReturnStoreDefault.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة المتجر الافتراضية'**
+  String get productReturnStoreDefault;
+
+  /// No description provided for @returnPolicyNotSet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لسه ما اتحددتش سياسة الإرجاع'**
+  String get returnPolicyNotSet;
+
+  /// No description provided for @hideProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء المنتج من المتجر'**
+  String get hideProduct;
+
+  /// No description provided for @showProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار المنتج في المتجر'**
+  String get showProduct;
+
+  /// No description provided for @viewAsBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كمشتري'**
+  String get viewAsBuyer;
+
+  /// No description provided for @keyFeaturesHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مميزات المنتج (سطر لكل ميزة)'**
+  String get keyFeaturesHint;
+
+  /// No description provided for @variantLabelHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'النوع (مثلاً: أسود / 128GB)'**
+  String get variantLabelHint;
+
+  /// No description provided for @priceEgp.
+  ///
+  /// In ar, this message translates to:
+  /// **'السعر (ج.م)'**
+  String get priceEgp;
+
+  /// No description provided for @compareAtEgp.
+  ///
+  /// In ar, this message translates to:
+  /// **'السعر قبل الخصم (اختياري)'**
+  String get compareAtEgp;
+
+  /// No description provided for @customReturnPolicy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة إرجاع خاصة بالمنتج'**
+  String get customReturnPolicy;
+
+  /// No description provided for @acceptsReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيقبل الإرجاع الاختياري'**
+  String get acceptsReturns;
+
+  /// No description provided for @processingDaysHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أيام التجهيز'**
+  String get processingDaysHint;
+
+  /// No description provided for @returnDaysHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدة الإرجاع (أيام)'**
+  String get returnDaysHint;
+
+  /// No description provided for @shippingRates.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن حسب المحافظة'**
+  String get shippingRates;
+
+  /// No description provided for @checkRates.
+  ///
+  /// In ar, this message translates to:
+  /// **'راجع الأرقام قبل الحفظ'**
+  String get checkRates;
+
+  /// No description provided for @shippingRatesNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'فعّل المحافظات اللي بتشحن لها وحدد رسوم ومدة التوصيل. المشتري بيشوف الرسوم دي في السلة.'**
+  String get shippingRatesNote;
+
+  /// No description provided for @feeEgp.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسوم'**
+  String get feeEgp;
+
+  /// No description provided for @etaMin.
+  ///
+  /// In ar, this message translates to:
+  /// **'من (يوم)'**
+  String get etaMin;
+
+  /// No description provided for @etaMax.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلى (يوم)'**
+  String get etaMax;
+
+  /// No description provided for @storeSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات المتجر'**
+  String get storeSettings;
+
+  /// No description provided for @payoutRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات السحب'**
+  String get payoutRequests;
+
+  /// No description provided for @requestPayout.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب سحب'**
+  String get requestPayout;
+
+  /// No description provided for @payoutHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل الطلبات'**
+  String get payoutHistory;
+
+  /// No description provided for @noPayouts.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طلبات سحب'**
+  String get noPayouts;
+
+  /// No description provided for @payoutRequestNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب السحب بيتراجع من شخصين في فريق أضمن قبل التحويل. التطبيق مش بيحوّل فلوس.'**
+  String get payoutRequestNote;
+
+  /// No description provided for @payoutUnderReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحت المراجعة'**
+  String get payoutUnderReview;
+
+  /// No description provided for @payoutProcessing.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التنفيذ'**
+  String get payoutProcessing;
+
+  /// No description provided for @payoutPaid.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التحويل'**
+  String get payoutPaid;
+
+  /// No description provided for @payoutUncertain.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التحقق من التحويل'**
+  String get payoutUncertain;
+
+  /// No description provided for @payoutRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get payoutRejected;
+
+  /// No description provided for @payoutNotTransferred.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم التحويل'**
+  String get payoutNotTransferred;
+
+  /// No description provided for @payoutUncertainNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش واضح لسه إذا التحويل وصل. فريق أضمن بيتحقق، ومحدش هيعيد التحويل قبل التأكد.'**
+  String get payoutUncertainNote;
+
+  /// No description provided for @paidReference.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرجع التحويل: {ref}'**
+  String paidReference(Object ref);
+
+  /// No description provided for @cancelRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الطلب'**
+  String get cancelRequest;
+
+  /// No description provided for @cancelPayoutConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلغي طلب السحب ده؟'**
+  String get cancelPayoutConfirm;
+
+  /// No description provided for @maxWithdrawable.
+  ///
+  /// In ar, this message translates to:
+  /// **'أقصى مبلغ متاح: {amount}'**
+  String maxWithdrawable(Object amount);
+
+  /// No description provided for @amountEgp.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ (ج.م)'**
+  String get amountEgp;
+
+  /// No description provided for @transferCost.
+  ///
+  /// In ar, this message translates to:
+  /// **'تكلفة التحويل'**
+  String get transferCost;
+
+  /// No description provided for @youReceive.
+  ///
+  /// In ar, this message translates to:
+  /// **'هتستلم'**
+  String get youReceive;
+
+  /// No description provided for @reviewAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراجعة المبلغ'**
+  String get reviewAmount;
+
+  /// No description provided for @sendRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الطلب'**
+  String get sendRequest;
+
+  /// No description provided for @payoutRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتبعت طلب السحب للمراجعة'**
+  String get payoutRequested;
+
+  /// No description provided for @payoutAlreadyRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب ده متسجل بالفعل'**
+  String get payoutAlreadyRequested;
+
+  /// No description provided for @continueApplication.
+  ///
+  /// In ar, this message translates to:
+  /// **'كمّل طلب البائع'**
+  String get continueApplication;
 }
 
 class _EdmnLocalizationsDelegate
