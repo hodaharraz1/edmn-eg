@@ -7,6 +7,15 @@ import { buildOpenApi } from '@/server/api/openapi';
 import { ADMIN_API_ROUTES, ALL_API_ROUTES, MOBILE_API_ROUTES } from '@/server/api/routes';
 
 /** The committed OpenAPI documents are the reviewed contract: they must equal what the route definitions generate. */
+/** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
+const BUYER_WRITES = new Set([
+  'updateMe', 'changePassword', 'forgotPassword', 'resetPassword', 'sendVerificationCode', 'confirmVerificationCode',
+  'createAddress', 'updateAddress', 'deleteAddress',
+  'addCartItem', 'setCartItemQuantity', 'acknowledgeCartPrices',
+  'placeOrder', 'cancelUnpaidOrder', 'confirmReceipt', 'requestCancellation', 'reportOrderProblem',
+  'submitPaymentProof',
+]);
+
 describe('mobile API contract (OpenAPI 3.1)', () => {
   for (const api of ['mobile', 'admin'] as const) {
     it(`openapi/${api}.v1.json is up to date (run: npx tsx scripts/openapi.ts)`, () => {
@@ -46,8 +55,25 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
 
   it('Phase 1 exposes no money-moving or privileged financial operation', () => {
     for (const r of ALL_API_ROUTES) expect(r.path).not.toMatch(/withdraw|settle|payout|refund|release|ledger|journal|real-?money|kill-?switch/i);
+    // Every state-changing operation is listed here BY ID: a new write route fails this test until it is reviewed
+    // and added on purpose. None of them moves money: proof upload only queues a TEST payment for staff review,
+    // confirm-receipt only records the buyer's confirmation (release stays Maker/Checker in the admin console).
+    const ALLOWED_WRITES = new Set([
+      // auth / account / security (Phase 1)
+      ...ALL_API_ROUTES.filter((r) => r.method !== 'GET' && /Auth|Account|Security/.test(r.tags.join(' ')) && !BUYER_WRITES.has(r.id)).map((r) => r.id),
+      ...BUYER_WRITES,
+    ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
-    for (const r of writes) expect(r.tags.join(' ')).toMatch(/Auth|Account|Security/);
+    for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
+    for (const r of writes.filter((w) => BUYER_WRITES.has(w.id))) {
+      expect(r.api, r.id).toBe('mobile');
+      // Identity always comes from the session, never from the client.
+      expect(['customer', 'none'], r.id).toContain(r.auth);
+      if (r.auth === 'none') expect(r.tags, r.id).toContain('Auth');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
+    }
+    for (const r of writes) expect(r.auth, r.id).not.toBe('optional-customer');
   });
 
   it('every documented error code is a stable snake_case code from the catalogue', () => {
