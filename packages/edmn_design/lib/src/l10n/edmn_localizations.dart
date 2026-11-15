@@ -2837,13 +2837,13 @@ abstract class EdmnLocalizations {
   /// No description provided for @etaMin.
   ///
   /// In ar, this message translates to:
-  /// **'من (يوم)'**
+  /// **'من'**
   String get etaMin;
 
   /// No description provided for @etaMax.
   ///
   /// In ar, this message translates to:
-  /// **'إلى (يوم)'**
+  /// **'إلى'**
   String get etaMax;
 
   /// No description provided for @storeSettings.

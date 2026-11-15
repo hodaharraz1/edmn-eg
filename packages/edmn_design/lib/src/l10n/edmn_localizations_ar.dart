@@ -1465,10 +1465,10 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get feeEgp => 'الرسوم';
 
   @override
-  String get etaMin => 'من (يوم)';
+  String get etaMin => 'من';
 
   @override
-  String get etaMax => 'إلى (يوم)';
+  String get etaMax => 'إلى';
 
   @override
   String get storeSettings => 'إعدادات المتجر';

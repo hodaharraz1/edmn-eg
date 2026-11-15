@@ -50,38 +50,38 @@ Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reu
 | B41 | Buyer rating | — | Missing | createProductReview/createSellerReview (no mobile route) | — | — |
 | B42 | Transaction result | inline notices | Merged | — | — | — |
 | S01 | Become a seller | /seller (not-a-seller) | Implemented | me/seller | widget | — |
-| S02 | Seller registration | — | Missing | startApplication/saveBusiness (no mobile route) | — | — |
-| S03 | Seller KYC | — | Missing | saveIdentity/uploadSellerDocument | — | — |
-| S04 | Store creation | — | Missing | saveStore | — | — |
-| S05 | Store branding | — | Missing | saveStore logo | — | — |
-| S06 | Application status | /seller (status) | Implemented | me/seller | — | — |
-| S07 | Terms acceptance | — | Missing | submitApplication | — | — |
+| S02 | Seller registration | /seller/apply | Implemented | startApplication/saveBusiness via /seller/application* | backend flow | yes |
+| S03 | Seller KYC | /account/identity + application identity | Implemented | /me/identity, PUT /seller/application/identity | backend flow | yes |
+| S04 | Store creation | /seller/apply (store step) | Implemented | POST /seller/application/store | backend flow | — |
+| S05 | Store branding | /seller/apply (logo) | Merged | store logo multipart (banner: web only) | — | — |
+| S06 | Application status | /seller, /seller/apply | Implemented | /me/seller, /seller/application | widget | yes |
+| S07 | Terms acceptance | /seller/apply (submit) | Implemented | POST /seller/application/submit | backend flow | — |
 | S08 | Seller dashboard | /seller | Implemented | seller/home | widget+backend | yes |
-| S09 | Store profile | — | Missing | updateStoreSettings | — | — |
-| S10 | Store settings | — | Missing | updateStoreSettings | — | — |
+| S09 | Store profile | /seller/store | Implemented | GET/PUT /seller/store | backend flow | yes |
+| S10 | Store settings | /seller/store | Merged | storeSettings | backend flow | yes |
 | S11 | Products list | /seller/products | Implemented | seller/products | backend | yes |
-| S12 | Add product | — | Missing | createDraft | — | — |
-| S13 | Product images | — | Missing | addImages/removeImage | — | — |
-| S14 | Category selection | — | Missing | categories | — | — |
-| S15 | Product details form | — | Missing | updateDetails | — | — |
-| S16 | Pricing | — | Missing | saveVariants | — | — |
-| S17 | Variants | — | Missing | saveVariants | — | — |
+| S12 | Add product | /seller/products/new | Implemented | POST /seller/products | backend flow | yes |
+| S13 | Product images | /seller/products/:id/edit (photos) | Implemented | POST/DELETE …/images | backend flow | yes |
+| S14 | Category selection | /seller/products/new (category) | Implemented | catalog categories + attributes | backend flow | yes |
+| S15 | Product details form | /seller/products/:id/edit (details) | Implemented | PUT …/details | backend flow | yes |
+| S16 | Pricing | /seller/products/:id/edit (price) | Implemented | PUT …/variants | backend flow | yes |
+| S17 | Variants | /seller/products/:id/edit (variants) | Implemented | PUT …/variants | backend flow | yes |
 | S18 | Inventory | /seller/products stock | Implemented | seller/variants/{id}/stock | backend | yes |
-| S19 | Product preview | — | Missing | productForSellerEdit | — | — |
-| S20 | Approval status | /seller/products chips | Merged | seller/products | — | yes |
-| S21 | Edit product | — | Missing | updateDetails/logistics | — | — |
-| S22 | Availability | — | Missing | setListingActive | — | — |
-| S23 | Shipping governorates | — | Missing | setShippingRates | — | — |
-| S24 | Shipping rates | — | Missing | setShippingRates | — | — |
-| S25 | Return policy | — | Missing | updateStoreSettings/logistics | — | — |
+| S19 | Product preview | editor "عرض كمشتري" + submission problems | Merged | GET /seller/products/{id} | backend flow | yes |
+| S20 | Approval status | /seller/products, editor status | Implemented | GET /seller/products/{id} | backend flow | yes |
+| S21 | Edit product | /seller/products/:id/edit | Implemented | details/logistics/variants | backend flow | yes |
+| S22 | Availability | editor show/hide | Implemented | POST …/visibility | backend flow | yes |
+| S23 | Shipping governorates | /seller/shipping | Implemented | GET/PUT /seller/shipping-rates | backend flow | yes |
+| S24 | Shipping rates | /seller/shipping | Implemented | PUT /seller/shipping-rates | backend flow | yes |
+| S25 | Return policy | /seller/store + editor return policy | Implemented | PUT /seller/store, …/logistics | backend flow | yes |
 | S26 | Seller orders | /seller/orders | Implemented | seller/orders | backend | yes |
 | S27 | Seller order details | /seller/orders/:id | Implemented | seller/orders/{id} | widget+backend | yes |
 | S28 | Fulfilment | /seller/orders/:id steps | Implemented | seller/orders/{id}/steps | widget+backend | yes |
 | S29 | Shipping proof | /seller/orders/:id shipment | Implemented | seller/orders/{id}/shipment | backend | — |
 | S30 | Returns & disputes | — | Missing | returnsForSeller/disputesAsRespondent | — | — |
 | S31 | Earnings | /seller/funds | Implemented | seller/funds | backend | yes |
-| S32 | Withdrawal request | — | Missing | requestWithdrawal (owner approved request-only in §20) | — | — |
-| S33 | Withdrawal history | — | Missing | sellerWithdrawals | — | — |
+| S32 | Withdrawal request | /seller/payouts (request sheet) | Implemented | POST /seller/payout-requests(+preview) | backend flow + widget | yes |
+| S33 | Withdrawal history | /seller/payouts | Implemented | GET /seller/payout-requests, cancel | backend flow + widget | yes |
 | D01 | Deal hub | /deals stub | Missing | dealsForUser | — | — |
 | D02 | How it works | — | Missing | static | — | — |
 | D03 | Choose role | — | Missing | createDeal | — | — |
@@ -114,7 +114,7 @@ Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reu
 | D30 | Deposit instructions | — | Blocked by Business Decision | no deposit service | — | — |
 | D31 | Deposit proof | — | Blocked by Business Decision | no deposit service | — | — |
 | D32 | Withdrawal | — | Missing | requestAccountWithdrawal/requestWithdrawal | — | — |
-| D33 | Payout accounts | — | Missing | addPayoutMethod | — | — |
+| D33 | Payout accounts | /seller/apply payout account | Merged | POST /seller/application/payout-account (seller); buyer payout accounts: no API | backend flow | — |
 | D34 | Wallet transfer | — | Blocked by Business Decision | no wallet-to-wallet service | — | — |
 | D35 | Wallet result | — | Missing | — | — | — |
 | C01 | Inbox | — | Missing | listForUser/listForSeller | — | — |

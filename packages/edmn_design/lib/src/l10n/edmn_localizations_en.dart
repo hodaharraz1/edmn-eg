@@ -1477,10 +1477,10 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get feeEgp => 'Fee';
 
   @override
-  String get etaMin => 'Min days';
+  String get etaMin => 'Min';
 
   @override
-  String get etaMax => 'Max days';
+  String get etaMax => 'Max';
 
   @override
   String get storeSettings => 'Store settings';
