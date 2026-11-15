@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { SORTS } from '@/server/modules/catalog/search';
 import { publicCategoryTree, publicGovernorates, publicProductDetail, publicProductReviews, publicProductSearch, publicStoreView } from '@/server/modules/catalog/public-read';
-import { publicAppConfig, publicLegalDocument } from '@/server/modules/mobile/app-config';
+import { publicAppConfig, publicContentPage, publicLegalDocument } from '@/server/modules/mobile/app-config';
 import { ApiError } from '../errors';
 import { defineRoute } from '../http';
 import { category, page, productCard, productDetail, review, slug, storeView } from '../schemas';
@@ -191,4 +191,24 @@ export const legalDocument = defineRoute({
   },
 });
 
-export const publicRoutes = [appConfig, categories, governorates, searchProducts, productBySlug, productReviews, storeBySlug, legalDocument];
+export const contentPage = defineRoute({
+  id: 'getContentPage',
+  api: 'mobile',
+  method: 'GET',
+  path: '/api/v1/content/pages/{slug}',
+  summary: 'A published help / FAQ page from the admin CMS (plain text)',
+  tags: ['Content'],
+  auth: 'none',
+  rate: 'read',
+  cacheSeconds: 300,
+  errors: ['not_found'],
+  params: z.object({ slug: z.string().regex(/^[a-z0-9-]{2,60}$/) }),
+  response: z.object({ slug: z.string(), title: z.string(), body: z.string(), updatedAt: z.string().meta({ format: 'date-time' }) }),
+  handler: async ({ params }) => {
+    const p = await publicContentPage(params.slug);
+    if (!p) throw new ApiError('not_found');
+    return p;
+  },
+});
+
+export const publicRoutes = [appConfig, categories, governorates, searchProducts, productBySlug, productReviews, storeBySlug, legalDocument, contentPage];

@@ -2098,4 +2098,13 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String maxAttachments(int count) {
     return 'تقدر ترفق $count ملفات بالكتير';
   }
+
+  @override
+  String get faq => 'الأسئلة الشائعة';
+
+  @override
+  String get returnsPolicy => 'سياسة الإرجاع';
+
+  @override
+  String get protectedDealTerms => 'شروط أضمن صفقة';
 }

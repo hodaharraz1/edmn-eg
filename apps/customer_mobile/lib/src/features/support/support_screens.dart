@@ -12,6 +12,7 @@ import '../messages/messages_screens.dart' show fileBytesProvider;
 /// Help & support (C09–C16): my tickets, a new ticket (optionally about one of my orders / deals / payments), the
 /// ticket thread with replies, reopen and rating — each offered only when the server lists it. Staff appear as
 /// «فريق أضمن»; internal notes never reach the app.
+final contentPageProvider = FutureProvider.autoDispose.family<GetContentPageResponse, String>((ref, slug) => ref.watch(mobileApiProvider).contentPage(slug));
 final ticketsProvider = FutureProvider.autoDispose<ListSupportTicketsResponse>((ref) => ref.watch(mobileApiProvider).supportTickets());
 final ticketProvider = FutureProvider.autoDispose.family<GetSupportTicketResponse, String>((ref, id) => ref.watch(mobileApiProvider).supportTicket(id));
 
@@ -65,6 +66,12 @@ class SupportScreen extends ConsumerWidget {
           const SizedBox(height: EdmnSpacing.md),
           EdmnPrimaryButton(key: const Key('new-ticket'), label: t.newTicket, icon: Icons.add_rounded, onPressed: () => context.push('/support/new')),
           const SizedBox(height: EdmnSpacing.xs),
+          EdmnMenuGroup(children: [
+            EdmnMenuItem(key: const Key('faq'), icon: Icons.quiz_outlined, title: t.faq, onTap: () => context.push('/pages/faq')),
+            EdmnMenuItem(icon: Icons.assignment_return_outlined, title: t.returnsPolicy, onTap: () => context.push('/legal/returns')),
+            EdmnMenuItem(icon: Icons.verified_user_outlined, title: t.protectedDealTerms, onTap: () => context.push('/legal/protected-deal-terms')),
+          ]),
+          const SizedBox(height: EdmnSpacing.md),
           EdmnSecondaryButton(key: const Key('open-messages'), label: t.messages, icon: Icons.chat_bubble_outline_rounded, onPressed: () => context.push('/messages')),
           const SizedBox(height: EdmnSpacing.lg),
           EdmnSectionHeader(title: t.myTickets),
@@ -360,5 +367,27 @@ class _RateFormState extends State<_RateForm> {
       const SizedBox(height: EdmnSpacing.md),
       EdmnPrimaryButton(key: const Key('rate-submit'), label: t.send, onPressed: () => Navigator.pop(context, (_stars, _c.text.trim()))),
     ]);
+  }
+}
+
+/// C10: a help page from the admin CMS. When EDMN has not published it, the server says so (not found) and the app
+/// shows that — never invented questions and answers.
+class ContentPageScreen extends ConsumerWidget {
+  const ContentPageScreen({super.key, required this.slug});
+  final String slug;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final page = ref.watch(contentPageProvider(slug));
+    return EdmnAppScaffold(
+      title: page.value?.title ?? EdmnLocalizations.of(context).faq,
+      body: AsyncView(
+        value: page,
+        onRetry: () => ref.invalidate(contentPageProvider(slug)),
+        data: (p) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
+          Text(p.body, style: EdmnType.body.copyWith(color: EdmnColors.textPrimary, height: 1.8)),
+        ]),
+      ),
+    );
   }
 }

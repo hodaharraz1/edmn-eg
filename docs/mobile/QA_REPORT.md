@@ -71,3 +71,18 @@ Defects found by the screenshot pass and fixed: the offer money was read from a 
 total); the seller saw «عرض بانتظار ردك» on the buyer's turn; terms history showed a raw `PROPOSED` and «أنت البائع» to
 the buyer; the delivery-code sheet rebuilt its provider on every frame (endless reload); a cached deal kept old actions
 after navigating back.
+
+## Phase 3: messaging and support
+
+| Check | Result |
+|---|---|
+| Backend `tsc`, `eslint`, `openapi --check` | pass |
+| Vitest | 785/785 |
+| Flow D / Flow E integration (`mobile-messaging-api.test.ts`) | pass; see `CHAT_ARCHITECTURE.md` |
+| Flutter customer widget tests | 24/24 |
+| Real screenshots (local isolated backend) | `docs/mobile/screenshots/messaging/`: inbox, buyer and seller views of a deal conversation, report sheet, support home, new ticket prefilled from a deal, ticket with a staff reply |
+| HawkScan | NOT RUN (no HAWK_API_KEY) |
+
+Defects found and fixed: `EdmnSkeletonList` crashed when shown inside a scrolling page (an unbounded viewport) while a
+list was loading; a failed send showed two error messages and hid the retry button; the chat composer was a fixed
+4-line box (it now grows from one line).

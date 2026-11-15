@@ -289,7 +289,7 @@ class _Composer extends StatelessWidget {
               ]),
             Row(children: [
               IconButton(key: const Key('attach'), tooltip: t.attachFile, icon: const Icon(Icons.attach_file_rounded), color: EdmnColors.primary, onPressed: sending ? null : onPick),
-              Expanded(child: EdmnTextField(key: const Key('message-input'), controller: text, hint: t.typeMessage, maxLines: 4, maxLength: 2000)),
+              Expanded(child: EdmnTextField(key: const Key('message-input'), controller: text, hint: t.typeMessage, minLines: 1, maxLines: 4, maxLength: 2000)),
               const SizedBox(width: EdmnSpacing.xs),
               IconButton.filled(
                 key: const Key('send'),

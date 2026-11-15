@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { POST as loginRoute } from '@/app/api/v1/auth/login/route';
+import { GET as contentPageRoute } from '@/app/api/v1/content/pages/[slug]/route';
 import { GET as orderRoute } from '@/app/api/v1/orders/[orderId]/route';
 import { GET as storeOrderRoute } from '@/app/api/v1/seller/orders/[sellerOrderId]/route';
 import { GET as threadRoute } from '@/app/api/v1/conversations/[conversationId]/route';
@@ -24,6 +25,7 @@ import { GET as ticketsRoute, POST as openTicketRoute } from '@/app/api/v1/suppo
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { journalEntries, sellerMembers } from '@/server/db/schema';
+import { savePage } from '@/server/modules/cms/service';
 import { replyToTicket, updateTicket } from '@/server/modules/support/service';
 import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, submitAndConfirm } from '../helpers/factory';
 
@@ -210,5 +212,16 @@ describe('Flow E — support tickets', () => {
     expect(reopened.body.allowedActions).toEqual(['REPLY']);
     // The ticket id alone grants nothing to another customer.
     expect((await call(replyRoute, `/support/tickets/${tid}/replies`, { token: ot, params: tp, idem: key(), form: (() => { const f = new FormData(); f.set('body', 'تدخل'); return f; })() })).status).toBeGreaterThanOrEqual(403);
+  });
+});
+
+describe('C10 — help pages come from the admin CMS', () => {
+  it('serves a published page as plain text and 404s otherwise (no invented FAQ)', async () => {
+    const slug = `faq-${key().slice(0, 6).toLowerCase().replace(/[^a-z0-9]/g, 'x')}`;
+    expect((await call(contentPageRoute, `/content/pages/${slug}`, { params: { slug } })).status).toBe(404);
+    await savePage(admin, null, { slug, title: 'الأسئلة الشائعة', body: 'إزاي أتابع طلبي؟\nمن «طلباتي».', isPublished: true });
+    const r = await call(contentPageRoute, `/content/pages/${slug}`, { params: { slug } });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body).toMatchObject({ slug, title: 'الأسئلة الشائعة' });
   });
 });

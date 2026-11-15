@@ -4051,6 +4051,24 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'تقدر ترفق {count} ملفات بالكتير'**
   String maxAttachments(int count);
+
+  /// No description provided for @faq.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأسئلة الشائعة'**
+  String get faq;
+
+  /// No description provided for @returnsPolicy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة الإرجاع'**
+  String get returnsPolicy;
+
+  /// No description provided for @protectedDealTerms.
+  ///
+  /// In ar, this message translates to:
+  /// **'شروط أضمن صفقة'**
+  String get protectedDealTerms;
 }
 
 class _EdmnLocalizationsDelegate

@@ -32,3 +32,10 @@ export async function publicLegalDocument(slug: string) {
   if (!d) return null;
   return { code, slug: LEGAL_CODES[code].slug, title: d.title, version: d.version, body: d.body, approved: d.status === 'APPROVED', updatedAt: d.updatedAt.toISOString() };
 }
+
+/** A published CMS page (help / FAQ / about), plain text as authored in the admin console; null when not published. */
+export async function publicContentPage(slug: string) {
+  const { pageBySlug } = await import('@/server/modules/cms/service');
+  const p = await pageBySlug(slug);
+  return p ? { slug: p.slug, title: p.title, body: p.body, updatedAt: p.updatedAt.toISOString() } : null;
+}

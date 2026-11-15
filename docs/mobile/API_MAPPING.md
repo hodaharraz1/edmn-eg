@@ -60,6 +60,18 @@ Identity always comes from the session; no route accepts a user/seller id. Money
 
 Not exposed, by design: release, refund, settlement, payout of deals (staff only).
 
+## Messaging & support (Phase 3)
+
+| Operation | Route (auth) | Service |
+|---|---|---|
+| inbox / unread / thread | GET /conversations, /conversations/unread, /conversations/{id} (customer); same under /seller/conversations (seller, orders.communicate) | listForUser / listForSeller, unreadForUser / unreadForSeller, participantThread |
+| send / seen / report | POST …/{id}/messages (multipart, clientKey), …/{id}/seen, …/messages/{messageId}/report | sendMessage, markRead, reportMessage |
+| open from context | POST /seller-orders/{id}/conversation (customer), /seller/orders/{id}/conversation (seller), /deals/{id}/conversation (customer) | openSellerOrderConversation, openDealConversation |
+| tickets | GET/POST /support/tickets, GET /support/tickets/{id}, POST …/replies, …/reopen, …/rating | myTickets, openTicket, ticketThread, replyToTicket, reopenTicket, rateTicket |
+| help pages | GET /content/pages/{slug} (public) | cms pageBySlug |
+
+See `CHAT_ARCHITECTURE.md`.
+
 ## Not yet exposed to mobile (needed for the remaining phases)
 
 Protected Deal (create, invitation, terms, accept, pay, evidence, delivery OTP, confirm), disputes/returns

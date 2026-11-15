@@ -130,6 +130,7 @@ class EdmnTextField extends StatefulWidget {
     this.onChanged,
     this.enabled = true,
     this.maxLines = 1,
+    this.minLines,
     this.autofillHints,
     this.label,
     this.maxLength,
@@ -147,6 +148,8 @@ class EdmnTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final bool enabled;
   final int maxLines;
+  /// When set, the field starts at this height and grows up to [maxLines] (chat composers).
+  final int? minLines;
   final int? maxLength;
   final Iterable<String>? autofillHints;
 
@@ -171,6 +174,7 @@ class _EdmnTextFieldState extends State<EdmnTextField> {
     onChanged: widget.onChanged,
     enabled: widget.enabled,
     maxLines: widget.obscure ? 1 : widget.maxLines,
+    minLines: widget.obscure ? null : widget.minLines,
     maxLength: widget.maxLength,
     autofillHints: widget.autofillHints,
     textDirection: widget.textDirection,

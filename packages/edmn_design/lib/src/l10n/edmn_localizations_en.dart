@@ -2119,4 +2119,13 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String maxAttachments(int count) {
     return 'You can attach up to $count files';
   }
+
+  @override
+  String get faq => 'FAQ';
+
+  @override
+  String get returnsPolicy => 'Returns policy';
+
+  @override
+  String get protectedDealTerms => 'Protected Deal terms';
 }

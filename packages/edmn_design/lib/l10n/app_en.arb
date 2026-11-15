@@ -675,5 +675,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "faq": "FAQ",
+  "returnsPolicy": "Returns policy",
+  "protectedDealTerms": "Protected Deal terms"
 }

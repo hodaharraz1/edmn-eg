@@ -840,5 +840,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "faq": "الأسئلة الشائعة",
+  "returnsPolicy": "سياسة الإرجاع",
+  "protectedDealTerms": "شروط أضمن صفقة"
 }

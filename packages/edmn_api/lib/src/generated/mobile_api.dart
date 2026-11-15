@@ -28,6 +28,7 @@ abstract final class MobileApiPaths {
   static const getCart = (method: 'GET', path: '/api/v1/cart');
   static const getCategoryAttributes = (method: 'GET', path: '/api/v1/catalog/categories/{categoryId}/attributes');
   static const getCheckout = (method: 'GET', path: '/api/v1/checkout');
+  static const getContentPage = (method: 'GET', path: '/api/v1/content/pages/{slug}');
   static const getConversation = (method: 'GET', path: '/api/v1/conversations/{conversationId}');
   static const getDeal = (method: 'GET', path: '/api/v1/deals/{dealId}');
   static const getDealDeliveryCode = (method: 'GET', path: '/api/v1/deals/{dealId}/delivery-code');
@@ -789,6 +790,22 @@ class GetCategoryAttributesResponseItemsItemOptionsItem {
   final String labelAr;
 
   Map<String, dynamic> toJson() => {'value': value, 'labelAr': labelAr};
+}
+
+class GetContentPageResponse {
+  const GetContentPageResponse({required this.slug, required this.title, required this.body, required this.updatedAt});
+
+  factory GetContentPageResponse.fromJson(Map<String, dynamic> json) => GetContentPageResponse(slug: json['slug'] as String, title: json['title'] as String, body: json['body'] as String, updatedAt: json['updatedAt'] as String);
+
+  final String slug;
+
+  final String title;
+
+  final String body;
+
+  final String updatedAt;
+
+  Map<String, dynamic> toJson() => {'slug': slug, 'title': title, 'body': body, 'updatedAt': updatedAt};
 }
 
 class GetConversationResponse {

@@ -6,6 +6,7 @@ Status: **Implemented** (own route, wired, tested) · **Reused** · **Merged** (
 Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reused 1, Blocked by API 1, Blocked by Business Decision 5.
 
 After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5, Implemented 67, Merged 32, Missing 33, Reused 2.
+After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decision 5, Implemented 77, Merged 38, Missing 17, Reused 2.
 
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
@@ -119,22 +120,22 @@ After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5
 | D33 | Payout accounts | /seller/apply payout account | Merged | POST /seller/application/payout-account (seller); buyer payout accounts: no API | backend flow | — |
 | D34 | Wallet transfer | — | Blocked by Business Decision | no wallet-to-wallet service | — | — |
 | D35 | Wallet result | — | Missing | — | — | — |
-| C01 | Inbox | — | Missing | listForUser/listForSeller | — | — |
-| C02 | New conversation | — | Missing | openSellerOrderConversation/openDealConversation | — | — |
-| C03 | Chat | — | Missing | participantThread/sendMessage | — | — |
-| C04 | Attachments | — | Missing | sendMessage attachment | — | — |
-| C05 | Media viewer | — | Missing | files/{id} | — | — |
-| C06 | Chat details | — | Missing | participantThread | — | — |
-| C07 | Chat notifications | — | Missing | unreadForUser | — | — |
-| C08 | Report | — | Missing | reportMessage | — | — |
-| C09 | Help center | /support stub | Missing | — | — | — |
-| C10 | FAQ | — | Missing | CMS content | — | — |
-| C11 | Tickets list | — | Missing | myTickets | — | — |
-| C12 | Create ticket | — | Missing | openTicket | — | — |
-| C13 | Support chat | — | Missing | replyToTicket | — | — |
-| C14 | Support attachments | — | Missing | openTicket/replyToTicket | — | — |
-| C15 | Ticket detail | — | Missing | ticketThread | — | — |
-| C16 | Resolution | — | Missing | rateTicket/reopenTicket | — | — |
+| C01 | Inbox | /messages, /seller/messages | Implemented | GET /conversations, /seller/conversations | widget+backend | yes |
+| C02 | New conversation | «مراسلة البائع/المشتري» on order, seller order, deal | Implemented | POST /seller-orders/{id}/conversation, /seller/orders/{id}/conversation, /deals/{id}/conversation | backend | — |
+| C03 | Chat | /messages/:id, /seller/messages/:id | Implemented | GET thread, POST messages (clientKey), POST seen | widget+backend | yes |
+| C04 | Attachments | chat composer (≤3, image/PDF) | Merged | POST messages multipart | backend | — |
+| C05 | Media viewer | image tap → zoom dialog | Merged | GET /files/{id} (parties only) | backend | — |
+| C06 | Chat details | context header (order/deal link) in chat | Merged | thread.link / ref / title | widget | yes |
+| C07 | Chat notifications | unread badges in inbox | Merged | unread counts; device push → Phase 6 | backend | yes |
+| C08 | Report | long-press a message → sheet | Implemented | POST /conversations/messages/{id}/report | backend | yes |
+| C09 | Help center | /support | Implemented | GET /support/tickets | widget | yes |
+| C10 | FAQ | /pages/faq | Implemented | GET /content/pages/{slug} (admin CMS; 404 when not published) | backend | — |
+| C11 | Tickets list | /support «تذاكري» | Merged | GET /support/tickets | widget | yes |
+| C12 | Create ticket | /support/new (prefilled from order/deal) | Implemented | POST /support/tickets (own related id only) | backend | yes |
+| C13 | Support chat | /support/:id replies | Implemented | POST /support/tickets/{id}/replies | backend | yes |
+| C14 | Support attachments | new ticket / reply (1 file) | Merged | multipart attachment; GET /files/{id} | backend | — |
+| C15 | Ticket detail | /support/:id | Implemented | GET /support/tickets/{id} (no internal notes, staff unnamed) | widget+backend | yes |
+| C16 | Resolution | /support/:id rate / reopen | Implemented | POST rating, POST reopen | widget+backend | — |
 | C17 | Disputes list | — | Missing | disputesForUser | — | — |
 | C18 | Open dispute | — | Missing | openDispute | — | — |
 | C19 | Dispute evidence | — | Missing | addDisputeMessage | — | — |

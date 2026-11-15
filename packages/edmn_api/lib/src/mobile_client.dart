@@ -26,6 +26,9 @@ class MobileApi {
         'pageSize': pageSize,
       }));
   Future<List<ListGovernoratesResponseItemsItem>> governorates() async => ListGovernoratesResponse.fromJson(await client.getJson(MobileApiPaths.listGovernorates.path)).items;
+  /// Help / FAQ page authored in the admin CMS (404 when not published).
+  Future<GetContentPageResponse> contentPage(String slug) async =>
+      GetContentPageResponse.fromJson(await client.getJson(fillPath(MobileApiPaths.getContentPage.path, {'slug': slug})));
   Future<LegalDocument> legalDocument(String slug) async => LegalDocument.fromJson(await client.getJson(fillPath(MobileApiPaths.getLegalDocument.path, {'slug': slug})));
   Future<ProductDetail> product(String slug) async => ProductDetail.fromJson(await client.getJson(fillPath(MobileApiPaths.getProduct.path, {'slug': slug})));
   Future<ListProductReviewsResponse> productReviews(String slug) async =>

@@ -98,6 +98,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/support/new',
         builder: (c, s) => NewTicketScreen(type: s.uri.queryParameters['type'], relatedType: s.uri.queryParameters['relatedType'], relatedId: s.uri.queryParameters['relatedId']),
       ),
+      GoRoute(path: '/pages/:slug', builder: (c, s) => ContentPageScreen(slug: s.pathParameters['slug']!)),
       GoRoute(path: '/support/:id', builder: (c, s) => TicketScreen(id: s.pathParameters['id']!)),
     ],
   );
