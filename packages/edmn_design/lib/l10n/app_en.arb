@@ -678,5 +678,148 @@
   },
   "faq": "FAQ",
   "returnsPolicy": "Returns policy",
-  "protectedDealTerms": "Protected Deal terms"
+  "protectedDealTerms": "Protected Deal terms",
+  "accountHolderMustMatch": "The account holder must match your verified identity.",
+  "accountNeedsInfo": "More info needed",
+  "accountNumberHint": "Account number (optional with IBAN)",
+  "accountRejected": "Rejected",
+  "accountSubmitted": "Sent for review. It becomes usable once EDMN verifies it.",
+  "accountUnderReview": "Under review",
+  "accountVerified": "Verified",
+  "activityTestNotice": "Test transaction: real money is off and nothing was transferred.",
+  "addReceivingAccount": "Add receiving account",
+  "amountEgpHint": "Amount in EGP",
+  "amountInvalid": "Enter a valid amount (up to 2 decimals)",
+  "availableToWithdraw": "Available to withdraw",
+  "balanceAvailable": "Available",
+  "balanceAvailableHint": "You can request it now",
+  "balanceAwaitingRelease": "Due, awaiting release",
+  "balanceAwaitingReleaseHint": "Buyer confirmed; EDMN is approving the release",
+  "balanceBreakdown": "Balance details",
+  "balanceBySource": "By source",
+  "balanceClaims": "Open claims",
+  "balanceClaimsHint": "Dispute/return claims not covered by funds — not money",
+  "balanceDebt": "Debt",
+  "balanceDebtHint": "Must be settled before any payout",
+  "balanceHeld": "Held",
+  "balanceHeldHint": "Due to a dispute or review — not withdrawable",
+  "balancePaidOut": "Paid out to you",
+  "balancePending": "Pending",
+  "balancePendingHint": "Paid; still in delivery or buyer response window",
+  "balanceReserved": "Reserved for a payout",
+  "balanceReservedHint": "An approved payout being transferred",
+  "bankNameHint": "Bank name",
+  "checkAmount": "Check amount",
+  "dateLabel": "Date",
+  "destDealsOnly": "Protected Deal earnings only",
+  "destStoreAndDeals": "Store account: store + deals",
+  "destinationLabel": "Destination",
+  "edmnFees": "EDMN fees",
+  "filterPayments": "Payments",
+  "filterPayouts": "Payouts",
+  "filterRefunds": "Refunds",
+  "financialStatement": "Statement",
+  "fundsByOrder": "Funds by order or deal",
+  "holderNameFull": "Account holder full name",
+  "ibanHint": "IBAN (EG + 27 digits)",
+  "ledgerEntries": "Entries",
+  "methodBank": "Bank transfer",
+  "methodInstapay": "InstaPay",
+  "methodLabel": "Method",
+  "methodWallet": "Mobile wallet",
+  "noActivity": "No activity yet",
+  "noPayoutRequests": "No payout requests",
+  "noPrepaidBalance": "EDMN keeps no prepaid balance: you pay per order or deal, and refunds go back to the original payment method.",
+  "noReceivingAccounts": "No receiving accounts",
+  "noteLabel": "Note",
+  "openFromHistory": "Open the transaction from the history",
+  "payoutBlockDebt": "You have a debt that must be settled before any payout.",
+  "payoutBlockIdentity": "Verify your identity before requesting a payout.",
+  "payoutBlockNoAccount": "Add a receiving account and wait for verification first.",
+  "payoutBlockNothing": "Nothing is available to withdraw right now.",
+  "payoutDestination": "Pay out to",
+  "payoutDoesNotFit": "The amount exceeds what is available for this destination.",
+  "payoutPreviewNote": "Server estimate; the final split is set at approval.",
+  "payoutRequestAlreadySent": "This request was already recorded",
+  "payoutRequestSent": "Payout request received",
+  "payoutTestNotice": "Test request: real money is off; nothing will be transferred.",
+  "receivingAccounts": "Receiving accounts",
+  "receivingAccountsNote": "Every new account is reviewed by EDMN before it can receive money.",
+  "recentActivity": "Recent activity",
+  "referenceNumber": "Reference",
+  "refundsTotal": "Refunds",
+  "removeAccount": "Remove account",
+  "removeAccountConfirm": "You will not be able to use this account for new requests.",
+  "searchByReference": "Search by order or reference number",
+  "sendPayoutRequest": "Send payout request",
+  "sourceStore": "Store sales",
+  "testTag": "Test",
+  "totalSales": "Total sales",
+  "transactionDetails": "Transaction details",
+  "transactionHistory": "Transaction history",
+  "transferReference": "Transfer reference",
+  "viewAll": "View all",
+  "walletNumberHint": "Wallet number",
+  "walletProviderHint": "Wallet provider (Vodafone Cash, Etisalat Cash…)",
+  "walletTestNotice": "Test balances: real money is off; these are not real, transferable funds.",
+  "activityPayment": "Payment {ref}",
+  "@activityPayment": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRefund": "Refund {ref}",
+  "@activityRefund": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "activityPayout": "Payout {ref}",
+  "@activityPayout": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "orderRef": "Order {ref}",
+  "@orderRef": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutMinimum": "Minimum {amount}",
+  "@payoutMinimum": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutRequestResult": "Request #{number}. EDMN will review and approve it; no money moves before approval.",
+  "@payoutRequestResult": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutConfirmBody": "You will request {amount} to {destination}. EDMN reviews and approves it.",
+  "@payoutConfirmBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "noEarningsYet": "No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here."
 }

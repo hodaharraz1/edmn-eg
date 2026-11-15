@@ -72,6 +72,19 @@ Not exposed, by design: release, refund, settlement, payout of deals (staff only
 
 See `CHAT_ARCHITECTURE.md`.
 
+## Wallet (Phase 4)
+
+| Operation | Route (auth) | Service |
+|---|---|---|
+| wallet view | GET /wallet (customer) | sellerFinancialView, activePayoutMethod, receiving destinations, identityStatus |
+| activity | GET /wallet/activity?kind&q (customer) | payments, refunds, accountWithdrawals |
+| payout requests | GET/POST /wallet/payout-requests, POST …/preview, POST …/{id}/cancel (customer) | accountWithdrawals, requestAccountWithdrawal, previewAccountWithdrawal, cancelWithdrawal |
+| receiving accounts | GET/POST /wallet/receiving-accounts, POST …/{id}/archive (customer) | myReceivingDestinations, submitReceivingDestination, archiveReceivingDestination |
+| store statement / payout account | GET /seller/statement, /seller/payout-account (seller, finance.view) | sellerStatement, activePayoutMethod |
+
+Not exposed, by design: approval, reservation, transfer, uncertain resolution, top-up, wallet-to-wallet transfer. See
+`WALLET_FINANCIAL_STATES.md`.
+
 ## Not yet exposed to mobile (needed for the remaining phases)
 
 Protected Deal (create, invitation, terms, accept, pay, evidence, delivery OTP, confirm), disputes/returns

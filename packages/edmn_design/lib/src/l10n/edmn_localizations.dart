@@ -4069,6 +4069,552 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'شروط أضمن صفقة'**
   String get protectedDealTerms;
+
+  /// No description provided for @accountHolderMustMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم صاحب الحساب لازم يطابق اسمك في التحقق من الهوية.'**
+  String get accountHolderMustMatch;
+
+  /// No description provided for @accountNeedsInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب معلومات'**
+  String get accountNeedsInfo;
+
+  /// No description provided for @accountNumberHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم الحساب (اختياري لو كتبت الـ IBAN)'**
+  String get accountNumberHint;
+
+  /// No description provided for @accountRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get accountRejected;
+
+  /// No description provided for @accountSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتبعت للمراجعة. هيتفعّل بعد تحقق فريق أضمن.'**
+  String get accountSubmitted;
+
+  /// No description provided for @accountUnderReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get accountUnderReview;
+
+  /// No description provided for @accountVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'متحقق منه'**
+  String get accountVerified;
+
+  /// No description provided for @activityTestNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'عملية تجريبية: الأموال الحقيقية مقفولة ومفيش فلوس اتحولت.'**
+  String get activityTestNotice;
+
+  /// No description provided for @addReceivingAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة حساب استلام'**
+  String get addReceivingAccount;
+
+  /// No description provided for @amountEgpHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ بالجنيه'**
+  String get amountEgpHint;
+
+  /// No description provided for @amountInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب مبلغ صحيح (جنيه وقروش لحد رقمين)'**
+  String get amountInvalid;
+
+  /// No description provided for @availableToWithdraw.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح للسحب'**
+  String get availableToWithdraw;
+
+  /// No description provided for @balanceAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح'**
+  String get balanceAvailable;
+
+  /// No description provided for @balanceAvailableHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقدر تطلب سحبه دلوقتي'**
+  String get balanceAvailableHint;
+
+  /// No description provided for @balanceAwaitingRelease.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستحق وبانتظار الاعتماد'**
+  String get balanceAwaitingRelease;
+
+  /// No description provided for @balanceAwaitingReleaseHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'المشتري أكد، وفريق أضمن بيعتمد التحويل لرصيدك'**
+  String get balanceAwaitingReleaseHint;
+
+  /// No description provided for @balanceBreakdown.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل الرصيد'**
+  String get balanceBreakdown;
+
+  /// No description provided for @balanceBySource.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسب المصدر'**
+  String get balanceBySource;
+
+  /// No description provided for @balanceClaims.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطالبات مفتوحة'**
+  String get balanceClaims;
+
+  /// No description provided for @balanceClaimsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطالبات نزاع/إرجاع مش مغطاة برصيد — مش فلوس'**
+  String get balanceClaimsHint;
+
+  /// No description provided for @balanceDebt.
+  ///
+  /// In ar, this message translates to:
+  /// **'مديونية'**
+  String get balanceDebt;
+
+  /// No description provided for @balanceDebtHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'لازم تتسوّى قبل أي سحب'**
+  String get balanceDebtHint;
+
+  /// No description provided for @balanceHeld.
+  ///
+  /// In ar, this message translates to:
+  /// **'محجوز'**
+  String get balanceHeld;
+
+  /// No description provided for @balanceHeldHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بسبب نزاع أو مراجعة — مش قابل للسحب'**
+  String get balanceHeldHint;
+
+  /// No description provided for @balancePaidOut.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتحوّل لك'**
+  String get balancePaidOut;
+
+  /// No description provided for @balancePending.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلّق'**
+  String get balancePending;
+
+  /// No description provided for @balancePendingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتدفع ولسه في فترة التوصيل أو رد المشتري'**
+  String get balancePendingHint;
+
+  /// No description provided for @balanceReserved.
+  ///
+  /// In ar, this message translates to:
+  /// **'محجوز لطلب سحب'**
+  String get balanceReserved;
+
+  /// No description provided for @balanceReservedHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب سحب اتعتمد ولسه بيتحوّل'**
+  String get balanceReservedHint;
+
+  /// No description provided for @bankNameHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم البنك'**
+  String get bankNameHint;
+
+  /// No description provided for @checkAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراجعة المبلغ'**
+  String get checkAmount;
+
+  /// No description provided for @dateLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التاريخ'**
+  String get dateLabel;
+
+  /// No description provided for @destDealsOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستحقات الصفقات المحمية فقط'**
+  String get destDealsOnly;
+
+  /// No description provided for @destStoreAndDeals.
+  ///
+  /// In ar, this message translates to:
+  /// **'حساب المتجر: المتجر + الصفقات'**
+  String get destStoreAndDeals;
+
+  /// No description provided for @destinationLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الوجهة'**
+  String get destinationLabel;
+
+  /// No description provided for @edmnFees.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسوم أضمن'**
+  String get edmnFees;
+
+  /// No description provided for @filterPayments.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدفوعات'**
+  String get filterPayments;
+
+  /// No description provided for @filterPayouts.
+  ///
+  /// In ar, this message translates to:
+  /// **'سحب'**
+  String get filterPayouts;
+
+  /// No description provided for @filterRefunds.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستردات'**
+  String get filterRefunds;
+
+  /// No description provided for @financialStatement.
+  ///
+  /// In ar, this message translates to:
+  /// **'كشف الحساب'**
+  String get financialStatement;
+
+  /// No description provided for @fundsByOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبالغ حسب الطلب أو الصفقة'**
+  String get fundsByOrder;
+
+  /// No description provided for @holderNameFull.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم صاحب الحساب كامل'**
+  String get holderNameFull;
+
+  /// No description provided for @ibanHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'IBAN (EG + 27 رقم)'**
+  String get ibanHint;
+
+  /// No description provided for @ledgerEntries.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحركات'**
+  String get ledgerEntries;
+
+  /// No description provided for @methodBank.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل بنكي'**
+  String get methodBank;
+
+  /// No description provided for @methodInstapay.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنستاباي'**
+  String get methodInstapay;
+
+  /// No description provided for @methodLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطريقة'**
+  String get methodLabel;
+
+  /// No description provided for @methodWallet.
+  ///
+  /// In ar, this message translates to:
+  /// **'محفظة موبايل'**
+  String get methodWallet;
+
+  /// No description provided for @noActivity.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش حركات لحد دلوقتي'**
+  String get noActivity;
+
+  /// No description provided for @noPayoutRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طلبات سحب'**
+  String get noPayoutRequests;
+
+  /// No description provided for @noPrepaidBalance.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضمن ما بيحتفظش برصيد مدفوع مقدمًا: الدفع بيكون لكل طلب أو صفقة، والمستردات بترجع لوسيلة الدفع الأصلية.'**
+  String get noPrepaidBalance;
+
+  /// No description provided for @noReceivingAccounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش حسابات استلام'**
+  String get noReceivingAccounts;
+
+  /// No description provided for @noteLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة'**
+  String get noteLabel;
+
+  /// No description provided for @openFromHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'افتح العملية من سجل المعاملات'**
+  String get openFromHistory;
+
+  /// No description provided for @payoutBlockDebt.
+  ///
+  /// In ar, this message translates to:
+  /// **'عليك مديونية لازم تتسوّى قبل أي سحب.'**
+  String get payoutBlockDebt;
+
+  /// No description provided for @payoutBlockIdentity.
+  ///
+  /// In ar, this message translates to:
+  /// **'لازم تتحقق من هويتك قبل طلب أي سحب.'**
+  String get payoutBlockIdentity;
+
+  /// No description provided for @payoutBlockNoAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف حساب استلام واستنى التحقق منه قبل السحب.'**
+  String get payoutBlockNoAccount;
+
+  /// No description provided for @payoutBlockNothing.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش رصيد متاح للسحب دلوقتي.'**
+  String get payoutBlockNothing;
+
+  /// No description provided for @payoutDestination.
+  ///
+  /// In ar, this message translates to:
+  /// **'هيتحوّل على'**
+  String get payoutDestination;
+
+  /// No description provided for @payoutDoesNotFit.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ أكبر من المتاح للسحب على الوجهة دي.'**
+  String get payoutDoesNotFit;
+
+  /// No description provided for @payoutPreviewNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ده تقدير من الخادم. التوزيع النهائي بيتحدد وقت الاعتماد.'**
+  String get payoutPreviewNote;
+
+  /// No description provided for @payoutRequestAlreadySent.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب ده اتسجل قبل كده'**
+  String get payoutRequestAlreadySent;
+
+  /// No description provided for @payoutRequestSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم استلام طلب السحب'**
+  String get payoutRequestSent;
+
+  /// No description provided for @payoutTestNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب تجريبي: الأموال الحقيقية مقفولة، ومفيش أي تحويل هيتم.'**
+  String get payoutTestNotice;
+
+  /// No description provided for @receivingAccounts.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسابات الاستلام'**
+  String get receivingAccounts;
+
+  /// No description provided for @receivingAccountsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'أي حساب جديد بيتراجع من فريق أضمن قبل ما يستقبل فلوس.'**
+  String get receivingAccountsNote;
+
+  /// No description provided for @recentActivity.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر الحركات'**
+  String get recentActivity;
+
+  /// No description provided for @referenceNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرقم المرجعي'**
+  String get referenceNumber;
+
+  /// No description provided for @refundsTotal.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستردات'**
+  String get refundsTotal;
+
+  /// No description provided for @removeAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيقاف الحساب'**
+  String get removeAccount;
+
+  /// No description provided for @removeAccountConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش هتقدر تستخدم الحساب ده تاني في طلبات جديدة.'**
+  String get removeAccountConfirm;
+
+  /// No description provided for @searchByReference.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث برقم الطلب أو المرجع'**
+  String get searchByReference;
+
+  /// No description provided for @sendPayoutRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال طلب السحب'**
+  String get sendPayoutRequest;
+
+  /// No description provided for @sourceStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'مبيعات المتجر'**
+  String get sourceStore;
+
+  /// No description provided for @testTag.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجريبي'**
+  String get testTag;
+
+  /// No description provided for @totalSales.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي المبيعات'**
+  String get totalSales;
+
+  /// No description provided for @transactionDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل العملية'**
+  String get transactionDetails;
+
+  /// No description provided for @transactionHistory.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل المعاملات'**
+  String get transactionHistory;
+
+  /// No description provided for @transferReference.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرجع التحويل'**
+  String get transferReference;
+
+  /// No description provided for @viewAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض الكل'**
+  String get viewAll;
+
+  /// No description provided for @walletNumberHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم المحفظة'**
+  String get walletNumberHint;
+
+  /// No description provided for @walletProviderHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزود المحفظة (فودافون كاش، اتصالات كاش…)'**
+  String get walletProviderHint;
+
+  /// No description provided for @walletTestNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرصدة تجريبية: الأموال الحقيقية مقفولة، والمبالغ دي مش فلوس حقيقية قابلة للتحويل.'**
+  String get walletTestNotice;
+
+  /// No description provided for @activityPayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'دفع {ref}'**
+  String activityPayment(String ref);
+
+  /// No description provided for @activityRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'استرداد {ref}'**
+  String activityRefund(String ref);
+
+  /// No description provided for @activityPayout.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب سحب {ref}'**
+  String activityPayout(String ref);
+
+  /// No description provided for @orderRef.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب {ref}'**
+  String orderRef(String ref);
+
+  /// No description provided for @payoutMinimum.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحد الأدنى {amount}'**
+  String payoutMinimum(String amount);
+
+  /// No description provided for @payoutRequestResult.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم الطلب #{number}. فريق أضمن هيراجعه ويعتمده، ومفيش فلوس بتتحرك قبل الاعتماد.'**
+  String payoutRequestResult(String number);
+
+  /// No description provided for @payoutConfirmBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هتطلب سحب {amount} على {destination}. الطلب بيتراجع ويتعتمد من فريق أضمن.'**
+  String payoutConfirmBody(String amount, String destination);
+
+  /// No description provided for @noEarningsYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.'**
+  String get noEarningsYet;
 }
 
 class _EdmnLocalizationsDelegate

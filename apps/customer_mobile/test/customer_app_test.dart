@@ -112,6 +112,53 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // Wallet
+  String? walletBlock;
+  int requestFailures = 0;
+  final requestKeys = <String>[];
+  @override
+  Future<GetWalletResponse> wallet() async {
+    Map<String, dynamic> b(int avail) => {
+          'pendingPiastres': 50000, 'heldPiastres': 30000, 'awaitingReleasePiastres': 20000, 'availablePiastres': avail, 'reservedPiastres': 10000,
+          'debtPiastres': 0, 'unsecuredClaimsPiastres': 0, 'paidOutPiastres': 0,
+        };
+    return GetWalletResponse.fromJson({
+      'hasEarnings': true, 'balances': b(125000),
+      'sources': [{...b(125000), 'source': 'MARKETPLACE', 'storeName': 'متجر القاهرة'}],
+      'items': <Map<String, dynamic>>[],
+      'payout': {
+        'identityApproved': walletBlock != 'IDENTITY',
+        'destinations': [{'key': 'STORE_PAYOUT_METHOD', 'label': 'إنستاباي ••••ab', 'scope': 'STORE_AND_DEALS'}],
+        'minimumPiastres': 10000, 'blockReason': walletBlock,
+      },
+      'topUpAvailable': false, 'realMoney': false,
+    });
+  }
+  @override
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson({'items': <Map<String, dynamic>>[]});
+  @override
+  Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async => ListAccountPayoutRequestsResponse.fromJson({
+        'items': [
+          {'id': 'r1', 'number': '7001', 'amountPiastres': 20000, 'status': 'TRANSFER_UNCERTAIN', 'destination': 'إنستاباي ••••ab', 'createdAt': '2030-01-01T10:00:00Z',
+            'paidAt': null, 'reference': null, 'reasonAr': null, 'isTest': true, 'sources': <Map<String, dynamic>>[], 'cancellable': false},
+        ],
+      });
+  @override
+  Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson({
+        'amountPiastres': amountPiastres, 'availablePiastres': 125000, 'fits': amountPiastres <= 125000, 'destination': 'إنستاباي ••••ab',
+        'sources': [{'source': 'MARKETPLACE', 'amountPiastres': amountPiastres}],
+      });
+  @override
+  Future<CreateAccountPayoutRequestResponse> requestAccountPayout(int amountPiastres, String destination, String clientKey) async {
+    requestKeys.add(clientKey);
+    if (requestFailures-- > 0) throw const ApiFailure(code: ApiErrorCode.network);
+    return CreateAccountPayoutRequestResponse.fromJson({
+      'created': requestKeys.where((k) => k == clientKey).length == 1,
+      'request': {'id': 'r2', 'number': '7002', 'amountPiastres': amountPiastres, 'status': 'REQUESTED', 'destination': 'إنستاباي ••••ab', 'createdAt': '2030-01-01T10:00:00Z',
+        'paidAt': null, 'reference': null, 'reasonAr': null, 'isTest': true, 'sources': <Map<String, dynamic>>[], 'cancellable': false},
+    });
+  }
+
   // Messaging / support
   bool convCanWrite = true;
   int sendFailures = 0;
@@ -424,19 +471,22 @@ Future<void> _go(WidgetTester t, String location) async {
 }
 
 void main() {
-  testWidgets('starts in Arabic (RTL) on the home tab: products with EGP prices, TEST banner, board navigation', (t) async {
+  testWidgets('starts in Arabic (RTL) on the home tab: products with EGP prices, no global TEST banner, board navigation', (t) async {
     await _start(t, FakeMobileApi());
     expect(Directionality.of(t.element(find.text('سماعة لاسلكية').first)), TextDirection.rtl);
     expect(find.text('1,250.5 ج.م'), findsWidgets);
-    expect(find.textContaining('وضع تجريبي'), findsOneWidget);
+    // Real Money is OFF, but the TEST notice belongs to money steps only — never app-wide.
+    expect(find.textContaining('وضع تجريبي'), findsNothing);
+    expect(find.byKey(const Key('test-money-notice')), findsNothing);
     for (final tab in ['الرئيسية', 'الأقسام', 'إعادة الطلب', 'طلباتي']) {
       expect(find.text(tab), findsOneWidget);
     }
   });
 
-  testWidgets('no TEST banner when the server says Real Money is on', (t) async {
-    await _start(t, FakeMobileApi(realMoney: true));
-    expect(find.textContaining('وضع تجريبي'), findsNothing);
+  testWidgets('the TEST notice appears inside the payment step while Real Money is OFF', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/payments/pay1');
+    expect(find.byKey(const Key('test-money-notice')), findsOneWidget);
   });
 
   testWidgets('an unsupported version is blocked by the server-side minimum', (t) async {
@@ -549,9 +599,9 @@ void main() {
     expect(api.confirmKeys, hasLength(1));
   });
 
-  testWidgets('services without a mobile API say so honestly (no fake balance)', (t) async {
+  testWidgets('services without a mobile API say so honestly (no fake list)', (t) async {
     await _start(t, FakeMobileApi(), signedIn: true);
-    await _go(t, '/wallet');
+    await _go(t, '/notifications');
     expect(find.byKey(const Key('not-yet-available')), findsOneWidget);
     expect(find.textContaining('ج.م'), findsNothing);
   });
@@ -739,6 +789,57 @@ void main() {
     expect(api.ticketRatings, [4]);
     expect(find.byKey(const Key('rate-ticket')), findsNothing);
     expect(find.byKey(const Key('reopen-ticket')), findsOneWidget);
+  });
+
+  testWidgets('wallet: server balances, held money is not shown as available, TEST notice in the wallet, no top-up flow', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/wallet');
+    expect(find.byKey(const Key('wallet-card')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('wallet-card')), matching: find.text('1,250 ج.م')), findsOneWidget);
+    expect(find.byKey(const Key('test-money-notice')), findsOneWidget);
+    expect(find.textContaining('شحن'), findsNothing); // no top-up
+    expect(find.textContaining('تحويل رصيد'), findsNothing); // no wallet-to-wallet transfer
+    await _reveal(t, find.byKey(const Key('balance-breakdown')));
+    expect(find.text('300 ج.م'), findsWidgets); // held, listed apart from available
+    await _reveal(t, find.byKey(const Key('no-topup')));
+  });
+
+  testWidgets('wallet: a blocked payout says why (identity) and offers no request button', (t) async {
+    final api = FakeMobileApi()..walletBlock = 'IDENTITY';
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/payout');
+    expect(find.byKey(const Key('payout-block')), findsOneWidget);
+    expect(find.byKey(const Key('payout-submit')), findsNothing);
+    expect(find.byKey(const Key('payout-preview-btn')), findsNothing);
+  });
+
+  testWidgets('payout request: server preview → confirmation → a retry reuses the SAME client key; uncertain stays uncertain', (t) async {
+    final api = FakeMobileApi()..requestFailures = 1;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/payout');
+    await _reveal(t, find.byKey(const Key('acc-payout-r1')));
+    expect(find.textContaining('جاري التحقق من التحويل'), findsOneWidget); // TRANSFER_UNCERTAIN from the server
+    expect(find.byKey(const Key('cancel-acc-payout-r1')), findsNothing);
+    await t.scrollUntilVisible(find.byKey(const Key('payout-amount')), -250, scrollable: _mainList);
+    await t.enterText(find.descendant(of: find.byKey(const Key('payout-amount')), matching: find.byType(EditableText)), '500');
+    await t.pumpAndSettle();
+    await _reveal(t, find.byKey(const Key('payout-preview-btn')));
+    await t.tap(find.byKey(const Key('payout-preview-btn')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('payout-preview')), findsOneWidget);
+    for (var i = 0; i < 2; i++) {
+      await _reveal(t, find.byKey(const Key('payout-submit')));
+      await t.tap(find.byKey(const Key('payout-submit')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const Key('dialog-confirm')));
+      await t.pumpAndSettle();
+      await t.pump(const Duration(seconds: 6));
+      await t.pumpAndSettle();
+    }
+    expect(api.requestKeys, hasLength(2));
+    expect(api.requestKeys[0], api.requestKeys[1]);
+    await t.scrollUntilVisible(find.byKey(const Key('payout-result')), -250, scrollable: _mainList);
+    expect(find.byKey(const Key('payout-result')), findsOneWidget);
   });
 
   test('version comparison', () {

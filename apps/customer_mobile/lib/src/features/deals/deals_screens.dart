@@ -421,6 +421,8 @@ class _DealScreenState extends ConsumerState<DealScreen> {
                     },
                   ),
                 ),
+              // Money step while Real Money is OFF: say so here, next to the amounts (no app-wide banner).
+              if ((d.payment?.isTest ?? !ref.watch(realMoneyProvider)) && m.buyerPaysPiastres != null) ...[const SizedBox(height: EdmnSpacing.sm), EdmnTestMoneyNotice(message: t.testPaymentNotice)],
               // D16 timeline
               const SizedBox(height: EdmnSpacing.md),
               EdmnCard(

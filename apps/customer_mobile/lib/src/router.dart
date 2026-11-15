@@ -20,6 +20,7 @@ import 'features/orders/payment_screen.dart';
 import 'features/seller/seller_screens.dart';
 import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
+import 'features/wallet/wallet_screens.dart';
 import 'providers.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
@@ -75,7 +76,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/deals/new', builder: (c, s) => const NewDealScreen()),
       GoRoute(path: '/deals/join', builder: (c, s) => JoinDealScreen(token: s.uri.queryParameters['token'])),
       GoRoute(path: '/deals/:id', builder: (c, s) => DealScreen(id: s.pathParameters['id']!)),
-      GoRoute(path: '/wallet', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).wallet, icon: Icons.account_balance_wallet_outlined)),
+      GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen()),
+      GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
+      GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(item: s.extra as ListWalletActivityResponseItemsItem?)),
+      GoRoute(path: '/wallet/payout', builder: (c, s) => const AccountPayoutScreen()),
+      GoRoute(path: '/wallet/accounts', builder: (c, s) => const ReceivingAccountsScreen()),
+      GoRoute(path: '/seller/statement', builder: (c, s) => const SellerStatementScreen()),
       GoRoute(path: '/seller', builder: (c, s) => const SellerCenterScreen()),
       GoRoute(path: '/seller/orders', builder: (c, s) => const SellerOrdersScreen()),
       GoRoute(path: '/seller/orders/:id', builder: (c, s) => SellerOrderScreen(id: s.pathParameters['id']!)),

@@ -38,7 +38,8 @@ logo, two-line headline, dots, white "ابدأ الآن", sign-in link).
 | V-13 | No TEST banner | Thin amber "وضع تجريبي" strip on top | Mandatory while Real Money is OFF (server flag) | None — disappears when the server enables real money |
 | V-14 | Order numbers "#EDMN-45892" | "#100014" | The server's order number format | Change server format if desired |
 | V-15 | Header logo larger relative to the header | Slightly smaller logo (48 px) | Fits long Arabic tagline + badge at 360-px widths | Can be enlarged after on-device review |
-| V-16 | Wallet balance card + quick actions | Screen not built yet (honest state) | Customer wallet mobile API not built yet | — (planned, HANDOVER P1) |
+| V-16 | Wallet quick actions «شحن الرصيد / تحويل رصيد / سجل المعاملات» | «طلب سحب / حسابات الاستلام / سجل المعاملات» on the same blue card + white quick-action card | No top-up or wallet-to-wallet service exists (D28–D31, D34 blocked; owner deferred D34); showing them would be inactive buttons | Restore the two actions if the owner approves a deposit / transfer service |
+| V-17 | Yellow TEST strip above every screen | Removed app-wide (owner request, Phase 4); header starts at the status bar as on the board | The TEST state is shown only inside money steps (checkout, payment, deal money, wallet, payout requests) via `EdmnTestMoneyNotice` | — |
 
 ## Not yet compared (screens not built)
 

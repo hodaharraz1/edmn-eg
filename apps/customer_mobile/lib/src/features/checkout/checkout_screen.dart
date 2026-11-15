@@ -70,7 +70,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         data: (q) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
           EdmnStepper(labels: [t.stepAddress, t.stepDelivery, t.stepPayment, t.stepConfirm], current: _step),
           const SizedBox(height: EdmnSpacing.lg),
-          if (!q.realMoneyEnabled) ...[EdmnNotice(message: t.testPaymentNotice, tone: EdmnTone.warning), const SizedBox(height: EdmnSpacing.md)],
+          if (!q.realMoneyEnabled) ...[EdmnTestMoneyNotice(message: t.testPaymentNotice), const SizedBox(height: EdmnSpacing.md)],
           ...switch (_step) {
             0 => _addressStep(q, selected),
             1 => _deliveryStep(q),

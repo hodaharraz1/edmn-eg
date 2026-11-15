@@ -2128,4 +2128,310 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get protectedDealTerms => 'Protected Deal terms';
+
+  @override
+  String get accountHolderMustMatch =>
+      'The account holder must match your verified identity.';
+
+  @override
+  String get accountNeedsInfo => 'More info needed';
+
+  @override
+  String get accountNumberHint => 'Account number (optional with IBAN)';
+
+  @override
+  String get accountRejected => 'Rejected';
+
+  @override
+  String get accountSubmitted =>
+      'Sent for review. It becomes usable once EDMN verifies it.';
+
+  @override
+  String get accountUnderReview => 'Under review';
+
+  @override
+  String get accountVerified => 'Verified';
+
+  @override
+  String get activityTestNotice =>
+      'Test transaction: real money is off and nothing was transferred.';
+
+  @override
+  String get addReceivingAccount => 'Add receiving account';
+
+  @override
+  String get amountEgpHint => 'Amount in EGP';
+
+  @override
+  String get amountInvalid => 'Enter a valid amount (up to 2 decimals)';
+
+  @override
+  String get availableToWithdraw => 'Available to withdraw';
+
+  @override
+  String get balanceAvailable => 'Available';
+
+  @override
+  String get balanceAvailableHint => 'You can request it now';
+
+  @override
+  String get balanceAwaitingRelease => 'Due, awaiting release';
+
+  @override
+  String get balanceAwaitingReleaseHint =>
+      'Buyer confirmed; EDMN is approving the release';
+
+  @override
+  String get balanceBreakdown => 'Balance details';
+
+  @override
+  String get balanceBySource => 'By source';
+
+  @override
+  String get balanceClaims => 'Open claims';
+
+  @override
+  String get balanceClaimsHint =>
+      'Dispute/return claims not covered by funds — not money';
+
+  @override
+  String get balanceDebt => 'Debt';
+
+  @override
+  String get balanceDebtHint => 'Must be settled before any payout';
+
+  @override
+  String get balanceHeld => 'Held';
+
+  @override
+  String get balanceHeldHint => 'Due to a dispute or review — not withdrawable';
+
+  @override
+  String get balancePaidOut => 'Paid out to you';
+
+  @override
+  String get balancePending => 'Pending';
+
+  @override
+  String get balancePendingHint =>
+      'Paid; still in delivery or buyer response window';
+
+  @override
+  String get balanceReserved => 'Reserved for a payout';
+
+  @override
+  String get balanceReservedHint => 'An approved payout being transferred';
+
+  @override
+  String get bankNameHint => 'Bank name';
+
+  @override
+  String get checkAmount => 'Check amount';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get destDealsOnly => 'Protected Deal earnings only';
+
+  @override
+  String get destStoreAndDeals => 'Store account: store + deals';
+
+  @override
+  String get destinationLabel => 'Destination';
+
+  @override
+  String get edmnFees => 'EDMN fees';
+
+  @override
+  String get filterPayments => 'Payments';
+
+  @override
+  String get filterPayouts => 'Payouts';
+
+  @override
+  String get filterRefunds => 'Refunds';
+
+  @override
+  String get financialStatement => 'Statement';
+
+  @override
+  String get fundsByOrder => 'Funds by order or deal';
+
+  @override
+  String get holderNameFull => 'Account holder full name';
+
+  @override
+  String get ibanHint => 'IBAN (EG + 27 digits)';
+
+  @override
+  String get ledgerEntries => 'Entries';
+
+  @override
+  String get methodBank => 'Bank transfer';
+
+  @override
+  String get methodInstapay => 'InstaPay';
+
+  @override
+  String get methodLabel => 'Method';
+
+  @override
+  String get methodWallet => 'Mobile wallet';
+
+  @override
+  String get noActivity => 'No activity yet';
+
+  @override
+  String get noPayoutRequests => 'No payout requests';
+
+  @override
+  String get noPrepaidBalance =>
+      'EDMN keeps no prepaid balance: you pay per order or deal, and refunds go back to the original payment method.';
+
+  @override
+  String get noReceivingAccounts => 'No receiving accounts';
+
+  @override
+  String get noteLabel => 'Note';
+
+  @override
+  String get openFromHistory => 'Open the transaction from the history';
+
+  @override
+  String get payoutBlockDebt =>
+      'You have a debt that must be settled before any payout.';
+
+  @override
+  String get payoutBlockIdentity =>
+      'Verify your identity before requesting a payout.';
+
+  @override
+  String get payoutBlockNoAccount =>
+      'Add a receiving account and wait for verification first.';
+
+  @override
+  String get payoutBlockNothing =>
+      'Nothing is available to withdraw right now.';
+
+  @override
+  String get payoutDestination => 'Pay out to';
+
+  @override
+  String get payoutDoesNotFit =>
+      'The amount exceeds what is available for this destination.';
+
+  @override
+  String get payoutPreviewNote =>
+      'Server estimate; the final split is set at approval.';
+
+  @override
+  String get payoutRequestAlreadySent => 'This request was already recorded';
+
+  @override
+  String get payoutRequestSent => 'Payout request received';
+
+  @override
+  String get payoutTestNotice =>
+      'Test request: real money is off; nothing will be transferred.';
+
+  @override
+  String get receivingAccounts => 'Receiving accounts';
+
+  @override
+  String get receivingAccountsNote =>
+      'Every new account is reviewed by EDMN before it can receive money.';
+
+  @override
+  String get recentActivity => 'Recent activity';
+
+  @override
+  String get referenceNumber => 'Reference';
+
+  @override
+  String get refundsTotal => 'Refunds';
+
+  @override
+  String get removeAccount => 'Remove account';
+
+  @override
+  String get removeAccountConfirm =>
+      'You will not be able to use this account for new requests.';
+
+  @override
+  String get searchByReference => 'Search by order or reference number';
+
+  @override
+  String get sendPayoutRequest => 'Send payout request';
+
+  @override
+  String get sourceStore => 'Store sales';
+
+  @override
+  String get testTag => 'Test';
+
+  @override
+  String get totalSales => 'Total sales';
+
+  @override
+  String get transactionDetails => 'Transaction details';
+
+  @override
+  String get transactionHistory => 'Transaction history';
+
+  @override
+  String get transferReference => 'Transfer reference';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String get walletNumberHint => 'Wallet number';
+
+  @override
+  String get walletProviderHint =>
+      'Wallet provider (Vodafone Cash, Etisalat Cash…)';
+
+  @override
+  String get walletTestNotice =>
+      'Test balances: real money is off; these are not real, transferable funds.';
+
+  @override
+  String activityPayment(String ref) {
+    return 'Payment $ref';
+  }
+
+  @override
+  String activityRefund(String ref) {
+    return 'Refund $ref';
+  }
+
+  @override
+  String activityPayout(String ref) {
+    return 'Payout $ref';
+  }
+
+  @override
+  String orderRef(String ref) {
+    return 'Order $ref';
+  }
+
+  @override
+  String payoutMinimum(String amount) {
+    return 'Minimum $amount';
+  }
+
+  @override
+  String payoutRequestResult(String number) {
+    return 'Request #$number. EDMN will review and approve it; no money moves before approval.';
+  }
+
+  @override
+  String payoutConfirmBody(String amount, String destination) {
+    return 'You will request $amount to $destination. EDMN reviews and approves it.';
+  }
+
+  @override
+  String get noEarningsYet =>
+      'No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here.';
 }

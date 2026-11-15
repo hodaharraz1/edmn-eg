@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
 import '../../version.dart';
 
-/// Wraps every screen: blocks unsupported app versions (server-driven) and shows the TEST-money banner while Real Money
-/// is OFF. If the config cannot be loaded the app still works (catalog is read-only); the banner stays visible.
+/// Wraps every screen: blocks unsupported app versions (server-driven). There is no global banner: while Real Money is
+/// OFF the payment, deal-payment, wallet and payout steps each show their own TEST notice (EdmnTestMoneyNotice).
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child});
   final Widget child;
@@ -31,11 +31,6 @@ class AppShell extends ConsumerWidget {
         ),
       );
     }
-    if (cfg != null && cfg.realMoneyEnabled) return child;
-    // The status bar area belongs to the banner; screens below must not add the top inset again.
-    return Column(children: [
-      const ColoredBox(color: EdmnColors.warningLight, child: SafeArea(bottom: false, child: TestMoneyBanner())),
-      Expanded(child: MediaQuery.removePadding(context: context, removeTop: true, child: child)),
-    ]);
+    return child;
   }
 }

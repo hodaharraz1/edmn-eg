@@ -86,3 +86,19 @@ after navigating back.
 Defects found and fixed: `EdmnSkeletonList` crashed when shown inside a scrolling page (an unbounded viewport) while a
 list was loading; a failed send showed two error messages and hid the retry button; the chat composer was a fixed
 4-line box (it now grows from one line).
+
+## Phase 4: wallet and financial operations, and removal of the global TEST banner
+
+| Check | Result |
+|---|---|
+| Backend `tsc`, `eslint`, `openapi --check` | pass |
+| Vitest | 788/788 |
+| Flow G integration (`mobile-wallet-api.test.ts`) | 3/3; see `WALLET_FINANCIAL_STATES.md` |
+| Flutter customer widget tests | 27/27 |
+| Real screenshots (local isolated backend) | `docs/mobile/screenshots/wallet/`: home without the banner, wallet, balance breakdown, payout request with server preview, store statement, store payouts, buyer wallet, activity, activity detail, receiving accounts, add account |
+| HawkScan | NOT RUN (no HAWK_API_KEY) |
+
+Defects found and fixed:
+- the payout request status chip overflowed a 390-px row («جاري التحقق من التحويل · تجريبي»);
+- order refs such as «#100002» rendered reversed inside Arabic titles (now wrapped in LTR isolates);
+- a buyer without earnings saw a bare 0 with no explanation.

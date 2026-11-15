@@ -85,7 +85,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         data: (p) {
           final (label, tone) = paymentStatus(t, p.status);
           return ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
-            if (p.isTest) ...[EdmnNotice(message: t.testPaymentNotice, tone: EdmnTone.warning), const SizedBox(height: EdmnSpacing.md)],
+            if (p.isTest) ...[EdmnTestMoneyNotice(message: t.testPaymentNotice), const SizedBox(height: EdmnSpacing.md)],
             if (_submitted) ...[EdmnNotice(key: const Key('receipt-submitted'), message: t.receiptSubmitted, tone: EdmnTone.success), const SizedBox(height: EdmnSpacing.md)],
             EdmnCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

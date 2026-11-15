@@ -843,5 +843,148 @@
   },
   "faq": "الأسئلة الشائعة",
   "returnsPolicy": "سياسة الإرجاع",
-  "protectedDealTerms": "شروط أضمن صفقة"
+  "protectedDealTerms": "شروط أضمن صفقة",
+  "accountHolderMustMatch": "اسم صاحب الحساب لازم يطابق اسمك في التحقق من الهوية.",
+  "accountNeedsInfo": "مطلوب معلومات",
+  "accountNumberHint": "رقم الحساب (اختياري لو كتبت الـ IBAN)",
+  "accountRejected": "مرفوض",
+  "accountSubmitted": "اتبعت للمراجعة. هيتفعّل بعد تحقق فريق أضمن.",
+  "accountUnderReview": "قيد المراجعة",
+  "accountVerified": "متحقق منه",
+  "activityTestNotice": "عملية تجريبية: الأموال الحقيقية مقفولة ومفيش فلوس اتحولت.",
+  "addReceivingAccount": "إضافة حساب استلام",
+  "amountEgpHint": "المبلغ بالجنيه",
+  "amountInvalid": "اكتب مبلغ صحيح (جنيه وقروش لحد رقمين)",
+  "availableToWithdraw": "متاح للسحب",
+  "balanceAvailable": "متاح",
+  "balanceAvailableHint": "تقدر تطلب سحبه دلوقتي",
+  "balanceAwaitingRelease": "مستحق وبانتظار الاعتماد",
+  "balanceAwaitingReleaseHint": "المشتري أكد، وفريق أضمن بيعتمد التحويل لرصيدك",
+  "balanceBreakdown": "تفاصيل الرصيد",
+  "balanceBySource": "حسب المصدر",
+  "balanceClaims": "مطالبات مفتوحة",
+  "balanceClaimsHint": "مطالبات نزاع/إرجاع مش مغطاة برصيد — مش فلوس",
+  "balanceDebt": "مديونية",
+  "balanceDebtHint": "لازم تتسوّى قبل أي سحب",
+  "balanceHeld": "محجوز",
+  "balanceHeldHint": "بسبب نزاع أو مراجعة — مش قابل للسحب",
+  "balancePaidOut": "اتحوّل لك",
+  "balancePending": "معلّق",
+  "balancePendingHint": "اتدفع ولسه في فترة التوصيل أو رد المشتري",
+  "balanceReserved": "محجوز لطلب سحب",
+  "balanceReservedHint": "طلب سحب اتعتمد ولسه بيتحوّل",
+  "bankNameHint": "اسم البنك",
+  "checkAmount": "مراجعة المبلغ",
+  "dateLabel": "التاريخ",
+  "destDealsOnly": "مستحقات الصفقات المحمية فقط",
+  "destStoreAndDeals": "حساب المتجر: المتجر + الصفقات",
+  "destinationLabel": "الوجهة",
+  "edmnFees": "رسوم أضمن",
+  "filterPayments": "مدفوعات",
+  "filterPayouts": "سحب",
+  "filterRefunds": "مستردات",
+  "financialStatement": "كشف الحساب",
+  "fundsByOrder": "المبالغ حسب الطلب أو الصفقة",
+  "holderNameFull": "اسم صاحب الحساب كامل",
+  "ibanHint": "IBAN (EG + 27 رقم)",
+  "ledgerEntries": "الحركات",
+  "methodBank": "تحويل بنكي",
+  "methodInstapay": "إنستاباي",
+  "methodLabel": "الطريقة",
+  "methodWallet": "محفظة موبايل",
+  "noActivity": "مفيش حركات لحد دلوقتي",
+  "noPayoutRequests": "مفيش طلبات سحب",
+  "noPrepaidBalance": "أضمن ما بيحتفظش برصيد مدفوع مقدمًا: الدفع بيكون لكل طلب أو صفقة، والمستردات بترجع لوسيلة الدفع الأصلية.",
+  "noReceivingAccounts": "مفيش حسابات استلام",
+  "noteLabel": "ملاحظة",
+  "openFromHistory": "افتح العملية من سجل المعاملات",
+  "payoutBlockDebt": "عليك مديونية لازم تتسوّى قبل أي سحب.",
+  "payoutBlockIdentity": "لازم تتحقق من هويتك قبل طلب أي سحب.",
+  "payoutBlockNoAccount": "أضف حساب استلام واستنى التحقق منه قبل السحب.",
+  "payoutBlockNothing": "مفيش رصيد متاح للسحب دلوقتي.",
+  "payoutDestination": "هيتحوّل على",
+  "payoutDoesNotFit": "المبلغ أكبر من المتاح للسحب على الوجهة دي.",
+  "payoutPreviewNote": "ده تقدير من الخادم. التوزيع النهائي بيتحدد وقت الاعتماد.",
+  "payoutRequestAlreadySent": "الطلب ده اتسجل قبل كده",
+  "payoutRequestSent": "تم استلام طلب السحب",
+  "payoutTestNotice": "طلب تجريبي: الأموال الحقيقية مقفولة، ومفيش أي تحويل هيتم.",
+  "receivingAccounts": "حسابات الاستلام",
+  "receivingAccountsNote": "أي حساب جديد بيتراجع من فريق أضمن قبل ما يستقبل فلوس.",
+  "recentActivity": "آخر الحركات",
+  "referenceNumber": "الرقم المرجعي",
+  "refundsTotal": "مستردات",
+  "removeAccount": "إيقاف الحساب",
+  "removeAccountConfirm": "مش هتقدر تستخدم الحساب ده تاني في طلبات جديدة.",
+  "searchByReference": "ابحث برقم الطلب أو المرجع",
+  "sendPayoutRequest": "إرسال طلب السحب",
+  "sourceStore": "مبيعات المتجر",
+  "testTag": "تجريبي",
+  "totalSales": "إجمالي المبيعات",
+  "transactionDetails": "تفاصيل العملية",
+  "transactionHistory": "سجل المعاملات",
+  "transferReference": "مرجع التحويل",
+  "viewAll": "عرض الكل",
+  "walletNumberHint": "رقم المحفظة",
+  "walletProviderHint": "مزود المحفظة (فودافون كاش، اتصالات كاش…)",
+  "walletTestNotice": "أرصدة تجريبية: الأموال الحقيقية مقفولة، والمبالغ دي مش فلوس حقيقية قابلة للتحويل.",
+  "activityPayment": "دفع {ref}",
+  "@activityPayment": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "activityRefund": "استرداد {ref}",
+  "@activityRefund": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "activityPayout": "طلب سحب {ref}",
+  "@activityPayout": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "orderRef": "طلب {ref}",
+  "@orderRef": {
+    "placeholders": {
+      "ref": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutMinimum": "الحد الأدنى {amount}",
+  "@payoutMinimum": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutRequestResult": "رقم الطلب #{number}. فريق أضمن هيراجعه ويعتمده، ومفيش فلوس بتتحرك قبل الاعتماد.",
+  "@payoutRequestResult": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "payoutConfirmBody": "هتطلب سحب {amount} على {destination}. الطلب بيتراجع ويتعتمد من فريق أضمن.",
+  "@payoutConfirmBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "noEarningsYet": "لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا."
 }

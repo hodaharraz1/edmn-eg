@@ -1062,6 +1062,8 @@ class _StoreSettingsFormState extends ConsumerState<_StoreSettingsForm> {
 
 /* ───────────────────────── S32/S33 payout requests ───────────────────────── */
 
+final storePayoutAccountProvider = FutureProvider.autoDispose<GetSellerPayoutAccountResponse>((ref) => ref.watch(mobileApiProvider).sellerPayoutAccount());
+
 (String, EdmnTone) payoutStatus(EdmnLocalizations t, String s) => switch (s) {
       'REQUESTED' || 'UNDER_REVIEW' => (t.payoutUnderReview, EdmnTone.warning),
       'APPROVED' || 'PROCESSING' => (t.payoutProcessing, EdmnTone.info),
@@ -1100,6 +1102,24 @@ class PayoutRequestsScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(payoutRequestsProvider),
         data: (r) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
           if (funds.value != null) EdmnWalletCard(label: t.withdrawable, amountPiastres: funds.value!.withdrawablePiastres),
+          if (!ref.watch(realMoneyProvider)) ...[_gap(), EdmnTestMoneyNotice(message: t.payoutTestNotice)],
+          ref.watch(storePayoutAccountProvider).maybeWhen(
+                data: (a) => a.account == null
+                    ? Padding(padding: const EdgeInsetsDirectional.only(top: EdmnSpacing.sm), child: EdmnNotice(key: const Key('no-payout-account'), message: t.payoutBlockNoAccount, tone: EdmnTone.warning))
+                    : Padding(
+                        padding: const EdgeInsetsDirectional.only(top: EdmnSpacing.sm),
+                        child: EdmnCard(
+                          key: const Key('store-payout-account'),
+                          child: Row(children: [
+                            const Icon(Icons.account_balance_outlined, color: EdmnColors.primary),
+                            const SizedBox(width: EdmnSpacing.xs),
+                            Expanded(child: Text(t.payoutDestination, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary))),
+                            Text(a.account!.label, textDirection: TextDirection.ltr, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary)),
+                          ]),
+                        ),
+                      ),
+                orElse: () => const SizedBox.shrink(),
+              ),
           if (funds.value?.blockReasonAr != null) ...[_gap(), EdmnNotice(message: funds.value!.blockReasonAr!, tone: EdmnTone.danger)],
           _gap(),
           EdmnNotice(message: t.payoutRequestNote),
@@ -1179,6 +1199,7 @@ class _PayoutRequestFormState extends ConsumerState<_PayoutRequestForm> {
         onChanged: (_) => setState(() => _preview = null),
       ),
       _gap(),
+      if (!ref.watch(realMoneyProvider)) ...[EdmnTestMoneyNotice(message: t.payoutTestNotice), _gap()],
       if (_preview != null)
         EdmnAmountSummary(
           rows: [(t.amountDue, _preview!.amountPiastres), (t.transferCost, -_preview!.transferCostPiastres)],

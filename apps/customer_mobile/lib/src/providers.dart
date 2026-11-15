@@ -31,6 +31,9 @@ final mobileApiProvider = Provider<MobileApi>((ref) => MobileApi(ref.watch(apiCl
 /// Server-side app configuration (minimum versions, Real Money flag). Nothing here is hardcoded in the app.
 final appConfigProvider = FutureProvider<AppConfig>((ref) => ref.watch(mobileApiProvider).appConfig());
 
+/// Real Money as the server reports it. Unknown (config not loaded) counts as OFF, so money steps keep their TEST notice.
+final realMoneyProvider = Provider<bool>((ref) => ref.watch(appConfigProvider).value?.realMoneyEnabled ?? false);
+
 class LocaleController extends Notifier<Locale> {
   @override
   Locale build() => EdmnLocales.fallback;

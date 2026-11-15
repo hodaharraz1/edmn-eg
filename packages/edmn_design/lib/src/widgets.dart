@@ -5,27 +5,37 @@ import 'tokens.dart';
 
 export 'money_text.dart';
 
-/// Shown on every screen while Real Money is OFF (value comes from the server's app config, never hardcoded).
-class TestMoneyBanner extends StatelessWidget {
-  const TestMoneyBanner({super.key});
+/// In-flow notice for money steps while Real Money is OFF (payment, deal payment, wallet, payout requests). The app
+/// passes the server's flag; it is never shown app-wide. Says plainly that no real money moves.
+class EdmnTestMoneyNotice extends StatelessWidget {
+  const EdmnTestMoneyNotice({super.key, this.message});
+
+  /// Step-specific wording; defaults to the generic TEST-money sentence.
+  final String? message;
 
   @override
-  Widget build(BuildContext context) => Material(
-    type: MaterialType.transparency,
+  Widget build(BuildContext context) => Semantics(
+    container: true,
     child: Container(
+      key: const Key('test-money-notice'),
       width: double.infinity,
-      color: EdmnColors.warningLight,
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: EdmnSpacing.md,
-        vertical: EdmnSpacing.xxs,
+      padding: const EdgeInsetsDirectional.all(EdmnSpacing.sm),
+      decoration: BoxDecoration(
+        color: EdmnColors.warningLight,
+        borderRadius: BorderRadius.circular(EdmnRadii.small),
       ),
-      child: Text(
-        EdmnLocalizations.of(context).testMoneyBanner,
-        textAlign: TextAlign.center,
-        style: EdmnType.caption.copyWith(
-          color: EdmnColors.warning,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.science_outlined, color: EdmnColors.warning, size: 20),
+          const SizedBox(width: EdmnSpacing.xs),
+          Expanded(
+            child: Text(
+              message ?? EdmnLocalizations.of(context).testMoneyBanner,
+              style: EdmnType.secondary.copyWith(color: EdmnColors.warning, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     ),
   );

@@ -6,8 +6,11 @@ abstract final class MobileApiPaths {
   static const acknowledgeCartPrices = (method: 'POST', path: '/api/v1/cart/acknowledge-prices');
   static const addCartItem = (method: 'POST', path: '/api/v1/cart/items');
   static const addDealPhotos = (method: 'POST', path: '/api/v1/deals/{dealId}/photos');
+  static const addReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts');
   static const addSellerPayoutAccount = (method: 'POST', path: '/api/v1/seller/application/payout-account');
   static const addSellerProductImages = (method: 'POST', path: '/api/v1/seller/products/{productId}/images');
+  static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
+  static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
   static const cancelUnpaidOrder = (method: 'POST', path: '/api/v1/orders/{orderId}/cancel');
@@ -16,6 +19,7 @@ abstract final class MobileApiPaths {
   static const confirmDealReceipt = (method: 'POST', path: '/api/v1/deals/{dealId}/confirm-receipt');
   static const confirmReceipt = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/confirm-receipt');
   static const confirmVerificationCode = (method: 'POST', path: '/api/v1/me/verification/confirm');
+  static const createAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests');
   static const createAddress = (method: 'POST', path: '/api/v1/me/addresses');
   static const createDeal = (method: 'POST', path: '/api/v1/deals');
   static const createSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests');
@@ -44,15 +48,19 @@ abstract final class MobileApiPaths {
   static const getSellerFunds = (method: 'GET', path: '/api/v1/seller/funds');
   static const getSellerHome = (method: 'GET', path: '/api/v1/seller/home');
   static const getSellerOrder = (method: 'GET', path: '/api/v1/seller/orders/{sellerOrderId}');
+  static const getSellerPayoutAccount = (method: 'GET', path: '/api/v1/seller/payout-account');
   static const getSellerProduct = (method: 'GET', path: '/api/v1/seller/products/{productId}');
   static const getSellerShippingRates = (method: 'GET', path: '/api/v1/seller/shipping-rates');
+  static const getSellerStatement = (method: 'GET', path: '/api/v1/seller/statement');
   static const getSellerStoreSettings = (method: 'GET', path: '/api/v1/seller/store');
   static const getStore = (method: 'GET', path: '/api/v1/stores/{slug}');
   static const getStoreConversation = (method: 'GET', path: '/api/v1/seller/conversations/{conversationId}');
   static const getStoreUnreadMessages = (method: 'GET', path: '/api/v1/seller/conversations/unread');
   static const getSupportTicket = (method: 'GET', path: '/api/v1/support/tickets/{ticketId}');
   static const getUnreadMessages = (method: 'GET', path: '/api/v1/conversations/unread');
+  static const getWallet = (method: 'GET', path: '/api/v1/wallet');
   static const inviteDealSeller = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation');
+  static const listAccountPayoutRequests = (method: 'GET', path: '/api/v1/wallet/payout-requests');
   static const listAddresses = (method: 'GET', path: '/api/v1/me/addresses');
   static const listCategories = (method: 'GET', path: '/api/v1/catalog/categories');
   static const listConversations = (method: 'GET', path: '/api/v1/conversations');
@@ -61,11 +69,13 @@ abstract final class MobileApiPaths {
   static const listMySessions = (method: 'GET', path: '/api/v1/me/sessions');
   static const listOrders = (method: 'GET', path: '/api/v1/orders');
   static const listProductReviews = (method: 'GET', path: '/api/v1/catalog/products/{slug}/reviews');
+  static const listReceivingAccounts = (method: 'GET', path: '/api/v1/wallet/receiving-accounts');
   static const listSellerOrders = (method: 'GET', path: '/api/v1/seller/orders');
   static const listSellerPayoutRequests = (method: 'GET', path: '/api/v1/seller/payout-requests');
   static const listSellerProducts = (method: 'GET', path: '/api/v1/seller/products');
   static const listStoreConversations = (method: 'GET', path: '/api/v1/seller/conversations');
   static const listSupportTickets = (method: 'GET', path: '/api/v1/support/tickets');
+  static const listWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
@@ -76,6 +86,7 @@ abstract final class MobileApiPaths {
   static const openStoreOrderConversation = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/conversation');
   static const openSupportTicket = (method: 'POST', path: '/api/v1/support/tickets');
   static const placeOrder = (method: 'POST', path: '/api/v1/orders');
+  static const previewAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/preview');
   static const previewSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/preview');
   static const rateSupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/rating');
   static const refreshDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation/refresh');
@@ -146,6 +157,50 @@ class AddCartItemResponse {
   final int quantity;
 
   Map<String, dynamic> toJson() => {'quantity': quantity};
+}
+
+class AddReceivingAccountRequest {
+  const AddReceivingAccountRequest({required this.account, this.replacesId});
+
+  factory AddReceivingAccountRequest.fromJson(Map<String, dynamic> json) => AddReceivingAccountRequest(account: json['account'], replacesId: json['replacesId'] == null ? null : json['replacesId'] as String);
+
+  final Object? account;
+
+  final String? replacesId;
+
+  Map<String, dynamic> toJson() => {'account': account, if (replacesId != null) 'replacesId': replacesId};
+}
+
+class AddReceivingAccountResponse {
+  const AddReceivingAccountResponse({required this.items});
+
+  factory AddReceivingAccountResponse.fromJson(Map<String, dynamic> json) => AddReceivingAccountResponse(items: (json['items'] as List).map((e) => AddReceivingAccountResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<AddReceivingAccountResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class AddReceivingAccountResponseItemsItem {
+  const AddReceivingAccountResponseItemsItem({required this.id, required this.type, required this.label, required this.holderName, required this.status, required this.reviewNote, required this.createdAt});
+
+  factory AddReceivingAccountResponseItemsItem.fromJson(Map<String, dynamic> json) => AddReceivingAccountResponseItemsItem(id: json['id'] as String, type: json['type'] as String, label: json['label'] as String, holderName: json['holderName'] as String, status: json['status'] as String, reviewNote: json['reviewNote'] as String?, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String type;
+
+  final String label;
+
+  final String holderName;
+
+  final String status;
+
+  final String? reviewNote;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'type': type, 'label': label, 'holderName': holderName, 'status': status, 'reviewNote': reviewNote, 'createdAt': createdAt};
 }
 
 class Address {
@@ -227,6 +282,98 @@ class AppConfigMinSupportedVersion {
   final String admin;
 
   Map<String, dynamic> toJson() => {'customer': customer, 'admin': admin};
+}
+
+class ArchiveReceivingAccountResponse {
+  const ArchiveReceivingAccountResponse({required this.items});
+
+  factory ArchiveReceivingAccountResponse.fromJson(Map<String, dynamic> json) => ArchiveReceivingAccountResponse(items: (json['items'] as List).map((e) => ArchiveReceivingAccountResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ArchiveReceivingAccountResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ArchiveReceivingAccountResponseItemsItem {
+  const ArchiveReceivingAccountResponseItemsItem({required this.id, required this.type, required this.label, required this.holderName, required this.status, required this.reviewNote, required this.createdAt});
+
+  factory ArchiveReceivingAccountResponseItemsItem.fromJson(Map<String, dynamic> json) => ArchiveReceivingAccountResponseItemsItem(id: json['id'] as String, type: json['type'] as String, label: json['label'] as String, holderName: json['holderName'] as String, status: json['status'] as String, reviewNote: json['reviewNote'] as String?, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String type;
+
+  final String label;
+
+  final String holderName;
+
+  final String status;
+
+  final String? reviewNote;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'type': type, 'label': label, 'holderName': holderName, 'status': status, 'reviewNote': reviewNote, 'createdAt': createdAt};
+}
+
+class CancelAccountPayoutRequestResponse {
+  const CancelAccountPayoutRequestResponse({required this.items});
+
+  factory CancelAccountPayoutRequestResponse.fromJson(Map<String, dynamic> json) => CancelAccountPayoutRequestResponse(items: (json['items'] as List).map((e) => CancelAccountPayoutRequestResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<CancelAccountPayoutRequestResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class CancelAccountPayoutRequestResponseItemsItem {
+  const CancelAccountPayoutRequestResponseItemsItem({required this.id, required this.number, required this.amountPiastres, required this.status, required this.destination, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.isTest, required this.sources, required this.cancellable});
+
+  factory CancelAccountPayoutRequestResponseItemsItem.fromJson(Map<String, dynamic> json) => CancelAccountPayoutRequestResponseItemsItem(id: json['id'] as String, number: json['number'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, destination: json['destination'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, isTest: json['isTest'] as bool, sources: (json['sources'] as List).map((e) => CancelAccountPayoutRequestResponseItemsItemSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  final String number;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = not confirmed either way; never retried or resolved by the app.
+  final String status;
+
+  final String destination;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool isTest;
+
+  final List<CancelAccountPayoutRequestResponseItemsItemSourcesItem> sources;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'amountPiastres': amountPiastres, 'status': status, 'destination': destination, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'isTest': isTest, 'sources': sources.map((e) => e.toJson()).toList(), 'cancellable': cancellable};
+}
+
+class CancelAccountPayoutRequestResponseItemsItemSourcesItem {
+  const CancelAccountPayoutRequestResponseItemsItemSourcesItem({required this.source, required this.amountPiastres, required this.status});
+
+  factory CancelAccountPayoutRequestResponseItemsItemSourcesItem.fromJson(Map<String, dynamic> json) => CancelAccountPayoutRequestResponseItemsItemSourcesItem(source: json['source'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String);
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String status;
+
+  Map<String, dynamic> toJson() => {'source': source, 'amountPiastres': amountPiastres, 'status': status};
 }
 
 class CancelDealRequest {
@@ -502,6 +649,82 @@ class ConfirmVerificationCodeRequest {
   final String code;
 
   Map<String, dynamic> toJson() => {'channel': channel, 'code': code};
+}
+
+class CreateAccountPayoutRequestRequest {
+  const CreateAccountPayoutRequestRequest({required this.amountPiastres, required this.destination, required this.clientKey});
+
+  factory CreateAccountPayoutRequestRequest.fromJson(Map<String, dynamic> json) => CreateAccountPayoutRequestRequest(amountPiastres: (json['amountPiastres'] as num).toInt(), destination: json['destination'] as String, clientKey: json['clientKey'] as String);
+
+  final int amountPiastres;
+
+  final String destination;
+
+  final String clientKey;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'destination': destination, 'clientKey': clientKey};
+}
+
+class CreateAccountPayoutRequestResponse {
+  const CreateAccountPayoutRequestResponse({required this.created, required this.request});
+
+  factory CreateAccountPayoutRequestResponse.fromJson(Map<String, dynamic> json) => CreateAccountPayoutRequestResponse(created: json['created'] as bool, request: CreateAccountPayoutRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final bool created;
+
+  final CreateAccountPayoutRequestResponseRequest request;
+
+  Map<String, dynamic> toJson() => {'created': created, 'request': request.toJson()};
+}
+
+class CreateAccountPayoutRequestResponseRequest {
+  const CreateAccountPayoutRequestResponseRequest({required this.id, required this.number, required this.amountPiastres, required this.status, required this.destination, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.isTest, required this.sources, required this.cancellable});
+
+  factory CreateAccountPayoutRequestResponseRequest.fromJson(Map<String, dynamic> json) => CreateAccountPayoutRequestResponseRequest(id: json['id'] as String, number: json['number'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, destination: json['destination'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, isTest: json['isTest'] as bool, sources: (json['sources'] as List).map((e) => CreateAccountPayoutRequestResponseRequestSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  final String number;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = not confirmed either way; never retried or resolved by the app.
+  final String status;
+
+  final String destination;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool isTest;
+
+  final List<CreateAccountPayoutRequestResponseRequestSourcesItem> sources;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'amountPiastres': amountPiastres, 'status': status, 'destination': destination, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'isTest': isTest, 'sources': sources.map((e) => e.toJson()).toList(), 'cancellable': cancellable};
+}
+
+class CreateAccountPayoutRequestResponseRequestSourcesItem {
+  const CreateAccountPayoutRequestResponseRequestSourcesItem({required this.source, required this.amountPiastres, required this.status});
+
+  factory CreateAccountPayoutRequestResponseRequestSourcesItem.fromJson(Map<String, dynamic> json) => CreateAccountPayoutRequestResponseRequestSourcesItem(source: json['source'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String);
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String status;
+
+  Map<String, dynamic> toJson() => {'source': source, 'amountPiastres': amountPiastres, 'status': status};
 }
 
 class CreateAddressRequest {
@@ -1141,6 +1364,28 @@ class GetSellerHomeResponseSales {
   Map<String, dynamic> toJson() => {'todayPiastres': todayPiastres, 'last30DaysGrossPiastres': last30DaysGrossPiastres, 'last30DaysNetPiastres': last30DaysNetPiastres};
 }
 
+class GetSellerPayoutAccountResponse {
+  const GetSellerPayoutAccountResponse({required this.account});
+
+  factory GetSellerPayoutAccountResponse.fromJson(Map<String, dynamic> json) => GetSellerPayoutAccountResponse(account: json['account'] == null ? null : GetSellerPayoutAccountResponseAccount.fromJson(json['account'] as Map<String, dynamic>));
+
+  final GetSellerPayoutAccountResponseAccount? account;
+
+  Map<String, dynamic> toJson() => {'account': account?.toJson()};
+}
+
+class GetSellerPayoutAccountResponseAccount {
+  const GetSellerPayoutAccountResponseAccount({required this.label, required this.type});
+
+  factory GetSellerPayoutAccountResponseAccount.fromJson(Map<String, dynamic> json) => GetSellerPayoutAccountResponseAccount(label: json['label'] as String, type: json['type'] as String);
+
+  final String label;
+
+  final String type;
+
+  Map<String, dynamic> toJson() => {'label': label, 'type': type};
+}
+
 class GetSellerShippingRatesResponse {
   const GetSellerShippingRatesResponse({required this.items});
 
@@ -1168,6 +1413,70 @@ class GetSellerShippingRatesResponseItemsItem {
   final int etaMaxDays;
 
   Map<String, dynamic> toJson() => {'governorateId': governorateId, 'enabled': enabled, 'feePiastres': feePiastres, 'etaMinDays': etaMinDays, 'etaMaxDays': etaMaxDays};
+}
+
+class GetSellerStatementResponse {
+  const GetSellerStatementResponse({required this.totals, required this.rows});
+
+  factory GetSellerStatementResponse.fromJson(Map<String, dynamic> json) => GetSellerStatementResponse(totals: GetSellerStatementResponseTotals.fromJson(json['totals'] as Map<String, dynamic>), rows: (json['rows'] as List).map((e) => GetSellerStatementResponseRowsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final GetSellerStatementResponseTotals totals;
+
+  final List<GetSellerStatementResponseRowsItem> rows;
+
+  Map<String, dynamic> toJson() => {'totals': totals.toJson(), 'rows': rows.map((e) => e.toJson()).toList()};
+}
+
+class GetSellerStatementResponseRowsItem {
+  const GetSellerStatementResponseRowsItem({required this.id, required this.date, required this.type, required this.description, required this.reference, required this.orderRef, required this.netEffectPiastres, required this.pendingDeltaPiastres, required this.availableDeltaPiastres, required this.reservedDeltaPiastres, required this.payoutCostPiastres});
+
+  factory GetSellerStatementResponseRowsItem.fromJson(Map<String, dynamic> json) => GetSellerStatementResponseRowsItem(id: json['id'] as String, date: json['date'] as String, type: json['type'] as String, description: json['description'] as String, reference: json['reference'] as String, orderRef: json['orderRef'] as String?, netEffectPiastres: (json['netEffectPiastres'] as num).toInt(), pendingDeltaPiastres: (json['pendingDeltaPiastres'] as num).toInt(), availableDeltaPiastres: (json['availableDeltaPiastres'] as num).toInt(), reservedDeltaPiastres: (json['reservedDeltaPiastres'] as num).toInt(), payoutCostPiastres: (json['payoutCostPiastres'] as num).toInt());
+
+  final String id;
+
+  final String date;
+
+  final String type;
+
+  final String description;
+
+  final String reference;
+
+  final String? orderRef;
+
+  final int netEffectPiastres;
+
+  final int pendingDeltaPiastres;
+
+  final int availableDeltaPiastres;
+
+  final int reservedDeltaPiastres;
+
+  final int payoutCostPiastres;
+
+  Map<String, dynamic> toJson() => {'id': id, 'date': date, 'type': type, 'description': description, 'reference': reference, 'orderRef': orderRef, 'netEffectPiastres': netEffectPiastres, 'pendingDeltaPiastres': pendingDeltaPiastres, 'availableDeltaPiastres': availableDeltaPiastres, 'reservedDeltaPiastres': reservedDeltaPiastres, 'payoutCostPiastres': payoutCostPiastres};
+}
+
+class GetSellerStatementResponseTotals {
+  const GetSellerStatementResponseTotals({required this.grossSalesPiastres, required this.edmnFeesPiastres, required this.refundsPiastres, required this.pendingPiastres, required this.ledgerAvailablePiastres, required this.reservedPiastres, required this.debtPiastres});
+
+  factory GetSellerStatementResponseTotals.fromJson(Map<String, dynamic> json) => GetSellerStatementResponseTotals(grossSalesPiastres: (json['grossSalesPiastres'] as num).toInt(), edmnFeesPiastres: (json['edmnFeesPiastres'] as num).toInt(), refundsPiastres: (json['refundsPiastres'] as num).toInt(), pendingPiastres: (json['pendingPiastres'] as num).toInt(), ledgerAvailablePiastres: (json['ledgerAvailablePiastres'] as num).toInt(), reservedPiastres: (json['reservedPiastres'] as num).toInt(), debtPiastres: (json['debtPiastres'] as num).toInt());
+
+  final int grossSalesPiastres;
+
+  final int edmnFeesPiastres;
+
+  final int refundsPiastres;
+
+  final int pendingPiastres;
+
+  final int ledgerAvailablePiastres;
+
+  final int reservedPiastres;
+
+  final int debtPiastres;
+
+  Map<String, dynamic> toJson() => {'grossSalesPiastres': grossSalesPiastres, 'edmnFeesPiastres': edmnFeesPiastres, 'refundsPiastres': refundsPiastres, 'pendingPiastres': pendingPiastres, 'ledgerAvailablePiastres': ledgerAvailablePiastres, 'reservedPiastres': reservedPiastres, 'debtPiastres': debtPiastres};
 }
 
 class GetStoreConversationResponse {
@@ -1325,6 +1634,155 @@ class GetUnreadMessagesResponse {
   Map<String, dynamic> toJson() => {'unread': unread};
 }
 
+class GetWalletResponse {
+  const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUpAvailable, required this.realMoney});
+
+  factory GetWalletResponse.fromJson(Map<String, dynamic> json) => GetWalletResponse(hasEarnings: json['hasEarnings'] as bool, balances: GetWalletResponseBalances.fromJson(json['balances'] as Map<String, dynamic>), sources: (json['sources'] as List).map((e) => GetWalletResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetWalletResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), payout: GetWalletResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), topUpAvailable: json['topUpAvailable'] as bool, realMoney: json['realMoney'] as bool);
+
+  final bool hasEarnings;
+
+  final GetWalletResponseBalances balances;
+
+  final List<GetWalletResponseSourcesItem> sources;
+
+  final List<GetWalletResponseItemsItem> items;
+
+  final GetWalletResponsePayout payout;
+
+  /// Always false: EDMN keeps no prepaid balance and has no top-up service.
+  final bool topUpAvailable;
+
+  final bool realMoney;
+
+  Map<String, dynamic> toJson() => {'hasEarnings': hasEarnings, 'balances': balances.toJson(), 'sources': sources.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'payout': payout.toJson(), 'topUpAvailable': topUpAvailable, 'realMoney': realMoney};
+}
+
+class GetWalletResponseBalances {
+  const GetWalletResponseBalances({required this.pendingPiastres, required this.heldPiastres, required this.awaitingReleasePiastres, required this.availablePiastres, required this.reservedPiastres, required this.debtPiastres, required this.unsecuredClaimsPiastres, required this.paidOutPiastres});
+
+  factory GetWalletResponseBalances.fromJson(Map<String, dynamic> json) => GetWalletResponseBalances(pendingPiastres: (json['pendingPiastres'] as num).toInt(), heldPiastres: (json['heldPiastres'] as num).toInt(), awaitingReleasePiastres: (json['awaitingReleasePiastres'] as num).toInt(), availablePiastres: (json['availablePiastres'] as num).toInt(), reservedPiastres: (json['reservedPiastres'] as num).toInt(), debtPiastres: (json['debtPiastres'] as num).toInt(), unsecuredClaimsPiastres: (json['unsecuredClaimsPiastres'] as num).toInt(), paidOutPiastres: (json['paidOutPiastres'] as num).toInt());
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int pendingPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int heldPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int awaitingReleasePiastres;
+
+  /// Withdrawable now; holds, disputes and in-flight requests are already excluded.
+  final int availablePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int reservedPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int debtPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int unsecuredClaimsPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int paidOutPiastres;
+
+  Map<String, dynamic> toJson() => {'pendingPiastres': pendingPiastres, 'heldPiastres': heldPiastres, 'awaitingReleasePiastres': awaitingReleasePiastres, 'availablePiastres': availablePiastres, 'reservedPiastres': reservedPiastres, 'debtPiastres': debtPiastres, 'unsecuredClaimsPiastres': unsecuredClaimsPiastres, 'paidOutPiastres': paidOutPiastres};
+}
+
+class GetWalletResponseItemsItem {
+  const GetWalletResponseItemsItem({required this.source, required this.kind, required this.entityId, required this.ref, required this.bucket, required this.amountPiastres});
+
+  factory GetWalletResponseItemsItem.fromJson(Map<String, dynamic> json) => GetWalletResponseItemsItem(source: json['source'] as String, kind: json['kind'] as String, entityId: json['entityId'] as String, ref: json['ref'] as String, bucket: json['bucket'] as String, amountPiastres: (json['amountPiastres'] as num).toInt());
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  /// One of: SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String kind;
+
+  final String entityId;
+
+  final String ref;
+
+  /// One of: pending, held, entitledAwaitingRelease, available (kept as String for forward compatibility).
+  final String bucket;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  Map<String, dynamic> toJson() => {'source': source, 'kind': kind, 'entityId': entityId, 'ref': ref, 'bucket': bucket, 'amountPiastres': amountPiastres};
+}
+
+class GetWalletResponsePayout {
+  const GetWalletResponsePayout({required this.identityApproved, required this.destinations, required this.minimumPiastres, required this.blockReason});
+
+  factory GetWalletResponsePayout.fromJson(Map<String, dynamic> json) => GetWalletResponsePayout(identityApproved: json['identityApproved'] as bool, destinations: (json['destinations'] as List).map((e) => GetWalletResponsePayoutDestinationsItem.fromJson(e as Map<String, dynamic>)).toList(), minimumPiastres: (json['minimumPiastres'] as num).toInt(), blockReason: json['blockReason'] as String?);
+
+  final bool identityApproved;
+
+  final List<GetWalletResponsePayoutDestinationsItem> destinations;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int minimumPiastres;
+
+  /// One of: IDENTITY, NO_DESTINATION, DEBT, NOTHING_AVAILABLE (kept as String for forward compatibility).
+  final String? blockReason;
+
+  Map<String, dynamic> toJson() => {'identityApproved': identityApproved, 'destinations': destinations.map((e) => e.toJson()).toList(), 'minimumPiastres': minimumPiastres, 'blockReason': blockReason};
+}
+
+class GetWalletResponsePayoutDestinationsItem {
+  const GetWalletResponsePayoutDestinationsItem({required this.key, required this.label, required this.scope});
+
+  factory GetWalletResponsePayoutDestinationsItem.fromJson(Map<String, dynamic> json) => GetWalletResponsePayoutDestinationsItem(key: json['key'] as String, label: json['label'] as String, scope: json['scope'] as String);
+
+  final String key;
+
+  final String label;
+
+  /// One of: STORE_AND_DEALS, DEALS_ONLY (kept as String for forward compatibility).
+  final String scope;
+
+  Map<String, dynamic> toJson() => {'key': key, 'label': label, 'scope': scope};
+}
+
+class GetWalletResponseSourcesItem {
+  const GetWalletResponseSourcesItem({required this.pendingPiastres, required this.heldPiastres, required this.awaitingReleasePiastres, required this.availablePiastres, required this.reservedPiastres, required this.debtPiastres, required this.unsecuredClaimsPiastres, required this.paidOutPiastres, required this.source, required this.storeName});
+
+  factory GetWalletResponseSourcesItem.fromJson(Map<String, dynamic> json) => GetWalletResponseSourcesItem(pendingPiastres: (json['pendingPiastres'] as num).toInt(), heldPiastres: (json['heldPiastres'] as num).toInt(), awaitingReleasePiastres: (json['awaitingReleasePiastres'] as num).toInt(), availablePiastres: (json['availablePiastres'] as num).toInt(), reservedPiastres: (json['reservedPiastres'] as num).toInt(), debtPiastres: (json['debtPiastres'] as num).toInt(), unsecuredClaimsPiastres: (json['unsecuredClaimsPiastres'] as num).toInt(), paidOutPiastres: (json['paidOutPiastres'] as num).toInt(), source: json['source'] as String, storeName: json['storeName'] as String?);
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int pendingPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int heldPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int awaitingReleasePiastres;
+
+  /// Withdrawable now; holds, disputes and in-flight requests are already excluded.
+  final int availablePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int reservedPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int debtPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int unsecuredClaimsPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int paidOutPiastres;
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  final String? storeName;
+
+  Map<String, dynamic> toJson() => {'pendingPiastres': pendingPiastres, 'heldPiastres': heldPiastres, 'awaitingReleasePiastres': awaitingReleasePiastres, 'availablePiastres': availablePiastres, 'reservedPiastres': reservedPiastres, 'debtPiastres': debtPiastres, 'unsecuredClaimsPiastres': unsecuredClaimsPiastres, 'paidOutPiastres': paidOutPiastres, 'source': source, 'storeName': storeName};
+}
+
 class IdentityStatus {
   const IdentityStatus({required this.status, required this.legalName, required this.last4, required this.hasFront, required this.hasBack, required this.reason});
 
@@ -1389,6 +1847,66 @@ class LegalDocument {
   final String updatedAt;
 
   Map<String, dynamic> toJson() => {'code': code, 'slug': slug, 'title': title, 'version': version, 'body': body, 'approved': approved, 'updatedAt': updatedAt};
+}
+
+class ListAccountPayoutRequestsResponse {
+  const ListAccountPayoutRequestsResponse({required this.items});
+
+  factory ListAccountPayoutRequestsResponse.fromJson(Map<String, dynamic> json) => ListAccountPayoutRequestsResponse(items: (json['items'] as List).map((e) => ListAccountPayoutRequestsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ListAccountPayoutRequestsResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListAccountPayoutRequestsResponseItemsItem {
+  const ListAccountPayoutRequestsResponseItemsItem({required this.id, required this.number, required this.amountPiastres, required this.status, required this.destination, required this.createdAt, required this.paidAt, required this.reference, required this.reasonAr, required this.isTest, required this.sources, required this.cancellable});
+
+  factory ListAccountPayoutRequestsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListAccountPayoutRequestsResponseItemsItem(id: json['id'] as String, number: json['number'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, destination: json['destination'] as String, createdAt: json['createdAt'] as String, paidAt: json['paidAt'] as String?, reference: json['reference'] as String?, reasonAr: json['reasonAr'] as String?, isTest: json['isTest'] as bool, sources: (json['sources'] as List).map((e) => ListAccountPayoutRequestsResponseItemsItemSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  final String number;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// TRANSFER_UNCERTAIN = not confirmed either way; never retried or resolved by the app.
+  final String status;
+
+  final String destination;
+
+  final String createdAt;
+
+  final String? paidAt;
+
+  final String? reference;
+
+  final String? reasonAr;
+
+  final bool isTest;
+
+  final List<ListAccountPayoutRequestsResponseItemsItemSourcesItem> sources;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'amountPiastres': amountPiastres, 'status': status, 'destination': destination, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'isTest': isTest, 'sources': sources.map((e) => e.toJson()).toList(), 'cancellable': cancellable};
+}
+
+class ListAccountPayoutRequestsResponseItemsItemSourcesItem {
+  const ListAccountPayoutRequestsResponseItemsItemSourcesItem({required this.source, required this.amountPiastres, required this.status});
+
+  factory ListAccountPayoutRequestsResponseItemsItemSourcesItem.fromJson(Map<String, dynamic> json) => ListAccountPayoutRequestsResponseItemsItemSourcesItem(source: json['source'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String);
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String status;
+
+  Map<String, dynamic> toJson() => {'source': source, 'amountPiastres': amountPiastres, 'status': status};
 }
 
 class ListAddressesResponse {
@@ -1574,6 +2092,38 @@ class ListProductReviewsResponse {
   final List<Review> items;
 
   Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListReceivingAccountsResponse {
+  const ListReceivingAccountsResponse({required this.items});
+
+  factory ListReceivingAccountsResponse.fromJson(Map<String, dynamic> json) => ListReceivingAccountsResponse(items: (json['items'] as List).map((e) => ListReceivingAccountsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ListReceivingAccountsResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListReceivingAccountsResponseItemsItem {
+  const ListReceivingAccountsResponseItemsItem({required this.id, required this.type, required this.label, required this.holderName, required this.status, required this.reviewNote, required this.createdAt});
+
+  factory ListReceivingAccountsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListReceivingAccountsResponseItemsItem(id: json['id'] as String, type: json['type'] as String, label: json['label'] as String, holderName: json['holderName'] as String, status: json['status'] as String, reviewNote: json['reviewNote'] as String?, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String type;
+
+  final String label;
+
+  final String holderName;
+
+  final String status;
+
+  final String? reviewNote;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'type': type, 'label': label, 'holderName': holderName, 'status': status, 'reviewNote': reviewNote, 'createdAt': createdAt};
 }
 
 class ListSellerOrdersResponse {
@@ -1790,6 +2340,64 @@ class ListSupportTicketsResponseItemsItem {
   final List<String> allowedActions;
 
   Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList()};
+}
+
+class ListWalletActivityResponse {
+  const ListWalletActivityResponse({required this.items});
+
+  factory ListWalletActivityResponse.fromJson(Map<String, dynamic> json) => ListWalletActivityResponse(items: (json['items'] as List).map((e) => ListWalletActivityResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ListWalletActivityResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListWalletActivityResponseItemsItem {
+  const ListWalletActivityResponseItemsItem({required this.kind, required this.id, required this.direction, required this.amountPiastres, required this.status, required this.ref, required this.method, required this.reference, required this.note, required this.isTest, required this.createdAt, required this.link});
+
+  factory ListWalletActivityResponseItemsItem.fromJson(Map<String, dynamic> json) => ListWalletActivityResponseItemsItem(kind: json['kind'] as String, id: json['id'] as String, direction: json['direction'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, ref: json['ref'] as String, method: json['method'] as String?, reference: json['reference'] as String?, note: json['note'] as String?, isTest: json['isTest'] as bool, createdAt: json['createdAt'] as String, link: json['link'] == null ? null : ListWalletActivityResponseItemsItemLink.fromJson(json['link'] as Map<String, dynamic>));
+
+  /// One of: PAYMENT, REFUND, PAYOUT (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  /// One of: OUT, IN (kept as String for forward compatibility).
+  final String direction;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String status;
+
+  final String ref;
+
+  final String? method;
+
+  final String? reference;
+
+  final String? note;
+
+  final bool isTest;
+
+  final String createdAt;
+
+  final ListWalletActivityResponseItemsItemLink? link;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id, 'direction': direction, 'amountPiastres': amountPiastres, 'status': status, 'ref': ref, 'method': method, 'reference': reference, 'note': note, 'isTest': isTest, 'createdAt': createdAt, 'link': link?.toJson()};
+}
+
+class ListWalletActivityResponseItemsItemLink {
+  const ListWalletActivityResponseItemsItemLink({required this.kind, required this.id});
+
+  factory ListWalletActivityResponseItemsItemLink.fromJson(Map<String, dynamic> json) => ListWalletActivityResponseItemsItemLink(kind: json['kind'] as String, id: json['id'] as String);
+
+  /// One of: ORDER, DEAL, PAYMENT (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
 }
 
 class LoginRequest {
@@ -2280,6 +2888,52 @@ class PlaceOrderResponse {
   final bool created;
 
   Map<String, dynamic> toJson() => {'orderId': orderId, 'created': created};
+}
+
+class PreviewAccountPayoutRequestRequest {
+  const PreviewAccountPayoutRequestRequest({required this.amountPiastres, required this.destination});
+
+  factory PreviewAccountPayoutRequestRequest.fromJson(Map<String, dynamic> json) => PreviewAccountPayoutRequestRequest(amountPiastres: (json['amountPiastres'] as num).toInt(), destination: json['destination'] as String);
+
+  final int amountPiastres;
+
+  final String destination;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'destination': destination};
+}
+
+class PreviewAccountPayoutRequestResponse {
+  const PreviewAccountPayoutRequestResponse({required this.amountPiastres, required this.availablePiastres, required this.fits, required this.destination, required this.sources});
+
+  factory PreviewAccountPayoutRequestResponse.fromJson(Map<String, dynamic> json) => PreviewAccountPayoutRequestResponse(amountPiastres: (json['amountPiastres'] as num).toInt(), availablePiastres: (json['availablePiastres'] as num).toInt(), fits: json['fits'] as bool, destination: json['destination'] as String, sources: (json['sources'] as List).map((e) => PreviewAccountPayoutRequestResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int availablePiastres;
+
+  final bool fits;
+
+  final String destination;
+
+  final List<PreviewAccountPayoutRequestResponseSourcesItem> sources;
+
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'availablePiastres': availablePiastres, 'fits': fits, 'destination': destination, 'sources': sources.map((e) => e.toJson()).toList()};
+}
+
+class PreviewAccountPayoutRequestResponseSourcesItem {
+  const PreviewAccountPayoutRequestResponseSourcesItem({required this.source, required this.amountPiastres});
+
+  factory PreviewAccountPayoutRequestResponseSourcesItem.fromJson(Map<String, dynamic> json) => PreviewAccountPayoutRequestResponseSourcesItem(source: json['source'] as String, amountPiastres: (json['amountPiastres'] as num).toInt());
+
+  /// One of: MARKETPLACE, PROTECTED_DEAL (kept as String for forward compatibility).
+  final String source;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  Map<String, dynamic> toJson() => {'source': source, 'amountPiastres': amountPiastres};
 }
 
 class PreviewSellerPayoutRequestRequest {

@@ -7,6 +7,7 @@ Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reu
 
 After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5, Implemented 67, Merged 32, Missing 33, Reused 2.
 After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decision 5, Implemented 77, Merged 38, Missing 17, Reused 2.
+After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implemented 83, Merged 37, Missing 12, Reused 2.
 
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
@@ -108,18 +109,18 @@ After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decis
 | D21 | Settlement status | /deals/:id status/timeline | Merged | GET /deals/{id} (release is staff-only) | backend | — |
 | D22 | Completion | /deals/:id COMPLETED | Merged | GET /deals/{id} | — | — |
 | D23 | Cancellation/refund | /deals/:id cancel; refund status read-only | Implemented | POST cancel; refund by staff only | backend | — |
-| D24 | Wallet home | /wallet stub | Missing | sellerFinancialView / account withdrawals | — | — |
-| D25 | Balance breakdown | /seller/funds (seller) | Merged | seller/funds | backend | yes |
-| D26 | Transaction history | — | Missing | ledger statement | — | — |
-| D27 | Transaction detail | — | Missing | — | — | — |
-| D28 | Add funds | — | Blocked by Business Decision | no deposit service | — | — |
-| D29 | Deposit method | — | Blocked by Business Decision | no deposit service | — | — |
+| D24 | Wallet home | /wallet | Implemented | GET /wallet (sellerFinancialView) | widget+backend | yes |
+| D25 | Balance breakdown | /wallet «تفاصيل الرصيد», /seller/funds | Implemented | GET /wallet balances + sources + items | widget+backend | yes |
+| D26 | Transaction history | /wallet/activity (filters + search); /seller/statement | Implemented | GET /wallet/activity?kind&q; GET /seller/statement (finance.view) | backend | yes |
+| D27 | Transaction detail | /wallet/activity/:id | Implemented | activity row (server) + link to payment/order/deal | — | yes |
+| D28 | Add funds | — (no flow shown) | Blocked by Business Decision | no deposit / prepaid-balance service in backend; topUpAvailable=false | backend | — |
+| D29 | Deposit method | — | Blocked by Business Decision | no deposit service (payment methods exist only for orders/deals) | — | — |
 | D30 | Deposit instructions | — | Blocked by Business Decision | no deposit service | — | — |
-| D31 | Deposit proof | — | Blocked by Business Decision | no deposit service | — | — |
-| D32 | Withdrawal | — | Missing | requestAccountWithdrawal/requestWithdrawal | — | — |
-| D33 | Payout accounts | /seller/apply payout account | Merged | POST /seller/application/payout-account (seller); buyer payout accounts: no API | backend flow | — |
-| D34 | Wallet transfer | — | Blocked by Business Decision | no wallet-to-wallet service | — | — |
-| D35 | Wallet result | — | Missing | — | — | — |
+| D31 | Deposit proof | — | Blocked by Business Decision | no deposit service (order/deal receipts: /payments/:id) | — | — |
+| D32 | Withdrawal | /wallet/payout; /seller/payouts | Implemented | POST /wallet/payout-requests (+preview, cancel) — request only; seller: /seller/payout-requests | widget+backend | yes |
+| D33 | Payout accounts | /wallet/accounts; store account on /seller/payouts | Implemented | GET/POST /wallet/receiving-accounts, archive; GET /seller/payout-account | backend | yes |
+| D34 | Wallet transfer | — | Blocked by Business Decision | owner: deferred; no wallet-to-wallet service | — | — |
+| D35 | Wallet result | /wallet/payout result card; request list statuses | Merged | created / already recorded; REQUESTED…PAID/REJECTED/TRANSFER_UNCERTAIN | widget+backend | — |
 | C01 | Inbox | /messages, /seller/messages | Implemented | GET /conversations, /seller/conversations | widget+backend | yes |
 | C02 | New conversation | «مراسلة البائع/المشتري» on order, seller order, deal | Implemented | POST /seller-orders/{id}/conversation, /seller/orders/{id}/conversation, /deals/{id}/conversation | backend | — |
 | C03 | Chat | /messages/:id, /seller/messages/:id | Implemented | GET thread, POST messages (clientKey), POST seen | widget+backend | yes |

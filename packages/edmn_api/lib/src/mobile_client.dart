@@ -322,4 +322,30 @@ class MobileApi {
   Future<GetSupportTicketResponse> rateSupportTicket(String id, int rating, {String? comment, required String idempotencyKey}) async => GetSupportTicketResponse.fromJson(
       await client.sendJson('POST', fillPath(MobileApiPaths.rateSupportTicket.path, {'ticketId': id}),
           body: {'rating': rating, if (comment != null && comment.isNotEmpty) 'comment': comment}, idempotencyKey: idempotencyKey));
+
+  // ── Wallet: earnings, activity, payout REQUESTS, receiving accounts; store statement ──────────────────────────
+  // Every amount is computed by the server from the ledger. A payout request moves nothing; EDMN approves, reserves
+  // and transfers in the admin console.
+  Future<GetWalletResponse> wallet() async => GetWalletResponse.fromJson(await client.getJson(MobileApiPaths.getWallet.path));
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson(
+      await client.getJson(MobileApiPaths.listWalletActivity.path, query: {'kind': ?kind, if (q != null && q.isNotEmpty) 'q': q}));
+  Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async =>
+      ListAccountPayoutRequestsResponse.fromJson(await client.getJson(MobileApiPaths.listAccountPayoutRequests.path));
+  Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson(
+      await client.sendJson('POST', MobileApiPaths.previewAccountPayoutRequest.path, body: {'amountPiastres': amountPiastres, 'destination': destination}));
+  /// [clientKey] identifies this one request: a retry with the same key returns the original (created=false).
+  Future<CreateAccountPayoutRequestResponse> requestAccountPayout(int amountPiastres, String destination, String clientKey) async =>
+      CreateAccountPayoutRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.createAccountPayoutRequest.path,
+          body: {'amountPiastres': amountPiastres, 'destination': destination, 'clientKey': clientKey}));
+  Future<CancelAccountPayoutRequestResponse> cancelAccountPayout(String id, {required String idempotencyKey}) async => CancelAccountPayoutRequestResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.cancelAccountPayoutRequest.path, {'requestId': id}), idempotencyKey: idempotencyKey));
+  Future<ListReceivingAccountsResponse> receivingAccounts() async => ListReceivingAccountsResponse.fromJson(await client.getJson(MobileApiPaths.listReceivingAccounts.path));
+  Future<AddReceivingAccountResponse> addReceivingAccount(Map<String, dynamic> account, {String? replacesId, required String idempotencyKey}) async =>
+      AddReceivingAccountResponse.fromJson(await client.sendJson('POST', MobileApiPaths.addReceivingAccount.path,
+          body: {'account': account, 'replacesId': ?replacesId}, idempotencyKey: idempotencyKey));
+  Future<ArchiveReceivingAccountResponse> archiveReceivingAccount(String id, {required String idempotencyKey}) async => ArchiveReceivingAccountResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.archiveReceivingAccount.path, {'accountId': id}), idempotencyKey: idempotencyKey));
+  Future<GetSellerStatementResponse> sellerStatement() async => GetSellerStatementResponse.fromJson(await client.getJson(MobileApiPaths.getSellerStatement.path));
+  Future<GetSellerPayoutAccountResponse> sellerPayoutAccount() async =>
+      GetSellerPayoutAccountResponse.fromJson(await client.getJson(MobileApiPaths.getSellerPayoutAccount.path));
 }

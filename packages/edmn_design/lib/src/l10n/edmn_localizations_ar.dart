@@ -2107,4 +2107,302 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get protectedDealTerms => 'شروط أضمن صفقة';
+
+  @override
+  String get accountHolderMustMatch =>
+      'اسم صاحب الحساب لازم يطابق اسمك في التحقق من الهوية.';
+
+  @override
+  String get accountNeedsInfo => 'مطلوب معلومات';
+
+  @override
+  String get accountNumberHint => 'رقم الحساب (اختياري لو كتبت الـ IBAN)';
+
+  @override
+  String get accountRejected => 'مرفوض';
+
+  @override
+  String get accountSubmitted => 'اتبعت للمراجعة. هيتفعّل بعد تحقق فريق أضمن.';
+
+  @override
+  String get accountUnderReview => 'قيد المراجعة';
+
+  @override
+  String get accountVerified => 'متحقق منه';
+
+  @override
+  String get activityTestNotice =>
+      'عملية تجريبية: الأموال الحقيقية مقفولة ومفيش فلوس اتحولت.';
+
+  @override
+  String get addReceivingAccount => 'إضافة حساب استلام';
+
+  @override
+  String get amountEgpHint => 'المبلغ بالجنيه';
+
+  @override
+  String get amountInvalid => 'اكتب مبلغ صحيح (جنيه وقروش لحد رقمين)';
+
+  @override
+  String get availableToWithdraw => 'متاح للسحب';
+
+  @override
+  String get balanceAvailable => 'متاح';
+
+  @override
+  String get balanceAvailableHint => 'تقدر تطلب سحبه دلوقتي';
+
+  @override
+  String get balanceAwaitingRelease => 'مستحق وبانتظار الاعتماد';
+
+  @override
+  String get balanceAwaitingReleaseHint =>
+      'المشتري أكد، وفريق أضمن بيعتمد التحويل لرصيدك';
+
+  @override
+  String get balanceBreakdown => 'تفاصيل الرصيد';
+
+  @override
+  String get balanceBySource => 'حسب المصدر';
+
+  @override
+  String get balanceClaims => 'مطالبات مفتوحة';
+
+  @override
+  String get balanceClaimsHint => 'مطالبات نزاع/إرجاع مش مغطاة برصيد — مش فلوس';
+
+  @override
+  String get balanceDebt => 'مديونية';
+
+  @override
+  String get balanceDebtHint => 'لازم تتسوّى قبل أي سحب';
+
+  @override
+  String get balanceHeld => 'محجوز';
+
+  @override
+  String get balanceHeldHint => 'بسبب نزاع أو مراجعة — مش قابل للسحب';
+
+  @override
+  String get balancePaidOut => 'اتحوّل لك';
+
+  @override
+  String get balancePending => 'معلّق';
+
+  @override
+  String get balancePendingHint => 'اتدفع ولسه في فترة التوصيل أو رد المشتري';
+
+  @override
+  String get balanceReserved => 'محجوز لطلب سحب';
+
+  @override
+  String get balanceReservedHint => 'طلب سحب اتعتمد ولسه بيتحوّل';
+
+  @override
+  String get bankNameHint => 'اسم البنك';
+
+  @override
+  String get checkAmount => 'مراجعة المبلغ';
+
+  @override
+  String get dateLabel => 'التاريخ';
+
+  @override
+  String get destDealsOnly => 'مستحقات الصفقات المحمية فقط';
+
+  @override
+  String get destStoreAndDeals => 'حساب المتجر: المتجر + الصفقات';
+
+  @override
+  String get destinationLabel => 'الوجهة';
+
+  @override
+  String get edmnFees => 'رسوم أضمن';
+
+  @override
+  String get filterPayments => 'مدفوعات';
+
+  @override
+  String get filterPayouts => 'سحب';
+
+  @override
+  String get filterRefunds => 'مستردات';
+
+  @override
+  String get financialStatement => 'كشف الحساب';
+
+  @override
+  String get fundsByOrder => 'المبالغ حسب الطلب أو الصفقة';
+
+  @override
+  String get holderNameFull => 'اسم صاحب الحساب كامل';
+
+  @override
+  String get ibanHint => 'IBAN (EG + 27 رقم)';
+
+  @override
+  String get ledgerEntries => 'الحركات';
+
+  @override
+  String get methodBank => 'تحويل بنكي';
+
+  @override
+  String get methodInstapay => 'إنستاباي';
+
+  @override
+  String get methodLabel => 'الطريقة';
+
+  @override
+  String get methodWallet => 'محفظة موبايل';
+
+  @override
+  String get noActivity => 'مفيش حركات لحد دلوقتي';
+
+  @override
+  String get noPayoutRequests => 'مفيش طلبات سحب';
+
+  @override
+  String get noPrepaidBalance =>
+      'أضمن ما بيحتفظش برصيد مدفوع مقدمًا: الدفع بيكون لكل طلب أو صفقة، والمستردات بترجع لوسيلة الدفع الأصلية.';
+
+  @override
+  String get noReceivingAccounts => 'مفيش حسابات استلام';
+
+  @override
+  String get noteLabel => 'ملاحظة';
+
+  @override
+  String get openFromHistory => 'افتح العملية من سجل المعاملات';
+
+  @override
+  String get payoutBlockDebt => 'عليك مديونية لازم تتسوّى قبل أي سحب.';
+
+  @override
+  String get payoutBlockIdentity => 'لازم تتحقق من هويتك قبل طلب أي سحب.';
+
+  @override
+  String get payoutBlockNoAccount =>
+      'أضف حساب استلام واستنى التحقق منه قبل السحب.';
+
+  @override
+  String get payoutBlockNothing => 'مفيش رصيد متاح للسحب دلوقتي.';
+
+  @override
+  String get payoutDestination => 'هيتحوّل على';
+
+  @override
+  String get payoutDoesNotFit => 'المبلغ أكبر من المتاح للسحب على الوجهة دي.';
+
+  @override
+  String get payoutPreviewNote =>
+      'ده تقدير من الخادم. التوزيع النهائي بيتحدد وقت الاعتماد.';
+
+  @override
+  String get payoutRequestAlreadySent => 'الطلب ده اتسجل قبل كده';
+
+  @override
+  String get payoutRequestSent => 'تم استلام طلب السحب';
+
+  @override
+  String get payoutTestNotice =>
+      'طلب تجريبي: الأموال الحقيقية مقفولة، ومفيش أي تحويل هيتم.';
+
+  @override
+  String get receivingAccounts => 'حسابات الاستلام';
+
+  @override
+  String get receivingAccountsNote =>
+      'أي حساب جديد بيتراجع من فريق أضمن قبل ما يستقبل فلوس.';
+
+  @override
+  String get recentActivity => 'آخر الحركات';
+
+  @override
+  String get referenceNumber => 'الرقم المرجعي';
+
+  @override
+  String get refundsTotal => 'مستردات';
+
+  @override
+  String get removeAccount => 'إيقاف الحساب';
+
+  @override
+  String get removeAccountConfirm =>
+      'مش هتقدر تستخدم الحساب ده تاني في طلبات جديدة.';
+
+  @override
+  String get searchByReference => 'ابحث برقم الطلب أو المرجع';
+
+  @override
+  String get sendPayoutRequest => 'إرسال طلب السحب';
+
+  @override
+  String get sourceStore => 'مبيعات المتجر';
+
+  @override
+  String get testTag => 'تجريبي';
+
+  @override
+  String get totalSales => 'إجمالي المبيعات';
+
+  @override
+  String get transactionDetails => 'تفاصيل العملية';
+
+  @override
+  String get transactionHistory => 'سجل المعاملات';
+
+  @override
+  String get transferReference => 'مرجع التحويل';
+
+  @override
+  String get viewAll => 'عرض الكل';
+
+  @override
+  String get walletNumberHint => 'رقم المحفظة';
+
+  @override
+  String get walletProviderHint => 'مزود المحفظة (فودافون كاش، اتصالات كاش…)';
+
+  @override
+  String get walletTestNotice =>
+      'أرصدة تجريبية: الأموال الحقيقية مقفولة، والمبالغ دي مش فلوس حقيقية قابلة للتحويل.';
+
+  @override
+  String activityPayment(String ref) {
+    return 'دفع $ref';
+  }
+
+  @override
+  String activityRefund(String ref) {
+    return 'استرداد $ref';
+  }
+
+  @override
+  String activityPayout(String ref) {
+    return 'طلب سحب $ref';
+  }
+
+  @override
+  String orderRef(String ref) {
+    return 'طلب $ref';
+  }
+
+  @override
+  String payoutMinimum(String amount) {
+    return 'الحد الأدنى $amount';
+  }
+
+  @override
+  String payoutRequestResult(String number) {
+    return 'رقم الطلب #$number. فريق أضمن هيراجعه ويعتمده، ومفيش فلوس بتتحرك قبل الاعتماد.';
+  }
+
+  @override
+  String payoutConfirmBody(String amount, String destination) {
+    return 'هتطلب سحب $amount على $destination. الطلب بيتراجع ويتعتمد من فريق أضمن.';
+  }
+
+  @override
+  String get noEarningsYet =>
+      'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.';
 }

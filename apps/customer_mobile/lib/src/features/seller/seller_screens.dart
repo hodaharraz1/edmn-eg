@@ -135,6 +135,7 @@ class _SellerHome extends ConsumerWidget {
           if (p.contains('orders.communicate')) EdmnMenuItem(key: const Key('seller-messages'), icon: Icons.chat_bubble_outline_rounded, title: t.storeMessages, onTap: () => context.push('/seller/messages')),
           if (p.contains('orders.manage')) EdmnMenuItem(key: const Key('seller-orders'), icon: Icons.shopping_cart_outlined, title: t.sellerOrders, onTap: () => context.push('/seller/orders')),
           if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-funds'), icon: Icons.account_balance_wallet_outlined, title: t.earningsBalance, onTap: () => context.push('/seller/funds')),
+          if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-statement'), icon: Icons.receipt_long_outlined, title: t.financialStatement, onTap: () => context.push('/seller/statement')),
           if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-payouts'), icon: Icons.outbound_outlined, title: t.payoutRequests, onTap: () => context.push('/seller/payouts')),
           if (p.contains('store.manage')) EdmnMenuItem(key: const Key('seller-shipping'), icon: Icons.local_shipping_outlined, title: t.shippingRates, onTap: () => context.push('/seller/shipping')),
           if (p.contains('store.manage')) EdmnMenuItem(key: const Key('seller-store'), icon: Icons.settings_outlined, title: t.storeSettings, onTap: () => context.push('/seller/store')),

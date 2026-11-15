@@ -41,7 +41,11 @@ const CUSTOMER_MESSAGE_WRITES = new Set([
 const STORE_MESSAGE_WRITES = new Set(['sendStoreMessage', 'markStoreConversationSeen', 'reportStoreMessage', 'openStoreOrderConversation']);
 
 /** The only payout-related routes on the mobile API (request side). */
-const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest', 'addSellerPayoutAccount']);
+const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest', 'addSellerPayoutAccount', 'getSellerPayoutAccount']);
+/** Account-level payout REQUESTS by the beneficiary (same owner decision §20; auth `customer`, own account only). */
+const ACCOUNT_PAYOUT_ROUTES = new Set(['listAccountPayoutRequests', 'previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest']);
+/** Wallet writes: payout request / preview / cancel, and receiving accounts submitted for staff verification. */
+const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
 const BUYER_WRITES = new Set([
@@ -94,9 +98,13 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
     for (const r of ALL_API_ROUTES) expect(r.path, r.id).not.toMatch(/withdraw|settle|refund|release|ledger|journal|real-?money|kill-?switch|transfer|paid/i);
     // Payout paths: ONLY the owner-approved REQUEST routes (spec §20 — "request only; transfer execution stays blocked").
     for (const r of ALL_API_ROUTES.filter((x) => /payout/i.test(x.path))) {
-      expect(PAYOUT_REQUEST_ROUTES.has(r.id), `unreviewed payout route ${r.id}`).toBe(true);
-      expect(r.auth === 'seller' || r.id === 'addSellerPayoutAccount', r.id).toBe(true);
+      expect(PAYOUT_REQUEST_ROUTES.has(r.id) || ACCOUNT_PAYOUT_ROUTES.has(r.id), `unreviewed payout route ${r.id}`).toBe(true);
+      if (PAYOUT_REQUEST_ROUTES.has(r.id)) expect(r.auth === 'seller' || r.id === 'addSellerPayoutAccount', r.id).toBe(true);
+      else expect(r.auth, r.id).toBe('customer');
     }
+    // An account payout request names an amount, one of MY verified destinations and its idempotency key — nothing else.
+    const acc = ALL_API_ROUTES.find((r) => r.id === 'createAccountPayoutRequest')!;
+    expect(Object.keys((acc.body as unknown as { shape: Record<string, unknown> }).shape).sort()).toEqual(['amountPiastres', 'clientKey', 'destination']);
     const create = ALL_API_ROUTES.find((r) => r.id === 'createSellerPayoutRequest')!;
     expect(Object.keys((create.body as unknown as { shape: Record<string, unknown> }).shape).sort()).toEqual(['amountPiastres', 'clientKey']);
     // Every state-changing operation is listed here BY ID: a new write route fails this test until it is reviewed
@@ -111,6 +119,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...DEAL_WRITES,
       ...CUSTOMER_MESSAGE_WRITES,
       ...STORE_MESSAGE_WRITES,
+      ...WALLET_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -138,6 +147,11 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       // Never a free-form recipient: the counterparty always comes from the order / deal the conversation is bound to.
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity or recipient`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId|recipient\w*|to)$/i);
+    }
+    for (const r of writes.filter((w) => WALLET_WRITES.has(w.id))) {
+      expect(r.auth, r.id).toBe('customer');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }
     for (const r of writes) expect(r.auth, r.id).not.toBe('optional-customer');
   });
