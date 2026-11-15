@@ -583,5 +583,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "dealMoneyOffer": "The current offer’s amounts are calculated by EDMN and become final once both parties agree.",
+  "dealMoneyIndicative": "Estimated until the seller makes an offer; final fees are calculated on agreement.",
+  "dealAwaitingBuyer": "Awaiting buyer",
+  "dealAwaitingSeller": "Awaiting seller",
+  "dealPartySeller": "Seller",
+  "dealPartyBuyer": "Buyer",
+  "termsProposed": "Proposed",
+  "termsAccepted": "Accepted",
+  "termsRejected": "Rejected",
+  "termsSuperseded": "Superseded"
 }

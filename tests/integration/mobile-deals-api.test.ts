@@ -114,6 +114,10 @@ describe('Flow C — Protected Deal between two app users', () => {
     const bv = await call(dealRoute, `/deals/${id}`, { token: bt, params: p });
     expect(bv.body.allowedActions).toContain('RESPOND_TO_OFFER');
     expect(bv.body.money.buyerPaysPiastres).toBeGreaterThan(0);
+    // While an offer is pending the app shows THAT offer's server price (with the split fees), labelled OFFER.
+    const offered = bv.body.terms.history.at(-1).terms.price;
+    expect(bv.body.money).toMatchObject({ basis: 'OFFER', buyerPaysPiastres: offered.buyerPays, sellerReceivesPiastres: offered.sellerReceives, buyerFeePiastres: offered.buyerFee, goodsTotalPiastres: offered.goodsTotal });
+    expect(bv.body.money.totalPiastres + bv.body.money.buyerFeePiastres).toBe(bv.body.money.buyerPaysPiastres);
 
     // Buyer requests a change → seller must re-approve material terms.
     const change = await call(offerRespRoute, `/deals/${id}/offer-response`, {
@@ -140,6 +144,9 @@ describe('Flow C — Protected Deal between two app users', () => {
     const pay = await call(payRoute, `/deals/${id}/payment`, { token: bt, idem: key(), params: p, body: { method: 'INSTAPAY' } });
     expect(pay.status, JSON.stringify(pay.body)).toBe(200);
     const paymentId = pay.body.paymentId as string;
+    // After agreement the price is frozen; the payment asks for exactly what the buyer agreed to pay.
+    expect(pay.body.deal.money.basis).toBe('AGREED');
+    expect(pay.body.deal.payment.amountDuePiastres).toBe(pay.body.deal.money.buyerPaysPiastres);
     const f = new FormData();
     f.set('claimedAmount', String(pay.body.deal.money.buyerPaysPiastres / 100));
     f.set('clientKey', key());

@@ -55,3 +55,19 @@ Server-authoritative totals and allowed actions; identity from session only; ide
 refresh token in Keychain/Keystore, access token in memory only; no sensitive values logged; Real Money OFF banner.
 No production access, no deploy, no real money, no secrets created (local screenshot env used throwaway local
 values only, never written to the repository).
+
+## Phase 2 — Protected Deal
+
+| Check | Result |
+|---|---|
+| Backend `tsc`, `eslint`, `openapi --check` | pass |
+| Vitest (unit + integration, isolated test DB) | 782/782 (rerun after the money-basis fix) |
+| Flow C integration (`mobile-deals-api.test.ts`) | create → steps → invite → claim → offer → change → accept → pay (receipt) → staff confirm → ship → code → confirm; offer money = offer price; payment due = agreed buyerPays |
+| Flutter customer widget tests | 20/20 (adds: accept needs confirmation and no release/refund button exists; invite link shown once and seller actions follow allowedActions, seller never sees the code; buyer code reveal shows expiry and attempts) |
+| Real screenshots (local isolated backend `edmn_shots`) | `docs/mobile/screenshots/deals/` d01, d02, d03, d06, d08, d11, d12, d14, d15 |
+| HawkScan | NOT RUN (no HAWK_API_KEY in this environment) |
+
+Defects found by the screenshot pass and fixed: the offer money was read from a stale indicative quote (fee 0, wrong
+total); the seller saw «عرض بانتظار ردك» on the buyer's turn; terms history showed a raw `PROPOSED` and «أنت البائع» to
+the buyer; the delivery-code sheet rebuilt its provider on every frame (endless reload); a cached deal kept old actions
+after navigating back.

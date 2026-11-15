@@ -2186,12 +2186,18 @@ class ProtectedDealBuyerLocation {
 }
 
 class ProtectedDealMoney {
-  const ProtectedDealMoney({required this.unitPricePiastres, required this.shippingFeePiastres, required this.totalPiastres, required this.buyerFeePiastres, required this.sellerFeePiastres, required this.buyerPaysPiastres, required this.sellerReceivesPiastres});
+  const ProtectedDealMoney({required this.basis, required this.unitPricePiastres, required this.goodsTotalPiastres, required this.shippingFeePiastres, required this.totalPiastres, required this.buyerFeePiastres, required this.sellerFeePiastres, required this.buyerPaysPiastres, required this.sellerReceivesPiastres});
 
-  factory ProtectedDealMoney.fromJson(Map<String, dynamic> json) => ProtectedDealMoney(unitPricePiastres: (json['unitPricePiastres'] as num?)?.toInt(), shippingFeePiastres: (json['shippingFeePiastres'] as num?)?.toInt(), totalPiastres: (json['totalPiastres'] as num?)?.toInt(), buyerFeePiastres: (json['buyerFeePiastres'] as num?)?.toInt(), sellerFeePiastres: (json['sellerFeePiastres'] as num?)?.toInt(), buyerPaysPiastres: (json['buyerPaysPiastres'] as num?)?.toInt(), sellerReceivesPiastres: (json['sellerReceivesPiastres'] as num?)?.toInt());
+  factory ProtectedDealMoney.fromJson(Map<String, dynamic> json) => ProtectedDealMoney(basis: json['basis'] as String, unitPricePiastres: (json['unitPricePiastres'] as num?)?.toInt(), goodsTotalPiastres: (json['goodsTotalPiastres'] as num?)?.toInt(), shippingFeePiastres: (json['shippingFeePiastres'] as num?)?.toInt(), totalPiastres: (json['totalPiastres'] as num?)?.toInt(), buyerFeePiastres: (json['buyerFeePiastres'] as num?)?.toInt(), sellerFeePiastres: (json['sellerFeePiastres'] as num?)?.toInt(), buyerPaysPiastres: (json['buyerPaysPiastres'] as num?)?.toInt(), sellerReceivesPiastres: (json['sellerReceivesPiastres'] as num?)?.toInt());
+
+  /// One of: AGREED, OFFER, INDICATIVE (kept as String for forward compatibility).
+  final String basis;
 
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int? unitPricePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? goodsTotalPiastres;
 
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int? shippingFeePiastres;
@@ -2211,7 +2217,7 @@ class ProtectedDealMoney {
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int? sellerReceivesPiastres;
 
-  Map<String, dynamic> toJson() => {'unitPricePiastres': unitPricePiastres, 'shippingFeePiastres': shippingFeePiastres, 'totalPiastres': totalPiastres, 'buyerFeePiastres': buyerFeePiastres, 'sellerFeePiastres': sellerFeePiastres, 'buyerPaysPiastres': buyerPaysPiastres, 'sellerReceivesPiastres': sellerReceivesPiastres};
+  Map<String, dynamic> toJson() => {'basis': basis, 'unitPricePiastres': unitPricePiastres, 'goodsTotalPiastres': goodsTotalPiastres, 'shippingFeePiastres': shippingFeePiastres, 'totalPiastres': totalPiastres, 'buyerFeePiastres': buyerFeePiastres, 'sellerFeePiastres': sellerFeePiastres, 'buyerPaysPiastres': buyerPaysPiastres, 'sellerReceivesPiastres': sellerReceivesPiastres};
 }
 
 class ProtectedDealPayment {

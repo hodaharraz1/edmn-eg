@@ -19821,7 +19821,28 @@
           "money": {
             "type": "object",
             "properties": {
+              "basis": {
+                "type": "string",
+                "enum": [
+                  "AGREED",
+                  "OFFER",
+                  "INDICATIVE"
+                ]
+              },
               "unitPricePiastres": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "goodsTotalPiastres": {
                 "anyOf": [
                   {
                     "type": "integer",
@@ -19914,7 +19935,9 @@
               }
             },
             "required": [
+              "basis",
               "unitPricePiastres",
+              "goodsTotalPiastres",
               "shippingFeePiastres",
               "totalPiastres",
               "buyerFeePiastres",

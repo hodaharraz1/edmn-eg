@@ -81,16 +81,8 @@ export async function dealView(actor: Actor, dealId: string) {
     customTerms: d.customTerms,
     buyerName: g.buyerName,
     sellerName: d.sellerFullName ?? null,
-    /** Server-computed money (piastres). Null until the seller's offer sets the price. */
-    money: {
-      unitPricePiastres: d.unitPrice ?? null,
-      shippingFeePiastres: d.shippingFee ?? null,
-      totalPiastres: d.totalAmount ?? null,
-      buyerFeePiastres: d.buyerFeeAmount ?? null,
-      sellerFeePiastres: d.sellerFeeAmount ?? null,
-      buyerPaysPiastres: d.buyerPays ?? null,
-      sellerReceivesPiastres: d.sellerReceives ?? null,
-    },
+    /** Server-computed money (piastres): the agreed (frozen) price, else the pending offer's price, else the estimate. */
+    money: dealMoney(d, latest),
     terms: {
       currentVersion: latest?.version ?? null,
       latestStatus: latest?.status ?? null,
@@ -108,6 +100,35 @@ export async function dealView(actor: Actor, dealId: string) {
     financialHold: !!d.financialHold,
     createdAt: d.createdAt.toISOString(),
     allowedActions: dealAllowedActions({ status: d.status, role, handoverVerified: !!d.handoverVerifiedAt }),
+  };
+}
+
+type Price = { unitPrice: number; goodsTotal?: number; shippingFee: number; totalAmount: number; buyerFee?: number; sellerFee?: number; buyerPays: number; sellerReceives: number };
+
+/**
+ * Before both parties agree the deal row holds an INDICATIVE quote (fees not yet split); each seller offer carries its
+ * own server price; on acceptance the row is frozen with the split fees. The app shows exactly one of these and says
+ * which — it never adds anything up itself.
+ */
+function dealMoney(d: Awaited<ReturnType<typeof dealGraph>>['deal'], latest: typeof dealTermsVersions.$inferSelect | null) {
+  if (d.agreedVersion != null) {
+    return { basis: 'AGREED' as const, unitPricePiastres: d.unitPrice ?? null, shippingFeePiastres: d.shippingFee ?? null, totalPiastres: d.totalAmount ?? null, goodsTotalPiastres: d.totalAmount != null ? d.totalAmount - (d.shippingFee ?? 0) : null, buyerFeePiastres: d.buyerFeeAmount, sellerFeePiastres: d.sellerFeeAmount, buyerPaysPiastres: d.buyerPays ?? null, sellerReceivesPiastres: d.sellerReceives ?? null };
+  }
+  const offer = latest && latest.status === 'PROPOSED' ? ((latest.terms ?? {}) as { price?: Price }).price : undefined;
+  if (offer) {
+    return { basis: 'OFFER' as const, unitPricePiastres: offer.unitPrice, shippingFeePiastres: offer.shippingFee, goodsTotalPiastres: offer.goodsTotal ?? offer.totalAmount - offer.shippingFee, totalPiastres: offer.totalAmount, buyerFeePiastres: offer.buyerFee ?? offer.buyerPays - offer.totalAmount, sellerFeePiastres: offer.sellerFee ?? offer.totalAmount - offer.sellerReceives, buyerPaysPiastres: offer.buyerPays, sellerReceivesPiastres: offer.sellerReceives };
+  }
+  const t = d.totalAmount ?? null;
+  return {
+    basis: 'INDICATIVE' as const,
+    unitPricePiastres: d.unitPrice ?? null,
+    shippingFeePiastres: d.shippingFee ?? null,
+    goodsTotalPiastres: t != null ? t - (d.shippingFee ?? 0) : null,
+    totalPiastres: t,
+    buyerFeePiastres: t != null && d.buyerPays != null ? d.buyerPays - t : null,
+    sellerFeePiastres: t != null && d.sellerReceives != null ? t - d.sellerReceives : null,
+    buyerPaysPiastres: d.buyerPays ?? null,
+    sellerReceivesPiastres: d.sellerReceives ?? null,
   };
 }
 

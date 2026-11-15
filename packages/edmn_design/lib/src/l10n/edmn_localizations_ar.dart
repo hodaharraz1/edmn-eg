@@ -1832,4 +1832,36 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String codeExpires(String time, int attempts) {
     return 'صالح حتى $time · المحاولات المتبقية $attempts';
   }
+
+  @override
+  String get dealMoneyOffer =>
+      'مبالغ العرض الحالي محسوبة من أضمن، وتصبح نهائية بعد موافقة الطرفين.';
+
+  @override
+  String get dealMoneyIndicative =>
+      'مبالغ تقديرية لحين وصول عرض البائع؛ الرسوم النهائية تُحسب عند الاتفاق.';
+
+  @override
+  String get dealAwaitingBuyer => 'بانتظار رد المشتري';
+
+  @override
+  String get dealAwaitingSeller => 'بانتظار رد البائع';
+
+  @override
+  String get dealPartySeller => 'البائع';
+
+  @override
+  String get dealPartyBuyer => 'المشتري';
+
+  @override
+  String get termsProposed => 'مقترح';
+
+  @override
+  String get termsAccepted => 'مقبول';
+
+  @override
+  String get termsRejected => 'مرفوض';
+
+  @override
+  String get termsSuperseded => 'استُبدل بنسخة أحدث';
 }

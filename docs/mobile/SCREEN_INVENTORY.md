@@ -5,6 +5,8 @@ Status: **Implemented** (own route, wired, tested) · **Reused** · **Merged** (
 
 Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reused 1, Blocked by API 1, Blocked by Business Decision 5.
 
+After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5, Implemented 67, Merged 32, Missing 33, Reused 2.
+
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
 | B01 | Splash | /splash | Implemented | boot refresh | widget | yes |
@@ -82,29 +84,29 @@ Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reu
 | S31 | Earnings | /seller/funds | Implemented | seller/funds | backend | yes |
 | S32 | Withdrawal request | /seller/payouts (request sheet) | Implemented | POST /seller/payout-requests(+preview) | backend flow + widget | yes |
 | S33 | Withdrawal history | /seller/payouts | Implemented | GET /seller/payout-requests, cancel | backend flow + widget | yes |
-| D01 | Deal hub | /deals stub | Missing | dealsForUser | — | — |
-| D02 | How it works | — | Missing | static | — | — |
-| D03 | Choose role | — | Missing | createDeal | — | — |
-| D04 | Transaction type | — | Missing | createDeal | — | — |
-| D05 | Counterparty | — | Missing | saveDealStep | — | — |
-| D06 | Invitation | — | Missing | inviteSeller/claimInvitation | — | — |
-| D07 | Deal details | — | Missing | saveDealStep/addDealPhotos | — | — |
-| D08 | Delivery terms | — | Missing | saveDealStep | — | — |
-| D09 | Fees | — | Missing | deal quote (server) | — | — |
-| D10 | Review | — | Missing | dealGraph | — | — |
-| D11 | Pending approval | — | Missing | dealGraph | — | — |
-| D12 | Accept/reject/counter | — | Missing | respondToOffer/submitSellerOffer | — | — |
-| D13 | Revision review | — | Missing | termsHistory/respondToChangeRequest | — | — |
-| D14 | Deal payment | — | Missing | startDealPayment + proof | — | — |
-| D15 | Payment held | — | Missing | dealGraph | — | — |
-| D16 | Deal timeline | — | Missing | dealGraph | — | — |
-| D17 | Delivery evidence | — | Missing | markDealDelivered | — | — |
-| D18 | Delivery OTP | — | Missing | verifyDeliveryOtp/deliveryOtpForBuyer | — | — |
-| D19 | Inspection & acceptance | — | Missing | confirmDealReceipt | — | — |
-| D20 | Deal dispute | — | Missing | openDispute | — | — |
-| D21 | Settlement status | — | Missing | dealGraph | — | — |
-| D22 | Completion | — | Missing | dealGraph | — | — |
-| D23 | Cancellation/refund | — | Missing | cancelDeal | — | — |
+| D01 | Deal hub | /deals | Implemented | GET /deals | widget | yes |
+| D02 | How it works | /deals (sheet) | Merged | static (server rules in copy) | — | yes |
+| D03 | Choose role | /deals: «صفقة جديدة» (buyer) / «معايا رابط دعوة» (seller) | Merged | buyer-initiated domain: seller joins by link | — | yes |
+| D04 | Transaction type | /deals/new step 1 (condition NEW/USED) | Merged | PUT /deals/{id}/steps/1 | backend | yes |
+| D05 | Counterparty | /deals/new step 4 (seller name/phone) | Merged | PUT /deals/{id}/steps/5 | backend (seeded via HTTP) | — |
+| D06 | Invitation | /deals/:id invite + /deals/join | Implemented | POST invitation / refresh / revoke; POST /deal-invitations/claim | widget+backend | yes |
+| D07 | Deal details | /deals/new step 1 | Implemented | PUT steps/1; photos: POST /deals/{id}/photos (API only — picker not in wizard yet) | backend | yes |
+| D08 | Delivery terms | /deals/new step 3 | Merged | PUT steps/3, steps/4 | backend | yes |
+| D09 | Fees | /deals/:id money card | Merged | money.basis INDICATIVE/OFFER/AGREED (server) | widget+backend | yes |
+| D10 | Review | /deals/new step 5 → /deals/:id | Merged | GET /deals/{id} | — | — |
+| D11 | Pending approval | /deals/:id status + timeline | Merged | GET /deals/{id} | widget | yes |
+| D12 | Accept/reject/counter | /deals/:id buyer actions; seller offer sheet | Implemented | POST offer, offer-response | widget+backend | yes |
+| D13 | Revision review | /deals/:id terms history + change response | Implemented | terms.history; POST change-response | backend | yes |
+| D14 | Deal payment | /deals/:id → /payments/:id | Reused | POST /deals/{id}/payment + payments proof | backend | — |
+| D15 | Payment held | /deals/:id status ACTIVE | Merged | GET /deals/{id} | backend | — |
+| D16 | Deal timeline | /deals/:id | Implemented | GET /deals/{id} | widget | yes |
+| D17 | Delivery evidence | /deals/:id seller ship sheet | Implemented | POST /deals/{id}/shipped (note + proof) | backend | — |
+| D18 | Delivery OTP | /deals/:id code sheet (buyer) / verify (seller) | Implemented | GET delivery-code, POST verify, regenerate | widget+backend | — |
+| D19 | Inspection & acceptance | /deals/:id confirm receipt | Implemented | POST confirm-receipt | backend | — |
+| D20 | Deal dispute | /deals/:id «not received» | Merged | POST not-received; full dispute UI → Phase 5 | backend | — |
+| D21 | Settlement status | /deals/:id status/timeline | Merged | GET /deals/{id} (release is staff-only) | backend | — |
+| D22 | Completion | /deals/:id COMPLETED | Merged | GET /deals/{id} | — | — |
+| D23 | Cancellation/refund | /deals/:id cancel; refund status read-only | Implemented | POST cancel; refund by staff only | backend | — |
 | D24 | Wallet home | /wallet stub | Missing | sellerFinancialView / account withdrawals | — | — |
 | D25 | Balance breakdown | /seller/funds (seller) | Merged | seller/funds | backend | yes |
 | D26 | Transaction history | — | Missing | ledger statement | — | — |

@@ -79,6 +79,7 @@ Map<String, dynamic> _deal({String role = 'BUYER', String status = 'OFFER_PENDIN
       'quantity': 1, 'sourceUrl': null, 'deliveryMethod': 'مندوب', 'deliveryDeadline': '2030-01-08T10:00:00Z', 'inspectionDays': 2, 'customTerms': null,
       'buyerName': 'منى', 'sellerName': 'أحمد',
       'money': {
+        'basis': 'OFFER', 'goodsTotalPiastres': 1500000,
         'unitPricePiastres': 1500000, 'shippingFeePiastres': 5000, 'totalPiastres': 1505000, 'buyerFeePiastres': 15050, 'sellerFeePiastres': 22575,
         'buyerPaysPiastres': 1520050, 'sellerReceivesPiastres': 1482425,
       },

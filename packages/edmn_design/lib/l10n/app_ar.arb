@@ -748,5 +748,15 @@
         "type": "int"
       }
     }
-  }
+  },
+  "dealMoneyOffer": "مبالغ العرض الحالي محسوبة من أضمن، وتصبح نهائية بعد موافقة الطرفين.",
+  "dealMoneyIndicative": "مبالغ تقديرية لحين وصول عرض البائع؛ الرسوم النهائية تُحسب عند الاتفاق.",
+  "dealAwaitingBuyer": "بانتظار رد المشتري",
+  "dealAwaitingSeller": "بانتظار رد البائع",
+  "dealPartySeller": "البائع",
+  "dealPartyBuyer": "المشتري",
+  "termsProposed": "مقترح",
+  "termsAccepted": "مقبول",
+  "termsRejected": "مرفوض",
+  "termsSuperseded": "استُبدل بنسخة أحدث"
 }

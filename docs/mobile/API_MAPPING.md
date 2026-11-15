@@ -43,6 +43,23 @@ Identity always comes from the session; no route accepts a user/seller id. Money
 * Dart generator: optional request fields are omitted when unset (the API rejects explicit `null`) — fixed a real
   login failure found by the end-to-end screenshot run.
 
+## Protected Deal (Phase 2, auth `customer`; role from the session)
+
+| Operation | Route | Service |
+|---|---|---|
+| listDeals / getDeal | GET /api/v1/deals, /deals/{dealId} | dealsForUser, dealGraph + dealAllowedActions |
+| createDeal / saveDealStep / addDealPhotos | POST /deals, PUT /deals/{id}/steps/{step}, POST /deals/{id}/photos | createDeal, saveDealStep, addDealPhotos |
+| inviteDealSeller / refresh / revoke | POST /deals/{id}/invitation(/refresh, /revoke) | inviteSeller, refreshInvitation, revokeInvitation |
+| claimDealInvitation / declineDealInvitation | POST /deal-invitations/claim, /deals/{id}/decline | claimInvitation, rejectInvitation |
+| submitDealOffer / respondDealOffer / respondDealChangeRequest | POST /deals/{id}/offer, /offer-response, /change-response | submitSellerOffer, respondToOffer, respondToChangeRequest |
+| cancelDeal | POST /deals/{id}/cancel | cancelDeal |
+| startDealPayment | POST /deals/{id}/payment → shared /payments/{id} proof | startDealPayment |
+| markDealShipped | POST /deals/{id}/shipped | markDealDelivered |
+| delivery code (buyer) / regenerate / verify (seller) | GET /deals/{id}/delivery-code, POST …/regenerate, …/verify | revealDeliveryOtpForBuyer, regenerateDeliveryOtp, verifyDeliveryOtp |
+| confirmDealReceipt / reportDealNotReceived | POST /deals/{id}/confirm-receipt, /not-received | confirmDealReceipt, reportNotReceived |
+
+Not exposed, by design: release, refund, settlement, payout of deals (staff only).
+
 ## Not yet exposed to mobile (needed for the remaining phases)
 
 Protected Deal (create, invitation, terms, accept, pay, evidence, delivery OTP, confirm), disputes/returns

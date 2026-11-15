@@ -53,7 +53,11 @@ const deal = z
     buyerName: z.string(),
     sellerName: z.string().nullable(),
     money: z.object({
+      /** AGREED = frozen when both parties accepted; OFFER = the pending offer's server price; INDICATIVE = estimate before an offer. */
+      basis: z.enum(['AGREED', 'OFFER', 'INDICATIVE']),
       unitPricePiastres: piastres.nullable(),
+      /** Item price × quantity (excludes shipping). */
+      goodsTotalPiastres: piastres.nullable(),
       shippingFeePiastres: piastres.nullable(),
       totalPiastres: piastres.nullable(),
       buyerFeePiastres: piastres.nullable(),

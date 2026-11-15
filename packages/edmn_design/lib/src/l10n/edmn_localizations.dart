@@ -3541,6 +3541,66 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'صالح حتى {time} · المحاولات المتبقية {attempts}'**
   String codeExpires(String time, int attempts);
+
+  /// No description provided for @dealMoneyOffer.
+  ///
+  /// In ar, this message translates to:
+  /// **'مبالغ العرض الحالي محسوبة من أضمن، وتصبح نهائية بعد موافقة الطرفين.'**
+  String get dealMoneyOffer;
+
+  /// No description provided for @dealMoneyIndicative.
+  ///
+  /// In ar, this message translates to:
+  /// **'مبالغ تقديرية لحين وصول عرض البائع؛ الرسوم النهائية تُحسب عند الاتفاق.'**
+  String get dealMoneyIndicative;
+
+  /// No description provided for @dealAwaitingBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار رد المشتري'**
+  String get dealAwaitingBuyer;
+
+  /// No description provided for @dealAwaitingSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار رد البائع'**
+  String get dealAwaitingSeller;
+
+  /// No description provided for @dealPartySeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع'**
+  String get dealPartySeller;
+
+  /// No description provided for @dealPartyBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'المشتري'**
+  String get dealPartyBuyer;
+
+  /// No description provided for @termsProposed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقترح'**
+  String get termsProposed;
+
+  /// No description provided for @termsAccepted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقبول'**
+  String get termsAccepted;
+
+  /// No description provided for @termsRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get termsRejected;
+
+  /// No description provided for @termsSuperseded.
+  ///
+  /// In ar, this message translates to:
+  /// **'استُبدل بنسخة أحدث'**
+  String get termsSuperseded;
 }
 
 class _EdmnLocalizationsDelegate

@@ -1851,4 +1851,36 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String codeExpires(String time, int attempts) {
     return 'Valid until $time · $attempts attempts left';
   }
+
+  @override
+  String get dealMoneyOffer =>
+      'The current offer’s amounts are calculated by EDMN and become final once both parties agree.';
+
+  @override
+  String get dealMoneyIndicative =>
+      'Estimated until the seller makes an offer; final fees are calculated on agreement.';
+
+  @override
+  String get dealAwaitingBuyer => 'Awaiting buyer';
+
+  @override
+  String get dealAwaitingSeller => 'Awaiting seller';
+
+  @override
+  String get dealPartySeller => 'Seller';
+
+  @override
+  String get dealPartyBuyer => 'Buyer';
+
+  @override
+  String get termsProposed => 'Proposed';
+
+  @override
+  String get termsAccepted => 'Accepted';
+
+  @override
+  String get termsRejected => 'Rejected';
+
+  @override
+  String get termsSuperseded => 'Superseded';
 }

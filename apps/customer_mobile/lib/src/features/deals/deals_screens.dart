@@ -17,12 +17,12 @@ final dealProvider = FutureProvider.autoDispose.family<ProtectedDeal, String>((r
 /// Re-read each time the sheet opens (expiry / attempts change on the server); never cached beyond the sheet.
 final dealCodeProvider = FutureProvider.autoDispose.family<GetDealDeliveryCodeResponse, String>((ref, id) => ref.watch(mobileApiProvider).dealDeliveryCode(id));
 
-(String, EdmnTone) dealStatus(EdmnLocalizations t, String s) => switch (s) {
+(String, EdmnTone) dealStatus(EdmnLocalizations t, String s, {String role = 'BUYER'}) => switch (s) {
       'DRAFT' => (t.dealDraft, EdmnTone.neutral),
       'INVITED' => (t.dealInvited, EdmnTone.info),
       'SELLER_JOINED' => (t.dealSellerJoined, EdmnTone.info),
-      'OFFER_PENDING_BUYER' => (t.dealOfferPending, EdmnTone.warning),
-      'CHANGE_REQUESTED' => (t.dealChangeRequested, EdmnTone.warning),
+      'OFFER_PENDING_BUYER' => (role == 'BUYER' ? t.dealOfferPending : t.dealAwaitingBuyer, EdmnTone.warning),
+      'CHANGE_REQUESTED' => (role == 'SELLER' ? t.dealChangeRequested : t.dealAwaitingSeller, EdmnTone.warning),
       'ACCEPTED' || 'PAYMENT_PENDING' => (t.statusPendingPayment, EdmnTone.warning),
       'PAYMENT_UNDER_REVIEW' => (t.statusPaymentUnderReview, EdmnTone.warning),
       'ACTIVE' => (t.dealFundsHeld, EdmnTone.info),
@@ -113,7 +113,7 @@ class _DealsHubScreenState extends ConsumerState<DealsHubScreen> {
               return Column(children: [
                 for (final d in items)
                   () {
-                    final (l, tone) = dealStatus(t, d.status);
+                    final (l, tone) = dealStatus(t, d.status, role: d.role);
                     return EdmnSecureDealCard(
                       key: Key('deal-${d.id}'),
                       title: d.title,
@@ -366,7 +366,7 @@ class _DealScreenState extends ConsumerState<DealScreen> {
         onRetry: () => ref.invalidate(dealProvider(widget.id)),
         data: (d) {
           final a = d.allowedActions.toSet();
-          final (label, tone) = dealStatus(t, d.status);
+          final (label, tone) = dealStatus(t, d.status, role: d.role);
           final r = _rank(d.status);
           EdmnStepState at(int i) => d.status == 'CANCELLED' ? (i == 0 ? EdmnStepState.done : EdmnStepState.pending) : (r > i ? EdmnStepState.done : (r == i ? EdmnStepState.current : EdmnStepState.pending));
           Widget btn(String key, String l, VoidCallback onTap, {bool primary = true, bool danger = false}) => Padding(
@@ -406,14 +406,18 @@ class _DealScreenState extends ConsumerState<DealScreen> {
                 EdmnCard(
                   child: EdmnAmountSummary(
                     rows: [
-                      (t.itemsTotal, m.totalPiastres),
+                      (t.itemsTotal, m.goodsTotalPiastres),
                       if ((m.shippingFeePiastres ?? 0) > 0) (t.shippingFee, m.shippingFeePiastres),
                       if (d.role == 'BUYER') (t.buyerFee, m.buyerFeePiastres),
                       if (d.role == 'SELLER') (t.commission, -(m.sellerFeePiastres ?? 0)),
                     ],
                     totalLabel: d.role == 'BUYER' ? t.dealBuyerPays : t.dealSellerReceives,
                     totalPiastres: d.role == 'BUYER' ? m.buyerPaysPiastres : m.sellerReceivesPiastres,
-                    note: t.dealMoneyNote,
+                    note: switch (m.basis) {
+                      'AGREED' => t.dealMoneyNote,
+                      'OFFER' => t.dealMoneyOffer,
+                      _ => t.dealMoneyIndicative,
+                    },
                   ),
                 ),
               // D16 timeline
@@ -444,8 +448,8 @@ class _DealScreenState extends ConsumerState<DealScreen> {
                     for (final v in d.terms.history)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('v${v.version} · ${v.proposedBy == 'SELLER' ? t.dealRoleSeller : t.dealRoleBuyer}', style: EdmnType.bodyStrong),
-                        subtitle: Text([v.status, ?v.message].join(' — '), style: EdmnType.secondary),
+                        title: Text('v${v.version} · ${v.proposedBy == 'SELLER' ? t.dealPartySeller : t.dealPartyBuyer}', style: EdmnType.bodyStrong),
+                        subtitle: Text([_termsStatus(t, v.status), ?v.message].join(' — '), style: EdmnType.secondary),
                       ),
                   ]),
                 ),
@@ -520,6 +524,14 @@ class _DealScreenState extends ConsumerState<DealScreen> {
     );
   }
 }
+
+String _termsStatus(EdmnLocalizations t, String s) => switch (s) {
+      'PROPOSED' => t.termsProposed,
+      'ACCEPTED' => t.termsAccepted,
+      'REJECTED' => t.termsRejected,
+      'SUPERSEDED' => t.termsSuperseded,
+      _ => s,
+    };
 
 Future<String?> _ask(BuildContext context, String title, String hint, {int min = 3}) {
   final t = EdmnLocalizations.of(context);
