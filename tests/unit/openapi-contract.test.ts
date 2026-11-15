@@ -7,6 +7,9 @@ import { buildOpenApi } from '@/server/api/openapi';
 import { ADMIN_API_ROUTES, ALL_API_ROUTES, MOBILE_API_ROUTES } from '@/server/api/routes';
 
 /** The committed OpenAPI documents are the reviewed contract: they must equal what the route definitions generate. */
+/** Seller fulfilment / inventory writes reviewed for the Customer App's Seller Center (no money movement). */
+const SELLER_WRITES = new Set(['runSellerOrderStep', 'saveSellerShipment', 'setSellerVariantStock']);
+
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
 const BUYER_WRITES = new Set([
   'updateMe', 'changePassword', 'forgotPassword', 'resetPassword', 'sendVerificationCode', 'confirmVerificationCode',
@@ -62,6 +65,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       // auth / account / security (Phase 1)
       ...ALL_API_ROUTES.filter((r) => r.method !== 'GET' && /Auth|Account|Security/.test(r.tags.join(' ')) && !BUYER_WRITES.has(r.id)).map((r) => r.id),
       ...BUYER_WRITES,
+      ...SELLER_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -70,6 +74,12 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       // Identity always comes from the session, never from the client.
       expect(['customer', 'none'], r.id).toContain(r.auth);
       if (r.auth === 'none') expect(r.tags, r.id).toContain('Auth');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
+    }
+    for (const r of writes.filter((w) => SELLER_WRITES.has(w.id))) {
+      // Seller writes act for the session user's own store only (auth `seller`), never for a client-named store.
+      expect(r.auth, r.id).toBe('seller');
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }

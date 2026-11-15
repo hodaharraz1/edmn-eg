@@ -134,4 +134,36 @@ class MobileApi {
   /// Private file bytes (receipts, evidence) the signed-in user may read. Never cached to disk by the client.
   Future<Uint8List> file(String fileId) => client.guard((d) async =>
       Uint8List.fromList((await d.get<List<int>>(fillPath(MobileApiPaths.getFile.path, {'fileId': fileId}), options: Options(responseType: ResponseType.bytes))).data!));
+
+  // ── Seller Center (same app; the store is the session user's membership) ─────────────────────────────────
+  Future<GetMySellerMembershipResponse> sellerMembership() async => GetMySellerMembershipResponse.fromJson(await client.getJson(MobileApiPaths.getMySellerMembership.path));
+  Future<GetSellerHomeResponse> sellerHome() async => GetSellerHomeResponse.fromJson(await client.getJson(MobileApiPaths.getSellerHome.path));
+  Future<ListSellerOrdersResponse> sellerOrders({String? status, int page = 1}) async =>
+      ListSellerOrdersResponse.fromJson(await client.getJson(MobileApiPaths.listSellerOrders.path, query: {'status': ?status, 'page': page}));
+  Future<SellerOrder> sellerOrder(String id) async => SellerOrder.fromJson(await client.getJson(fillPath(MobileApiPaths.getSellerOrder.path, {'sellerOrderId': id})));
+
+  /// One fulfilment step; the server refuses a step that is not in the order's allowedActions.
+  Future<SellerOrder> sellerOrderStep(String id, String step, {String? note, required String idempotencyKey}) async => SellerOrder.fromJson(await client.sendJson(
+      'POST', fillPath(MobileApiPaths.runSellerOrderStep.path, {'sellerOrderId': id}),
+      body: {'step': step, if (note != null && note.isNotEmpty) 'note': note}, idempotencyKey: idempotencyKey));
+
+  Future<SellerOrder> saveSellerShipment(String id,
+          {required String carrierName, String? trackingNumber, required DateTime shippedAt, Uint8List? waybill, String? waybillName, required String idempotencyKey}) async =>
+      SellerOrder.fromJson(await client.guard((d) async => (await d.post<Map<String, dynamic>>(fillPath(MobileApiPaths.saveSellerShipment.path, {'sellerOrderId': id}),
+              data: FormData.fromMap({
+                'carrierName': carrierName,
+                if (trackingNumber != null && trackingNumber.isNotEmpty) 'trackingNumber': trackingNumber,
+                'shippedAt': shippedAt.toUtc().toIso8601String(),
+                if (waybill != null) 'waybill': MultipartFile.fromBytes(waybill, filename: waybillName ?? 'waybill.jpg'),
+              }),
+              options: Options(contentType: 'multipart/form-data', headers: {'idempotency-key': idempotencyKey})))
+          .data!));
+
+  Future<ListSellerProductsResponse> sellerProducts({String? status, int page = 1}) async =>
+      ListSellerProductsResponse.fromJson(await client.getJson(MobileApiPaths.listSellerProducts.path, query: {'status': ?status, 'page': page}));
+  Future<SetSellerVariantStockResponse> setVariantStock(String variantId, int stockOnHand) async => SetSellerVariantStockResponse.fromJson(
+      await client.sendJson('PUT', fillPath(MobileApiPaths.setSellerVariantStock.path, {'variantId': variantId}), body: {'stockOnHand': stockOnHand}));
+
+  /// Read-only funds position (finance.view).
+  Future<GetSellerFundsResponse> sellerFunds() async => GetSellerFundsResponse.fromJson(await client.getJson(MobileApiPaths.getSellerFunds.path));
 }

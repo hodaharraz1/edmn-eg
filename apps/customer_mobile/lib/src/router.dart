@@ -15,6 +15,7 @@ import 'features/catalog/catalog_home_screen.dart';
 import 'features/checkout/checkout_screen.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
+import 'features/seller/seller_screens.dart';
 import 'providers.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
@@ -68,7 +69,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Services whose mobile API is not built yet: an honest screen, never a fake balance or list.
       GoRoute(path: '/deals', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).protectedDeal, icon: Icons.verified_user_outlined)),
       GoRoute(path: '/wallet', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).wallet, icon: Icons.account_balance_wallet_outlined)),
-      GoRoute(path: '/seller', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).sellerCenter, icon: Icons.storefront_outlined)),
+      GoRoute(path: '/seller', builder: (c, s) => const SellerCenterScreen()),
+      GoRoute(path: '/seller/orders', builder: (c, s) => const SellerOrdersScreen()),
+      GoRoute(path: '/seller/orders/:id', builder: (c, s) => SellerOrderScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/seller/products', builder: (c, s) => const SellerProductsScreen()),
+      GoRoute(path: '/seller/funds', builder: (c, s) => const SellerFundsScreen()),
       GoRoute(path: '/notifications', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).notifications, icon: Icons.notifications_none_rounded)),
       GoRoute(path: '/support', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).helpSupport, icon: Icons.support_agent_rounded)),
     ],

@@ -9,7 +9,7 @@ TestFlight or a store.
 
 * `packages/edmn_design` — the locked design system (tokens, Cairo font, original-logo assets, 30+ components with
   their states). See DESIGN_SYSTEM.md.
-* `apps/customer_mobile` — ONE app for buyer and (next) seller. Buyer journey complete against the real API:
+* `apps/customer_mobile` — ONE app for buyer and seller (Seller Center role-gated by the server membership). Buyer journey complete against the real API:
   onboarding, sign in/up, verification, password reset, home, categories, search, product, public store page,
   multi-seller cart, 4-step checkout, order tracking, manual payment with receipt upload, orders, reorder, account,
   addresses, security, devices, language AR/EN, legal. See SCREEN_INVENTORY.md.
@@ -29,13 +29,13 @@ TestFlight or a store.
 ## Remaining work, by priority
 
 **P0 — needed before the app can be called complete**
-1. **Seller center (same app, role-gated)** — mobile API over existing seller services: onboarding/approval status,
-   store settings, products (create/edit, images, variants, stock, price, new/used, return policy), shipping rates
-   by governorate, seller orders with state-machine actions, shipment + proof upload, returns/disputes. Then the
-   screens (board "مركز البائع" + Figma). Role switch buyer ⇄ seller from the profile's seller membership.
-2. **Seller finance** — balances, holds, debts/uncovered claims (never as withdrawable), withdrawals incl.
-   `TRANSFER_UNCERTAIN` (never resent, never shown as failed/succeeded), ledger history. Every route using
-   `sellerFundsPosition` behind `finance.view` + store scope. Maker/Checker stays on the admin side.
+1. **Seller center — remaining** (DONE: membership/role switch, dashboard, orders + fulfilment steps + shipment
+   proof, stock, read-only funds). Still to build: registration & documents & payout account, store settings,
+   product create/edit with photos/variants/prices/return policy, shipping rates by governorate, returns/disputes.
+2. **Seller payouts — needs an owner decision**: payout request + history incl. `TRANSFER_UNCERTAIN` (never resent,
+   never shown as failed/succeeded). The Phase 1 contract guard forbids any `withdraw` path on the mobile API;
+   enabling it means deliberately extending that guard (request-only, finance.withdraw, Maker/Checker unchanged).
+   Until then the app states that payouts are made on the website.
 3. **Protected Deal** — create (role, counterparty, details, terms, review), invitation accept/reject/modify,
    payment instructions + receipt, evidence, delivery OTP (expiry, attempts, single use preserved), confirm/dispute,
    completion/release status. Clarify V-10 (board shows a flash-sale style screen).

@@ -419,5 +419,108 @@
   "destAccountName": "اسم الحساب",
   "destAccountNumber": "رقم الحساب",
   "destInstapayAddress": "عنوان إنستاباي",
-  "destWalletNumber": "رقم المحفظة"
+  "destWalletNumber": "رقم المحفظة",
+  "sellerActive": "نشط",
+  "sellerRestricted": "مقيّد",
+  "sellerDraft": "طلب لم يُرسل",
+  "sellerPendingReview": "طلبك تحت المراجعة",
+  "sellerMoreInfo": "مطلوب بيانات إضافية",
+  "sellerSuspended": "موقوف",
+  "sellerRejected": "مرفوض",
+  "notSellerTitle": "انت مش بائع على أضمن لسه",
+  "notSellerBody": "التسجيل كبائع ومراجعة المستندات بيتم حالياً من موقع أضمن (مركز البائع). بعد الموافقة هتدير متجرك من هنا.",
+  "sellerNotOperatingBody": "هتقدر تستقبل الطلبات بعد موافقة فريق أضمن. تابع حالة طلبك من موقع أضمن.",
+  "sellerRole": "دورك: {role}",
+  "@sellerRole": {
+    "placeholders": {
+      "role": {}
+    }
+  },
+  "salesToday": "المبيعات اليوم",
+  "ordersLast30": "الطلبات (30 يوم)",
+  "ordersToHandle": "طلبات محتاجة تنفيذ",
+  "productsLive": "المنتجات المعروضة",
+  "ratingLabel": "التقييم",
+  "manageProducts": "إدارة المنتجات",
+  "sellerOrders": "الطلبات",
+  "earningsBalance": "الأرباح والرصيد",
+  "viewMyStore": "صفحة متجري للمشترين",
+  "sellerWebOnlyNote": "إضافة منتج جديد وتعديل الصور والأسعار وأسعار الشحن وطلبات السحب متاحة حالياً من مركز البائع على الموقع.",
+  "soNew": "جديد",
+  "soAccepted": "مقبول",
+  "soReady": "جاهز للشحن",
+  "noSellerOrders": "مفيش طلبات هنا",
+  "stepConfirmOrder": "قبول الطلب",
+  "stepStartProcessing": "بدء التجهيز",
+  "stepMarkReady": "جاهز للشحن",
+  "stepMarkShipped": "تم الشحن",
+  "stepAcceptCancellation": "الموافقة على الإلغاء",
+  "sellerStepConfirm": "هتغيّر حالة الطلب. المشتري هيشوف التحديث.",
+  "acceptCancellationConfirm": "هيتلغي الطلب والمبلغ هيرجع للمشتري حسب سياسة أضمن.",
+  "acceptCancellationNote": "البائع وافق على طلب الإلغاء من التطبيق",
+  "commission": "عمولة أضمن",
+  "sellerNet": "صافي البائع",
+  "sellerNetNote": "الصافي بيتحول لرصيدك بعد الاستلام وانتهاء الضمانات، مش فوراً.",
+  "waybillAttached": "بوليصة الشحن مرفوعة",
+  "addShipment": "بيانات الشحن",
+  "editShipment": "تعديل بيانات الشحن",
+  "shipmentDetails": "بيانات الشحن",
+  "carrierHint": "شركة الشحن",
+  "trackingHint": "رقم البوليصة (اختياري)",
+  "waybill": "إثبات الشحن (بوليصة)",
+  "waybillHint": "اختار صورة أو PDF للبوليصة",
+  "stockLine": "المخزون {onHand} · محجوز {reserved} · متاح {available}",
+  "@stockLine": {
+    "placeholders": {
+      "onHand": {
+        "type": "int"
+      },
+      "reserved": {
+        "type": "int"
+      },
+      "available": {
+        "type": "int"
+      }
+    }
+  },
+  "editStock": "تعديل المخزون",
+  "stockOnHand": "الكمية الموجودة",
+  "reservedFloor": "لا تقل عن {reserved} (محجوزة لطلبات قائمة)",
+  "@reservedFloor": {
+    "placeholders": {
+      "reserved": {
+        "type": "int"
+      }
+    }
+  },
+  "productLive": "معروض",
+  "productDraft": "مسودة",
+  "productInReview": "تحت المراجعة",
+  "productRejected": "مرفوض",
+  "productSuspended": "موقوف",
+  "productArchived": "مؤرشف",
+  "withdrawable": "قابل للسحب",
+  "fundsPending": "معلّق (لسه ما اتحررش)",
+  "fundsAvailable": "رصيد متاح بالدفاتر",
+  "fundsHeld": "محجوز لنزاعات/مرتجعات",
+  "fundsReserved": "محجوز لسحب معتمد",
+  "fundsDebt": "مديونية مسجلة",
+  "fundsUnsecured": "مطالبات غير مغطاة",
+  "fundsNote": "الأرقام من دفاتر أضمن. المحجوز والمديونية والمطالبات مش قابلة للسحب.",
+  "openPayouts": "عندك {count} طلب سحب قيد التنفيذ",
+  "@openPayouts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "payoutOnWebNote": "طلب السحب ومتابعته متاحين حالياً من مركز البائع على الموقع، ويتم اعتماده بمراجعة مزدوجة من فريق أضمن.",
+  "switchToSeller": "مركز البائع",
+  "roleOwner": "صاحب المتجر",
+  "roleManager": "مدير المتجر",
+  "roleCatalog": "مسؤول المنتجات",
+  "roleOrders": "مسؤول الطلبات",
+  "roleFinance": "المالية",
+  "roleSupport": "الدعم"
 }

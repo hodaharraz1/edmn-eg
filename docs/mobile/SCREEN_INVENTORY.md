@@ -54,13 +54,22 @@ is provided — that is listed as an open item in HANDOVER.
 | Devices | `/account/devices` | sessions, revoke | remote sign-out | widget | — |
 | Payment methods | `/account/payment-methods` | checkout (methods) | read-only | — | — |
 | Legal / about | `/legal/:slug` | content/legal | error | — | — |
-| Wallet, Protected Deal, Seller Center, Notifications, Support | `/wallet`, `/deals`, `/seller`, `/notifications`, `/support` | — | HONEST-STUB | widget (wallet: no fake balance) | buyer/27 |
+| Wallet, Protected Deal, Notifications, Support | `/wallet`, `/deals`, `/notifications`, `/support` | — | HONEST-STUB | widget (wallet: no fake balance) | buyer/27 |
 
-**Buyer screens DONE: 22 · HONEST-STUB: 5 · Seller screens DONE: 0.**
+**Buyer screens DONE: 22 · HONEST-STUB: 4 (wallet, Protected Deal, notifications, support).**
 
-## Seller (same app, role-gated) — NOT STARTED
+## Seller Center (same app, role-gated by the server membership)
 
-Registration & approval status, private dashboard, products (create/edit, images, new/used, category, price,
-stock, return policy), shipping rates by governorate, seller orders (state machine actions), shipment proof,
-returns/disputes, earnings / holds / withdrawals / ledger. The public store page buyers see (`/stores/:slug`) is DONE
-and is separate from the private seller dashboard. See HANDOVER for the API work each needs.
+| Screen | Route | API | Permission | UI states | Tests | Screenshot |
+|---|---|---|---|---|---|---|
+| Seller gate / dashboard (board "مركز البائع") | `/seller` | `GET /me/seller`, `GET /seller/home` | membership; sales only with finance.view | not-a-seller, application status (pending/rejected/suspended), dashboard | widget + backend | seller/s01 |
+| Seller orders | `/seller/orders` | `GET /seller/orders?status` | orders.manage | status pills, empty, paid orders only | backend | seller/s02 |
+| Seller order | `/seller/orders/:id` | `GET /seller/orders/{id}`, `POST …/steps`, `POST …/shipment` (multipart waybill) | orders.manage | ship-to, items, seller net (finance.view), cancellation request, only allowed steps, confirm dialogs | widget + backend | seller/s03, s04 |
+| Products & stock | `/seller/products` | `GET /seller/products`, `PUT /seller/variants/{id}/stock` | products.manage / inventory.manage | stock / reserved / available, reserved floor validation | backend | seller/s05 |
+| Earnings & balance | `/seller/funds` | `GET /seller/funds` (read only) | finance.view | withdrawable vs pending / held / reserved / debt / uncovered claims, block reason, open payouts | backend | seller/s06 |
+| Public store page (buyers) | `/stores/:slug` | public | — | separate from the private dashboard | backend | buyer/07 |
+
+**Seller screens DONE: 5.** Seller items still NOT STARTED in the app (web Seller Center only, stated in-app):
+registration & documents, store settings, product create/edit + photos + prices, shipping rates by governorate,
+returns/disputes handling, payout requests + history (needs an owner decision: the contract guard forbids any
+`withdraw` route on the mobile API — see HANDOVER).

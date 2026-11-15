@@ -23,6 +23,18 @@ Identity always comes from the session; no route accepts a user/seller id. Money
 | Payment | `GET /payments/{id}`, `POST /payments/{id}/proof` (multipart; clientKey) | customer | clientKey |
 | Private files | `GET /files/{id}` (binary; uniform 404) | customer | — |
 
+## Seller Center (auth `seller`: the store is the session user's membership)
+
+| Screen | Endpoint | Store permission |
+|---|---|---|
+| Role switch | `GET /me/seller` (auth customer) | — |
+| Dashboard | `GET /seller/home` | any member; sales figures only with finance.view |
+| Orders | `GET /seller/orders?status&page`, `GET /seller/orders/{id}` | orders.manage (paid orders only) |
+| Fulfilment | `POST /seller/orders/{id}/steps` {CONFIRM_ORDER, START_PROCESSING, MARK_READY_TO_SHIP, MARK_SHIPPED, ACCEPT_CANCELLATION} — only if in allowedActions | orders.manage |
+| Shipment proof | `POST /seller/orders/{id}/shipment` (multipart, optional waybill) | orders.manage |
+| Products & stock | `GET /seller/products`, `PUT /seller/variants/{id}/stock` | products.manage / inventory.manage |
+| Funds (read only) | `GET /seller/funds` — sellerBalances + sellerFundsPosition + sendBlockReason | finance.view |
+
 ## Added in this phase (backend, additive, no schema change)
 
 * `GET /orders` items: `itemCount`, `thumbnails` (≤3) — from the order's own snapshots (board "طلباتي").

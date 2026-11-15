@@ -203,6 +203,43 @@ class FakeMobileApi extends MobileApi {
     ]);
   }
 
+  bool isSeller = false;
+  final steps = <String>[];
+
+  @override
+  Future<GetMySellerMembershipResponse> sellerMembership() async => GetMySellerMembershipResponse.fromJson({
+        'membership': isSeller
+            ? {'status': 'APPROVED', 'type': 'BUSINESS', 'role': 'ORDER_MANAGER', 'permissions': ['orders.manage', 'inventory.manage'], 'store': {'name': 'تك زون', 'slug': 'tech'}, 'canOperate': true}
+            : null,
+      });
+
+  @override
+  Future<GetSellerHomeResponse> sellerHome() async => GetSellerHomeResponse.fromJson({
+        'orders': {'pendingConfirmation': 2, 'processing': 1, 'readyToShip': 0, 'shipped': 3, 'openReturns': 0, 'last30Days': 12},
+        'products': {'live': 7, 'outOfStock': 1, 'lowStock': 0},
+        'rating': {'average': 4.8, 'count': 20},
+        'sales': null,
+        'onTimeRate': 0.9,
+      });
+
+  Map<String, dynamic> _so(List<String> actions) => {
+        'id': 'so1', 'number': '100001-A', 'status': 'PAID', 'paidAt': '2030-01-01T10:00:00Z', 'processingDays': 1,
+        'shipTo': {'recipientName': 'منى السيد', 'phone': '01012345678', 'governorate': 'القاهرة', 'city': 'مدينة نصر', 'district': null, 'street': 'عباس العقاد',
+          'building': null, 'floor': null, 'apartment': null, 'landmark': null},
+        'items': [{'id': 'i1', 'title': 'سماعة', 'variantLabel': 'أسود', 'condition': 'NEW', 'imageUrl': null, 'quantity': 1, 'unitPricePiastres': 125050, 'lineTotalPiastres': 125050}],
+        'merchandiseSubtotalPiastres': 125050, 'shippingFeePiastres': 5000, 'economics': null, 'shipment': null, 'cancellationRequest': null, 'openDispute': false,
+        'allowedActions': actions,
+      };
+
+  @override
+  Future<SellerOrder> sellerOrder(String id) async => SellerOrder.fromJson(_so(steps.isEmpty ? const ['CONFIRM_ORDER', 'SAVE_SHIPMENT'] : const ['START_PROCESSING', 'SAVE_SHIPMENT']));
+
+  @override
+  Future<SellerOrder> sellerOrderStep(String id, String step, {String? note, required String idempotencyKey}) async {
+    steps.add(step);
+    return sellerOrder(id);
+  }
+
   @override
   Future<ListMySessionsResponse> mySessions() async => ListMySessionsResponse(items: [
         DeviceSession(id: 'a' * 32, scope: 'MOBILE', current: true, createdAt: '', lastSeenAt: '', expiresAt: '', device: const DeviceSessionDevice(platform: 'ANDROID', name: 'Pixel', appVersion: '1.2.0', app: 'CUSTOMER'), userAgent: null),
@@ -411,6 +448,31 @@ void main() {
     await t.tap(find.byKey(const Key('revoke-others')));
     await t.pumpAndSettle();
     expect(api.revokeCalls, 1);
+  });
+
+  testWidgets('seller center: a buyer without a store sees an honest status, not a dashboard', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/seller');
+    expect(find.byKey(const Key('not-a-seller')), findsOneWidget);
+  });
+
+  testWidgets('seller center: menus follow the role (no money for an order manager); steps follow allowedActions', (t) async {
+    final api = FakeMobileApi()..isSeller = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/seller');
+    expect(find.text('تك زون'), findsOneWidget);
+    expect(find.byKey(const Key('seller-orders')), findsOneWidget);
+    expect(find.byKey(const Key('seller-funds')), findsNothing); // ORDER_MANAGER has no finance.view
+    await _go(t, '/seller/orders/so1');
+    expect(find.byKey(const Key('step-CONFIRM_ORDER')), findsOneWidget);
+    expect(find.byKey(const Key('step-MARK_SHIPPED')), findsNothing);
+    await t.tap(find.byKey(const Key('step-CONFIRM_ORDER')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.steps, ['CONFIRM_ORDER']);
+    expect(find.byKey(const Key('step-START_PROCESSING')), findsOneWidget);
+    expect(find.byKey(const Key('step-CONFIRM_ORDER')), findsNothing);
   });
 
   test('version comparison', () {

@@ -1951,6 +1951,432 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'رقم المحفظة'**
   String get destWalletNumber;
+
+  /// No description provided for @sellerActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'نشط'**
+  String get sellerActive;
+
+  /// No description provided for @sellerRestricted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقيّد'**
+  String get sellerRestricted;
+
+  /// No description provided for @sellerDraft.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب لم يُرسل'**
+  String get sellerDraft;
+
+  /// No description provided for @sellerPendingReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبك تحت المراجعة'**
+  String get sellerPendingReview;
+
+  /// No description provided for @sellerMoreInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب بيانات إضافية'**
+  String get sellerMoreInfo;
+
+  /// No description provided for @sellerSuspended.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقوف'**
+  String get sellerSuspended;
+
+  /// No description provided for @sellerRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get sellerRejected;
+
+  /// No description provided for @notSellerTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'انت مش بائع على أضمن لسه'**
+  String get notSellerTitle;
+
+  /// No description provided for @notSellerBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'التسجيل كبائع ومراجعة المستندات بيتم حالياً من موقع أضمن (مركز البائع). بعد الموافقة هتدير متجرك من هنا.'**
+  String get notSellerBody;
+
+  /// No description provided for @sellerNotOperatingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'هتقدر تستقبل الطلبات بعد موافقة فريق أضمن. تابع حالة طلبك من موقع أضمن.'**
+  String get sellerNotOperatingBody;
+
+  /// No description provided for @sellerRole.
+  ///
+  /// In ar, this message translates to:
+  /// **'دورك: {role}'**
+  String sellerRole(Object role);
+
+  /// No description provided for @salesToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبيعات اليوم'**
+  String get salesToday;
+
+  /// No description provided for @ordersLast30.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات (30 يوم)'**
+  String get ordersLast30;
+
+  /// No description provided for @ordersToHandle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات محتاجة تنفيذ'**
+  String get ordersToHandle;
+
+  /// No description provided for @productsLive.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتجات المعروضة'**
+  String get productsLive;
+
+  /// No description provided for @ratingLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقييم'**
+  String get ratingLabel;
+
+  /// No description provided for @manageProducts.
+  ///
+  /// In ar, this message translates to:
+  /// **'إدارة المنتجات'**
+  String get manageProducts;
+
+  /// No description provided for @sellerOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات'**
+  String get sellerOrders;
+
+  /// No description provided for @earningsBalance.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأرباح والرصيد'**
+  String get earningsBalance;
+
+  /// No description provided for @viewMyStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'صفحة متجري للمشترين'**
+  String get viewMyStore;
+
+  /// No description provided for @sellerWebOnlyNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة منتج جديد وتعديل الصور والأسعار وأسعار الشحن وطلبات السحب متاحة حالياً من مركز البائع على الموقع.'**
+  String get sellerWebOnlyNote;
+
+  /// No description provided for @soNew.
+  ///
+  /// In ar, this message translates to:
+  /// **'جديد'**
+  String get soNew;
+
+  /// No description provided for @soAccepted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقبول'**
+  String get soAccepted;
+
+  /// No description provided for @soReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاهز للشحن'**
+  String get soReady;
+
+  /// No description provided for @noSellerOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طلبات هنا'**
+  String get noSellerOrders;
+
+  /// No description provided for @stepConfirmOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول الطلب'**
+  String get stepConfirmOrder;
+
+  /// No description provided for @stepStartProcessing.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء التجهيز'**
+  String get stepStartProcessing;
+
+  /// No description provided for @stepMarkReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاهز للشحن'**
+  String get stepMarkReady;
+
+  /// No description provided for @stepMarkShipped.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الشحن'**
+  String get stepMarkShipped;
+
+  /// No description provided for @stepAcceptCancellation.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموافقة على الإلغاء'**
+  String get stepAcceptCancellation;
+
+  /// No description provided for @sellerStepConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هتغيّر حالة الطلب. المشتري هيشوف التحديث.'**
+  String get sellerStepConfirm;
+
+  /// No description provided for @acceptCancellationConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هيتلغي الطلب والمبلغ هيرجع للمشتري حسب سياسة أضمن.'**
+  String get acceptCancellationConfirm;
+
+  /// No description provided for @acceptCancellationNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع وافق على طلب الإلغاء من التطبيق'**
+  String get acceptCancellationNote;
+
+  /// No description provided for @commission.
+  ///
+  /// In ar, this message translates to:
+  /// **'عمولة أضمن'**
+  String get commission;
+
+  /// No description provided for @sellerNet.
+  ///
+  /// In ar, this message translates to:
+  /// **'صافي البائع'**
+  String get sellerNet;
+
+  /// No description provided for @sellerNetNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصافي بيتحول لرصيدك بعد الاستلام وانتهاء الضمانات، مش فوراً.'**
+  String get sellerNetNote;
+
+  /// No description provided for @waybillAttached.
+  ///
+  /// In ar, this message translates to:
+  /// **'بوليصة الشحن مرفوعة'**
+  String get waybillAttached;
+
+  /// No description provided for @addShipment.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات الشحن'**
+  String get addShipment;
+
+  /// No description provided for @editShipment.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل بيانات الشحن'**
+  String get editShipment;
+
+  /// No description provided for @shipmentDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'بيانات الشحن'**
+  String get shipmentDetails;
+
+  /// No description provided for @carrierHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'شركة الشحن'**
+  String get carrierHint;
+
+  /// No description provided for @trackingHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم البوليصة (اختياري)'**
+  String get trackingHint;
+
+  /// No description provided for @waybill.
+  ///
+  /// In ar, this message translates to:
+  /// **'إثبات الشحن (بوليصة)'**
+  String get waybill;
+
+  /// No description provided for @waybillHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار صورة أو PDF للبوليصة'**
+  String get waybillHint;
+
+  /// No description provided for @stockLine.
+  ///
+  /// In ar, this message translates to:
+  /// **'المخزون {onHand} · محجوز {reserved} · متاح {available}'**
+  String stockLine(int onHand, int reserved, int available);
+
+  /// No description provided for @editStock.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل المخزون'**
+  String get editStock;
+
+  /// No description provided for @stockOnHand.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكمية الموجودة'**
+  String get stockOnHand;
+
+  /// No description provided for @reservedFloor.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا تقل عن {reserved} (محجوزة لطلبات قائمة)'**
+  String reservedFloor(int reserved);
+
+  /// No description provided for @productLive.
+  ///
+  /// In ar, this message translates to:
+  /// **'معروض'**
+  String get productLive;
+
+  /// No description provided for @productDraft.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسودة'**
+  String get productDraft;
+
+  /// No description provided for @productInReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحت المراجعة'**
+  String get productInReview;
+
+  /// No description provided for @productRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get productRejected;
+
+  /// No description provided for @productSuspended.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقوف'**
+  String get productSuspended;
+
+  /// No description provided for @productArchived.
+  ///
+  /// In ar, this message translates to:
+  /// **'مؤرشف'**
+  String get productArchived;
+
+  /// No description provided for @withdrawable.
+  ///
+  /// In ar, this message translates to:
+  /// **'قابل للسحب'**
+  String get withdrawable;
+
+  /// No description provided for @fundsPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'معلّق (لسه ما اتحررش)'**
+  String get fundsPending;
+
+  /// No description provided for @fundsAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'رصيد متاح بالدفاتر'**
+  String get fundsAvailable;
+
+  /// No description provided for @fundsHeld.
+  ///
+  /// In ar, this message translates to:
+  /// **'محجوز لنزاعات/مرتجعات'**
+  String get fundsHeld;
+
+  /// No description provided for @fundsReserved.
+  ///
+  /// In ar, this message translates to:
+  /// **'محجوز لسحب معتمد'**
+  String get fundsReserved;
+
+  /// No description provided for @fundsDebt.
+  ///
+  /// In ar, this message translates to:
+  /// **'مديونية مسجلة'**
+  String get fundsDebt;
+
+  /// No description provided for @fundsUnsecured.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطالبات غير مغطاة'**
+  String get fundsUnsecured;
+
+  /// No description provided for @fundsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأرقام من دفاتر أضمن. المحجوز والمديونية والمطالبات مش قابلة للسحب.'**
+  String get fundsNote;
+
+  /// No description provided for @openPayouts.
+  ///
+  /// In ar, this message translates to:
+  /// **'عندك {count} طلب سحب قيد التنفيذ'**
+  String openPayouts(int count);
+
+  /// No description provided for @payoutOnWebNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب السحب ومتابعته متاحين حالياً من مركز البائع على الموقع، ويتم اعتماده بمراجعة مزدوجة من فريق أضمن.'**
+  String get payoutOnWebNote;
+
+  /// No description provided for @switchToSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'مركز البائع'**
+  String get switchToSeller;
+
+  /// No description provided for @roleOwner.
+  ///
+  /// In ar, this message translates to:
+  /// **'صاحب المتجر'**
+  String get roleOwner;
+
+  /// No description provided for @roleManager.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدير المتجر'**
+  String get roleManager;
+
+  /// No description provided for @roleCatalog.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسؤول المنتجات'**
+  String get roleCatalog;
+
+  /// No description provided for @roleOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسؤول الطلبات'**
+  String get roleOrders;
+
+  /// No description provided for @roleFinance.
+  ///
+  /// In ar, this message translates to:
+  /// **'المالية'**
+  String get roleFinance;
+
+  /// No description provided for @roleSupport.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدعم'**
+  String get roleSupport;
 }
 
 class _EdmnLocalizationsDelegate

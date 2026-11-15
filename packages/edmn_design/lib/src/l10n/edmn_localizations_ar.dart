@@ -999,4 +999,232 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get destWalletNumber => 'رقم المحفظة';
+
+  @override
+  String get sellerActive => 'نشط';
+
+  @override
+  String get sellerRestricted => 'مقيّد';
+
+  @override
+  String get sellerDraft => 'طلب لم يُرسل';
+
+  @override
+  String get sellerPendingReview => 'طلبك تحت المراجعة';
+
+  @override
+  String get sellerMoreInfo => 'مطلوب بيانات إضافية';
+
+  @override
+  String get sellerSuspended => 'موقوف';
+
+  @override
+  String get sellerRejected => 'مرفوض';
+
+  @override
+  String get notSellerTitle => 'انت مش بائع على أضمن لسه';
+
+  @override
+  String get notSellerBody =>
+      'التسجيل كبائع ومراجعة المستندات بيتم حالياً من موقع أضمن (مركز البائع). بعد الموافقة هتدير متجرك من هنا.';
+
+  @override
+  String get sellerNotOperatingBody =>
+      'هتقدر تستقبل الطلبات بعد موافقة فريق أضمن. تابع حالة طلبك من موقع أضمن.';
+
+  @override
+  String sellerRole(Object role) {
+    return 'دورك: $role';
+  }
+
+  @override
+  String get salesToday => 'المبيعات اليوم';
+
+  @override
+  String get ordersLast30 => 'الطلبات (30 يوم)';
+
+  @override
+  String get ordersToHandle => 'طلبات محتاجة تنفيذ';
+
+  @override
+  String get productsLive => 'المنتجات المعروضة';
+
+  @override
+  String get ratingLabel => 'التقييم';
+
+  @override
+  String get manageProducts => 'إدارة المنتجات';
+
+  @override
+  String get sellerOrders => 'الطلبات';
+
+  @override
+  String get earningsBalance => 'الأرباح والرصيد';
+
+  @override
+  String get viewMyStore => 'صفحة متجري للمشترين';
+
+  @override
+  String get sellerWebOnlyNote =>
+      'إضافة منتج جديد وتعديل الصور والأسعار وأسعار الشحن وطلبات السحب متاحة حالياً من مركز البائع على الموقع.';
+
+  @override
+  String get soNew => 'جديد';
+
+  @override
+  String get soAccepted => 'مقبول';
+
+  @override
+  String get soReady => 'جاهز للشحن';
+
+  @override
+  String get noSellerOrders => 'مفيش طلبات هنا';
+
+  @override
+  String get stepConfirmOrder => 'قبول الطلب';
+
+  @override
+  String get stepStartProcessing => 'بدء التجهيز';
+
+  @override
+  String get stepMarkReady => 'جاهز للشحن';
+
+  @override
+  String get stepMarkShipped => 'تم الشحن';
+
+  @override
+  String get stepAcceptCancellation => 'الموافقة على الإلغاء';
+
+  @override
+  String get sellerStepConfirm => 'هتغيّر حالة الطلب. المشتري هيشوف التحديث.';
+
+  @override
+  String get acceptCancellationConfirm =>
+      'هيتلغي الطلب والمبلغ هيرجع للمشتري حسب سياسة أضمن.';
+
+  @override
+  String get acceptCancellationNote => 'البائع وافق على طلب الإلغاء من التطبيق';
+
+  @override
+  String get commission => 'عمولة أضمن';
+
+  @override
+  String get sellerNet => 'صافي البائع';
+
+  @override
+  String get sellerNetNote =>
+      'الصافي بيتحول لرصيدك بعد الاستلام وانتهاء الضمانات، مش فوراً.';
+
+  @override
+  String get waybillAttached => 'بوليصة الشحن مرفوعة';
+
+  @override
+  String get addShipment => 'بيانات الشحن';
+
+  @override
+  String get editShipment => 'تعديل بيانات الشحن';
+
+  @override
+  String get shipmentDetails => 'بيانات الشحن';
+
+  @override
+  String get carrierHint => 'شركة الشحن';
+
+  @override
+  String get trackingHint => 'رقم البوليصة (اختياري)';
+
+  @override
+  String get waybill => 'إثبات الشحن (بوليصة)';
+
+  @override
+  String get waybillHint => 'اختار صورة أو PDF للبوليصة';
+
+  @override
+  String stockLine(int onHand, int reserved, int available) {
+    return 'المخزون $onHand · محجوز $reserved · متاح $available';
+  }
+
+  @override
+  String get editStock => 'تعديل المخزون';
+
+  @override
+  String get stockOnHand => 'الكمية الموجودة';
+
+  @override
+  String reservedFloor(int reserved) {
+    return 'لا تقل عن $reserved (محجوزة لطلبات قائمة)';
+  }
+
+  @override
+  String get productLive => 'معروض';
+
+  @override
+  String get productDraft => 'مسودة';
+
+  @override
+  String get productInReview => 'تحت المراجعة';
+
+  @override
+  String get productRejected => 'مرفوض';
+
+  @override
+  String get productSuspended => 'موقوف';
+
+  @override
+  String get productArchived => 'مؤرشف';
+
+  @override
+  String get withdrawable => 'قابل للسحب';
+
+  @override
+  String get fundsPending => 'معلّق (لسه ما اتحررش)';
+
+  @override
+  String get fundsAvailable => 'رصيد متاح بالدفاتر';
+
+  @override
+  String get fundsHeld => 'محجوز لنزاعات/مرتجعات';
+
+  @override
+  String get fundsReserved => 'محجوز لسحب معتمد';
+
+  @override
+  String get fundsDebt => 'مديونية مسجلة';
+
+  @override
+  String get fundsUnsecured => 'مطالبات غير مغطاة';
+
+  @override
+  String get fundsNote =>
+      'الأرقام من دفاتر أضمن. المحجوز والمديونية والمطالبات مش قابلة للسحب.';
+
+  @override
+  String openPayouts(int count) {
+    return 'عندك $count طلب سحب قيد التنفيذ';
+  }
+
+  @override
+  String get payoutOnWebNote =>
+      'طلب السحب ومتابعته متاحين حالياً من مركز البائع على الموقع، ويتم اعتماده بمراجعة مزدوجة من فريق أضمن.';
+
+  @override
+  String get switchToSeller => 'مركز البائع';
+
+  @override
+  String get roleOwner => 'صاحب المتجر';
+
+  @override
+  String get roleManager => 'مدير المتجر';
+
+  @override
+  String get roleCatalog => 'مسؤول المنتجات';
+
+  @override
+  String get roleOrders => 'مسؤول الطلبات';
+
+  @override
+  String get roleFinance => 'المالية';
+
+  @override
+  String get roleSupport => 'الدعم';
 }

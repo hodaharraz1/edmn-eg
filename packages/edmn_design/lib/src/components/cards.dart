@@ -423,7 +423,7 @@ class EdmnStatTile extends StatelessWidget {
               ),
               DefaultTextStyle.merge(
                 style: EdmnType.section.copyWith(color: EdmnColors.textPrimary),
-                child: value,
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: value),
               ),
             ],
           ),

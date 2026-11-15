@@ -33,7 +33,7 @@ logo, two-line headline, dots, white "ابدأ الآن", sign-in link).
 | V-08 | Cart "إضافة كوبون خصم" | Not shown | No coupon API | Approve coupons (backend first) |
 | V-09 | Checkout methods: الدفع عند الاستلام / بطاقة بنكية / المحفظة | Only server-enabled methods (InstaPay, Vodafone Cash, bank transfer) with a TEST notice | COD/card/wallet do not exist in the backend; Real Money is OFF | Business decision on COD / card / wallet payments |
 | V-10 | "أضمن صفقة" screen styled as a flash-sale (countdown, "أضف إلى السلة") | Screen not built yet (honest "not available yet") | Protected Deal is an escrow flow between two parties, not a flash sale; the board mixes it with marketplace deals | Confirm: deal hub per directive §11, or a marketplace offers page |
-| V-11 | Seller center stat labels (التقييم 124 / المنتجات 4.8) | Seller center not built yet | Labels look swapped on the board | Confirm labels when the seller center ships |
+| V-11 | Seller stat tiles: المبيعات اليوم 12,430 / الطلبات اليوم 58 / المنتجات 4.8 / التقييم 124 | Tiles: sales today (finance.view only, else orders 30 days) / orders to handle / live products / rating | Board labels/values look swapped (rating 124, products 4.8); "orders today" is not a server metric — the server provides orders awaiting action | Confirm the four tiles |
 | V-12 | Back chevron "<" at the left of RTL headers | Back at the start (right) pointing right | Platform RTL convention and iOS back gesture | Confirm |
 | V-13 | No TEST banner | Thin amber "وضع تجريبي" strip on top | Mandatory while Real Money is OFF (server flag) | None — disappears when the server enables real money |
 | V-14 | Order numbers "#EDMN-45892" | "#100014" | The server's order number format | Change server format if desired |
@@ -42,5 +42,5 @@ logo, two-line headline, dots, white "ابدأ الآن", sign-in link).
 
 ## Not yet compared (screens not built)
 
-Protected Deal (all steps), wallet, disputes/returns screens, notifications, support, seller center. Their
+Protected Deal (all steps), wallet, disputes/returns screens, notifications, support. Seller Center is compared in `compare/seller.webp`. Their
 components exist in the design system; screens follow when their APIs exist (HANDOVER).

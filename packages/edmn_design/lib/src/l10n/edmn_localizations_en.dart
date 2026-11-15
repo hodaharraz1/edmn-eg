@@ -1007,4 +1007,234 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get destWalletNumber => 'Wallet number';
+
+  @override
+  String get sellerActive => 'Active';
+
+  @override
+  String get sellerRestricted => 'Restricted';
+
+  @override
+  String get sellerDraft => 'Application not submitted';
+
+  @override
+  String get sellerPendingReview => 'Application under review';
+
+  @override
+  String get sellerMoreInfo => 'More information required';
+
+  @override
+  String get sellerSuspended => 'Suspended';
+
+  @override
+  String get sellerRejected => 'Rejected';
+
+  @override
+  String get notSellerTitle => 'You are not a seller yet';
+
+  @override
+  String get notSellerBody =>
+      'Seller registration and document review run on the EDMN website for now. Once approved you manage your store here.';
+
+  @override
+  String get sellerNotOperatingBody =>
+      'You can receive orders once EDMN approves your store. Follow your application on the EDMN website.';
+
+  @override
+  String sellerRole(Object role) {
+    return 'Your role: $role';
+  }
+
+  @override
+  String get salesToday => 'Sales today';
+
+  @override
+  String get ordersLast30 => 'Orders (30 days)';
+
+  @override
+  String get ordersToHandle => 'Orders to handle';
+
+  @override
+  String get productsLive => 'Live products';
+
+  @override
+  String get ratingLabel => 'Rating';
+
+  @override
+  String get manageProducts => 'Manage products';
+
+  @override
+  String get sellerOrders => 'Orders';
+
+  @override
+  String get earningsBalance => 'Earnings & balance';
+
+  @override
+  String get viewMyStore => 'My public store page';
+
+  @override
+  String get sellerWebOnlyNote =>
+      'Adding products, editing photos, prices, shipping rates and payout requests are on the website Seller Center for now.';
+
+  @override
+  String get soNew => 'New';
+
+  @override
+  String get soAccepted => 'Accepted';
+
+  @override
+  String get soReady => 'Ready to ship';
+
+  @override
+  String get noSellerOrders => 'No orders here';
+
+  @override
+  String get stepConfirmOrder => 'Accept order';
+
+  @override
+  String get stepStartProcessing => 'Start preparing';
+
+  @override
+  String get stepMarkReady => 'Ready to ship';
+
+  @override
+  String get stepMarkShipped => 'Mark as shipped';
+
+  @override
+  String get stepAcceptCancellation => 'Accept cancellation';
+
+  @override
+  String get sellerStepConfirm =>
+      'This changes the order status; the buyer will see it.';
+
+  @override
+  String get acceptCancellationConfirm =>
+      'The order will be cancelled and refunded per EDMN policy.';
+
+  @override
+  String get acceptCancellationNote =>
+      'Seller accepted the cancellation in the app';
+
+  @override
+  String get commission => 'EDMN commission';
+
+  @override
+  String get sellerNet => 'Seller net';
+
+  @override
+  String get sellerNetNote =>
+      'Net becomes available after delivery and protections end — not immediately.';
+
+  @override
+  String get waybillAttached => 'Waybill attached';
+
+  @override
+  String get addShipment => 'Add shipment';
+
+  @override
+  String get editShipment => 'Edit shipment';
+
+  @override
+  String get shipmentDetails => 'Shipment details';
+
+  @override
+  String get carrierHint => 'Carrier';
+
+  @override
+  String get trackingHint => 'Tracking number (optional)';
+
+  @override
+  String get waybill => 'Shipping proof (waybill)';
+
+  @override
+  String get waybillHint => 'Choose a waybill image or PDF';
+
+  @override
+  String stockLine(int onHand, int reserved, int available) {
+    return 'Stock $onHand · reserved $reserved · available $available';
+  }
+
+  @override
+  String get editStock => 'Edit stock';
+
+  @override
+  String get stockOnHand => 'Stock on hand';
+
+  @override
+  String reservedFloor(int reserved) {
+    return 'Not below $reserved (reserved for open orders)';
+  }
+
+  @override
+  String get productLive => 'Live';
+
+  @override
+  String get productDraft => 'Draft';
+
+  @override
+  String get productInReview => 'In review';
+
+  @override
+  String get productRejected => 'Rejected';
+
+  @override
+  String get productSuspended => 'Suspended';
+
+  @override
+  String get productArchived => 'Archived';
+
+  @override
+  String get withdrawable => 'Withdrawable';
+
+  @override
+  String get fundsPending => 'Pending (not yet released)';
+
+  @override
+  String get fundsAvailable => 'Available (ledger)';
+
+  @override
+  String get fundsHeld => 'Held for disputes/returns';
+
+  @override
+  String get fundsReserved => 'Reserved for an approved payout';
+
+  @override
+  String get fundsDebt => 'Booked debt';
+
+  @override
+  String get fundsUnsecured => 'Uncovered claims';
+
+  @override
+  String get fundsNote =>
+      'Figures come from EDMN\'s ledger. Held amounts, debt and claims are never withdrawable.';
+
+  @override
+  String openPayouts(int count) {
+    return 'You have $count payout request(s) in progress';
+  }
+
+  @override
+  String get payoutOnWebNote =>
+      'Payout requests are made on the website Seller Center and approved by EDMN with two-person review.';
+
+  @override
+  String get switchToSeller => 'Seller Center';
+
+  @override
+  String get roleOwner => 'Store owner';
+
+  @override
+  String get roleManager => 'Store manager';
+
+  @override
+  String get roleCatalog => 'Catalog manager';
+
+  @override
+  String get roleOrders => 'Order manager';
+
+  @override
+  String get roleFinance => 'Finance';
+
+  @override
+  String get roleSupport => 'Support';
 }
