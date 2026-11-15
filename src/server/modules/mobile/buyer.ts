@@ -5,6 +5,7 @@ import { db } from '@/server/db/client';
 import { addresses, cancellationRequests, disputes, files, governorates, orderItems, orders, paymentSubmissions, payments, products, refunds, returns, sellerOrders, shipments, trackingEvents } from '@/server/db/schema';
 import { returnPolicySummary, type ReturnPolicy } from '@/domain/return-policy';
 import { sellerOrderAllowedActions } from '@/server/modules/allowed-actions';
+import { sellerOrderMessagingAvailable } from '@/server/modules/messaging/service';
 import { publicMediaUrl } from '@/server/modules/catalog/public-read';
 import { acknowledgePrices, cartView } from '@/server/modules/commerce/cart';
 import { customerOrders, orderForCustomer, orderLabel } from '@/server/modules/commerce/orders';
@@ -293,7 +294,11 @@ export async function buyerOrder(actor: Actor, orderId: string) {
         disputes: soDisputes.map((d) => ({ id: d.id, number: d.number, status: d.status })),
         returns: rets.filter((r) => r.sellerOrderId === so.id).map((r) => ({ id: r.id, number: r.number, status: r.status })),
         refunds: refs.filter((r) => r.sellerOrderId === so.id).map((r) => ({ id: r.id, status: r.status, amountPiastres: r.amount })),
-        allowedActions: sellerOrderAllowedActions({ status: so.status, role: o.customerId === userId ? 'BUYER' : 'NONE', cancellationPending, openDispute, disputeWindowClosed }),
+        allowedActions: [
+          ...sellerOrderAllowedActions({ status: so.status, role: o.customerId === userId ? 'BUYER' : 'NONE', cancellationPending, openDispute, disputeWindowClosed }),
+          // Messaging opens once the payment is confirmed (same rule as the messaging service).
+          ...(o.customerId === userId && sellerOrderMessagingAvailable(so) ? (['MESSAGE_SELLER'] as const) : []),
+        ],
       };
     }),
   };

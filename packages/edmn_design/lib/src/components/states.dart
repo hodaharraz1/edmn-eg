@@ -58,6 +58,8 @@ class _EdmnSkeletonListState extends State<EdmnSkeletonList>
     child: FadeTransition(
       opacity: Tween(begin: 0.45, end: 1.0).animate(_c),
       child: ListView.separated(
+        // Never scrolls: shrink-wrapped so it can also sit inside a page's own scroll view while loading.
+        shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen),
         itemCount: widget.rows,

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../common/file_pick.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
+import '../messages/messages_screens.dart' show openConversation;
 
 /// Seller Center inside the same app. The store and its permissions come from the server (membership of the
 /// signed-in user); menus and actions show only what the member's role allows and what the server allows now.
@@ -131,6 +132,7 @@ class _SellerHome extends ConsumerWidget {
         EdmnMenuGroup(children: [
           if (p.contains('products.manage') || p.contains('inventory.manage'))
             EdmnMenuItem(key: const Key('seller-products'), icon: Icons.inventory_2_outlined, title: t.manageProducts, onTap: () => context.push('/seller/products')),
+          if (p.contains('orders.communicate')) EdmnMenuItem(key: const Key('seller-messages'), icon: Icons.chat_bubble_outline_rounded, title: t.storeMessages, onTap: () => context.push('/seller/messages')),
           if (p.contains('orders.manage')) EdmnMenuItem(key: const Key('seller-orders'), icon: Icons.shopping_cart_outlined, title: t.sellerOrders, onTap: () => context.push('/seller/orders')),
           if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-funds'), icon: Icons.account_balance_wallet_outlined, title: t.earningsBalance, onTap: () => context.push('/seller/funds')),
           if (p.contains('finance.view')) EdmnMenuItem(key: const Key('seller-payouts'), icon: Icons.outbound_outlined, title: t.payoutRequests, onTap: () => context.push('/seller/payouts')),
@@ -326,6 +328,15 @@ class _SellerOrderScreenState extends ConsumerState<SellerOrderScreen> {
                       ? EdmnSecondaryButton(key: Key('step-$step'), label: labels[step]!, destructive: true, loading: _busy == step, onPressed: _busy == null ? () => _step(step, labels[step]!) : null)
                       : EdmnPrimaryButton(key: Key('step-$step'), label: labels[step]!, loading: _busy == step, onPressed: _busy == null ? () => _step(step, labels[step]!) : null),
                 ),
+            if (o.allowedActions.contains('MESSAGE_BUYER')) ...[
+              EdmnSecondaryButton(
+                key: const Key('message-buyer'),
+                label: t.messageBuyer,
+                icon: Icons.chat_bubble_outline_rounded,
+                onPressed: () => openConversation(context, ref, (api) => api.openOrderConversation(o.id, store: true), store: true),
+              ),
+              const SizedBox(height: EdmnSpacing.xs),
+            ],
             if (o.allowedActions.contains('SAVE_SHIPMENT'))
               EdmnSecondaryButton(
                 key: const Key('save-shipment'),

@@ -14,14 +14,16 @@ import 'features/catalog/browse_screens.dart';
 import 'features/catalog/catalog_home_screen.dart';
 import 'features/checkout/checkout_screen.dart';
 import 'features/deals/deals_screens.dart';
+import 'features/messages/messages_screens.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
 import 'features/seller/seller_screens.dart';
 import 'features/seller/seller_setup_screens.dart';
+import 'features/support/support_screens.dart';
 import 'providers.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
-const _protected = ['/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support'];
+const _protected = ['/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support', '/messages'];
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SignedInListenable(ref);
@@ -87,7 +89,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/account/identity', builder: (c, s) => const IdentityScreen()),
       GoRoute(path: '/seller/funds', builder: (c, s) => const SellerFundsScreen()),
       GoRoute(path: '/notifications', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).notifications, icon: Icons.notifications_none_rounded)),
-      GoRoute(path: '/support', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).helpSupport, icon: Icons.support_agent_rounded)),
+      GoRoute(path: '/messages', builder: (c, s) => const InboxScreen()),
+      GoRoute(path: '/messages/:id', builder: (c, s) => ConversationScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/seller/messages', builder: (c, s) => const InboxScreen(store: true)),
+      GoRoute(path: '/seller/messages/:id', builder: (c, s) => ConversationScreen(id: s.pathParameters['id']!, store: true)),
+      GoRoute(path: '/support', builder: (c, s) => const SupportScreen()),
+      GoRoute(
+        path: '/support/new',
+        builder: (c, s) => NewTicketScreen(type: s.uri.queryParameters['type'], relatedType: s.uri.queryParameters['relatedType'], relatedId: s.uri.queryParameters['relatedId']),
+      ),
+      GoRoute(path: '/support/:id', builder: (c, s) => TicketScreen(id: s.pathParameters['id']!)),
     ],
   );
 });

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../common/status.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
+import '../messages/messages_screens.dart' show openConversation;
 import '../cart/cart_providers.dart';
 import 'order_providers.dart';
 
@@ -294,6 +295,22 @@ class _SellerOrderSection extends ConsumerWidget {
             const SizedBox(height: EdmnSpacing.xs),
             _ReportProblemButton(soId: so.id, orderId: order.id),
           ],
+          if (actions.contains('MESSAGE_SELLER')) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            EdmnSecondaryButton(
+              key: Key('message-seller-${so.id}'),
+              label: t.messageSeller,
+              icon: Icons.chat_bubble_outline_rounded,
+              onPressed: () => openConversation(context, ref, (api) => api.openOrderConversation(so.id)),
+            ),
+          ],
+          const SizedBox(height: EdmnSpacing.xs),
+          TextButton.icon(
+            key: Key('help-${so.id}'),
+            icon: const Icon(Icons.support_agent_rounded),
+            label: Text(t.helpWithOrder),
+            onPressed: () => context.push('/support/new?type=ORDER&relatedType=ORDER&relatedId=${order.id}'),
+          ),
         ]),
       ),
     );

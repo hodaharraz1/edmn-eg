@@ -112,6 +112,66 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // Messaging / support
+  bool convCanWrite = true;
+  int sendFailures = 0;
+  final sendKeys = <String>[];
+  final seenUpTo = <String?>[];
+  List<String> ticketActions = const ['REPLY'];
+  final ticketRatings = <int>[];
+
+  Map<String, dynamic> _msg(String id, {bool mine = false}) => {
+        'id': id, 'side': mine ? 'BUYER' : 'SELLER', 'mine': mine, 'body': mine ? 'ممكن ميعاد الشحن؟' : 'هيتشحن بكرة', 'hidden': false,
+        'createdAt': '2030-01-01T10:00:00Z', 'attachments': <Map<String, dynamic>>[], 'readByOther': mine,
+      };
+  @override
+  Future<GetConversationResponse> conversation(String id, {bool store = false}) async => GetConversationResponse.fromJson({
+        'id': id, 'context': 'SELLER_ORDER', 'side': 'BUYER', 'ref': 'طلب #100001-A', 'title': 'سماعة لاسلكية', 'status': 'PAID', 'otherParty': 'متجر القاهرة',
+        'link': {'kind': 'ORDER', 'id': '11111111-1111-4111-8111-111111111111'}, 'canWrite': convCanWrite,
+        'readOnlyReason': convCanWrite ? null : 'الطلب ده خلص من فترة، والمحادثة بقت للقراءة بس.',
+        'messages': [_msg('m1', mine: true), _msg('m2')],
+      });
+  @override
+  Future<SendMessageResponse> sendMessage(String id, String body, String clientKey, {List<(Uint8List, String)> attachments = const [], bool store = false}) async {
+    sendKeys.add(clientKey);
+    if (sendFailures-- > 0) throw const ApiFailure(code: ApiErrorCode.rateLimited, status: 429);
+    return SendMessageResponse.fromJson({'id': 'm3', 'createdAt': '2030-01-01T10:01:00Z'});
+  }
+  @override
+  Future<int> markConversationSeen(String id, {String? upToMessageId, bool store = false}) async {
+    seenUpTo.add(upToMessageId);
+    return 0;
+  }
+  @override
+  Future<ListSupportTicketsResponse> supportTickets() async => ListSupportTicketsResponse.fromJson({
+        'items': [
+          {'id': 'x1', 'number': '1042', 'type': 'ORDER', 'subject': 'استفسار عن الطلب', 'status': 'OPEN', 'relatedType': null, 'relatedId': null, 'rating': null,
+            'createdAt': '2030-01-01T10:00:00Z', 'updatedAt': '2030-01-01T10:00:00Z', 'allowedActions': ['REPLY']},
+        ],
+      });
+  @override
+  Future<ListConversationsResponse> conversations({bool store = false, String? filter, String? q}) async => ListConversationsResponse.fromJson({
+        'items': [
+          {'id': 'c1', 'context': 'SELLER_ORDER', 'ref': 'طلب #100001-A', 'title': 'سماعة لاسلكية', 'status': 'PAID', 'otherParty': 'متجر القاهرة', 'side': 'BUYER',
+            'lastMessageAt': '2030-01-01T10:00:00Z', 'preview': 'هيتشحن بكرة', 'unread': filter == null ? 2 : 0},
+        ],
+        'unread': 2,
+      });
+  @override
+  Future<GetSupportTicketResponse> supportTicket(String id) async => GetSupportTicketResponse.fromJson({
+        'id': id, 'number': '1042', 'type': 'ORDER', 'subject': 'استفسار عن الطلب', 'status': ticketActions.contains('RATE') ? 'RESOLVED' : 'OPEN',
+        'relatedType': null, 'relatedId': null, 'rating': null, 'createdAt': '2030-01-01T10:00:00Z', 'updatedAt': '2030-01-01T10:00:00Z', 'allowedActions': ticketActions,
+        'messages': [
+          {'id': 't1', 'fromStaff': false, 'mine': true, 'body': 'محتاج أعرف حالة الطلب', 'createdAt': '2030-01-01T10:00:00Z', 'attachmentFileId': null},
+          {'id': 't2', 'fromStaff': true, 'mine': false, 'body': 'الطلب في انتظار تأكيد الدفع', 'createdAt': '2030-01-01T11:00:00Z', 'attachmentFileId': null},
+        ],
+      });
+  @override
+  Future<GetSupportTicketResponse> rateSupportTicket(String id, int rating, {String? comment, required String idempotencyKey}) async {
+    ticketRatings.add(rating);
+    ticketActions = const ['REPLY', 'REOPEN'];
+    return supportTicket(id);
+  }
   int codeReveals = 0;
 
   @override
@@ -617,6 +677,68 @@ void main() {
     expect(api.codeReveals, 1);
     expect(find.byKey(const Key('delivery-code')), findsOneWidget);
     expect(find.textContaining('المحاولات المتبقية 5'), findsOneWidget);
+  });
+
+  testWidgets('chat: a failed send is retried with the SAME client key (no duplicate); the next message gets a new one; seen = last rendered', (t) async {
+    final api = FakeMobileApi()..sendFailures = 1;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(find.text('هيتشحن بكرة'), findsOneWidget);
+    expect(find.byKey(const Key('conv-context')), findsOneWidget);
+    expect(api.seenUpTo, ['m2']);
+    await t.enterText(find.descendant(of: find.byKey(const Key('message-input')), matching: find.byType(EditableText)), 'تمام شكراً');
+    await t.tap(find.byKey(const Key('send')));
+    await t.pumpAndSettle();
+    expect(find.text('تمام شكراً'), findsOneWidget); // kept for the retry
+    expect(find.text('الرسالة ما اتبعتتش. اضغط إرسال تاني، ومش هتتكرر.'), findsOneWidget);
+    await t.pump(const Duration(seconds: 6)); // let the message clear
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('send')));
+    await t.pumpAndSettle();
+    expect(api.sendKeys, hasLength(2));
+    expect(api.sendKeys[0], api.sendKeys[1]);
+    await t.enterText(find.descendant(of: find.byKey(const Key('message-input')), matching: find.byType(EditableText)), 'رسالة تانية');
+    await t.tap(find.byKey(const Key('send')));
+    await t.pumpAndSettle();
+    expect(api.sendKeys[2], isNot(api.sendKeys[0]));
+  });
+
+  testWidgets('inbox lists conversations with the server unread count', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/messages');
+    expect(find.byKey(const Key('conv-c1')), findsOneWidget);
+    expect(find.byKey(const Key('unread-c1')), findsOneWidget);
+    await _go(t, '/support');
+    expect(find.byKey(const Key('ticket-x1')), findsOneWidget);
+  });
+
+  testWidgets('chat: a read-only conversation shows the server reason and no composer', (t) async {
+    final api = FakeMobileApi()..convCanWrite = false;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(find.byKey(const Key('read-only')), findsOneWidget);
+    expect(find.byKey(const Key('send')), findsNothing);
+  });
+
+  testWidgets('support: staff shown as «فريق أضمن»; rating only when the server allows it, once', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/support/x1');
+    expect(find.text('فريق أضمن'), findsOneWidget);
+    expect(find.byKey(const Key('rate-ticket')), findsNothing);
+    api.ticketActions = const ['REPLY', 'REOPEN', 'RATE'];
+    await _go(t, '/support');
+    await _go(t, '/support/x1');
+    final rate = find.byKey(const Key('rate-ticket'));
+    await _reveal(t, rate);
+    await t.tap(rate);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('star-4')));
+    await t.tap(find.byKey(const Key('rate-submit')));
+    await t.pumpAndSettle();
+    expect(api.ticketRatings, [4]);
+    expect(find.byKey(const Key('rate-ticket')), findsNothing);
+    expect(find.byKey(const Key('reopen-ticket')), findsOneWidget);
   });
 
   test('version comparison', () {

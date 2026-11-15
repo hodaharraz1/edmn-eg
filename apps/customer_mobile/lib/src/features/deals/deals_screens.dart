@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../common/file_pick.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
+import '../messages/messages_screens.dart' show openConversation;
 
 /// أضمن صفقة — escrow between two parties outside the marketplace. Buyer creates and invites; seller joins and offers;
 /// both agree (any material change is re-approved); buyer pays (EDMN verifies the receipt); seller ships; the buyer's
@@ -515,6 +516,8 @@ class _DealScreenState extends ConsumerState<DealScreen> {
               if (a.contains('MARK_SHIPPED')) btn('ship', t.markShippedDeal, () => showEdmnBottomSheet(context, title: t.markShippedDeal, child: _ShipForm(dealId: d.id))),
               if (a.contains('VERIFY_DELIVERY_CODE')) btn('verify', t.enterDeliveryCode, () => showEdmnBottomSheet(context, title: t.enterDeliveryCode, child: _VerifyCode(dealId: d.id))),
               if (a.contains('REGENERATE_DELIVERY_CODE')) btn('regen', t.newDeliveryCode, () => _act('regen', (k) => api.regenerateDealDeliveryCode(d.id, idempotencyKey: k)), primary: false),
+              if (a.contains('MESSAGE')) btn('message', t.dealConversation, () => openConversation(context, ref, (api) => api.openDealConversation(d.id)), primary: false),
+              btn('help', t.helpWithDeal, () => context.push('/support/new?type=EXTERNAL_DEAL&relatedType=DEAL&relatedId=${d.id}'), primary: false),
               const SizedBox(height: EdmnSpacing.sm),
               EdmnNotice(message: t.dealNoReleaseNote, icon: Icons.lock_outline_rounded),
             ]),

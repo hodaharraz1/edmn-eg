@@ -4,6 +4,7 @@ import { forbidden } from '@/server/core/errors';
 import { db } from '@/server/db/client';
 import { dealTermsVersions } from '@/server/db/schema';
 import { dealAllowedActions, type DealRole } from '@/server/modules/allowed-actions';
+import { dealMessagingAvailable } from '@/server/modules/messaging/service';
 import {
   addDealPhotos,
   cancelDeal,
@@ -99,7 +100,7 @@ export async function dealView(actor: Actor, dealId: string) {
     buyerResponseDueAt: d.buyerResponseDueAt?.toISOString() ?? null,
     financialHold: !!d.financialHold,
     createdAt: d.createdAt.toISOString(),
-    allowedActions: dealAllowedActions({ status: d.status, role, handoverVerified: !!d.handoverVerifiedAt }),
+    allowedActions: [...dealAllowedActions({ status: d.status, role, handoverVerified: !!d.handoverVerifiedAt }), ...(dealMessagingAvailable(d) ? ['MESSAGE'] : [])],
   };
 }
 

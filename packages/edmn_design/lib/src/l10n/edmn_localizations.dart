@@ -3601,6 +3601,456 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'استُبدل بنسخة أحدث'**
   String get termsSuperseded;
+
+  /// No description provided for @attachFile.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرفاق ملف'**
+  String get attachFile;
+
+  /// No description provided for @attachmentHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة أو PDF (اختياري)'**
+  String get attachmentHint;
+
+  /// No description provided for @conversationReadOnly.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحادثة دي للقراءة بس دلوقتي.'**
+  String get conversationReadOnly;
+
+  /// No description provided for @dealConversation.
+  ///
+  /// In ar, this message translates to:
+  /// **'محادثة الصفقة'**
+  String get dealConversation;
+
+  /// No description provided for @edmnTeam.
+  ///
+  /// In ar, this message translates to:
+  /// **'فريق أضمن'**
+  String get edmnTeam;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get filterAll;
+
+  /// No description provided for @filterDeals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفقات'**
+  String get filterDeals;
+
+  /// No description provided for @filterOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات'**
+  String get filterOrders;
+
+  /// No description provided for @filterUnread.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مقروءة'**
+  String get filterUnread;
+
+  /// No description provided for @helpWithDeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'مساعدة بخصوص الصفقة'**
+  String get helpWithDeal;
+
+  /// No description provided for @helpWithOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'مساعدة بخصوص الطلب'**
+  String get helpWithOrder;
+
+  /// No description provided for @imageAttachment.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة مرفقة'**
+  String get imageAttachment;
+
+  /// No description provided for @messageBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراسلة المشتري'**
+  String get messageBuyer;
+
+  /// No description provided for @messageHidden.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسالة دي اتخفت بواسطة فريق أضمن'**
+  String get messageHidden;
+
+  /// No description provided for @messageNotSentRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسالة ما اتبعتتش. اضغط إرسال تاني، ومش هتتكرر.'**
+  String get messageNotSentRetry;
+
+  /// No description provided for @messageSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراسلة البائع'**
+  String get messageSeller;
+
+  /// No description provided for @messages.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسائل'**
+  String get messages;
+
+  /// No description provided for @messagesEvidenceNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسائل للتواصل بس: أي تأكيد استلام أو تغيير في السعر لازم يتم من أزرار الطلب أو الصفقة. ما تبعتش بيانات دفع أو كلمات سر.'**
+  String get messagesEvidenceNote;
+
+  /// No description provided for @myTickets.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذاكري'**
+  String get myTickets;
+
+  /// No description provided for @newTicket.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكرة جديدة'**
+  String get newTicket;
+
+  /// No description provided for @noConversations.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد محادثات'**
+  String get noConversations;
+
+  /// No description provided for @noConversationsBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحادثة بتتفتح من الطلب بعد تأكيد الدفع، أو من الصفقة بعد انضمام البائع.'**
+  String get noConversationsBody;
+
+  /// No description provided for @noTickets.
+  ///
+  /// In ar, this message translates to:
+  /// **'مافيش تذاكر لحد دلوقتي'**
+  String get noTickets;
+
+  /// No description provided for @pdfAttachment.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملف PDF مرفق'**
+  String get pdfAttachment;
+
+  /// No description provided for @rateService.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم الخدمة'**
+  String get rateService;
+
+  /// No description provided for @ratingCommentHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعليق (اختياري)'**
+  String get ratingCommentHint;
+
+  /// No description provided for @reopenReasonHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليه عايز تعيد فتح التذكرة؟'**
+  String get reopenReasonHint;
+
+  /// No description provided for @reopenTicket.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة فتح التذكرة'**
+  String get reopenTicket;
+
+  /// No description provided for @replyReopensTicket.
+  ///
+  /// In ar, this message translates to:
+  /// **'ردك هيعيد فتح التذكرة.'**
+  String get replyReopensTicket;
+
+  /// No description provided for @reportDataRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب بيانات مش محتاجها'**
+  String get reportDataRequest;
+
+  /// No description provided for @reportFraud.
+  ///
+  /// In ar, this message translates to:
+  /// **'محاولة نصب'**
+  String get reportFraud;
+
+  /// No description provided for @reportInappropriate.
+  ///
+  /// In ar, this message translates to:
+  /// **'محتوى غير لائق'**
+  String get reportInappropriate;
+
+  /// No description provided for @reportMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإبلاغ عن الرسالة'**
+  String get reportMessage;
+
+  /// No description provided for @reportMessageBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'البلاغ بيوصل لفريق أضمن للمراجعة. محدش بيتعاقب تلقائيًا.'**
+  String get reportMessageBody;
+
+  /// No description provided for @reportNoteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل إضافية (اختياري)'**
+  String get reportNoteHint;
+
+  /// No description provided for @reportOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب آخر'**
+  String get reportOther;
+
+  /// No description provided for @reportSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال البلاغ'**
+  String get reportSent;
+
+  /// No description provided for @seenByOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتقرت'**
+  String get seenByOther;
+
+  /// No description provided for @send.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال'**
+  String get send;
+
+  /// No description provided for @sendReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال البلاغ'**
+  String get sendReport;
+
+  /// No description provided for @sendTicket.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال التذكرة'**
+  String get sendTicket;
+
+  /// No description provided for @sent.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتبعتت'**
+  String get sent;
+
+  /// No description provided for @startConversation.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابدأ المحادثة'**
+  String get startConversation;
+
+  /// No description provided for @storeMessages.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل المتجر'**
+  String get storeMessages;
+
+  /// No description provided for @supportIntro.
+  ///
+  /// In ar, this message translates to:
+  /// **'فريق أضمن موجود يساعدك في الطلبات والدفع والصفقات والحساب.'**
+  String get supportIntro;
+
+  /// No description provided for @thanksForRating.
+  ///
+  /// In ar, this message translates to:
+  /// **'شكرًا على تقييمك'**
+  String get thanksForRating;
+
+  /// No description provided for @ticketAboutThis.
+  ///
+  /// In ar, this message translates to:
+  /// **'التذكرة هتترتبط بالطلب أو الصفقة اللي فتحتها منها.'**
+  String get ticketAboutThis;
+
+  /// No description provided for @ticketBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح المشكلة بالتفصيل'**
+  String get ticketBody;
+
+  /// No description provided for @ticketBodyShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح طلبك في 10 حروف على الأقل'**
+  String get ticketBodyShort;
+
+  /// No description provided for @ticketClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلقة'**
+  String get ticketClosed;
+
+  /// No description provided for @ticketEscalated.
+  ///
+  /// In ar, this message translates to:
+  /// **'محوّلة لفريق متخصص'**
+  String get ticketEscalated;
+
+  /// No description provided for @ticketInProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري العمل عليها'**
+  String get ticketInProgress;
+
+  /// No description provided for @ticketOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوحة'**
+  String get ticketOpen;
+
+  /// No description provided for @ticketPrivacyNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما تكتبش كلمة السر أو رقم البطاقة. فريق أضمن عمره ما هيطلبهم.'**
+  String get ticketPrivacyNote;
+
+  /// No description provided for @ticketResolved.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الحل'**
+  String get ticketResolved;
+
+  /// No description provided for @ticketSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال التذكرة'**
+  String get ticketSent;
+
+  /// No description provided for @ticketSubject.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموضوع'**
+  String get ticketSubject;
+
+  /// No description provided for @ticketSubjectShort.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب موضوع واضح (5 حروف على الأقل)'**
+  String get ticketSubjectShort;
+
+  /// No description provided for @ticketTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذكرة دعم'**
+  String get ticketTitle;
+
+  /// No description provided for @ticketType.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع المشكلة'**
+  String get ticketType;
+
+  /// No description provided for @ticketTypeAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب'**
+  String get ticketTypeAccount;
+
+  /// No description provided for @ticketTypeOrder.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب'**
+  String get ticketTypeOrder;
+
+  /// No description provided for @ticketTypePayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع'**
+  String get ticketTypePayment;
+
+  /// No description provided for @ticketTypeProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتج'**
+  String get ticketTypeProduct;
+
+  /// No description provided for @ticketTypeRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'استرداد'**
+  String get ticketTypeRefund;
+
+  /// No description provided for @ticketTypeReturn.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرجاع'**
+  String get ticketTypeReturn;
+
+  /// No description provided for @ticketTypeSellerFinance.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرباح المتجر'**
+  String get ticketTypeSellerFinance;
+
+  /// No description provided for @ticketTypeShipping.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن'**
+  String get ticketTypeShipping;
+
+  /// No description provided for @ticketTypeTechnical.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشكلة تقنية'**
+  String get ticketTypeTechnical;
+
+  /// No description provided for @ticketWaitingSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار البائع'**
+  String get ticketWaitingSeller;
+
+  /// No description provided for @ticketWaitingYou.
+  ///
+  /// In ar, this message translates to:
+  /// **'في انتظار ردك'**
+  String get ticketWaitingYou;
+
+  /// No description provided for @typeMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب رسالتك'**
+  String get typeMessage;
+
+  /// No description provided for @writeReply.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب ردك'**
+  String get writeReply;
+
+  /// No description provided for @you.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت'**
+  String get you;
+
+  /// No description provided for @maxAttachments.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقدر ترفق {count} ملفات بالكتير'**
+  String maxAttachments(int count);
 }
 
 class _EdmnLocalizationsDelegate

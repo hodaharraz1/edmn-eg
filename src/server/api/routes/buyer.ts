@@ -16,7 +16,7 @@ import { isoDateTime, ok, piastres, profile, tokenPair, uuid } from '../schemas'
  * services: prices, fees, shipping, totals, stock checks, ownership and allowed actions are all decided there.
  * The buyer is ALWAYS the session's user; no route accepts a user id.
  */
-const SELLER_ORDER_ACTIONS = z.enum(['REQUEST_CANCELLATION', 'CONFIRM_RECEIPT', 'REPORT_PROBLEM', 'OPEN_DISPUTE', 'CONFIRM_ORDER', 'START_PROCESSING', 'MARK_READY_TO_SHIP', 'SAVE_SHIPMENT', 'MARK_SHIPPED', 'ADD_TRACKING_EVENT', 'SUBMIT_DELIVERY_EVIDENCE', 'ACCEPT_CANCELLATION']);
+const SELLER_ORDER_ACTIONS = z.enum(['REQUEST_CANCELLATION', 'CONFIRM_RECEIPT', 'REPORT_PROBLEM', 'OPEN_DISPUTE', 'CONFIRM_ORDER', 'START_PROCESSING', 'MARK_READY_TO_SHIP', 'SAVE_SHIPMENT', 'MARK_SHIPPED', 'ADD_TRACKING_EVENT', 'SUBMIT_DELIVERY_EVIDENCE', 'ACCEPT_CANCELLATION', 'MESSAGE_SELLER']);
 
 const returnPolicy = z
   .object({ type: z.enum(['VOLUNTARY', 'NONE']), windowDays: z.number().int().nullable(), conditions: z.array(z.string()), shippingPayer: z.string(), notes: z.string(), summaryAr: z.string() })

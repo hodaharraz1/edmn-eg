@@ -28,6 +28,7 @@ abstract final class MobileApiPaths {
   static const getCart = (method: 'GET', path: '/api/v1/cart');
   static const getCategoryAttributes = (method: 'GET', path: '/api/v1/catalog/categories/{categoryId}/attributes');
   static const getCheckout = (method: 'GET', path: '/api/v1/checkout');
+  static const getConversation = (method: 'GET', path: '/api/v1/conversations/{conversationId}');
   static const getDeal = (method: 'GET', path: '/api/v1/deals/{dealId}');
   static const getDealDeliveryCode = (method: 'GET', path: '/api/v1/deals/{dealId}/delivery-code');
   static const getFile = (method: 'GET', path: '/api/v1/files/{fileId}');
@@ -46,9 +47,14 @@ abstract final class MobileApiPaths {
   static const getSellerShippingRates = (method: 'GET', path: '/api/v1/seller/shipping-rates');
   static const getSellerStoreSettings = (method: 'GET', path: '/api/v1/seller/store');
   static const getStore = (method: 'GET', path: '/api/v1/stores/{slug}');
+  static const getStoreConversation = (method: 'GET', path: '/api/v1/seller/conversations/{conversationId}');
+  static const getStoreUnreadMessages = (method: 'GET', path: '/api/v1/seller/conversations/unread');
+  static const getSupportTicket = (method: 'GET', path: '/api/v1/support/tickets/{ticketId}');
+  static const getUnreadMessages = (method: 'GET', path: '/api/v1/conversations/unread');
   static const inviteDealSeller = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation');
   static const listAddresses = (method: 'GET', path: '/api/v1/me/addresses');
   static const listCategories = (method: 'GET', path: '/api/v1/catalog/categories');
+  static const listConversations = (method: 'GET', path: '/api/v1/conversations');
   static const listDeals = (method: 'GET', path: '/api/v1/deals');
   static const listGovernorates = (method: 'GET', path: '/api/v1/governorates');
   static const listMySessions = (method: 'GET', path: '/api/v1/me/sessions');
@@ -57,17 +63,30 @@ abstract final class MobileApiPaths {
   static const listSellerOrders = (method: 'GET', path: '/api/v1/seller/orders');
   static const listSellerPayoutRequests = (method: 'GET', path: '/api/v1/seller/payout-requests');
   static const listSellerProducts = (method: 'GET', path: '/api/v1/seller/products');
+  static const listStoreConversations = (method: 'GET', path: '/api/v1/seller/conversations');
+  static const listSupportTickets = (method: 'GET', path: '/api/v1/support/tickets');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
+  static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
   static const markDealShipped = (method: 'POST', path: '/api/v1/deals/{dealId}/shipped');
+  static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
+  static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
+  static const openOrderConversation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/conversation');
+  static const openStoreOrderConversation = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/conversation');
+  static const openSupportTicket = (method: 'POST', path: '/api/v1/support/tickets');
   static const placeOrder = (method: 'POST', path: '/api/v1/orders');
   static const previewSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/preview');
+  static const rateSupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/rating');
   static const refreshDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation/refresh');
   static const refreshToken = (method: 'POST', path: '/api/v1/auth/token/refresh');
   static const regenerateDealDeliveryCode = (method: 'POST', path: '/api/v1/deals/{dealId}/delivery-code/regenerate');
   static const register = (method: 'POST', path: '/api/v1/auth/register');
+  static const reopenSupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/reopen');
+  static const replySupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/replies');
   static const reportDealNotReceived = (method: 'POST', path: '/api/v1/deals/{dealId}/not-received');
+  static const reportMessage = (method: 'POST', path: '/api/v1/conversations/messages/{messageId}/report');
   static const reportOrderProblem = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/problem');
+  static const reportStoreMessage = (method: 'POST', path: '/api/v1/seller/conversations/messages/{messageId}/report');
   static const requestCancellation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/cancellation-request');
   static const resetPassword = (method: 'POST', path: '/api/v1/auth/password/reset');
   static const respondDealChangeRequest = (method: 'POST', path: '/api/v1/deals/{dealId}/change-response');
@@ -87,6 +106,8 @@ abstract final class MobileApiPaths {
   static const saveSellerShippingRates = (method: 'PUT', path: '/api/v1/seller/shipping-rates');
   static const saveSellerStoreSettings = (method: 'PUT', path: '/api/v1/seller/store');
   static const searchProducts = (method: 'GET', path: '/api/v1/catalog/products');
+  static const sendMessage = (method: 'POST', path: '/api/v1/conversations/{conversationId}/messages');
+  static const sendStoreMessage = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/messages');
   static const sendVerificationCode = (method: 'POST', path: '/api/v1/me/verification/send');
   static const setCartItemQuantity = (method: 'PUT', path: '/api/v1/cart/items/{variantId}');
   static const setSellerProductVisibility = (method: 'POST', path: '/api/v1/seller/products/{productId}/visibility');
@@ -770,6 +791,89 @@ class GetCategoryAttributesResponseItemsItemOptionsItem {
   Map<String, dynamic> toJson() => {'value': value, 'labelAr': labelAr};
 }
 
+class GetConversationResponse {
+  const GetConversationResponse({required this.id, required this.context, required this.side, required this.ref, required this.title, required this.status, required this.otherParty, required this.link, required this.canWrite, required this.readOnlyReason, required this.messages});
+
+  factory GetConversationResponse.fromJson(Map<String, dynamic> json) => GetConversationResponse(id: json['id'] as String, context: json['context'] as String, side: json['side'] as String, ref: json['ref'] as String, title: json['title'] as String, status: json['status'] as String, otherParty: json['otherParty'] as String, link: GetConversationResponseLink.fromJson(json['link'] as Map<String, dynamic>), canWrite: json['canWrite'] as bool, readOnlyReason: json['readOnlyReason'] as String?, messages: (json['messages'] as List).map((e) => GetConversationResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  /// One of: SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String context;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final String ref;
+
+  final String title;
+
+  final String status;
+
+  final String otherParty;
+
+  final GetConversationResponseLink link;
+
+  final bool canWrite;
+
+  final String? readOnlyReason;
+
+  final List<GetConversationResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'context': context, 'side': side, 'ref': ref, 'title': title, 'status': status, 'otherParty': otherParty, 'link': link.toJson(), 'canWrite': canWrite, 'readOnlyReason': readOnlyReason, 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class GetConversationResponseLink {
+  const GetConversationResponseLink({required this.kind, required this.id});
+
+  factory GetConversationResponseLink.fromJson(Map<String, dynamic> json) => GetConversationResponseLink(kind: json['kind'] as String, id: json['id'] as String);
+
+  /// One of: ORDER, SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
+}
+
+class GetConversationResponseMessagesItem {
+  const GetConversationResponseMessagesItem({required this.id, required this.side, required this.mine, required this.body, required this.hidden, required this.createdAt, required this.attachments, required this.readByOther});
+
+  factory GetConversationResponseMessagesItem.fromJson(Map<String, dynamic> json) => GetConversationResponseMessagesItem(id: json['id'] as String, side: json['side'] as String, mine: json['mine'] as bool, body: json['body'] as String, hidden: json['hidden'] as bool, createdAt: json['createdAt'] as String, attachments: (json['attachments'] as List).map((e) => GetConversationResponseMessagesItemAttachmentsItem.fromJson(e as Map<String, dynamic>)).toList(), readByOther: json['readByOther'] as bool);
+
+  final String id;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final bool mine;
+
+  final String body;
+
+  final bool hidden;
+
+  final String createdAt;
+
+  /// Download with GET /api/v1/files/{fileId}.
+  final List<GetConversationResponseMessagesItemAttachmentsItem> attachments;
+
+  final bool readByOther;
+
+  Map<String, dynamic> toJson() => {'id': id, 'side': side, 'mine': mine, 'body': body, 'hidden': hidden, 'createdAt': createdAt, 'attachments': attachments.map((e) => e.toJson()).toList(), 'readByOther': readByOther};
+}
+
+class GetConversationResponseMessagesItemAttachmentsItem {
+  const GetConversationResponseMessagesItemAttachmentsItem({required this.fileId, required this.mimeType});
+
+  factory GetConversationResponseMessagesItemAttachmentsItem.fromJson(Map<String, dynamic> json) => GetConversationResponseMessagesItemAttachmentsItem(fileId: json['fileId'] as String, mimeType: json['mimeType'] as String);
+
+  final String fileId;
+
+  final String mimeType;
+
+  Map<String, dynamic> toJson() => {'fileId': fileId, 'mimeType': mimeType};
+}
+
 class GetDealDeliveryCodeResponse {
   const GetDealDeliveryCodeResponse({required this.available, required this.code, required this.expiresAt, required this.attemptsLeft});
 
@@ -1049,6 +1153,161 @@ class GetSellerShippingRatesResponseItemsItem {
   Map<String, dynamic> toJson() => {'governorateId': governorateId, 'enabled': enabled, 'feePiastres': feePiastres, 'etaMinDays': etaMinDays, 'etaMaxDays': etaMaxDays};
 }
 
+class GetStoreConversationResponse {
+  const GetStoreConversationResponse({required this.id, required this.context, required this.side, required this.ref, required this.title, required this.status, required this.otherParty, required this.link, required this.canWrite, required this.readOnlyReason, required this.messages});
+
+  factory GetStoreConversationResponse.fromJson(Map<String, dynamic> json) => GetStoreConversationResponse(id: json['id'] as String, context: json['context'] as String, side: json['side'] as String, ref: json['ref'] as String, title: json['title'] as String, status: json['status'] as String, otherParty: json['otherParty'] as String, link: GetStoreConversationResponseLink.fromJson(json['link'] as Map<String, dynamic>), canWrite: json['canWrite'] as bool, readOnlyReason: json['readOnlyReason'] as String?, messages: (json['messages'] as List).map((e) => GetStoreConversationResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  /// One of: SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String context;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final String ref;
+
+  final String title;
+
+  final String status;
+
+  final String otherParty;
+
+  final GetStoreConversationResponseLink link;
+
+  final bool canWrite;
+
+  final String? readOnlyReason;
+
+  final List<GetStoreConversationResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'context': context, 'side': side, 'ref': ref, 'title': title, 'status': status, 'otherParty': otherParty, 'link': link.toJson(), 'canWrite': canWrite, 'readOnlyReason': readOnlyReason, 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class GetStoreConversationResponseLink {
+  const GetStoreConversationResponseLink({required this.kind, required this.id});
+
+  factory GetStoreConversationResponseLink.fromJson(Map<String, dynamic> json) => GetStoreConversationResponseLink(kind: json['kind'] as String, id: json['id'] as String);
+
+  /// One of: ORDER, SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
+}
+
+class GetStoreConversationResponseMessagesItem {
+  const GetStoreConversationResponseMessagesItem({required this.id, required this.side, required this.mine, required this.body, required this.hidden, required this.createdAt, required this.attachments, required this.readByOther});
+
+  factory GetStoreConversationResponseMessagesItem.fromJson(Map<String, dynamic> json) => GetStoreConversationResponseMessagesItem(id: json['id'] as String, side: json['side'] as String, mine: json['mine'] as bool, body: json['body'] as String, hidden: json['hidden'] as bool, createdAt: json['createdAt'] as String, attachments: (json['attachments'] as List).map((e) => GetStoreConversationResponseMessagesItemAttachmentsItem.fromJson(e as Map<String, dynamic>)).toList(), readByOther: json['readByOther'] as bool);
+
+  final String id;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final bool mine;
+
+  final String body;
+
+  final bool hidden;
+
+  final String createdAt;
+
+  /// Download with GET /api/v1/files/{fileId}.
+  final List<GetStoreConversationResponseMessagesItemAttachmentsItem> attachments;
+
+  final bool readByOther;
+
+  Map<String, dynamic> toJson() => {'id': id, 'side': side, 'mine': mine, 'body': body, 'hidden': hidden, 'createdAt': createdAt, 'attachments': attachments.map((e) => e.toJson()).toList(), 'readByOther': readByOther};
+}
+
+class GetStoreConversationResponseMessagesItemAttachmentsItem {
+  const GetStoreConversationResponseMessagesItemAttachmentsItem({required this.fileId, required this.mimeType});
+
+  factory GetStoreConversationResponseMessagesItemAttachmentsItem.fromJson(Map<String, dynamic> json) => GetStoreConversationResponseMessagesItemAttachmentsItem(fileId: json['fileId'] as String, mimeType: json['mimeType'] as String);
+
+  final String fileId;
+
+  final String mimeType;
+
+  Map<String, dynamic> toJson() => {'fileId': fileId, 'mimeType': mimeType};
+}
+
+class GetStoreUnreadMessagesResponse {
+  const GetStoreUnreadMessagesResponse({required this.unread});
+
+  factory GetStoreUnreadMessagesResponse.fromJson(Map<String, dynamic> json) => GetStoreUnreadMessagesResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
+class GetSupportTicketResponse {
+  const GetSupportTicketResponse({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions, required this.messages});
+
+  factory GetSupportTicketResponse.fromJson(Map<String, dynamic> json) => GetSupportTicketResponse(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList(), messages: (json['messages'] as List).map((e) => GetSupportTicketResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  final List<GetSupportTicketResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList(), 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class GetSupportTicketResponseMessagesItem {
+  const GetSupportTicketResponseMessagesItem({required this.id, required this.fromStaff, required this.mine, required this.body, required this.createdAt, required this.attachmentFileId});
+
+  factory GetSupportTicketResponseMessagesItem.fromJson(Map<String, dynamic> json) => GetSupportTicketResponseMessagesItem(id: json['id'] as String, fromStaff: json['fromStaff'] as bool, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String, attachmentFileId: json['attachmentFileId'] as String?);
+
+  final String id;
+
+  final bool fromStaff;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  final String? attachmentFileId;
+
+  Map<String, dynamic> toJson() => {'id': id, 'fromStaff': fromStaff, 'mine': mine, 'body': body, 'createdAt': createdAt, 'attachmentFileId': attachmentFileId};
+}
+
+class GetUnreadMessagesResponse {
+  const GetUnreadMessagesResponse({required this.unread});
+
+  factory GetUnreadMessagesResponse.fromJson(Map<String, dynamic> json) => GetUnreadMessagesResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
 class IdentityStatus {
   const IdentityStatus({required this.status, required this.legalName, required this.last4, required this.hasFront, required this.hasBack, required this.reason});
 
@@ -1133,6 +1392,48 @@ class ListCategoriesResponse {
   final List<Category> items;
 
   Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListConversationsResponse {
+  const ListConversationsResponse({required this.items, required this.unread});
+
+  factory ListConversationsResponse.fromJson(Map<String, dynamic> json) => ListConversationsResponse(items: (json['items'] as List).map((e) => ListConversationsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), unread: (json['unread'] as num).toInt());
+
+  final List<ListConversationsResponseItemsItem> items;
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'unread': unread};
+}
+
+class ListConversationsResponseItemsItem {
+  const ListConversationsResponseItemsItem({required this.id, required this.context, required this.ref, required this.title, required this.status, required this.otherParty, required this.side, required this.lastMessageAt, required this.preview, required this.unread});
+
+  factory ListConversationsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListConversationsResponseItemsItem(id: json['id'] as String, context: json['context'] as String, ref: json['ref'] as String, title: json['title'] as String, status: json['status'] as String, otherParty: json['otherParty'] as String, side: json['side'] as String, lastMessageAt: json['lastMessageAt'] as String?, preview: json['preview'] as String, unread: (json['unread'] as num).toInt());
+
+  final String id;
+
+  /// One of: SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String context;
+
+  final String ref;
+
+  final String title;
+
+  final String status;
+
+  final String otherParty;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final String? lastMessageAt;
+
+  final String preview;
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'id': id, 'context': context, 'ref': ref, 'title': title, 'status': status, 'otherParty': otherParty, 'side': side, 'lastMessageAt': lastMessageAt, 'preview': preview, 'unread': unread};
 }
 
 class ListDealsResponse {
@@ -1392,6 +1693,88 @@ class ListSellerProductsResponseItemsItemVariantsItem {
   Map<String, dynamic> toJson() => {'id': id, 'label': label, 'pricePiastres': pricePiastres, 'stockOnHand': stockOnHand, 'reserved': reserved, 'available': available, 'lowStockThreshold': lowStockThreshold, 'active': active};
 }
 
+class ListStoreConversationsResponse {
+  const ListStoreConversationsResponse({required this.items, required this.unread});
+
+  factory ListStoreConversationsResponse.fromJson(Map<String, dynamic> json) => ListStoreConversationsResponse(items: (json['items'] as List).map((e) => ListStoreConversationsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), unread: (json['unread'] as num).toInt());
+
+  final List<ListStoreConversationsResponseItemsItem> items;
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'unread': unread};
+}
+
+class ListStoreConversationsResponseItemsItem {
+  const ListStoreConversationsResponseItemsItem({required this.id, required this.context, required this.ref, required this.title, required this.status, required this.otherParty, required this.side, required this.lastMessageAt, required this.preview, required this.unread});
+
+  factory ListStoreConversationsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListStoreConversationsResponseItemsItem(id: json['id'] as String, context: json['context'] as String, ref: json['ref'] as String, title: json['title'] as String, status: json['status'] as String, otherParty: json['otherParty'] as String, side: json['side'] as String, lastMessageAt: json['lastMessageAt'] as String?, preview: json['preview'] as String, unread: (json['unread'] as num).toInt());
+
+  final String id;
+
+  /// One of: SELLER_ORDER, DEAL (kept as String for forward compatibility).
+  final String context;
+
+  final String ref;
+
+  final String title;
+
+  final String status;
+
+  final String otherParty;
+
+  /// One of: BUYER, SELLER (kept as String for forward compatibility).
+  final String side;
+
+  final String? lastMessageAt;
+
+  final String preview;
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'id': id, 'context': context, 'ref': ref, 'title': title, 'status': status, 'otherParty': otherParty, 'side': side, 'lastMessageAt': lastMessageAt, 'preview': preview, 'unread': unread};
+}
+
+class ListSupportTicketsResponse {
+  const ListSupportTicketsResponse({required this.items});
+
+  factory ListSupportTicketsResponse.fromJson(Map<String, dynamic> json) => ListSupportTicketsResponse(items: (json['items'] as List).map((e) => ListSupportTicketsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ListSupportTicketsResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListSupportTicketsResponseItemsItem {
+  const ListSupportTicketsResponseItemsItem({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions});
+
+  factory ListSupportTicketsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListSupportTicketsResponseItemsItem(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList()};
+}
+
 class LoginRequest {
   const LoginRequest({required this.identifier, required this.password, required this.device});
 
@@ -1406,6 +1789,46 @@ class LoginRequest {
   Map<String, dynamic> toJson() => {'identifier': identifier, 'password': password, 'device': device.toJson()};
 }
 
+class MarkConversationSeenRequest {
+  const MarkConversationSeenRequest({this.upToMessageId});
+
+  factory MarkConversationSeenRequest.fromJson(Map<String, dynamic> json) => MarkConversationSeenRequest(upToMessageId: json['upToMessageId'] == null ? null : json['upToMessageId'] as String);
+
+  final String? upToMessageId;
+
+  Map<String, dynamic> toJson() => {if (upToMessageId != null) 'upToMessageId': upToMessageId};
+}
+
+class MarkConversationSeenResponse {
+  const MarkConversationSeenResponse({required this.unread});
+
+  factory MarkConversationSeenResponse.fromJson(Map<String, dynamic> json) => MarkConversationSeenResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
+class MarkStoreConversationSeenRequest {
+  const MarkStoreConversationSeenRequest({this.upToMessageId});
+
+  factory MarkStoreConversationSeenRequest.fromJson(Map<String, dynamic> json) => MarkStoreConversationSeenRequest(upToMessageId: json['upToMessageId'] == null ? null : json['upToMessageId'] as String);
+
+  final String? upToMessageId;
+
+  Map<String, dynamic> toJson() => {if (upToMessageId != null) 'upToMessageId': upToMessageId};
+}
+
+class MarkStoreConversationSeenResponse {
+  const MarkStoreConversationSeenResponse({required this.unread});
+
+  factory MarkStoreConversationSeenResponse.fromJson(Map<String, dynamic> json) => MarkStoreConversationSeenResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
 class Ok {
   const Ok({required this.ok});
 
@@ -1414,6 +1837,88 @@ class Ok {
   final bool ok;
 
   Map<String, dynamic> toJson() => {'ok': ok};
+}
+
+class OpenDealConversationResponse {
+  const OpenDealConversationResponse({required this.conversationId});
+
+  factory OpenDealConversationResponse.fromJson(Map<String, dynamic> json) => OpenDealConversationResponse(conversationId: json['conversationId'] as String);
+
+  final String conversationId;
+
+  Map<String, dynamic> toJson() => {'conversationId': conversationId};
+}
+
+class OpenOrderConversationResponse {
+  const OpenOrderConversationResponse({required this.conversationId});
+
+  factory OpenOrderConversationResponse.fromJson(Map<String, dynamic> json) => OpenOrderConversationResponse(conversationId: json['conversationId'] as String);
+
+  final String conversationId;
+
+  Map<String, dynamic> toJson() => {'conversationId': conversationId};
+}
+
+class OpenStoreOrderConversationResponse {
+  const OpenStoreOrderConversationResponse({required this.conversationId});
+
+  factory OpenStoreOrderConversationResponse.fromJson(Map<String, dynamic> json) => OpenStoreOrderConversationResponse(conversationId: json['conversationId'] as String);
+
+  final String conversationId;
+
+  Map<String, dynamic> toJson() => {'conversationId': conversationId};
+}
+
+class OpenSupportTicketResponse {
+  const OpenSupportTicketResponse({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions, required this.messages});
+
+  factory OpenSupportTicketResponse.fromJson(Map<String, dynamic> json) => OpenSupportTicketResponse(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList(), messages: (json['messages'] as List).map((e) => OpenSupportTicketResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  final List<OpenSupportTicketResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList(), 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class OpenSupportTicketResponseMessagesItem {
+  const OpenSupportTicketResponseMessagesItem({required this.id, required this.fromStaff, required this.mine, required this.body, required this.createdAt, required this.attachmentFileId});
+
+  factory OpenSupportTicketResponseMessagesItem.fromJson(Map<String, dynamic> json) => OpenSupportTicketResponseMessagesItem(id: json['id'] as String, fromStaff: json['fromStaff'] as bool, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String, attachmentFileId: json['attachmentFileId'] as String?);
+
+  final String id;
+
+  final bool fromStaff;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  final String? attachmentFileId;
+
+  Map<String, dynamic> toJson() => {'id': id, 'fromStaff': fromStaff, 'mine': mine, 'body': body, 'createdAt': createdAt, 'attachmentFileId': attachmentFileId};
 }
 
 class Order {
@@ -2303,6 +2808,70 @@ class ProtectedDealTermsHistoryItem {
   Map<String, dynamic> toJson() => {'version': version, 'proposedBy': proposedBy, 'status': status, 'message': message, 'createdAt': createdAt, 'terms': terms};
 }
 
+class RateSupportTicketRequest {
+  const RateSupportTicketRequest({required this.rating, this.comment});
+
+  factory RateSupportTicketRequest.fromJson(Map<String, dynamic> json) => RateSupportTicketRequest(rating: (json['rating'] as num).toInt(), comment: json['comment'] == null ? null : json['comment'] as String);
+
+  final int rating;
+
+  final String? comment;
+
+  Map<String, dynamic> toJson() => {'rating': rating, if (comment != null) 'comment': comment};
+}
+
+class RateSupportTicketResponse {
+  const RateSupportTicketResponse({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions, required this.messages});
+
+  factory RateSupportTicketResponse.fromJson(Map<String, dynamic> json) => RateSupportTicketResponse(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList(), messages: (json['messages'] as List).map((e) => RateSupportTicketResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  final List<RateSupportTicketResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList(), 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class RateSupportTicketResponseMessagesItem {
+  const RateSupportTicketResponseMessagesItem({required this.id, required this.fromStaff, required this.mine, required this.body, required this.createdAt, required this.attachmentFileId});
+
+  factory RateSupportTicketResponseMessagesItem.fromJson(Map<String, dynamic> json) => RateSupportTicketResponseMessagesItem(id: json['id'] as String, fromStaff: json['fromStaff'] as bool, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String, attachmentFileId: json['attachmentFileId'] as String?);
+
+  final String id;
+
+  final bool fromStaff;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  final String? attachmentFileId;
+
+  Map<String, dynamic> toJson() => {'id': id, 'fromStaff': fromStaff, 'mine': mine, 'body': body, 'createdAt': createdAt, 'attachmentFileId': attachmentFileId};
+}
+
 class RefreshDealInvitationResponse {
   const RefreshDealInvitationResponse({required this.link, required this.deal});
 
@@ -2347,6 +2916,120 @@ class RegisterRequest {
   Map<String, dynamic> toJson() => {'fullName': fullName, 'email': email, 'phone': phone, 'password': password, 'device': device.toJson()};
 }
 
+class ReopenSupportTicketRequest {
+  const ReopenSupportTicketRequest({required this.reason});
+
+  factory ReopenSupportTicketRequest.fromJson(Map<String, dynamic> json) => ReopenSupportTicketRequest(reason: json['reason'] as String);
+
+  final String reason;
+
+  Map<String, dynamic> toJson() => {'reason': reason};
+}
+
+class ReopenSupportTicketResponse {
+  const ReopenSupportTicketResponse({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions, required this.messages});
+
+  factory ReopenSupportTicketResponse.fromJson(Map<String, dynamic> json) => ReopenSupportTicketResponse(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList(), messages: (json['messages'] as List).map((e) => ReopenSupportTicketResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  final List<ReopenSupportTicketResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList(), 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class ReopenSupportTicketResponseMessagesItem {
+  const ReopenSupportTicketResponseMessagesItem({required this.id, required this.fromStaff, required this.mine, required this.body, required this.createdAt, required this.attachmentFileId});
+
+  factory ReopenSupportTicketResponseMessagesItem.fromJson(Map<String, dynamic> json) => ReopenSupportTicketResponseMessagesItem(id: json['id'] as String, fromStaff: json['fromStaff'] as bool, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String, attachmentFileId: json['attachmentFileId'] as String?);
+
+  final String id;
+
+  final bool fromStaff;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  final String? attachmentFileId;
+
+  Map<String, dynamic> toJson() => {'id': id, 'fromStaff': fromStaff, 'mine': mine, 'body': body, 'createdAt': createdAt, 'attachmentFileId': attachmentFileId};
+}
+
+class ReplySupportTicketResponse {
+  const ReplySupportTicketResponse({required this.id, required this.number, required this.type, required this.subject, required this.status, required this.relatedType, required this.relatedId, required this.rating, required this.createdAt, required this.updatedAt, required this.allowedActions, required this.messages});
+
+  factory ReplySupportTicketResponse.fromJson(Map<String, dynamic> json) => ReplySupportTicketResponse(id: json['id'] as String, number: json['number'] as String, type: json['type'] as String, subject: json['subject'] as String, status: json['status'] as String, relatedType: json['relatedType'] as String?, relatedId: json['relatedId'] as String?, rating: (json['rating'] as num?)?.toInt(), createdAt: json['createdAt'] as String, updatedAt: json['updatedAt'] as String, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList(), messages: (json['messages'] as List).map((e) => ReplySupportTicketResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String type;
+
+  final String subject;
+
+  final String status;
+
+  final String? relatedType;
+
+  final String? relatedId;
+
+  final int? rating;
+
+  final String createdAt;
+
+  final String updatedAt;
+
+  final List<String> allowedActions;
+
+  final List<ReplySupportTicketResponseMessagesItem> messages;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'type': type, 'subject': subject, 'status': status, 'relatedType': relatedType, 'relatedId': relatedId, 'rating': rating, 'createdAt': createdAt, 'updatedAt': updatedAt, 'allowedActions': allowedActions.map((e) => e).toList(), 'messages': messages.map((e) => e.toJson()).toList()};
+}
+
+class ReplySupportTicketResponseMessagesItem {
+  const ReplySupportTicketResponseMessagesItem({required this.id, required this.fromStaff, required this.mine, required this.body, required this.createdAt, required this.attachmentFileId});
+
+  factory ReplySupportTicketResponseMessagesItem.fromJson(Map<String, dynamic> json) => ReplySupportTicketResponseMessagesItem(id: json['id'] as String, fromStaff: json['fromStaff'] as bool, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String, attachmentFileId: json['attachmentFileId'] as String?);
+
+  final String id;
+
+  final bool fromStaff;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  final String? attachmentFileId;
+
+  Map<String, dynamic> toJson() => {'id': id, 'fromStaff': fromStaff, 'mine': mine, 'body': body, 'createdAt': createdAt, 'attachmentFileId': attachmentFileId};
+}
+
 class ReportDealNotReceivedRequest {
   const ReportDealNotReceivedRequest({required this.description});
 
@@ -2355,6 +3038,29 @@ class ReportDealNotReceivedRequest {
   final String description;
 
   Map<String, dynamic> toJson() => {'description': description};
+}
+
+class ReportMessageRequest {
+  const ReportMessageRequest({required this.reason, this.note});
+
+  factory ReportMessageRequest.fromJson(Map<String, dynamic> json) => ReportMessageRequest(reason: json['reason'] as String, note: json['note'] == null ? null : json['note'] as String);
+
+  /// One of: INAPPROPRIATE, FRAUD_ATTEMPT, UNNEEDED_DATA_REQUEST, OTHER (kept as String for forward compatibility).
+  final String reason;
+
+  final String? note;
+
+  Map<String, dynamic> toJson() => {'reason': reason, if (note != null) 'note': note};
+}
+
+class ReportMessageResponse {
+  const ReportMessageResponse({required this.ok});
+
+  factory ReportMessageResponse.fromJson(Map<String, dynamic> json) => ReportMessageResponse(ok: json['ok'] as bool);
+
+  final bool ok;
+
+  Map<String, dynamic> toJson() => {'ok': ok};
 }
 
 class ReportOrderProblemRequest {
@@ -2368,6 +3074,29 @@ class ReportOrderProblemRequest {
   final String description;
 
   Map<String, dynamic> toJson() => {'kind': kind, 'description': description};
+}
+
+class ReportStoreMessageRequest {
+  const ReportStoreMessageRequest({required this.reason, this.note});
+
+  factory ReportStoreMessageRequest.fromJson(Map<String, dynamic> json) => ReportStoreMessageRequest(reason: json['reason'] as String, note: json['note'] == null ? null : json['note'] as String);
+
+  /// One of: INAPPROPRIATE, FRAUD_ATTEMPT, UNNEEDED_DATA_REQUEST, OTHER (kept as String for forward compatibility).
+  final String reason;
+
+  final String? note;
+
+  Map<String, dynamic> toJson() => {'reason': reason, if (note != null) 'note': note};
+}
+
+class ReportStoreMessageResponse {
+  const ReportStoreMessageResponse({required this.ok});
+
+  factory ReportStoreMessageResponse.fromJson(Map<String, dynamic> json) => ReportStoreMessageResponse(ok: json['ok'] as bool);
+
+  final bool ok;
+
+  Map<String, dynamic> toJson() => {'ok': ok};
 }
 
 class RequestCancellationRequest {
@@ -3150,6 +3879,30 @@ class SellerStoreSettings {
   final String? bannerUrl;
 
   Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'supportPhone': supportPhone, 'acceptsVoluntaryReturns': acceptsVoluntaryReturns, 'voluntaryReturnDays': voluntaryReturnDays, 'returnConditions': returnConditions, 'returnConditionKeys': returnConditionKeys.map((e) => e).toList(), 'returnShippingPayer': returnShippingPayer, 'shippingPolicy': shippingPolicy, 'defaultProcessingDays': defaultProcessingDays, 'freeShippingThresholdPiastres': freeShippingThresholdPiastres, 'logoUrl': logoUrl, 'bannerUrl': bannerUrl};
+}
+
+class SendMessageResponse {
+  const SendMessageResponse({required this.id, required this.createdAt});
+
+  factory SendMessageResponse.fromJson(Map<String, dynamic> json) => SendMessageResponse(id: json['id'] as String, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'createdAt': createdAt};
+}
+
+class SendStoreMessageResponse {
+  const SendStoreMessageResponse({required this.id, required this.createdAt});
+
+  factory SendStoreMessageResponse.fromJson(Map<String, dynamic> json) => SendStoreMessageResponse(id: json['id'] as String, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'createdAt': createdAt};
 }
 
 class SendVerificationCodeRequest {

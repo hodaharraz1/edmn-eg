@@ -168,7 +168,7 @@ class MobileApi {
   Future<GetSellerFundsResponse> sellerFunds() async => GetSellerFundsResponse.fromJson(await client.getJson(MobileApiPaths.getSellerFunds.path));
 
   // ── Seller setup: identity, application, products, shipping, store, payout REQUESTS ─────────────────────────
-  Future<Map<String, dynamic>> _multipart(String path, {required Map<String, String> fields, Map<String, List<(Uint8List, String)>> files = const {}, required String idempotencyKey}) =>
+  Future<Map<String, dynamic>> _multipart(String path, {required Map<String, String> fields, Map<String, List<(Uint8List, String)>> files = const {}, required String? idempotencyKey}) =>
       client.guard((d) async {
         final form = FormData.fromMap(fields);
         for (final e in files.entries) {
@@ -176,7 +176,7 @@ class MobileApi {
             form.files.add(MapEntry(e.key, MultipartFile.fromBytes(bytes, filename: name)));
           }
         }
-        return (await d.post<Map<String, dynamic>>(path, data: form, options: Options(contentType: 'multipart/form-data', headers: {'idempotency-key': idempotencyKey}))).data!;
+        return (await d.post<Map<String, dynamic>>(path, data: form, options: Options(contentType: 'multipart/form-data', headers: {'idempotency-key': ?idempotencyKey}))).data!;
       });
 
   Future<IdentityStatus> myIdentity() async => IdentityStatus.fromJson(await client.getJson(MobileApiPaths.getMyIdentity.path));
@@ -280,4 +280,43 @@ class MobileApi {
       ProtectedDeal.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.confirmDealReceipt.path, id), idempotencyKey: idempotencyKey));
   Future<ProtectedDeal> reportDealNotReceived(String id, String description, {required String idempotencyKey}) async => ProtectedDeal.fromJson(
       await client.sendJson('POST', _deal(MobileApiPaths.reportDealNotReceived.path, id), body: {'description': description}, idempotencyKey: idempotencyKey));
+
+  // ── Messaging (buyer ↔ store, deal parties) and support ─────────────────────────────────────────────────────────
+  // `store: true` uses the store-side routes (session user's store membership with orders.communicate).
+  String _cv(bool store, String p) => store ? p.replaceFirst('/api/v1/conversations', '/api/v1/seller/conversations') : p;
+  Future<ListConversationsResponse> conversations({bool store = false, String? filter, String? q}) async => ListConversationsResponse.fromJson(
+      await client.getJson(_cv(store, MobileApiPaths.listConversations.path), query: {'filter': ?filter, if (q != null && q.isNotEmpty) 'q': q}));
+  Future<int> unreadMessages({bool store = false}) async =>
+      GetUnreadMessagesResponse.fromJson(await client.getJson(_cv(store, MobileApiPaths.getUnreadMessages.path))).unread;
+  Future<GetConversationResponse> conversation(String id, {bool store = false}) async =>
+      GetConversationResponse.fromJson(await client.getJson(_cv(store, fillPath(MobileApiPaths.getConversation.path, {'conversationId': id}))));
+  /// [clientKey] is reused when the same message is retried: the server then returns the original, never a duplicate.
+  Future<SendMessageResponse> sendMessage(String id, String body, String clientKey, {List<(Uint8List, String)> attachments = const [], bool store = false}) async =>
+      SendMessageResponse.fromJson(await _multipart(_cv(store, fillPath(MobileApiPaths.sendMessage.path, {'conversationId': id})),
+          fields: {'body': body, 'clientKey': clientKey}, files: {'attachments': attachments}, idempotencyKey: null));
+  /// Only this marks messages read: call it with the newest message that was actually on screen.
+  Future<int> markConversationSeen(String id, {String? upToMessageId, bool store = false}) async => MarkConversationSeenResponse.fromJson(await client.sendJson(
+          'POST', _cv(store, fillPath(MobileApiPaths.markConversationSeen.path, {'conversationId': id})), body: {'upToMessageId': ?upToMessageId}))
+      .unread;
+  Future<void> reportMessage(String messageId, String reason, {String? note, bool store = false}) async => client.sendJson(
+      'POST', _cv(store, fillPath(MobileApiPaths.reportMessage.path, {'messageId': messageId})), body: {'reason': reason, if (note != null && note.isNotEmpty) 'note': note});
+  Future<String> openOrderConversation(String sellerOrderId, {bool store = false}) async => OpenOrderConversationResponse.fromJson(await client.sendJson('POST',
+          fillPath(store ? MobileApiPaths.openStoreOrderConversation.path : MobileApiPaths.openOrderConversation.path, {'sellerOrderId': sellerOrderId})))
+      .conversationId;
+  Future<String> openDealConversation(String dealId) async =>
+      OpenOrderConversationResponse.fromJson(await client.sendJson('POST', _deal(MobileApiPaths.openDealConversation.path, dealId))).conversationId;
+
+  Future<ListSupportTicketsResponse> supportTickets() async => ListSupportTicketsResponse.fromJson(await client.getJson(MobileApiPaths.listSupportTickets.path));
+  Future<GetSupportTicketResponse> supportTicket(String id) async =>
+      GetSupportTicketResponse.fromJson(await client.getJson(fillPath(MobileApiPaths.getSupportTicket.path, {'ticketId': id})));
+  Future<GetSupportTicketResponse> openSupportTicket(Map<String, String> fields, {(Uint8List, String)? attachment, required String idempotencyKey}) async =>
+      GetSupportTicketResponse.fromJson(await _multipart(MobileApiPaths.openSupportTicket.path, fields: fields, files: {'attachment': [?attachment]}, idempotencyKey: idempotencyKey));
+  Future<GetSupportTicketResponse> replySupportTicket(String id, String body, {(Uint8List, String)? attachment, required String idempotencyKey}) async =>
+      GetSupportTicketResponse.fromJson(await _multipart(fillPath(MobileApiPaths.replySupportTicket.path, {'ticketId': id}),
+          fields: {'body': body}, files: {'attachment': [?attachment]}, idempotencyKey: idempotencyKey));
+  Future<GetSupportTicketResponse> reopenSupportTicket(String id, String reason, {required String idempotencyKey}) async => GetSupportTicketResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.reopenSupportTicket.path, {'ticketId': id}), body: {'reason': reason}, idempotencyKey: idempotencyKey));
+  Future<GetSupportTicketResponse> rateSupportTicket(String id, int rating, {String? comment, required String idempotencyKey}) async => GetSupportTicketResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.rateSupportTicket.path, {'ticketId': id}),
+          body: {'rating': rating, if (comment != null && comment.isNotEmpty) 'comment': comment}, idempotencyKey: idempotencyKey));
 }

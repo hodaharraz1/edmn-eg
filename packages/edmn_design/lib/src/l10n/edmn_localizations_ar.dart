@@ -1864,4 +1864,238 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get termsSuperseded => 'استُبدل بنسخة أحدث';
+
+  @override
+  String get attachFile => 'إرفاق ملف';
+
+  @override
+  String get attachmentHint => 'صورة أو PDF (اختياري)';
+
+  @override
+  String get conversationReadOnly => 'المحادثة دي للقراءة بس دلوقتي.';
+
+  @override
+  String get dealConversation => 'محادثة الصفقة';
+
+  @override
+  String get edmnTeam => 'فريق أضمن';
+
+  @override
+  String get filterAll => 'الكل';
+
+  @override
+  String get filterDeals => 'الصفقات';
+
+  @override
+  String get filterOrders => 'الطلبات';
+
+  @override
+  String get filterUnread => 'غير مقروءة';
+
+  @override
+  String get helpWithDeal => 'مساعدة بخصوص الصفقة';
+
+  @override
+  String get helpWithOrder => 'مساعدة بخصوص الطلب';
+
+  @override
+  String get imageAttachment => 'صورة مرفقة';
+
+  @override
+  String get messageBuyer => 'مراسلة المشتري';
+
+  @override
+  String get messageHidden => 'الرسالة دي اتخفت بواسطة فريق أضمن';
+
+  @override
+  String get messageNotSentRetry =>
+      'الرسالة ما اتبعتتش. اضغط إرسال تاني، ومش هتتكرر.';
+
+  @override
+  String get messageSeller => 'مراسلة البائع';
+
+  @override
+  String get messages => 'الرسائل';
+
+  @override
+  String get messagesEvidenceNote =>
+      'الرسائل للتواصل بس: أي تأكيد استلام أو تغيير في السعر لازم يتم من أزرار الطلب أو الصفقة. ما تبعتش بيانات دفع أو كلمات سر.';
+
+  @override
+  String get myTickets => 'تذاكري';
+
+  @override
+  String get newTicket => 'تذكرة جديدة';
+
+  @override
+  String get noConversations => 'لا توجد محادثات';
+
+  @override
+  String get noConversationsBody =>
+      'المحادثة بتتفتح من الطلب بعد تأكيد الدفع، أو من الصفقة بعد انضمام البائع.';
+
+  @override
+  String get noTickets => 'مافيش تذاكر لحد دلوقتي';
+
+  @override
+  String get pdfAttachment => 'ملف PDF مرفق';
+
+  @override
+  String get rateService => 'قيّم الخدمة';
+
+  @override
+  String get ratingCommentHint => 'تعليق (اختياري)';
+
+  @override
+  String get reopenReasonHint => 'ليه عايز تعيد فتح التذكرة؟';
+
+  @override
+  String get reopenTicket => 'إعادة فتح التذكرة';
+
+  @override
+  String get replyReopensTicket => 'ردك هيعيد فتح التذكرة.';
+
+  @override
+  String get reportDataRequest => 'طلب بيانات مش محتاجها';
+
+  @override
+  String get reportFraud => 'محاولة نصب';
+
+  @override
+  String get reportInappropriate => 'محتوى غير لائق';
+
+  @override
+  String get reportMessage => 'الإبلاغ عن الرسالة';
+
+  @override
+  String get reportMessageBody =>
+      'البلاغ بيوصل لفريق أضمن للمراجعة. محدش بيتعاقب تلقائيًا.';
+
+  @override
+  String get reportNoteHint => 'تفاصيل إضافية (اختياري)';
+
+  @override
+  String get reportOther => 'سبب آخر';
+
+  @override
+  String get reportSent => 'تم إرسال البلاغ';
+
+  @override
+  String get seenByOther => 'اتقرت';
+
+  @override
+  String get send => 'إرسال';
+
+  @override
+  String get sendReport => 'إرسال البلاغ';
+
+  @override
+  String get sendTicket => 'إرسال التذكرة';
+
+  @override
+  String get sent => 'اتبعتت';
+
+  @override
+  String get startConversation => 'ابدأ المحادثة';
+
+  @override
+  String get storeMessages => 'رسائل المتجر';
+
+  @override
+  String get supportIntro =>
+      'فريق أضمن موجود يساعدك في الطلبات والدفع والصفقات والحساب.';
+
+  @override
+  String get thanksForRating => 'شكرًا على تقييمك';
+
+  @override
+  String get ticketAboutThis =>
+      'التذكرة هتترتبط بالطلب أو الصفقة اللي فتحتها منها.';
+
+  @override
+  String get ticketBody => 'اشرح المشكلة بالتفصيل';
+
+  @override
+  String get ticketBodyShort => 'اشرح طلبك في 10 حروف على الأقل';
+
+  @override
+  String get ticketClosed => 'مغلقة';
+
+  @override
+  String get ticketEscalated => 'محوّلة لفريق متخصص';
+
+  @override
+  String get ticketInProgress => 'جاري العمل عليها';
+
+  @override
+  String get ticketOpen => 'مفتوحة';
+
+  @override
+  String get ticketPrivacyNote =>
+      'ما تكتبش كلمة السر أو رقم البطاقة. فريق أضمن عمره ما هيطلبهم.';
+
+  @override
+  String get ticketResolved => 'تم الحل';
+
+  @override
+  String get ticketSent => 'تم إرسال التذكرة';
+
+  @override
+  String get ticketSubject => 'الموضوع';
+
+  @override
+  String get ticketSubjectShort => 'اكتب موضوع واضح (5 حروف على الأقل)';
+
+  @override
+  String get ticketTitle => 'تذكرة دعم';
+
+  @override
+  String get ticketType => 'نوع المشكلة';
+
+  @override
+  String get ticketTypeAccount => 'الحساب';
+
+  @override
+  String get ticketTypeOrder => 'طلب';
+
+  @override
+  String get ticketTypePayment => 'الدفع';
+
+  @override
+  String get ticketTypeProduct => 'منتج';
+
+  @override
+  String get ticketTypeRefund => 'استرداد';
+
+  @override
+  String get ticketTypeReturn => 'إرجاع';
+
+  @override
+  String get ticketTypeSellerFinance => 'أرباح المتجر';
+
+  @override
+  String get ticketTypeShipping => 'الشحن';
+
+  @override
+  String get ticketTypeTechnical => 'مشكلة تقنية';
+
+  @override
+  String get ticketWaitingSeller => 'في انتظار البائع';
+
+  @override
+  String get ticketWaitingYou => 'في انتظار ردك';
+
+  @override
+  String get typeMessage => 'اكتب رسالتك';
+
+  @override
+  String get writeReply => 'اكتب ردك';
+
+  @override
+  String get you => 'أنت';
+
+  @override
+  String maxAttachments(int count) {
+    return 'تقدر ترفق $count ملفات بالكتير';
+  }
 }

@@ -1883,4 +1883,240 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get termsSuperseded => 'Superseded';
+
+  @override
+  String get attachFile => 'Attach a file';
+
+  @override
+  String get attachmentHint => 'Image or PDF (optional)';
+
+  @override
+  String get conversationReadOnly => 'This conversation is read-only now.';
+
+  @override
+  String get dealConversation => 'Deal conversation';
+
+  @override
+  String get edmnTeam => 'EDMN team';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterDeals => 'Deals';
+
+  @override
+  String get filterOrders => 'Orders';
+
+  @override
+  String get filterUnread => 'Unread';
+
+  @override
+  String get helpWithDeal => 'Get help with this deal';
+
+  @override
+  String get helpWithOrder => 'Get help with this order';
+
+  @override
+  String get imageAttachment => 'Attached image';
+
+  @override
+  String get messageBuyer => 'Message the buyer';
+
+  @override
+  String get messageHidden => 'This message was hidden by the EDMN team';
+
+  @override
+  String get messageNotSentRetry =>
+      'Message not sent. Tap send again; it will not be duplicated.';
+
+  @override
+  String get messageSeller => 'Message the seller';
+
+  @override
+  String get messages => 'Messages';
+
+  @override
+  String get messagesEvidenceNote =>
+      'Messages are for talking only: confirming receipt or changing a price is done with the order or deal buttons. Never send payment details or passwords.';
+
+  @override
+  String get myTickets => 'My tickets';
+
+  @override
+  String get newTicket => 'New ticket';
+
+  @override
+  String get noConversations => 'No conversations';
+
+  @override
+  String get noConversationsBody =>
+      'A conversation opens from an order once payment is confirmed, or from a deal once the seller joins.';
+
+  @override
+  String get noTickets => 'No tickets yet';
+
+  @override
+  String get pdfAttachment => 'PDF attachment';
+
+  @override
+  String get rateService => 'Rate the service';
+
+  @override
+  String get ratingCommentHint => 'Comment (optional)';
+
+  @override
+  String get reopenReasonHint => 'Why do you want to reopen the ticket?';
+
+  @override
+  String get reopenTicket => 'Reopen ticket';
+
+  @override
+  String get replyReopensTicket => 'Your reply will reopen the ticket.';
+
+  @override
+  String get reportDataRequest => 'Asking for unneeded data';
+
+  @override
+  String get reportFraud => 'Fraud attempt';
+
+  @override
+  String get reportInappropriate => 'Inappropriate content';
+
+  @override
+  String get reportMessage => 'Report message';
+
+  @override
+  String get reportMessageBody =>
+      'The report goes to the EDMN team for review. Nobody is penalised automatically.';
+
+  @override
+  String get reportNoteHint => 'More details (optional)';
+
+  @override
+  String get reportOther => 'Other';
+
+  @override
+  String get reportSent => 'Report sent';
+
+  @override
+  String get seenByOther => 'Seen';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get sendReport => 'Send report';
+
+  @override
+  String get sendTicket => 'Send ticket';
+
+  @override
+  String get sent => 'Sent';
+
+  @override
+  String get startConversation => 'Start the conversation';
+
+  @override
+  String get storeMessages => 'Store messages';
+
+  @override
+  String get supportIntro =>
+      'The EDMN team can help with orders, payments, deals and your account.';
+
+  @override
+  String get thanksForRating => 'Thanks for your rating';
+
+  @override
+  String get ticketAboutThis =>
+      'The ticket will be linked to the order or deal you opened it from.';
+
+  @override
+  String get ticketBody => 'Describe the problem in detail';
+
+  @override
+  String get ticketBodyShort =>
+      'Describe your request in at least 10 characters';
+
+  @override
+  String get ticketClosed => 'Closed';
+
+  @override
+  String get ticketEscalated => 'Escalated';
+
+  @override
+  String get ticketInProgress => 'In progress';
+
+  @override
+  String get ticketOpen => 'Open';
+
+  @override
+  String get ticketPrivacyNote =>
+      'Never write your password or card number. EDMN will never ask for them.';
+
+  @override
+  String get ticketResolved => 'Resolved';
+
+  @override
+  String get ticketSent => 'Ticket sent';
+
+  @override
+  String get ticketSubject => 'Subject';
+
+  @override
+  String get ticketSubjectShort =>
+      'Write a clear subject (at least 5 characters)';
+
+  @override
+  String get ticketTitle => 'Support ticket';
+
+  @override
+  String get ticketType => 'Topic';
+
+  @override
+  String get ticketTypeAccount => 'Account';
+
+  @override
+  String get ticketTypeOrder => 'Order';
+
+  @override
+  String get ticketTypePayment => 'Payment';
+
+  @override
+  String get ticketTypeProduct => 'Product';
+
+  @override
+  String get ticketTypeRefund => 'Refund';
+
+  @override
+  String get ticketTypeReturn => 'Return';
+
+  @override
+  String get ticketTypeSellerFinance => 'Store earnings';
+
+  @override
+  String get ticketTypeShipping => 'Shipping';
+
+  @override
+  String get ticketTypeTechnical => 'Technical issue';
+
+  @override
+  String get ticketWaitingSeller => 'Waiting for seller';
+
+  @override
+  String get ticketWaitingYou => 'Waiting for you';
+
+  @override
+  String get typeMessage => 'Type a message';
+
+  @override
+  String get writeReply => 'Write a reply';
+
+  @override
+  String get you => 'You';
+
+  @override
+  String maxAttachments(int count) {
+    return 'You can attach up to $count files';
+  }
 }

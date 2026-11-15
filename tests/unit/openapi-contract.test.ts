@@ -29,6 +29,17 @@ const DEAL_WRITES = new Set([
   'verifyDealDeliveryCode', 'confirmDealReceipt', 'reportDealNotReceived',
 ]);
 
+/**
+ * Messaging and support writes. Messages are evidence only (they change no order, deal, payment or balance); a
+ * conversation can only be opened from an order or deal the caller is a party to. Store-side routes act as the
+ * session user's store membership.
+ */
+const CUSTOMER_MESSAGE_WRITES = new Set([
+  'sendMessage', 'markConversationSeen', 'reportMessage', 'openOrderConversation', 'openDealConversation',
+  'openSupportTicket', 'replySupportTicket', 'reopenSupportTicket', 'rateSupportTicket',
+]);
+const STORE_MESSAGE_WRITES = new Set(['sendStoreMessage', 'markStoreConversationSeen', 'reportStoreMessage', 'openStoreOrderConversation']);
+
 /** The only payout-related routes on the mobile API (request side). */
 const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest', 'addSellerPayoutAccount']);
 
@@ -98,6 +109,8 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...SELLER_WRITES,
       ...APPLICATION_WRITES,
       ...DEAL_WRITES,
+      ...CUSTOMER_MESSAGE_WRITES,
+      ...STORE_MESSAGE_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -119,6 +132,12 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       expect(r.auth, r.id).toBe('customer');
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
+    }
+    for (const r of writes.filter((w) => CUSTOMER_MESSAGE_WRITES.has(w.id) || STORE_MESSAGE_WRITES.has(w.id))) {
+      expect(r.auth, r.id).toBe(STORE_MESSAGE_WRITES.has(r.id) ? 'seller' : 'customer');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      // Never a free-form recipient: the counterparty always comes from the order / deal the conversation is bound to.
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity or recipient`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId|recipient\w*|to)$/i);
     }
     for (const r of writes) expect(r.auth, r.id).not.toBe('optional-customer');
   });

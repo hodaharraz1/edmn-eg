@@ -4,6 +4,7 @@ import { forbidden, notFound, validation } from '@/server/core/errors';
 import { db } from '@/server/db/client';
 import { cancellationRequests, disputes, files, orderItems, orders, productImages, productVariants, products, sellerOrders, stores } from '@/server/db/schema';
 import { sellerOrderAllowedActions, type SellerOrderAction } from '@/server/modules/allowed-actions';
+import { sellerOrderMessagingAvailable } from '@/server/modules/messaging/service';
 import { publicMediaUrl } from '@/server/modules/catalog/public-read';
 import { setStock } from '@/server/modules/catalog/inventory';
 import {
@@ -170,7 +171,7 @@ export async function sellerOrderView(actor: Actor, soId: string) {
       : null,
     cancellationRequest: pendingCancel ? { id: pendingCancel.id, note: pendingCancel.note, createdAt: pendingCancel.createdAt.toISOString() } : null,
     openDispute,
-    allowedActions: actions,
+    allowedActions: [...actions, ...(actor.sellerPermissions?.has('orders.communicate') && sellerOrderMessagingAvailable(g.so) ? ['MESSAGE_BUYER'] : [])],
   };
 }
 

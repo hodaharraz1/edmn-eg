@@ -56,6 +56,9 @@ class IntentKey {
   void reset() => _key = newIdempotencyKey();
 }
 
+/// A network / rate-limit / 5xx failure: the same request can be sent again (with the same key).
+bool isRetryableError(Object e) => e is ApiFailure && e.isRetryable;
+
 /// Runs an action, showing the localized API error on failure. Returns true on success.
 Future<bool> runAction(BuildContext context, Future<void> Function() action, {String? success}) async {
   try {
