@@ -58,7 +58,7 @@ const threadOut = z.object({
 });
 const opened = z.object({ conversationId: uuid });
 const conv = z.object({ conversationId: uuid });
-const sendBody = z.object({ body: z.string().max(2000).optional().default(''), clientKey: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/) });
+const sendBody = z.object({ body: z.string().max(2000).optional().default(''), clientKey: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/) }).strict();
 const sent = z.object({ id: uuid, createdAt: isoDateTime });
 const seenBody = z.object({ upToMessageId: uuid.optional() });
 
@@ -76,7 +76,7 @@ function conversationRoutes(prefix: '' | '/seller', base: typeof customer | type
       path: `${p}/{conversationId}/messages`,
       summary: 'Send a message (text and/or up to 3 attachments). clientKey makes a retry return the original message.',
       rate: 'write',
-      errors: [...errors, 'rate_limited' as const],
+      errors: [...errors, 'rate_limited' as const, 'conflict' as const],
       params: conv,
       multipart: { files: { attachments: { max: 3 } } },
       body: sendBody,

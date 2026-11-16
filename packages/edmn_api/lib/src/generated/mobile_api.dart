@@ -68,6 +68,7 @@ abstract final class MobileApiPaths {
   static const getSupportTicket = (method: 'GET', path: '/api/v1/support/tickets/{ticketId}');
   static const getUnreadMessages = (method: 'GET', path: '/api/v1/conversations/unread');
   static const getWallet = (method: 'GET', path: '/api/v1/wallet');
+  static const getWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity/{activityId}');
   static const inviteDealSeller = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation');
   static const listAccountPayoutRequests = (method: 'GET', path: '/api/v1/wallet/payout-requests');
   static const listAddresses = (method: 'GET', path: '/api/v1/me/addresses');
@@ -1921,6 +1922,55 @@ class GetUnreadMessagesResponse {
   Map<String, dynamic> toJson() => {'unread': unread};
 }
 
+class GetWalletActivityResponse {
+  const GetWalletActivityResponse({required this.kind, required this.id, required this.direction, required this.amountPiastres, required this.status, required this.ref, required this.method, required this.reference, required this.note, required this.isTest, required this.createdAt, required this.link});
+
+  factory GetWalletActivityResponse.fromJson(Map<String, dynamic> json) => GetWalletActivityResponse(kind: json['kind'] as String, id: json['id'] as String, direction: json['direction'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, ref: json['ref'] as String, method: json['method'] as String?, reference: json['reference'] as String?, note: json['note'] as String?, isTest: json['isTest'] as bool?, createdAt: json['createdAt'] as String, link: json['link'] == null ? null : GetWalletActivityResponseLink.fromJson(json['link'] as Map<String, dynamic>));
+
+  /// One of: PAYMENT, REFUND, PAYOUT (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  /// One of: OUT, IN (kept as String for forward compatibility).
+  final String direction;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String status;
+
+  final String ref;
+
+  final String? method;
+
+  final String? reference;
+
+  final String? note;
+
+  /// null when a legacy refund has no original payment; never inferred from current money mode.
+  final bool? isTest;
+
+  final String createdAt;
+
+  final GetWalletActivityResponseLink? link;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id, 'direction': direction, 'amountPiastres': amountPiastres, 'status': status, 'ref': ref, 'method': method, 'reference': reference, 'note': note, 'isTest': isTest, 'createdAt': createdAt, 'link': link?.toJson()};
+}
+
+class GetWalletActivityResponseLink {
+  const GetWalletActivityResponseLink({required this.kind, required this.id});
+
+  factory GetWalletActivityResponseLink.fromJson(Map<String, dynamic> json) => GetWalletActivityResponseLink(kind: json['kind'] as String, id: json['id'] as String);
+
+  /// One of: ORDER, DEAL, PAYMENT (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
+}
+
 class GetWalletResponse {
   const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUpAvailable, required this.realMoney});
 
@@ -2670,19 +2720,25 @@ class ListSupportTicketsResponseItemsItem {
 }
 
 class ListWalletActivityResponse {
-  const ListWalletActivityResponse({required this.items});
+  const ListWalletActivityResponse({required this.items, required this.page, required this.pageSize, required this.hasMore});
 
-  factory ListWalletActivityResponse.fromJson(Map<String, dynamic> json) => ListWalletActivityResponse(items: (json['items'] as List).map((e) => ListWalletActivityResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+  factory ListWalletActivityResponse.fromJson(Map<String, dynamic> json) => ListWalletActivityResponse(items: (json['items'] as List).map((e) => ListWalletActivityResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), pageSize: (json['pageSize'] as num).toInt(), hasMore: json['hasMore'] as bool);
 
   final List<ListWalletActivityResponseItemsItem> items;
 
-  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+  final int page;
+
+  final int pageSize;
+
+  final bool hasMore;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'hasMore': hasMore};
 }
 
 class ListWalletActivityResponseItemsItem {
   const ListWalletActivityResponseItemsItem({required this.kind, required this.id, required this.direction, required this.amountPiastres, required this.status, required this.ref, required this.method, required this.reference, required this.note, required this.isTest, required this.createdAt, required this.link});
 
-  factory ListWalletActivityResponseItemsItem.fromJson(Map<String, dynamic> json) => ListWalletActivityResponseItemsItem(kind: json['kind'] as String, id: json['id'] as String, direction: json['direction'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, ref: json['ref'] as String, method: json['method'] as String?, reference: json['reference'] as String?, note: json['note'] as String?, isTest: json['isTest'] as bool, createdAt: json['createdAt'] as String, link: json['link'] == null ? null : ListWalletActivityResponseItemsItemLink.fromJson(json['link'] as Map<String, dynamic>));
+  factory ListWalletActivityResponseItemsItem.fromJson(Map<String, dynamic> json) => ListWalletActivityResponseItemsItem(kind: json['kind'] as String, id: json['id'] as String, direction: json['direction'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), status: json['status'] as String, ref: json['ref'] as String, method: json['method'] as String?, reference: json['reference'] as String?, note: json['note'] as String?, isTest: json['isTest'] as bool?, createdAt: json['createdAt'] as String, link: json['link'] == null ? null : ListWalletActivityResponseItemsItemLink.fromJson(json['link'] as Map<String, dynamic>));
 
   /// One of: PAYMENT, REFUND, PAYOUT (kept as String for forward compatibility).
   final String kind;
@@ -2705,7 +2761,8 @@ class ListWalletActivityResponseItemsItem {
 
   final String? note;
 
-  final bool isTest;
+  /// null when a legacy refund has no original payment; never inferred from current money mode.
+  final bool? isTest;
 
   final String createdAt;
 
@@ -3230,9 +3287,9 @@ class PreviewAccountPayoutRequestRequest {
 }
 
 class PreviewAccountPayoutRequestResponse {
-  const PreviewAccountPayoutRequestResponse({required this.amountPiastres, required this.availablePiastres, required this.fits, required this.destination, required this.sources});
+  const PreviewAccountPayoutRequestResponse({required this.amountPiastres, required this.availablePiastres, required this.fits, required this.transferCostPiastres, required this.netPiastres, required this.violations, required this.warnings, required this.destination, required this.sources});
 
-  factory PreviewAccountPayoutRequestResponse.fromJson(Map<String, dynamic> json) => PreviewAccountPayoutRequestResponse(amountPiastres: (json['amountPiastres'] as num).toInt(), availablePiastres: (json['availablePiastres'] as num).toInt(), fits: json['fits'] as bool, destination: json['destination'] as String, sources: (json['sources'] as List).map((e) => PreviewAccountPayoutRequestResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList());
+  factory PreviewAccountPayoutRequestResponse.fromJson(Map<String, dynamic> json) => PreviewAccountPayoutRequestResponse(amountPiastres: (json['amountPiastres'] as num).toInt(), availablePiastres: (json['availablePiastres'] as num).toInt(), fits: json['fits'] as bool, transferCostPiastres: (json['transferCostPiastres'] as num).toInt(), netPiastres: (json['netPiastres'] as num).toInt(), violations: (json['violations'] as List).map((e) => e as String).toList(), warnings: (json['warnings'] as List).map((e) => e as String).toList(), destination: json['destination'] as String, sources: (json['sources'] as List).map((e) => PreviewAccountPayoutRequestResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList());
 
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int amountPiastres;
@@ -3242,11 +3299,20 @@ class PreviewAccountPayoutRequestResponse {
 
   final bool fits;
 
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int transferCostPiastres;
+
+  final int netPiastres;
+
+  final List<String> violations;
+
+  final List<String> warnings;
+
   final String destination;
 
   final List<PreviewAccountPayoutRequestResponseSourcesItem> sources;
 
-  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'availablePiastres': availablePiastres, 'fits': fits, 'destination': destination, 'sources': sources.map((e) => e.toJson()).toList()};
+  Map<String, dynamic> toJson() => {'amountPiastres': amountPiastres, 'availablePiastres': availablePiastres, 'fits': fits, 'transferCostPiastres': transferCostPiastres, 'netPiastres': netPiastres, 'violations': violations.map((e) => e).toList(), 'warnings': warnings.map((e) => e).toList(), 'destination': destination, 'sources': sources.map((e) => e.toJson()).toList()};
 }
 
 class PreviewAccountPayoutRequestResponseSourcesItem {
@@ -4159,15 +4225,15 @@ class RespondDealOfferRequest {
 }
 
 class RespondDealOfferRequestChange {
-  const RespondDealOfferRequestChange({required this.returnPolicy, required this.message});
+  const RespondDealOfferRequestChange({this.returnPolicy, required this.message});
 
-  factory RespondDealOfferRequestChange.fromJson(Map<String, dynamic> json) => RespondDealOfferRequestChange(returnPolicy: (json['returnPolicy'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e)), message: json['message'] as String);
+  factory RespondDealOfferRequestChange.fromJson(Map<String, dynamic> json) => RespondDealOfferRequestChange(returnPolicy: json['returnPolicy'] == null ? null : (json['returnPolicy'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e)), message: json['message'] as String);
 
-  final Map<String, Object?> returnPolicy;
+  final Map<String, Object?>? returnPolicy;
 
   final String message;
 
-  Map<String, dynamic> toJson() => {'returnPolicy': returnPolicy, 'message': message};
+  Map<String, dynamic> toJson() => {if (returnPolicy != null) 'returnPolicy': returnPolicy, 'message': message};
 }
 
 class ReturnCase {

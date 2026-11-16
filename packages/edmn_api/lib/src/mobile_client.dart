@@ -328,8 +328,10 @@ class MobileApi {
   // Every amount is computed by the server from the ledger. A payout request moves nothing; EDMN approves, reserves
   // and transfers in the admin console.
   Future<GetWalletResponse> wallet() async => GetWalletResponse.fromJson(await client.getJson(MobileApiPaths.getWallet.path));
-  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson(
-      await client.getJson(MobileApiPaths.listWalletActivity.path, query: {'kind': ?kind, if (q != null && q.isNotEmpty) 'q': q}));
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q, int page = 1}) async => ListWalletActivityResponse.fromJson(
+      await client.getJson(MobileApiPaths.listWalletActivity.path, query: {'kind': ?kind, if (q != null && q.isNotEmpty) 'q': q, 'page': page}));
+  Future<GetWalletActivityResponse> walletActivityDetail(String id) async => GetWalletActivityResponse.fromJson(
+      await client.getJson(fillPath(MobileApiPaths.getWalletActivity.path, {'activityId': id})));
   Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async =>
       ListAccountPayoutRequestsResponse.fromJson(await client.getJson(MobileApiPaths.listAccountPayoutRequests.path));
   Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson(

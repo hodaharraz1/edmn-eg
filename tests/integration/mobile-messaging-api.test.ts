@@ -24,7 +24,7 @@ import { GET as ticketRoute } from '@/app/api/v1/support/tickets/[ticketId]/rout
 import { GET as ticketsRoute, POST as openTicketRoute } from '@/app/api/v1/support/tickets/route';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { journalEntries, sellerMembers } from '@/server/db/schema';
+import { journalEntries, sellerMembers, supportMessages } from '@/server/db/schema';
 import { savePage } from '@/server/modules/cms/service';
 import { replyToTicket, updateTicket } from '@/server/modules/support/service';
 import { checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, sellerOrdersOf, submitAndConfirm } from '../helpers/factory';
@@ -97,18 +97,29 @@ describe('Flow D — buyer ↔ store conversation', () => {
 
     // Buyer sends text + attachment; a retry with the same clientKey returns the SAME message.
     const clientKey = key();
+    const attachmentBytes = new Uint8Array(await png('chat'));
     const form = () => {
       const f = new FormData();
+      f.append('attachments', new Blob([attachmentBytes], { type: 'image/png' }), 'a.png');
       f.set('body', 'السلام عليكم، ممكن أعرف ميعاد الشحن؟');
       f.set('clientKey', clientKey);
       return f;
     };
     const first = form();
-    first.append('attachments', new Blob([new Uint8Array(await png('chat'))], { type: 'image/png' }), 'a.png');
+
     const m1 = await call(sendRoute, `/conversations/${id}/messages`, { token: bt, params: cp, form: first });
     expect(m1.status, JSON.stringify(m1.body)).toBe(200);
     const m1b = await call(sendRoute, `/conversations/${id}/messages`, { token: bt, params: cp, form: form() });
     expect(m1b.body.id).toBe(m1.body.id);
+    const changed = form();
+    changed.set('body', 'رسالة مختلفة بنفس المفتاح');
+    expect((await call(sendRoute, `/conversations/${id}/messages`, { token: bt, params: cp, form: changed })).status).toBe(409);
+    const changedFile = form();
+    changedFile.delete('attachments');
+    expect((await call(sendRoute, `/conversations/${id}/messages`, { token: bt, params: cp, form: changedFile })).status).toBe(409);
+    const arbitraryRecipient = form();
+    arbitraryRecipient.set('recipient', 'another-user');
+    expect((await call(sendRoute, `/conversations/${id}/messages`, { token: bt, params: cp, form: arbitraryRecipient })).status).toBe(422);
 
     // Store inbox: one unread. Fetching the thread does NOT mark it read; only «seen» does.
     const inbox = await call(storeInboxRoute, '/seller/conversations', { token: st });
@@ -188,7 +199,11 @@ describe('Flow E — support tickets', () => {
     expect(opened.body.allowedActions).toEqual(['REPLY']);
     expect((await call(ticketRoute, `/support/tickets/${tid}`, { token: ot, params: tp })).status).toBeGreaterThanOrEqual(403);
 
-    await replyToTicket(admin, tid, 'ملاحظة داخلية: راجع الدفع', { internal: true });
+    await replyToTicket(admin, tid, 'ملاحظة داخلية: راجع الدفع', { internal: true, attachment: { data: await png('internal'), name: 'internal.png' } });
+    const internal = (await db.select().from(supportMessages)).find((m) => m.ticketId === tid && m.isInternal)!;
+    const fileId = internal.attachmentFileId!;
+    // Even when the requester knows the exact id, an internal attachment is not theirs to read.
+    expect((await call(fileRoute, `/files/${fileId}`, { token: t, params: { fileId } })).status).toBe(404);
     await replyToTicket(admin, tid, 'أهلاً بحضرتك، الطلب في انتظار تأكيد الدفع.');
     const v = await call(ticketRoute, `/support/tickets/${tid}`, { token: t, params: tp });
     expect(v.body.messages.map((m: { body: string }) => m.body)).not.toContain('ملاحظة داخلية: راجع الدفع');

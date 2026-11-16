@@ -2763,4 +2763,17 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String returnableOf(int n, int total) {
     return 'متاح للإرجاع $n من $total';
   }
+
+  @override
+  String get previousPage => 'الصفحة السابقة';
+
+  @override
+  String get downloadPdf => 'تنزيل ملف PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.';
+
+  @override
+  String get payoutNetAmount => 'صافي المبلغ المتوقع استلامه';
 }

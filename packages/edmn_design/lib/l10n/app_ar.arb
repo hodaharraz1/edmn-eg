@@ -1155,5 +1155,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "previousPage": "الصفحة السابقة",
+  "downloadPdf": "تنزيل ملف PDF",
+  "activityMoneyModeUnknown": "نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.",
+  "payoutNetAmount": "صافي المبلغ المتوقع استلامه"
 }

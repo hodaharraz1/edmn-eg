@@ -2793,4 +2793,17 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String returnableOf(int n, int total) {
     return '$n of $total returnable';
   }
+
+  @override
+  String get previousPage => 'Previous page';
+
+  @override
+  String get downloadPdf => 'Download PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'The money mode for this legacy activity is unavailable. Contact support to confirm.';
+
+  @override
+  String get payoutNetAmount => 'Expected amount to receive';
 }

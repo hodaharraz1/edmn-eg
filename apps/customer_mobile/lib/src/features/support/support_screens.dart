@@ -324,9 +324,13 @@ class _TicketAttachment extends ConsumerWidget {
     final t = EdmnLocalizations.of(context);
     return ref.watch(fileBytesProvider(fileId)).when(
           loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
-          error: (_, _) => Text(t.pdfAttachment, style: EdmnType.caption),
-          // Images preview; anything the image codec cannot decode (a PDF) shows as a labelled file.
-          data: (b) => Padding(
+          error: (e, _) => EdmnErrorState(error: e, onRetry: () => ref.invalidate(fileBytesProvider(fileId))),
+          data: (b) => b.length >= 4 && b[0] == 37 && b[1] == 80 && b[2] == 68 && b[3] == 70
+              ? TextButton.icon(
+                  icon: const Icon(Icons.download_outlined), label: Text(t.downloadPdf),
+                  onPressed: () => runAction(context, () => ref.read(fileSaverProvider).save('$fileId.pdf', b)),
+                )
+              : Padding(
             padding: const EdgeInsetsDirectional.symmetric(vertical: EdmnSpacing.xxs),
             child: Image.memory(b, width: 180, errorBuilder: (_, _, _) => Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.picture_as_pdf_outlined, color: EdmnColors.error), Text(t.pdfAttachment)])),
           ),

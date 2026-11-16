@@ -5,6 +5,7 @@ import { POST as loginRoute } from '@/app/api/v1/auth/login/route';
 import { GET as storeFundsRoute } from '@/app/api/v1/seller/funds/route';
 import { GET as storePayoutAccountRoute } from '@/app/api/v1/seller/payout-account/route';
 import { GET as statementRoute } from '@/app/api/v1/seller/statement/route';
+import { GET as activityDetailRoute } from '@/app/api/v1/wallet/activity/[activityId]/route';
 import { GET as activityRoute } from '@/app/api/v1/wallet/activity/route';
 import { POST as cancelRoute } from '@/app/api/v1/wallet/payout-requests/[requestId]/cancel/route';
 import { POST as previewRoute } from '@/app/api/v1/wallet/payout-requests/preview/route';
@@ -15,7 +16,7 @@ import { GET as walletRoute } from '@/app/api/v1/wallet/route';
 import { customerActor } from '@/server/auth/actors';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { dealPayouts, externalDeals, journalEntries, sellerMembers, withdrawalRequests } from '@/server/db/schema';
+import { dealPayouts, externalDeals, journalEntries, sellerMembers, withdrawalRequests, orders, payments, refunds } from '@/server/db/schema';
 import { claimInvitation, confirmDealReceipt, createDeal, deliveryOtpForBuyer, inviteSeller, markDealDelivered, releaseDeal, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, verifyDeliveryOtp } from '@/server/modules/deals/service';
 import { reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
 import { confirmPayment, submitProof } from '@/server/modules/payments/service';
@@ -116,6 +117,10 @@ describe('Flow G — wallet', () => {
     const pv = await call(previewRoute, '/wallet/payout-requests/preview', { token: t, body: { amountPiastres: 100_00, destination: 'STORE_PAYOUT_METHOD' } });
     expect(pv.status, JSON.stringify(pv.body)).toBe(200);
     expect(pv.body.fits).toBe(true);
+    expect(pv.body).toHaveProperty('transferCostPiastres');
+    expect(pv.body.netPiastres).toBe(pv.body.amountPiastres - pv.body.transferCostPiastres);
+    const belowMinimum = await call(previewRoute, '/wallet/payout-requests/preview', { token: t, body: { amountPiastres: 1, destination: 'STORE_PAYOUT_METHOD' } });
+    expect(belowMinimum.status).toBe(422);
 
     const entriesBefore = (await db.select().from(journalEntries)).length;
     const ck = key();
@@ -125,6 +130,8 @@ describe('Flow G — wallet', () => {
     expect(r1.body).toMatchObject({ created: true, request: { status: 'REQUESTED', cancellable: false, isTest: true } });
     const r2 = await call(requestRoute, '/wallet/payout-requests', { token: t, body: { amountPiastres: 100_00, destination: 'STORE_PAYOUT_METHOD', clientKey: ck } });
     expect(r2.body).toMatchObject({ created: false, request: { id: r1.body.request.id } });
+    const changed = await call(requestRoute, '/wallet/payout-requests', { token: t, body: { amountPiastres: 200_00, destination: 'STORE_PAYOUT_METHOD', clientKey: ck } });
+    expect(changed.status).toBe(409);
     expect(await db.select().from(withdrawalRequests).where(and(eq(withdrawalRequests.userId, s.user.id), eq(withdrawalRequests.clientKey, ck)))).toHaveLength(1);
     expect((await db.select().from(journalEntries)).length).toBe(entriesBefore); // a request posts nothing
 
@@ -192,6 +199,37 @@ describe('Flow G — wallet', () => {
     expect(ar.status).toBe(200);
     expect((await call(accountsRoute, '/wallet/receiving-accounts', { token: t })).body.items).toEqual([]);
   });
+  it('searches older records before pagination, supports provider text, refreshes details, isolates owners and derives refund mode from payment', async () => {
+    const c = await makeCustomer();
+    const t = await login(c.user.email!);
+    const batch = Array.from({ length: 105 }, () => ({ id: randomUUID(), customerId: c.user.id, status: 'PENDING_PAYMENT' as const,
+      merchandiseTotal: 10000, shippingTotal: 0, discountTotal: 0, grandTotal: 10000,
+      shippingAddress: {}, governorateId: 1, paymentMethod: 'INSTAPAY' as const, paymentDueAt: new Date(), checkoutKey: key() }));
+    await db.insert(orders).values(batch);
+    const ps = await db.insert(payments).values(batch.map((o, i) => ({ orderId: o.id, payerUserId: c.user.id, method: 'INSTAPAY' as const,
+      amountDue: 10000, dueAt: new Date(), createdAt: new Date(Date.now() - (i + 1) * 1000), providerReference: i === 104 ? 'old-ABC-reference' : null, isTest: i !== 104 }))).returning();
+    const old = ps.find((p) => p.providerReference)!;
+    const found = await call(activityRoute, '/wallet/activity?q=ABC', { token: t });
+    expect(found.body.items.map((r: {id: string}) => r.id)).toEqual([old.id]);
+    const page1 = await call(activityRoute, '/wallet/activity?pageSize=100', { token: t });
+    const page2 = await call(activityRoute, '/wallet/activity?pageSize=100&page=2', { token: t });
+    expect(page1.body.hasMore).toBe(true);
+    expect(page2.body.items).toHaveLength(5);
+    expect(page2.body.hasMore).toBe(false);
+    expect(new Set([...page1.body.items, ...page2.body.items].map((x: {id: string}) => x.id)).size).toBe(105);
+    const detail = await call(activityDetailRoute, `/wallet/activity/${old.id}`, { token: t, params: { activityId: old.id } });
+    expect(detail.body.id).toBe(old.id);
+    const other = await makeCustomer();
+    expect((await call(activityDetailRoute, `/wallet/activity/${old.id}`, { token: await login(other.user.email!), params: { activityId: old.id } })).status).toBe(404);
+    await db.insert(refunds).values({ sourceType: 'ADMIN', sourceId: old.id, customerId: c.user.id, amount: 1000, originalPaymentId: old.id, reason: 'اختبار سجل الاسترداد' });
+    const rs = await call(activityRoute, '/wallet/activity?kind=REFUND', { token: t });
+    // The platform is in TEST mode, but this payment's immutable snapshot is real.
+    expect(rs.body.items[0].isTest).toBe(false);
+    await db.insert(refunds).values({ sourceType: 'ADMIN', sourceId: randomUUID(), customerId: c.user.id, amount: 1000, reason: 'سجل قديم بلا دفعة أصلية' });
+    const legacy = await call(activityRoute, '/wallet/activity?kind=REFUND', { token: t });
+    expect(legacy.body.items.some((r: {isTest: boolean | null}) => r.isTest === null)).toBe(true);
+  });
+
 });
 
 /* ───────── Protected-Deal-only seller (Phase 4 follow-up): account request to a verified receiving account ───────── */
