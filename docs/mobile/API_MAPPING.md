@@ -85,6 +85,18 @@ See `CHAT_ARCHITECTURE.md`.
 Not exposed, by design: approval, reservation, transfer, uncertain resolution, top-up, wallet-to-wallet transfer. See
 `WALLET_FINANCIAL_STATES.md`.
 
+## Returns, disputes, reviews (Phase 5)
+
+| Operation | Route (auth) | Service |
+|---|---|---|
+| return options / create / list / view | GET /seller-orders/{id}/return-options, POST /returns, GET /returns, /returns/{id} (customer) | returnWindow, openReturnedQty, requestReturn, returnGraph |
+| ship back / escalate | POST /returns/{id}/ship-back, /escalate (customer) | customerShipsReturn, escalateReturn |
+| store returns | GET /seller/returns, /seller/returns/{id}, POST …/steps, …/escalate (seller, returns.manage) | approveReturn, rejectReturn, markReturnReceived, startInspection, acceptReturnRefund (refund REQUEST) |
+| disputes | POST/GET /disputes, GET /disputes/{id}, POST …/messages (customer); GET /seller/disputes(/{id}), POST …/messages (seller, orders.manage or returns.manage) | openDispute, disputeGraph, addDisputeMessage |
+| reviews | GET /seller-orders/{id}/review-options, POST /reviews/products, /reviews/sellers (customer) | createProductReview, createSellerReview |
+
+Not exposed, by design: dispute decision (resolveDispute), refund approval and payout, review moderation.
+
 ## Not yet exposed to mobile (needed for the remaining phases)
 
 Protected Deal (create, invitation, terms, accept, pay, evidence, delivery OTP, confirm), disputes/returns

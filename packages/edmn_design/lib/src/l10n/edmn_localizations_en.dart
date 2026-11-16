@@ -2793,4 +2793,7 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String returnableOf(int n, int total) {
     return '$n of $total returnable';
   }
+
+  @override
+  String get disputeClaimHint => 'Amount you are claiming in EGP (optional)';
 }

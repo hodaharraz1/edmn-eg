@@ -2763,4 +2763,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String returnableOf(int n, int total) {
     return 'متاح للإرجاع $n من $total';
   }
+
+  @override
+  String get disputeClaimHint => 'المبلغ اللي بتطالب بيه بالجنيه (اختياري)';
 }

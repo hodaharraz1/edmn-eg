@@ -102,3 +102,27 @@ Defects found and fixed:
 - the payout request status chip overflowed a 390-px row («جاري التحقق من التحويل · تجريبي»);
 - order refs such as «#100002» rendered reversed inside Arabic titles (now wrapped in LTR isolates);
 - a buyer without earnings saw a bare 0 with no explanation.
+
+## Phase 5: returns, disputes and reviews
+
+| Check | Result |
+|---|---|
+| Backend `tsc`, `eslint`, `openapi --check` | pass |
+| Vitest | 793/793 |
+| Journeys 1–10 (`mobile-postpurchase-api.test.ts`) | 4/4 tests: return request → store steps → single refund request → finance approval; rejected return escalated to a dispute; dispute with store evidence → EDMN decision (admin console) seen by both parties; reviews once per item and order |
+| Security in those journeys | strangers get 404 on returns, disputes, replies and private evidence files; a store `CATALOG_MANAGER` gets 403 on store returns and disputes; replaying the refund step (same key or new key) leaves exactly one refund; the refund request posts no journal entry; trial balance holds |
+| Phase 4 follow-up (`mobile-wallet-api.test.ts`) | added: a Protected-Deal-only seller cancels an account payout request before approval (nothing reserved or posted) and cannot cancel after approval reserves it |
+| Flutter customer widget tests | 31/31 |
+| Real screenshots (local isolated backend) | `docs/mobile/screenshots/postpurchase/` (15): return request and reasons, requested, approved with ship-back address, store returns and steps, open dispute, dispute thread, store view, EDMN decision with refund state, lists, write review |
+| HawkScan | NOT RUN (no HAWK_API_KEY) |
+
+Defects found and fixed: the dispute amount field reused the «المبلغ اللي حوّلته» payment hint; a raw reason code
+(`ITEM_NOT_RECEIVED`) showed in the disputes list; the last timeline step stayed "current" after the decision; a row
+with the claimed amount overflowed.
+
+## Remaining from the 140 IDs after Phase 5
+
+- Missing (2): **B08** reset password (API exists; needs the deep-link screen), **C27** notifications center.
+- Blocked by API (1): **B22** wishlist.
+- Blocked by business decision (5): **D28–D31** deposits, **D34** wallet transfer.
+- Not verified on a physical device: all (no device, no Mac in this environment).

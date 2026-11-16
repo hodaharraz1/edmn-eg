@@ -5281,6 +5281,12 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'متاح للإرجاع {n} من {total}'**
   String returnableOf(int n, int total);
+
+  /// No description provided for @disputeClaimHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ اللي بتطالب بيه بالجنيه (اختياري)'**
+  String get disputeClaimHint;
 }
 
 class _EdmnLocalizationsDelegate

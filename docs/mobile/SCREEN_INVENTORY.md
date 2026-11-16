@@ -8,6 +8,7 @@ Baseline (Phase 0, commit `999bec7`): Implemented 38, Merged 17, Missing 78, Reu
 After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5, Implemented 67, Merged 32, Missing 33, Reused 2.
 After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decision 5, Implemented 77, Merged 38, Missing 17, Reused 2.
 After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implemented 83, Merged 37, Missing 12, Reused 2.
+After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Business Decision 5, Implemented 92, Merged 38, Missing 2, Reused 2.
 
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
@@ -49,9 +50,9 @@ After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implem
 | B36 | Delivery confirmation | /orders/:id action | Merged | seller-orders/{id}/confirm-receipt | widget+backend | — |
 | B37 | Reorder | /reorder | Implemented | orders + cart | — | yes |
 | B38 | Cancel / request cancellation | /orders/:id actions | Merged | orders/{id}/cancel, cancellation-request | backend | — |
-| B39 | Return request | — | Missing | service requestReturn (no mobile route) | — | — |
-| B40 | Return tracking | — | Missing | returnGraph (no mobile route) | — | — |
-| B41 | Buyer rating | — | Missing | createProductReview/createSellerReview (no mobile route) | — | — |
+| B39 | Return request | /returns/new?so= | Implemented | GET return-options, POST /returns (photos, idempotent) | widget+backend | yes |
+| B40 | Return tracking | /returns, /returns/:id | Implemented | GET /returns, /returns/{id}; ship-back; escalate; refund state | widget+backend | yes |
+| B41 | Buyer rating | /reviews/new?so=; store reviews on /stores/:slug | Implemented | GET review-options, POST /reviews/products, /reviews/sellers | widget+backend | yes |
 | B42 | Transaction result | inline notices | Merged | — | — | — |
 | S01 | Become a seller | /seller (not-a-seller) | Implemented | me/seller | widget | — |
 | S02 | Seller registration | /seller/apply | Implemented | startApplication/saveBusiness via /seller/application* | backend flow | yes |
@@ -82,7 +83,7 @@ After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implem
 | S27 | Seller order details | /seller/orders/:id | Implemented | seller/orders/{id} | widget+backend | yes |
 | S28 | Fulfilment | /seller/orders/:id steps | Implemented | seller/orders/{id}/steps | widget+backend | yes |
 | S29 | Shipping proof | /seller/orders/:id shipment | Implemented | seller/orders/{id}/shipment | backend | — |
-| S30 | Returns & disputes | — | Missing | returnsForSeller/disputesAsRespondent | — | — |
+| S30 | Returns & disputes | /seller/returns(/:id), /seller/disputes(/:id) | Implemented | seller/returns (+steps, escalate), seller/disputes (+messages) | widget+backend | yes |
 | S31 | Earnings | /seller/funds | Implemented | seller/funds | backend | yes |
 | S32 | Withdrawal request | /seller/payouts (request sheet) | Implemented | POST /seller/payout-requests(+preview) | backend flow + widget | yes |
 | S33 | Withdrawal history | /seller/payouts | Implemented | GET /seller/payout-requests, cancel | backend flow + widget | yes |
@@ -105,7 +106,7 @@ After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implem
 | D17 | Delivery evidence | /deals/:id seller ship sheet | Implemented | POST /deals/{id}/shipped (note + proof) | backend | — |
 | D18 | Delivery OTP | /deals/:id code sheet (buyer) / verify (seller) | Implemented | GET delivery-code, POST verify, regenerate | widget+backend | — |
 | D19 | Inspection & acceptance | /deals/:id confirm receipt | Implemented | POST confirm-receipt | backend | — |
-| D20 | Deal dispute | /deals/:id «not received» | Merged | POST not-received; full dispute UI → Phase 5 | backend | — |
+| D20 | Deal dispute | /deals/:id → /disputes/new?deal=; «not received» | Implemented | POST /disputes (dealId), POST /deals/{id}/not-received | backend | — |
 | D21 | Settlement status | /deals/:id status/timeline | Merged | GET /deals/{id} (release is staff-only) | backend | — |
 | D22 | Completion | /deals/:id COMPLETED | Merged | GET /deals/{id} | — | — |
 | D23 | Cancellation/refund | /deals/:id cancel; refund status read-only | Implemented | POST cancel; refund by staff only | backend | — |
@@ -137,12 +138,12 @@ After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implem
 | C14 | Support attachments | new ticket / reply (1 file) | Merged | multipart attachment; GET /files/{id} | backend | — |
 | C15 | Ticket detail | /support/:id | Implemented | GET /support/tickets/{id} (no internal notes, staff unnamed) | widget+backend | yes |
 | C16 | Resolution | /support/:id rate / reopen | Implemented | POST rating, POST reopen | widget+backend | — |
-| C17 | Disputes list | — | Missing | disputesForUser | — | — |
-| C18 | Open dispute | — | Missing | openDispute | — | — |
-| C19 | Dispute evidence | — | Missing | addDisputeMessage | — | — |
-| C20 | Dispute conversation | — | Missing | disputeGraph | — | — |
-| C21 | Dispute timeline | — | Missing | disputeGraph | — | — |
-| C22 | Dispute decision | — | Missing | disputeGraph | — | — |
+| C17 | Disputes list | /disputes, /seller/disputes | Implemented | GET /disputes, /seller/disputes | backend | yes |
+| C18 | Open dispute | /disputes/new?so= or ?deal= | Implemented | POST /disputes (order or deal, evidence ≤8) | backend | yes |
+| C19 | Dispute evidence | open form + reply attachment; private thumbnails | Merged | multipart evidence; GET /files/{id} (parties only) | backend | yes |
+| C20 | Dispute conversation | /disputes/:id replies + support link | Implemented | POST /disputes/{id}/messages (+seller) | widget+backend | yes |
+| C21 | Dispute timeline | /disputes/:id timeline | Merged | GET /disputes/{id} | widget | yes |
+| C22 | Dispute decision | /disputes/:id decision + refunds | Implemented | decision made in admin console; shown read-only | widget+backend | yes |
 | C23 | Account home | /account | Implemented | me | widget | yes |
 | C24 | Edit profile | /account/profile | Implemented | PATCH me | backend | — |
 | C25 | Addresses & contact | /account/addresses | Implemented | me/addresses | backend | yes |

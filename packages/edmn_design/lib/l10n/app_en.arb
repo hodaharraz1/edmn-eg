@@ -990,5 +990,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "disputeClaimHint": "Amount you are claiming in EGP (optional)"
 }

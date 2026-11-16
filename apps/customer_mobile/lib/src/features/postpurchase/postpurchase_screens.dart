@@ -51,10 +51,12 @@ String returnReason(EdmnLocalizations t, String r) => switch (r) {
       'MISSING_PARTS' => t.rrMissingParts,
       'NOT_AS_DESCRIBED' => t.rrNotAsDescribed,
       'COUNTERFEIT_SUSPECTED' || 'COUNTERFEIT' => t.rrCounterfeit,
-      'NOT_RECEIVED' => t.drNotReceived,
+      'NOT_RECEIVED' || 'ITEM_NOT_RECEIVED' || 'DEAL_NOT_RECEIVED' => t.drNotReceived,
+      'PRODUCT_PROBLEM' || 'ITEM_PROBLEM' => t.rrNotAsDescribed,
       'SELLER_UNRESPONSIVE' => t.drSellerUnresponsive,
       'OTHER' => t.rrOther,
-      _ => r.startsWith('RETURN_') ? returnReason(t, r.substring(7)) : r,
+      // Unknown server codes are never shown raw.
+      _ => r.startsWith('RETURN_') ? returnReason(t, r.substring(7)) : t.rrOther,
     };
 
 String decisionLabel(EdmnLocalizations t, String d) => switch (d) {
@@ -109,8 +111,9 @@ class _EvidenceGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Wrap(spacing: EdmnSpacing.xs, runSpacing: EdmnSpacing.xs, children: [
         for (final id in fileIds)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(EdmnRadii.small),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(border: Border.all(color: EdmnColors.border), borderRadius: BorderRadius.circular(EdmnRadii.small)),
             child: SizedBox(
               width: 88,
               height: 88,
@@ -588,7 +591,7 @@ class _NewDisputeScreenState extends ConsumerState<NewDisputeScreen> {
         const SizedBox(height: EdmnSpacing.sm),
         EdmnTextField(key: const Key('dsp-desc'), controller: _desc, hint: t.disputeDescriptionHint, maxLines: 5, maxLength: 4000),
         const SizedBox(height: EdmnSpacing.sm),
-        EdmnTextField(key: const Key('dsp-amount'), controller: _amount, hint: t.claimedAmountHint, keyboardType: const TextInputType.numberWithOptions(decimal: true), textDirection: TextDirection.ltr),
+        EdmnTextField(key: const Key('dsp-amount'), controller: _amount, hint: t.disputeClaimHint, keyboardType: const TextInputType.numberWithOptions(decimal: true), textDirection: TextDirection.ltr),
         const SizedBox(height: EdmnSpacing.sm),
         _Evidence(files: _files, max: 8, onChanged: (f) => setState(() => _files = f)),
       ]),
@@ -678,7 +681,7 @@ class _DisputeScreenState extends ConsumerState<DisputeScreen> {
         onRetry: () => ref.invalidate(disputeProvider(_args)),
         data: (d) {
           final (l, tone) = disputeStatus(t, d.status);
-          final rank = switch (d.status) { 'OPEN' => 0, 'UNDER_REVIEW' || 'AWAITING_INFORMATION' => 1, _ => 2 };
+          final rank = switch (d.status) { 'OPEN' => 0, 'UNDER_REVIEW' || 'AWAITING_INFORMATION' => 1, _ => 3 };
           EdmnStepState st(int i) => rank > i ? EdmnStepState.done : (rank == i ? EdmnStepState.current : EdmnStepState.pending);
           final ctxPath = d.context.kind == 'DEAL' ? '/deals/${d.context.id}' : (widget.store ? '/seller/orders/${d.context.id}' : '/orders/${d.context.orderId}');
           return ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
