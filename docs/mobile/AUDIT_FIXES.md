@@ -30,3 +30,10 @@ existing backend gates. Vercel auto-deploy is explicitly disabled for `codex/mob
 This fixes the audited defects. Phase 5 returns/disputes/reviews are preserved from upstream; a complete audit of
 that new phase is separate work. Remaining roadmap items such as notifications, the password-reset deep link,
 top-up business decisions and physical-device QA are not claimed as completed by this fix.
+
+## CI history scan
+
+The first complete GitHub run passed all 795 backend tests and all five Flutter jobs, then stopped on three
+history-scan findings from two old redaction-test input lines. They are deliberate dummy URLs / a key header without
+key material. The history scan now exempts only the exact reviewed full commit + path + line SHA-256 + rule pairs.
+Current-tree matches and new/copied/modified historical matches still fail; no history was rewritten or scanning disabled.
