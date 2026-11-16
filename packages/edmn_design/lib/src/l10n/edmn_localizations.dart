@@ -4615,6 +4615,672 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.'**
   String get noEarningsYet;
+
+  /// No description provided for @acceptRefundNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'القبول بيطلب استرداد للوحدات المرتجعة بسعر الشراء المسجل. فريق أضمن هو اللي بيعتمد ويحوّل.'**
+  String get acceptRefundNote;
+
+  /// No description provided for @acceptReturnRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبول الإرجاع وطلب الاسترداد'**
+  String get acceptReturnRefund;
+
+  /// No description provided for @addEvidenceFile.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرفاق دليل'**
+  String get addEvidenceFile;
+
+  /// No description provided for @againstYou.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح عليك'**
+  String get againstYou;
+
+  /// No description provided for @approveReturn.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموافقة على الإرجاع'**
+  String get approveReturn;
+
+  /// No description provided for @buyerParty.
+  ///
+  /// In ar, this message translates to:
+  /// **'المشتري'**
+  String get buyerParty;
+
+  /// No description provided for @chooseItemToReturn.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار منتج واحد على الأقل وكميته'**
+  String get chooseItemToReturn;
+
+  /// No description provided for @chooseReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار السبب'**
+  String get chooseReason;
+
+  /// No description provided for @claimedAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ المطلوب'**
+  String get claimedAmount;
+
+  /// No description provided for @contactSupportAboutDispute.
+  ///
+  /// In ar, this message translates to:
+  /// **'تواصل مع الدعم بخصوص النزاع'**
+  String get contactSupportAboutDispute;
+
+  /// No description provided for @decFullRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'استرداد كامل'**
+  String get decFullRefund;
+
+  /// No description provided for @decPartialRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'استرداد جزئي'**
+  String get decPartialRefund;
+
+  /// No description provided for @decRejectClaim.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض المطالبة'**
+  String get decRejectClaim;
+
+  /// No description provided for @decReleaseToSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ للبائع'**
+  String get decReleaseToSeller;
+
+  /// No description provided for @decReplacement.
+  ///
+  /// In ar, this message translates to:
+  /// **'استبدال المنتج'**
+  String get decReplacement;
+
+  /// No description provided for @decReturnRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب إرجاع المنتج'**
+  String get decReturnRequired;
+
+  /// No description provided for @describeMore.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح السبب في 10 حروف على الأقل'**
+  String get describeMore;
+
+  /// No description provided for @describeMore20.
+  ///
+  /// In ar, this message translates to:
+  /// **'احكي اللي حصل في 20 حرف على الأقل'**
+  String get describeMore20;
+
+  /// No description provided for @disputeConversation.
+  ///
+  /// In ar, this message translates to:
+  /// **'الردود'**
+  String get disputeConversation;
+
+  /// No description provided for @disputeDescriptionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'احكي اللي حصل بالتفصيل'**
+  String get disputeDescriptionHint;
+
+  /// No description provided for @disputeFreezeNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'طول ما النزاع مفتوح، مستحقات البائع عن الطلب ده بتفضل متجمّدة لحد ما فريق أضمن ياخد قراره.'**
+  String get disputeFreezeNote;
+
+  /// No description provided for @disputeFundsFrozen.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ المتعلق بالنزاع متجمّد لحد قرار فريق أضمن.'**
+  String get disputeFundsFrozen;
+
+  /// No description provided for @disputeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'نزاع'**
+  String get disputeLabel;
+
+  /// No description provided for @disputeOpened.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم فتح النزاع'**
+  String get disputeOpened;
+
+  /// No description provided for @disputeReasonTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع المشكلة'**
+  String get disputeReasonTitle;
+
+  /// No description provided for @disputeTryFirst.
+  ///
+  /// In ar, this message translates to:
+  /// **'جرّب الأول تتواصل مع البائع أو تطلب إرجاع. لو المشكلة ما اتحلتش، افتح نزاع.'**
+  String get disputeTryFirst;
+
+  /// No description provided for @drNotReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما استلمتش الطلب'**
+  String get drNotReceived;
+
+  /// No description provided for @drSellerUnresponsive.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع مش بيرد'**
+  String get drSellerUnresponsive;
+
+  /// No description provided for @dspAwaitingInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'مطلوب معلومات'**
+  String get dspAwaitingInfo;
+
+  /// No description provided for @dspClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get dspClosed;
+
+  /// No description provided for @dspOpen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح'**
+  String get dspOpen;
+
+  /// No description provided for @dspResolved.
+  ///
+  /// In ar, this message translates to:
+  /// **'صدر القرار'**
+  String get dspResolved;
+
+  /// No description provided for @dspUnderReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get dspUnderReview;
+
+  /// No description provided for @edmnDecision.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرار فريق أضمن'**
+  String get edmnDecision;
+
+  /// No description provided for @escalateHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح ليه محتاج فريق أضمن يتدخل'**
+  String get escalateHint;
+
+  /// No description provided for @escalateToEdmn.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل لفريق أضمن (نزاع)'**
+  String get escalateToEdmn;
+
+  /// No description provided for @evidenceTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأدلة'**
+  String get evidenceTitle;
+
+  /// No description provided for @iShippedItBack.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعت المنتج للبائع'**
+  String get iShippedItBack;
+
+  /// No description provided for @includeShippingRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'استرداد مصاريف الشحن كمان'**
+  String get includeShippingRefund;
+
+  /// No description provided for @markReturnReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلمت المنتج المرتجع'**
+  String get markReturnReceived;
+
+  /// No description provided for @myDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'النزاعات'**
+  String get myDisputes;
+
+  /// No description provided for @myReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات الإرجاع'**
+  String get myReturns;
+
+  /// No description provided for @noDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش نزاعات'**
+  String get noDisputes;
+
+  /// No description provided for @noMessagesYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لسه مفيش ردود'**
+  String get noMessagesYet;
+
+  /// No description provided for @noReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طلبات إرجاع'**
+  String get noReturns;
+
+  /// No description provided for @openDispute.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح نزاع'**
+  String get openDispute;
+
+  /// No description provided for @orderRefLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب'**
+  String get orderRefLabel;
+
+  /// No description provided for @photosRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'ارفع صور توضّح المشكلة'**
+  String get photosRequired;
+
+  /// No description provided for @publishReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'نشر التقييم'**
+  String get publishReview;
+
+  /// No description provided for @rateProducts.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم المنتجات'**
+  String get rateProducts;
+
+  /// No description provided for @reasonWindowClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت مدة الإرجاع لهذا السبب'**
+  String get reasonWindowClosed;
+
+  /// No description provided for @refundByEdmnNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسترداد بيتعتمد ويتحوّل من فريق أضمن لوسيلة الدفع الأصلية — مش من التطبيق.'**
+  String get refundByEdmnNote;
+
+  /// No description provided for @refundRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم طلب الاسترداد'**
+  String get refundRequested;
+
+  /// No description provided for @rejectReasonHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الرفض (بيظهر للمشتري)'**
+  String get rejectReasonHint;
+
+  /// No description provided for @rejectReturn.
+  ///
+  /// In ar, this message translates to:
+  /// **'رفض الإرجاع'**
+  String get rejectReturn;
+
+  /// No description provided for @requestReturn.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب إرجاع'**
+  String get requestReturn;
+
+  /// No description provided for @restockItems.
+  ///
+  /// In ar, this message translates to:
+  /// **'رجّع الكمية للمخزون'**
+  String get restockItems;
+
+  /// No description provided for @retApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتقبل'**
+  String get retApproved;
+
+  /// No description provided for @retDisputed.
+  ///
+  /// In ar, this message translates to:
+  /// **'محوّل لفريق أضمن'**
+  String get retDisputed;
+
+  /// No description provided for @retInTransit.
+  ///
+  /// In ar, this message translates to:
+  /// **'في الطريق للبائع'**
+  String get retInTransit;
+
+  /// No description provided for @retReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع استلم'**
+  String get retReceived;
+
+  /// No description provided for @retRefundPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسترداد قيد الاعتماد'**
+  String get retRefundPending;
+
+  /// No description provided for @retRefunded.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ اترد'**
+  String get retRefunded;
+
+  /// No description provided for @retRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get retRejected;
+
+  /// No description provided for @retRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الطلب'**
+  String get retRequested;
+
+  /// No description provided for @returnDescriptionHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشرح سبب الإرجاع بالتفصيل'**
+  String get returnDescriptionHint;
+
+  /// No description provided for @returnLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرجاع'**
+  String get returnLabel;
+
+  /// No description provided for @returnNotDelivered.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقدر تطلب الإرجاع بعد ما تأكّد استلام الطلب.'**
+  String get returnNotDelivered;
+
+  /// No description provided for @returnNothingLeft.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل الوحدات في الطلب ده اترجعت أو عليها طلب إرجاع.'**
+  String get returnNothingLeft;
+
+  /// No description provided for @returnReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الإرجاع'**
+  String get returnReason;
+
+  /// No description provided for @returnRefundNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'لو الإرجاع اتقبل، الاسترداد بيتعتمد من فريق أضمن ويرجع لوسيلة الدفع الأصلية.'**
+  String get returnRefundNote;
+
+  /// No description provided for @returnRequestSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال طلب الإرجاع'**
+  String get returnRequestSent;
+
+  /// No description provided for @returnShipBuyerPays.
+  ///
+  /// In ar, this message translates to:
+  /// **'مصاريف شحن المرتجع على المشتري'**
+  String get returnShipBuyerPays;
+
+  /// No description provided for @returnShipByReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'مصاريف الشحن حسب السبب: على البائع لو المنتج معيب أو مختلف'**
+  String get returnShipByReason;
+
+  /// No description provided for @returnShipSellerPays.
+  ///
+  /// In ar, this message translates to:
+  /// **'مصاريف شحن المرتجع على البائع'**
+  String get returnShipSellerPays;
+
+  /// No description provided for @returnWindowClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت مدة الإرجاع. لو المنتج معيب، تقدر تفتح نزاع.'**
+  String get returnWindowClosed;
+
+  /// No description provided for @returnWindowTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدة الإرجاع'**
+  String get returnWindowTitle;
+
+  /// No description provided for @returnedItems.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتجات المرتجعة'**
+  String get returnedItems;
+
+  /// No description provided for @reviewAfterDelivery.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقييم متاح بعد استلام الطلب.'**
+  String get reviewAfterDelivery;
+
+  /// No description provided for @reviewBodyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب رأيك (اختياري)'**
+  String get reviewBodyHint;
+
+  /// No description provided for @reviewPublished.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نشر التقييم'**
+  String get reviewPublished;
+
+  /// No description provided for @reviewTitleHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان التقييم (اختياري)'**
+  String get reviewTitleHint;
+
+  /// No description provided for @reviewVerifiedNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقييم متاح بس للمشتري الفعلي، ومرة واحدة لكل منتج ولكل طلب.'**
+  String get reviewVerifiedNote;
+
+  /// No description provided for @reviewed.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتقيّم'**
+  String get reviewed;
+
+  /// No description provided for @rrChangedMind.
+  ///
+  /// In ar, this message translates to:
+  /// **'غيرت رأيي'**
+  String get rrChangedMind;
+
+  /// No description provided for @rrCounterfeit.
+  ///
+  /// In ar, this message translates to:
+  /// **'شاكك إنه مش أصلي'**
+  String get rrCounterfeit;
+
+  /// No description provided for @rrDamaged.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصل تالف'**
+  String get rrDamaged;
+
+  /// No description provided for @rrDefective.
+  ///
+  /// In ar, this message translates to:
+  /// **'معيب / مش شغال'**
+  String get rrDefective;
+
+  /// No description provided for @rrMissingParts.
+  ///
+  /// In ar, this message translates to:
+  /// **'ناقص أجزاء'**
+  String get rrMissingParts;
+
+  /// No description provided for @rrNotAsDescribed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش مطابق للوصف'**
+  String get rrNotAsDescribed;
+
+  /// No description provided for @rrOther.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب تاني'**
+  String get rrOther;
+
+  /// No description provided for @rrWrongItem.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتج مختلف'**
+  String get rrWrongItem;
+
+  /// No description provided for @sellerParty.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع'**
+  String get sellerParty;
+
+  /// No description provided for @sendReturnRequest.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال طلب الإرجاع'**
+  String get sendReturnRequest;
+
+  /// No description provided for @shipBackTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابعت المنتج على'**
+  String get shipBackTitle;
+
+  /// No description provided for @startInspection.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء الفحص'**
+  String get startInspection;
+
+  /// No description provided for @storeDecision.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرار البائع'**
+  String get storeDecision;
+
+  /// No description provided for @storeDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نزاعات المتجر'**
+  String get storeDisputes;
+
+  /// No description provided for @storeReturnRequests.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرتجعات المتجر'**
+  String get storeReturnRequests;
+
+  /// No description provided for @theClaim.
+  ///
+  /// In ar, this message translates to:
+  /// **'المطالبة'**
+  String get theClaim;
+
+  /// No description provided for @viewDispute.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض النزاع'**
+  String get viewDispute;
+
+  /// No description provided for @whichItems.
+  ///
+  /// In ar, this message translates to:
+  /// **'هترجع إيه؟'**
+  String get whichItems;
+
+  /// No description provided for @writeReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب تقييم'**
+  String get writeReview;
+
+  /// No description provided for @youOpenedIt.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنت فتحته'**
+  String get youOpenedIt;
+
+  /// No description provided for @changeOfMindUntil.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإرجاع لأي سبب لحد {date}'**
+  String changeOfMindUntil(String date);
+
+  /// No description provided for @protectedUntil.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتج المعيب أو المختلف لحد {date}'**
+  String protectedUntil(String date);
+
+  /// No description provided for @shippedBackWith.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتشحن مع {carrier} — رقم التتبع {tracking}'**
+  String shippedBackWith(String carrier, String tracking);
+
+  /// No description provided for @rateStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيّم المتجر {store}'**
+  String rateStore(String store);
+
+  /// No description provided for @evidenceLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور أو مستندات (حتى {max})'**
+  String evidenceLabel(int max);
+
+  /// No description provided for @returnWindowBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدة الإرجاع {days} يوم من الاستلام (الحد القانوني {statutory} يوم).'**
+  String returnWindowBody(int days, int statutory);
+
+  /// No description provided for @returnableOf.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح للإرجاع {n} من {total}'**
+  String returnableOf(int n, int total);
 }
 
 class _EdmnLocalizationsDelegate

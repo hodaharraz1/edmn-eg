@@ -45,6 +45,12 @@ const PAYOUT_REQUEST_ROUTES = new Set(['listSellerPayoutRequests', 'previewSelle
 /** Account-level payout REQUESTS by the beneficiary (same owner decision §20; auth `customer`, own account only). */
 const ACCOUNT_PAYOUT_ROUTES = new Set(['listAccountPayoutRequests', 'previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest']);
 /** Wallet writes: payout request / preview / cancel, and receiving accounts submitted for staff verification. */
+/**
+ * Post-purchase writes. A store ACCEPT or a dispute decision only REQUESTS a refund (EDMN finance approves and pays);
+ * dispute decisions are never on the mobile API. Every one is idempotency-protected.
+ */
+const BUYER_POSTPURCHASE_WRITES = new Set(['createReturn', 'shipBackReturn', 'escalateMyReturn', 'openDispute', 'replyDispute', 'reviewProduct', 'reviewSeller']);
+const STORE_POSTPURCHASE_WRITES = new Set(['runStoreReturnStep', 'escalateStoreReturn', 'replyStoreDispute']);
 const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
@@ -120,6 +126,8 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...CUSTOMER_MESSAGE_WRITES,
       ...STORE_MESSAGE_WRITES,
       ...WALLET_WRITES,
+      ...BUYER_POSTPURCHASE_WRITES,
+      ...STORE_POSTPURCHASE_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -153,6 +161,14 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }
+    for (const r of writes.filter((w) => BUYER_POSTPURCHASE_WRITES.has(w.id) || STORE_POSTPURCHASE_WRITES.has(w.id))) {
+      expect(r.auth, r.id).toBe(STORE_POSTPURCHASE_WRITES.has(r.id) ? 'seller' : 'customer');
+      expect(r.idempotency, r.id).toBe('required');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity or decision`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId|decision|amount|refundAmount)$/i);
+    }
+    // No dispute DECISION and no refund execution on the mobile API.
+    for (const r of ALL_API_ROUTES) expect(r.id, r.id).not.toMatch(/resolveDispute|decideDispute|closeDispute|approveRefund|payRefund/i);
     for (const r of writes) expect(r.auth, r.id).not.toBe('optional-customer');
   });
 

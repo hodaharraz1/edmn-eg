@@ -295,6 +295,26 @@ class _SellerOrderSection extends ConsumerWidget {
             const SizedBox(height: EdmnSpacing.xs),
             _ReportProblemButton(soId: so.id, orderId: order.id),
           ],
+          if (actions.contains('WRITE_REVIEW')) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            EdmnSecondaryButton(key: Key('review-${so.id}'), label: t.writeReview, icon: Icons.star_outline_rounded, onPressed: () => context.push('/reviews/new?so=${so.id}')),
+          ],
+          if (actions.contains('REQUEST_RETURN')) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            EdmnSecondaryButton(key: Key('return-${so.id}'), label: t.requestReturn, icon: Icons.assignment_return_outlined, onPressed: () => context.push('/returns/new?so=${so.id}')),
+          ],
+          for (final r in so.returns) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            TextButton(key: Key('open-return-${r.id}'), onPressed: () => context.push('/returns/${r.id}'), child: Text('${t.returnLabel} #${r.number}')),
+          ],
+          for (final d in so.disputes) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            TextButton(key: Key('open-dispute-${d.id}'), onPressed: () => context.push('/disputes/${d.id}'), child: Text('${t.disputeLabel} #${d.number}')),
+          ],
+          if (actions.contains('OPEN_DISPUTE')) ...[
+            const SizedBox(height: EdmnSpacing.xs),
+            EdmnSecondaryButton(key: Key('dispute-${so.id}'), label: t.openDispute, destructive: true, onPressed: () => context.push('/disputes/new?so=${so.id}')),
+          ],
           if (actions.contains('MESSAGE_SELLER')) ...[
             const SizedBox(height: EdmnSpacing.xs),
             EdmnSecondaryButton(

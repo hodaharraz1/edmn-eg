@@ -460,6 +460,18 @@ class StoreScreen extends ConsumerWidget {
                 const SizedBox(height: EdmnSpacing.sm),
                 Text(s.description!, maxLines: 3, overflow: TextOverflow.ellipsis, style: EdmnType.body.copyWith(color: EdmnColors.textSecondary)),
               ],
+              if (s.reviews.isNotEmpty) ...[
+                const SizedBox(height: EdmnSpacing.xs),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const Key('store-reviews'),
+                    icon: const Icon(Icons.star_rounded, color: EdmnColors.warning),
+                    label: Text('${t.reviews} (${s.ratingCount})'),
+                    onPressed: () => showEdmnBottomSheet(context, title: t.reviews, child: Column(children: [for (final rv in s.reviews) ReviewTile(review: rv)])),
+                  ),
+                ),
+              ],
               const SizedBox(height: EdmnSpacing.sm),
               EdmnNotice(
                 icon: Icons.assignment_return_outlined,

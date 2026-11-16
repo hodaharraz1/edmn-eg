@@ -22,11 +22,14 @@ abstract final class MobileApiPaths {
   static const createAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests');
   static const createAddress = (method: 'POST', path: '/api/v1/me/addresses');
   static const createDeal = (method: 'POST', path: '/api/v1/deals');
+  static const createReturn = (method: 'POST', path: '/api/v1/returns');
   static const createSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests');
   static const createSellerProduct = (method: 'POST', path: '/api/v1/seller/products');
   static const declineDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/decline');
   static const deleteAddress = (method: 'DELETE', path: '/api/v1/me/addresses/{addressId}');
   static const deleteSellerProductImage = (method: 'DELETE', path: '/api/v1/seller/products/{productId}/images/{fileId}');
+  static const escalateMyReturn = (method: 'POST', path: '/api/v1/returns/{returnId}/escalate');
+  static const escalateStoreReturn = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/escalate');
   static const forgotPassword = (method: 'POST', path: '/api/v1/auth/password/forgot');
   static const getAppConfig = (method: 'GET', path: '/api/v1/app/config');
   static const getCart = (method: 'GET', path: '/api/v1/cart');
@@ -39,11 +42,15 @@ abstract final class MobileApiPaths {
   static const getFile = (method: 'GET', path: '/api/v1/files/{fileId}');
   static const getLegalDocument = (method: 'GET', path: '/api/v1/content/legal/{slug}');
   static const getMe = (method: 'GET', path: '/api/v1/me');
+  static const getMyDispute = (method: 'GET', path: '/api/v1/disputes/{disputeId}');
   static const getMyIdentity = (method: 'GET', path: '/api/v1/me/identity');
+  static const getMyReturn = (method: 'GET', path: '/api/v1/returns/{returnId}');
   static const getMySellerMembership = (method: 'GET', path: '/api/v1/me/seller');
   static const getOrder = (method: 'GET', path: '/api/v1/orders/{orderId}');
   static const getPayment = (method: 'GET', path: '/api/v1/payments/{paymentId}');
   static const getProduct = (method: 'GET', path: '/api/v1/catalog/products/{slug}');
+  static const getReturnOptions = (method: 'GET', path: '/api/v1/seller-orders/{sellerOrderId}/return-options');
+  static const getReviewOptions = (method: 'GET', path: '/api/v1/seller-orders/{sellerOrderId}/review-options');
   static const getSellerApplication = (method: 'GET', path: '/api/v1/seller/application');
   static const getSellerFunds = (method: 'GET', path: '/api/v1/seller/funds');
   static const getSellerHome = (method: 'GET', path: '/api/v1/seller/home');
@@ -55,6 +62,8 @@ abstract final class MobileApiPaths {
   static const getSellerStoreSettings = (method: 'GET', path: '/api/v1/seller/store');
   static const getStore = (method: 'GET', path: '/api/v1/stores/{slug}');
   static const getStoreConversation = (method: 'GET', path: '/api/v1/seller/conversations/{conversationId}');
+  static const getStoreDispute = (method: 'GET', path: '/api/v1/seller/disputes/{disputeId}');
+  static const getStoreReturn = (method: 'GET', path: '/api/v1/seller/returns/{returnId}');
   static const getStoreUnreadMessages = (method: 'GET', path: '/api/v1/seller/conversations/unread');
   static const getSupportTicket = (method: 'GET', path: '/api/v1/support/tickets/{ticketId}');
   static const getUnreadMessages = (method: 'GET', path: '/api/v1/conversations/unread');
@@ -66,6 +75,8 @@ abstract final class MobileApiPaths {
   static const listConversations = (method: 'GET', path: '/api/v1/conversations');
   static const listDeals = (method: 'GET', path: '/api/v1/deals');
   static const listGovernorates = (method: 'GET', path: '/api/v1/governorates');
+  static const listMyDisputes = (method: 'GET', path: '/api/v1/disputes');
+  static const listMyReturns = (method: 'GET', path: '/api/v1/returns');
   static const listMySessions = (method: 'GET', path: '/api/v1/me/sessions');
   static const listOrders = (method: 'GET', path: '/api/v1/orders');
   static const listProductReviews = (method: 'GET', path: '/api/v1/catalog/products/{slug}/reviews');
@@ -74,6 +85,8 @@ abstract final class MobileApiPaths {
   static const listSellerPayoutRequests = (method: 'GET', path: '/api/v1/seller/payout-requests');
   static const listSellerProducts = (method: 'GET', path: '/api/v1/seller/products');
   static const listStoreConversations = (method: 'GET', path: '/api/v1/seller/conversations');
+  static const listStoreDisputes = (method: 'GET', path: '/api/v1/seller/disputes');
+  static const listStoreReturns = (method: 'GET', path: '/api/v1/seller/returns');
   static const listSupportTickets = (method: 'GET', path: '/api/v1/support/tickets');
   static const listWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
@@ -82,6 +95,7 @@ abstract final class MobileApiPaths {
   static const markDealShipped = (method: 'POST', path: '/api/v1/deals/{dealId}/shipped');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
+  static const openDispute = (method: 'POST', path: '/api/v1/disputes');
   static const openOrderConversation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/conversation');
   static const openStoreOrderConversation = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/conversation');
   static const openSupportTicket = (method: 'POST', path: '/api/v1/support/tickets');
@@ -94,6 +108,8 @@ abstract final class MobileApiPaths {
   static const regenerateDealDeliveryCode = (method: 'POST', path: '/api/v1/deals/{dealId}/delivery-code/regenerate');
   static const register = (method: 'POST', path: '/api/v1/auth/register');
   static const reopenSupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/reopen');
+  static const replyDispute = (method: 'POST', path: '/api/v1/disputes/{disputeId}/messages');
+  static const replyStoreDispute = (method: 'POST', path: '/api/v1/seller/disputes/{disputeId}/messages');
   static const replySupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/replies');
   static const reportDealNotReceived = (method: 'POST', path: '/api/v1/deals/{dealId}/not-received');
   static const reportMessage = (method: 'POST', path: '/api/v1/conversations/messages/{messageId}/report');
@@ -103,10 +119,13 @@ abstract final class MobileApiPaths {
   static const resetPassword = (method: 'POST', path: '/api/v1/auth/password/reset');
   static const respondDealChangeRequest = (method: 'POST', path: '/api/v1/deals/{dealId}/change-response');
   static const respondDealOffer = (method: 'POST', path: '/api/v1/deals/{dealId}/offer-response');
+  static const reviewProduct = (method: 'POST', path: '/api/v1/reviews/products');
+  static const reviewSeller = (method: 'POST', path: '/api/v1/reviews/sellers');
   static const revokeDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation/revoke');
   static const revokeMyOtherSessions = (method: 'POST', path: '/api/v1/me/sessions/revoke-others');
   static const revokeMySession = (method: 'DELETE', path: '/api/v1/me/sessions/{sessionId}');
   static const runSellerOrderStep = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/steps');
+  static const runStoreReturnStep = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/steps');
   static const saveDealStep = (method: 'PUT', path: '/api/v1/deals/{dealId}/steps/{step}');
   static const saveSellerApplicationBusiness = (method: 'PUT', path: '/api/v1/seller/application/business');
   static const saveSellerApplicationIdentity = (method: 'PUT', path: '/api/v1/seller/application/identity');
@@ -124,6 +143,7 @@ abstract final class MobileApiPaths {
   static const setCartItemQuantity = (method: 'PUT', path: '/api/v1/cart/items/{variantId}');
   static const setSellerProductVisibility = (method: 'POST', path: '/api/v1/seller/products/{productId}/visibility');
   static const setSellerVariantStock = (method: 'PUT', path: '/api/v1/seller/variants/{variantId}/stock');
+  static const shipBackReturn = (method: 'POST', path: '/api/v1/returns/{returnId}/ship-back');
   static const startDealPayment = (method: 'POST', path: '/api/v1/deals/{dealId}/payment');
   static const startSellerApplication = (method: 'POST', path: '/api/v1/seller/application');
   static const submitDealOffer = (method: 'POST', path: '/api/v1/deals/{dealId}/offer');
@@ -963,6 +983,192 @@ class DeviceSessionDevice {
   Map<String, dynamic> toJson() => {'platform': platform, 'name': name, 'appVersion': appVersion, 'app': app};
 }
 
+class DisputeCase {
+  const DisputeCase({required this.id, required this.number, required this.status, required this.role, required this.context, required this.reasonCode, required this.description, required this.claimedAmountPiastres, required this.createdAt, required this.returnId, required this.messages, required this.evidence, required this.decision, required this.refunds, required this.fundsFrozen, required this.allowedActions});
+
+  factory DisputeCase.fromJson(Map<String, dynamic> json) => DisputeCase(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, role: json['role'] as String, context: DisputeCaseContext.fromJson(json['context'] as Map<String, dynamic>), reasonCode: json['reasonCode'] as String, description: json['description'] as String, claimedAmountPiastres: (json['claimedAmountPiastres'] as num?)?.toInt(), createdAt: json['createdAt'] as String, returnId: json['returnId'] as String?, messages: (json['messages'] as List).map((e) => DisputeCaseMessagesItem.fromJson(e as Map<String, dynamic>)).toList(), evidence: (json['evidence'] as List).map((e) => DisputeCaseEvidenceItem.fromJson(e as Map<String, dynamic>)).toList(), decision: json['decision'] == null ? null : DisputeCaseDecision.fromJson(json['decision'] as Map<String, dynamic>), refunds: (json['refunds'] as List).map((e) => DisputeCaseRefundsItem.fromJson(e as Map<String, dynamic>)).toList(), fundsFrozen: json['fundsFrozen'] as bool, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList());
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  /// One of: CLAIMANT, RESPONDENT (kept as String for forward compatibility).
+  final String role;
+
+  final DisputeCaseContext context;
+
+  final String reasonCode;
+
+  final String description;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? claimedAmountPiastres;
+
+  final String createdAt;
+
+  final String? returnId;
+
+  final List<DisputeCaseMessagesItem> messages;
+
+  final List<DisputeCaseEvidenceItem> evidence;
+
+  final DisputeCaseDecision? decision;
+
+  final List<DisputeCaseRefundsItem> refunds;
+
+  final bool fundsFrozen;
+
+  final List<String> allowedActions;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'role': role, 'context': context.toJson(), 'reasonCode': reasonCode, 'description': description, 'claimedAmountPiastres': claimedAmountPiastres, 'createdAt': createdAt, 'returnId': returnId, 'messages': messages.map((e) => e.toJson()).toList(), 'evidence': evidence.map((e) => e.toJson()).toList(), 'decision': decision?.toJson(), 'refunds': refunds.map((e) => e.toJson()).toList(), 'fundsFrozen': fundsFrozen, 'allowedActions': allowedActions.map((e) => e).toList()};
+}
+
+class DisputeCaseContext {
+  const DisputeCaseContext({required this.kind, required this.id, required this.orderId, required this.ref});
+
+  factory DisputeCaseContext.fromJson(Map<String, dynamic> json) => DisputeCaseContext(kind: json['kind'] as String, id: json['id'] as String, orderId: json['orderId'] as String?, ref: json['ref'] as String);
+
+  /// One of: ORDER, DEAL (kept as String for forward compatibility).
+  final String kind;
+
+  final String id;
+
+  final String? orderId;
+
+  final String ref;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id, 'orderId': orderId, 'ref': ref};
+}
+
+class DisputeCaseDecision {
+  const DisputeCaseDecision({required this.code, required this.amountPiastres, required this.note, required this.decidedAt});
+
+  factory DisputeCaseDecision.fromJson(Map<String, dynamic> json) => DisputeCaseDecision(code: json['code'] as String, amountPiastres: (json['amountPiastres'] as num?)?.toInt(), note: json['note'] as String?, decidedAt: json['decidedAt'] as String?);
+
+  final String code;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? amountPiastres;
+
+  final String? note;
+
+  final String? decidedAt;
+
+  Map<String, dynamic> toJson() => {'code': code, 'amountPiastres': amountPiastres, 'note': note, 'decidedAt': decidedAt};
+}
+
+class DisputeCaseEvidenceItem {
+  const DisputeCaseEvidenceItem({required this.fileId, required this.mimeType, required this.mine, required this.note, required this.createdAt});
+
+  factory DisputeCaseEvidenceItem.fromJson(Map<String, dynamic> json) => DisputeCaseEvidenceItem(fileId: json['fileId'] as String, mimeType: json['mimeType'] as String, mine: json['mine'] as bool, note: json['note'] as String?, createdAt: json['createdAt'] as String);
+
+  final String fileId;
+
+  final String mimeType;
+
+  final bool mine;
+
+  final String? note;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'fileId': fileId, 'mimeType': mimeType, 'mine': mine, 'note': note, 'createdAt': createdAt};
+}
+
+class DisputeCaseMessagesItem {
+  const DisputeCaseMessagesItem({required this.id, required this.from, required this.mine, required this.body, required this.createdAt});
+
+  factory DisputeCaseMessagesItem.fromJson(Map<String, dynamic> json) => DisputeCaseMessagesItem(id: json['id'] as String, from: json['from'] as String, mine: json['mine'] as bool, body: json['body'] as String, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  /// One of: CLAIMANT, RESPONDENT, EDMN (kept as String for forward compatibility).
+  final String from;
+
+  final bool mine;
+
+  final String body;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'from': from, 'mine': mine, 'body': body, 'createdAt': createdAt};
+}
+
+class DisputeCaseRefundsItem {
+  const DisputeCaseRefundsItem({required this.id, required this.status, required this.amountPiastres, required this.reference});
+
+  factory DisputeCaseRefundsItem.fromJson(Map<String, dynamic> json) => DisputeCaseRefundsItem(id: json['id'] as String, status: json['status'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), reference: json['reference'] as String?);
+
+  final String id;
+
+  final String status;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String? reference;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'amountPiastres': amountPiastres, 'reference': reference};
+}
+
+class DisputeSummary {
+  const DisputeSummary({required this.id, required this.number, required this.status, required this.role, required this.kind, required this.reasonCode, required this.decision, required this.createdAt});
+
+  factory DisputeSummary.fromJson(Map<String, dynamic> json) => DisputeSummary(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, role: json['role'] as String, kind: json['kind'] as String, reasonCode: json['reasonCode'] as String, decision: json['decision'] as String?, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  /// One of: CLAIMANT, RESPONDENT (kept as String for forward compatibility).
+  final String role;
+
+  /// One of: ORDER, DEAL (kept as String for forward compatibility).
+  final String kind;
+
+  final String reasonCode;
+
+  final String? decision;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'role': role, 'kind': kind, 'reasonCode': reasonCode, 'decision': decision, 'createdAt': createdAt};
+}
+
+class EscalatedReturn {
+  const EscalatedReturn({required this.disputeId});
+
+  factory EscalatedReturn.fromJson(Map<String, dynamic> json) => EscalatedReturn(disputeId: json['disputeId'] as String);
+
+  final String disputeId;
+
+  Map<String, dynamic> toJson() => {'disputeId': disputeId};
+}
+
+class EscalateMyReturnRequest {
+  const EscalateMyReturnRequest({required this.description});
+
+  factory EscalateMyReturnRequest.fromJson(Map<String, dynamic> json) => EscalateMyReturnRequest(description: json['description'] as String);
+
+  final String description;
+
+  Map<String, dynamic> toJson() => {'description': description};
+}
+
+class EscalateStoreReturnRequest {
+  const EscalateStoreReturnRequest({required this.description});
+
+  factory EscalateStoreReturnRequest.fromJson(Map<String, dynamic> json) => EscalateStoreReturnRequest(description: json['description'] as String);
+
+  final String description;
+
+  Map<String, dynamic> toJson() => {'description': description};
+}
+
 class ForgotPasswordRequest {
   const ForgotPasswordRequest({required this.identifier});
 
@@ -1248,6 +1454,87 @@ class GetPaymentResponseSubmissionsItem {
   final String proofFileId;
 
   Map<String, dynamic> toJson() => {'id': id, 'status': status, 'claimedAmountPiastres': claimedAmountPiastres, 'reference': reference, 'submittedAt': submittedAt, 'reviewReasonAr': reviewReasonAr, 'proofFileId': proofFileId};
+}
+
+class GetReturnOptionsResponse {
+  const GetReturnOptionsResponse({required this.eligible, required this.blockReason, required this.window, required this.reasons, required this.items, required this.returnShippingPayer});
+
+  factory GetReturnOptionsResponse.fromJson(Map<String, dynamic> json) => GetReturnOptionsResponse(eligible: json['eligible'] as bool, blockReason: json['blockReason'] as String?, window: GetReturnOptionsResponseWindow.fromJson(json['window'] as Map<String, dynamic>), reasons: (json['reasons'] as List).map((e) => GetReturnOptionsResponseReasonsItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetReturnOptionsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), returnShippingPayer: json['returnShippingPayer'] as String);
+
+  final bool eligible;
+
+  /// One of: NOT_DELIVERED, WINDOW_CLOSED, NOTHING_RETURNABLE (kept as String for forward compatibility).
+  final String? blockReason;
+
+  final GetReturnOptionsResponseWindow window;
+
+  final List<GetReturnOptionsResponseReasonsItem> reasons;
+
+  final List<GetReturnOptionsResponseItemsItem> items;
+
+  final String returnShippingPayer;
+
+  Map<String, dynamic> toJson() => {'eligible': eligible, 'blockReason': blockReason, 'window': window.toJson(), 'reasons': reasons.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'returnShippingPayer': returnShippingPayer};
+}
+
+class GetReturnOptionsResponseItemsItem {
+  const GetReturnOptionsResponseItemsItem({required this.orderItemId, required this.title, required this.variantLabel, required this.unitPricePiastres, required this.quantity, required this.returnableQuantity});
+
+  factory GetReturnOptionsResponseItemsItem.fromJson(Map<String, dynamic> json) => GetReturnOptionsResponseItemsItem(orderItemId: json['orderItemId'] as String, title: json['title'] as String, variantLabel: json['variantLabel'] as String, unitPricePiastres: (json['unitPricePiastres'] as num).toInt(), quantity: (json['quantity'] as num).toInt(), returnableQuantity: (json['returnableQuantity'] as num).toInt());
+
+  final String orderItemId;
+
+  final String title;
+
+  final String variantLabel;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int unitPricePiastres;
+
+  final int quantity;
+
+  final int returnableQuantity;
+
+  Map<String, dynamic> toJson() => {'orderItemId': orderItemId, 'title': title, 'variantLabel': variantLabel, 'unitPricePiastres': unitPricePiastres, 'quantity': quantity, 'returnableQuantity': returnableQuantity};
+}
+
+class GetReturnOptionsResponseReasonsItem {
+  const GetReturnOptionsResponseReasonsItem({required this.code, required this.requiresEvidence, required this.protected, required this.available});
+
+  factory GetReturnOptionsResponseReasonsItem.fromJson(Map<String, dynamic> json) => GetReturnOptionsResponseReasonsItem(code: json['code'] as String, requiresEvidence: json['requiresEvidence'] as bool, protected: json['protected'] as bool, available: json['available'] as bool);
+
+  /// One of: CHANGED_MIND, WRONG_ITEM, DAMAGED, DEFECTIVE, MISSING_PARTS, NOT_AS_DESCRIBED, COUNTERFEIT_SUSPECTED, OTHER (kept as String for forward compatibility).
+  final String code;
+
+  final bool requiresEvidence;
+
+  final bool protected;
+
+  final bool available;
+
+  Map<String, dynamic> toJson() => {'code': code, 'requiresEvidence': requiresEvidence, 'protected': protected, 'available': available};
+}
+
+class GetReturnOptionsResponseWindow {
+  const GetReturnOptionsResponseWindow({required this.statutoryDays, required this.voluntaryDays, required this.effectiveDays, required this.disputeDays, required this.deliveredAt, required this.deadline, required this.protectedDeadline});
+
+  factory GetReturnOptionsResponseWindow.fromJson(Map<String, dynamic> json) => GetReturnOptionsResponseWindow(statutoryDays: (json['statutoryDays'] as num).toInt(), voluntaryDays: (json['voluntaryDays'] as num).toInt(), effectiveDays: (json['effectiveDays'] as num).toInt(), disputeDays: (json['disputeDays'] as num).toInt(), deliveredAt: json['deliveredAt'] as String?, deadline: json['deadline'] as String?, protectedDeadline: json['protectedDeadline'] as String?);
+
+  final int statutoryDays;
+
+  final int voluntaryDays;
+
+  final int effectiveDays;
+
+  final int disputeDays;
+
+  final String? deliveredAt;
+
+  final String? deadline;
+
+  final String? protectedDeadline;
+
+  Map<String, dynamic> toJson() => {'statutoryDays': statutoryDays, 'voluntaryDays': voluntaryDays, 'effectiveDays': effectiveDays, 'disputeDays': disputeDays, 'deliveredAt': deliveredAt, 'deadline': deadline, 'protectedDeadline': protectedDeadline};
 }
 
 class GetSellerFundsResponse {
@@ -2033,6 +2320,26 @@ class ListGovernoratesResponseItemsItem {
   Map<String, dynamic> toJson() => {'id': id, 'code': code, 'nameAr': nameAr, 'nameEn': nameEn};
 }
 
+class ListMyDisputesResponse {
+  const ListMyDisputesResponse({required this.items});
+
+  factory ListMyDisputesResponse.fromJson(Map<String, dynamic> json) => ListMyDisputesResponse(items: (json['items'] as List).map((e) => DisputeSummary.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<DisputeSummary> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListMyReturnsResponse {
+  const ListMyReturnsResponse({required this.items});
+
+  factory ListMyReturnsResponse.fromJson(Map<String, dynamic> json) => ListMyReturnsResponse(items: (json['items'] as List).map((e) => ReturnSummary.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ReturnSummary> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
 class ListMySessionsResponse {
   const ListMySessionsResponse({required this.items});
 
@@ -2300,6 +2607,26 @@ class ListStoreConversationsResponseItemsItem {
   final int unread;
 
   Map<String, dynamic> toJson() => {'id': id, 'context': context, 'ref': ref, 'title': title, 'status': status, 'otherParty': otherParty, 'side': side, 'lastMessageAt': lastMessageAt, 'preview': preview, 'unread': unread};
+}
+
+class ListStoreDisputesResponse {
+  const ListStoreDisputesResponse({required this.items});
+
+  factory ListStoreDisputesResponse.fromJson(Map<String, dynamic> json) => ListStoreDisputesResponse(items: (json['items'] as List).map((e) => DisputeSummary.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<DisputeSummary> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ListStoreReturnsResponse {
+  const ListStoreReturnsResponse({required this.items});
+
+  factory ListStoreReturnsResponse.fromJson(Map<String, dynamic> json) => ListStoreReturnsResponse(items: (json['items'] as List).map((e) => ReturnSummary.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<ReturnSummary> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
 }
 
 class ListSupportTicketsResponse {
@@ -3843,6 +4170,120 @@ class RespondDealOfferRequestChange {
   Map<String, dynamic> toJson() => {'returnPolicy': returnPolicy, 'message': message};
 }
 
+class ReturnCase {
+  const ReturnCase({required this.id, required this.number, required this.status, required this.side, required this.reason, required this.description, required this.orderLabel, required this.orderId, required this.sellerOrderId, required this.storeName, required this.createdAt, required this.items, required this.evidence, required this.decisionReason, required this.returnCarrier, required this.returnTracking, required this.shipBackTo, required this.refundAmountPiastres, required this.refunds, required this.disputeId, required this.allowedActions});
+
+  factory ReturnCase.fromJson(Map<String, dynamic> json) => ReturnCase(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, side: json['side'] as String, reason: json['reason'] as String, description: json['description'] as String, orderLabel: json['orderLabel'] as String, orderId: json['orderId'] as String, sellerOrderId: json['sellerOrderId'] as String, storeName: json['storeName'] as String?, createdAt: json['createdAt'] as String, items: (json['items'] as List).map((e) => ReturnCaseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), evidence: (json['evidence'] as List).map((e) => ReturnCaseEvidenceItem.fromJson(e as Map<String, dynamic>)).toList(), decisionReason: json['decisionReason'] as String?, returnCarrier: json['returnCarrier'] as String?, returnTracking: json['returnTracking'] as String?, shipBackTo: json['shipBackTo'] == null ? null : ReturnCaseShipBackTo.fromJson(json['shipBackTo'] as Map<String, dynamic>), refundAmountPiastres: (json['refundAmountPiastres'] as num?)?.toInt(), refunds: (json['refunds'] as List).map((e) => ReturnCaseRefundsItem.fromJson(e as Map<String, dynamic>)).toList(), disputeId: json['disputeId'] as String?, allowedActions: (json['allowedActions'] as List).map((e) => e as String).toList());
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  /// One of: BUYER, STORE (kept as String for forward compatibility).
+  final String side;
+
+  final String reason;
+
+  final String description;
+
+  final String orderLabel;
+
+  final String orderId;
+
+  final String sellerOrderId;
+
+  final String? storeName;
+
+  final String createdAt;
+
+  final List<ReturnCaseItemsItem> items;
+
+  final List<ReturnCaseEvidenceItem> evidence;
+
+  final String? decisionReason;
+
+  final String? returnCarrier;
+
+  final String? returnTracking;
+
+  final ReturnCaseShipBackTo? shipBackTo;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? refundAmountPiastres;
+
+  final List<ReturnCaseRefundsItem> refunds;
+
+  final String? disputeId;
+
+  final List<String> allowedActions;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'side': side, 'reason': reason, 'description': description, 'orderLabel': orderLabel, 'orderId': orderId, 'sellerOrderId': sellerOrderId, 'storeName': storeName, 'createdAt': createdAt, 'items': items.map((e) => e.toJson()).toList(), 'evidence': evidence.map((e) => e.toJson()).toList(), 'decisionReason': decisionReason, 'returnCarrier': returnCarrier, 'returnTracking': returnTracking, 'shipBackTo': shipBackTo?.toJson(), 'refundAmountPiastres': refundAmountPiastres, 'refunds': refunds.map((e) => e.toJson()).toList(), 'disputeId': disputeId, 'allowedActions': allowedActions.map((e) => e).toList()};
+}
+
+class ReturnCaseEvidenceItem {
+  const ReturnCaseEvidenceItem({required this.fileId, required this.mimeType});
+
+  factory ReturnCaseEvidenceItem.fromJson(Map<String, dynamic> json) => ReturnCaseEvidenceItem(fileId: json['fileId'] as String, mimeType: json['mimeType'] as String);
+
+  final String fileId;
+
+  final String mimeType;
+
+  Map<String, dynamic> toJson() => {'fileId': fileId, 'mimeType': mimeType};
+}
+
+class ReturnCaseItemsItem {
+  const ReturnCaseItemsItem({required this.orderItemId, required this.title, required this.variantLabel, required this.quantity, required this.unitPricePiastres});
+
+  factory ReturnCaseItemsItem.fromJson(Map<String, dynamic> json) => ReturnCaseItemsItem(orderItemId: json['orderItemId'] as String, title: json['title'] as String, variantLabel: json['variantLabel'] as String, quantity: (json['quantity'] as num).toInt(), unitPricePiastres: (json['unitPricePiastres'] as num).toInt());
+
+  final String orderItemId;
+
+  final String title;
+
+  final String variantLabel;
+
+  final int quantity;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int unitPricePiastres;
+
+  Map<String, dynamic> toJson() => {'orderItemId': orderItemId, 'title': title, 'variantLabel': variantLabel, 'quantity': quantity, 'unitPricePiastres': unitPricePiastres};
+}
+
+class ReturnCaseRefundsItem {
+  const ReturnCaseRefundsItem({required this.id, required this.status, required this.amountPiastres, required this.reference});
+
+  factory ReturnCaseRefundsItem.fromJson(Map<String, dynamic> json) => ReturnCaseRefundsItem(id: json['id'] as String, status: json['status'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), reference: json['reference'] as String?);
+
+  final String id;
+
+  final String status;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  final String? reference;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'amountPiastres': amountPiastres, 'reference': reference};
+}
+
+class ReturnCaseShipBackTo {
+  const ReturnCaseShipBackTo({required this.address, required this.governorateId, required this.shippingPayer});
+
+  factory ReturnCaseShipBackTo.fromJson(Map<String, dynamic> json) => ReturnCaseShipBackTo(address: json['address'] as String, governorateId: (json['governorateId'] as num?)?.toInt(), shippingPayer: json['shippingPayer'] as String);
+
+  final String address;
+
+  final int? governorateId;
+
+  final String shippingPayer;
+
+  Map<String, dynamic> toJson() => {'address': address, 'governorateId': governorateId, 'shippingPayer': shippingPayer};
+}
+
 class ReturnPolicy {
   const ReturnPolicy({required this.type, required this.windowDays, required this.conditions, required this.shippingPayer, required this.notes, required this.summaryAr});
 
@@ -3862,6 +4303,27 @@ class ReturnPolicy {
   final String summaryAr;
 
   Map<String, dynamic> toJson() => {'type': type, 'windowDays': windowDays, 'conditions': conditions.map((e) => e).toList(), 'shippingPayer': shippingPayer, 'notes': notes, 'summaryAr': summaryAr};
+}
+
+class ReturnSummary {
+  const ReturnSummary({required this.id, required this.number, required this.status, required this.reason, required this.refundAmountPiastres, required this.createdAt});
+
+  factory ReturnSummary.fromJson(Map<String, dynamic> json) => ReturnSummary(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, reason: json['reason'] as String, refundAmountPiastres: (json['refundAmountPiastres'] as num?)?.toInt(), createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  final String reason;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int? refundAmountPiastres;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'reason': reason, 'refundAmountPiastres': refundAmountPiastres, 'createdAt': createdAt};
 }
 
 class Review {
@@ -3886,6 +4348,60 @@ class Review {
   Map<String, dynamic> toJson() => {'id': id, 'rating': rating, 'title': title, 'body': body, 'author': author, 'sellerResponse': sellerResponse, 'createdAt': createdAt};
 }
 
+class ReviewOptions {
+  const ReviewOptions({required this.eligible, required this.storeName, required this.sellerReviewed, required this.items});
+
+  factory ReviewOptions.fromJson(Map<String, dynamic> json) => ReviewOptions(eligible: json['eligible'] as bool, storeName: json['storeName'] as String?, sellerReviewed: json['sellerReviewed'] as bool, items: (json['items'] as List).map((e) => ReviewOptionsItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final bool eligible;
+
+  final String? storeName;
+
+  final bool sellerReviewed;
+
+  final List<ReviewOptionsItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'eligible': eligible, 'storeName': storeName, 'sellerReviewed': sellerReviewed, 'items': items.map((e) => e.toJson()).toList()};
+}
+
+class ReviewOptionsItemsItem {
+  const ReviewOptionsItemsItem({required this.orderItemId, required this.title, required this.variantLabel, required this.reviewed});
+
+  factory ReviewOptionsItemsItem.fromJson(Map<String, dynamic> json) => ReviewOptionsItemsItem(orderItemId: json['orderItemId'] as String, title: json['title'] as String, variantLabel: json['variantLabel'] as String, reviewed: json['reviewed'] as bool);
+
+  final String orderItemId;
+
+  final String title;
+
+  final String variantLabel;
+
+  final bool reviewed;
+
+  Map<String, dynamic> toJson() => {'orderItemId': orderItemId, 'title': title, 'variantLabel': variantLabel, 'reviewed': reviewed};
+}
+
+class ReviewSellerRequest {
+  const ReviewSellerRequest({required this.sellerOrderId, required this.rating, this.deliveryRating, this.packagingRating, this.accuracyRating, this.communicationRating, this.body});
+
+  factory ReviewSellerRequest.fromJson(Map<String, dynamic> json) => ReviewSellerRequest(sellerOrderId: json['sellerOrderId'] as String, rating: (json['rating'] as num).toInt(), deliveryRating: json['deliveryRating'] == null ? null : (json['deliveryRating'] as num).toInt(), packagingRating: json['packagingRating'] == null ? null : (json['packagingRating'] as num).toInt(), accuracyRating: json['accuracyRating'] == null ? null : (json['accuracyRating'] as num).toInt(), communicationRating: json['communicationRating'] == null ? null : (json['communicationRating'] as num).toInt(), body: json['body'] == null ? null : json['body'] as String);
+
+  final String sellerOrderId;
+
+  final int rating;
+
+  final int? deliveryRating;
+
+  final int? packagingRating;
+
+  final int? accuracyRating;
+
+  final int? communicationRating;
+
+  final String? body;
+
+  Map<String, dynamic> toJson() => {'sellerOrderId': sellerOrderId, 'rating': rating, if (deliveryRating != null) 'deliveryRating': deliveryRating, if (packagingRating != null) 'packagingRating': packagingRating, if (accuracyRating != null) 'accuracyRating': accuracyRating, if (communicationRating != null) 'communicationRating': communicationRating, if (body != null) 'body': body};
+}
+
 class RevokeMyOtherSessionsResponse {
   const RevokeMyOtherSessionsResponse({required this.revoked});
 
@@ -3907,6 +4423,25 @@ class RunSellerOrderStepRequest {
   final String? note;
 
   Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note};
+}
+
+class RunStoreReturnStepRequest {
+  const RunStoreReturnStepRequest({required this.step, this.note, this.reason, this.includeShipping, this.restock});
+
+  factory RunStoreReturnStepRequest.fromJson(Map<String, dynamic> json) => RunStoreReturnStepRequest(step: json['step'] as String, note: json['note'] == null ? null : json['note'] as String, reason: json['reason'] == null ? null : json['reason'] as String, includeShipping: json['includeShipping'] == null ? null : json['includeShipping'] as bool, restock: json['restock'] == null ? null : json['restock'] as bool);
+
+  /// One of: APPROVE, REJECT, MARK_RECEIVED, START_INSPECTION, ACCEPT (kept as String for forward compatibility).
+  final String step;
+
+  final String? note;
+
+  final String? reason;
+
+  final bool? includeShipping;
+
+  final bool? restock;
+
+  Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note, if (reason != null) 'reason': reason, if (includeShipping != null) 'includeShipping': includeShipping, if (restock != null) 'restock': restock};
 }
 
 class SaveSellerApplicationBusinessRequest {
@@ -4673,6 +5208,18 @@ class SetSellerVariantStockResponse {
   final int available;
 
   Map<String, dynamic> toJson() => {'id': id, 'stockOnHand': stockOnHand, 'reserved': reserved, 'available': available};
+}
+
+class ShipBackReturnRequest {
+  const ShipBackReturnRequest({required this.carrier, this.tracking});
+
+  factory ShipBackReturnRequest.fromJson(Map<String, dynamic> json) => ShipBackReturnRequest(carrier: json['carrier'] as String, tracking: json['tracking'] == null ? null : json['tracking'] as String);
+
+  final String carrier;
+
+  final String? tracking;
+
+  Map<String, dynamic> toJson() => {'carrier': carrier, if (tracking != null) 'tracking': tracking};
 }
 
 class StartDealPaymentRequest {

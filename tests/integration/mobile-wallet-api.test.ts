@@ -1,6 +1,6 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { POST as loginRoute } from '@/app/api/v1/auth/login/route';
 import { GET as storeFundsRoute } from '@/app/api/v1/seller/funds/route';
 import { GET as storePayoutAccountRoute } from '@/app/api/v1/seller/payout-account/route';
@@ -12,13 +12,19 @@ import { GET as requestsRoute, POST as requestRoute } from '@/app/api/v1/wallet/
 import { POST as archiveRoute } from '@/app/api/v1/wallet/receiving-accounts/[accountId]/archive/route';
 import { GET as accountsRoute, POST as addAccountRoute } from '@/app/api/v1/wallet/receiving-accounts/route';
 import { GET as walletRoute } from '@/app/api/v1/wallet/route';
+import { customerActor } from '@/server/auth/actors';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { journalEntries, sellerMembers, withdrawalRequests } from '@/server/db/schema';
+import { dealPayouts, externalDeals, journalEntries, sellerMembers, withdrawalRequests } from '@/server/db/schema';
+import { claimInvitation, confirmDealReceipt, createDeal, deliveryOtpForBuyer, inviteSeller, markDealDelivered, releaseDeal, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, verifyDeliveryOtp } from '@/server/modules/deals/service';
+import { reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
+import { confirmPayment, submitProof } from '@/server/modules/payments/service';
 import { financialInvariants } from '@/server/modules/finance/controls';
 import { approveWithdrawal, markWithdrawalProcessing, markWithdrawalTransferUncertain } from '@/server/modules/finance/withdrawals';
 import { identityStatus } from '@/server/modules/identity/service';
-import { approveIdentity, checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { approveIdentity, checkout, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makerRequest, makeSeller, makeUser, pdf, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+
+vi.mock('server-only', () => ({}));
 
 /**
  * Flow G — the wallet through the REAL mobile routes. Balances come from the ledger (holds and in-flight requests are
@@ -185,5 +191,82 @@ describe('Flow G — wallet', () => {
     const ar = await call(archiveRoute, `/wallet/receiving-accounts/${acc.id}/archive`, { token: t, idem: key(), params: { accountId: acc.id } });
     expect(ar.status).toBe(200);
     expect((await call(accountsRoute, '/wallet/receiving-accounts', { token: t })).body.items).toEqual([]);
+  });
+});
+
+/* ───────── Protected-Deal-only seller (Phase 4 follow-up): account request to a verified receiving account ───────── */
+
+const LOC = { governorateId: 2, city: 'الجيزة', street: 'شارع الهرم', lat: 29.98765, lng: 31.13456, accuracy: 20 };
+
+/** A completed Protected Deal (two-person release) whose payout is PAYABLE to `seller` (same setup as the finance suite). */
+async function payableDeal(seller: Actor, price = '1000') {
+  const buyer = customerActor((await makeUser()).id);
+  const deal = await createDeal(buyer, { title: 'جهاز للصفقة', description: 'جهاز بحالة جيدة جداً مع الشاحن', condition: 'NEW', quantity: 1 });
+  await saveDealStep(buyer, deal.id, 2, { unitPrice: price });
+  await saveDealStep(buyer, deal.id, 3, { deliveryMethod: 'تسليم يد بيد', deliveryDeadline: new Date(Date.now() + 5 * 86400_000), inspectionDays: 2 });
+  await saveDealStep(buyer, deal.id, 5, { loc_governorateId: '1', loc_city: 'القاهرة', loc_street: 'شارع التحرير', loc_lat: '30.04442', loc_lng: '31.23571', loc_accuracy: '15' });
+  const { token } = await inviteSeller(buyer, deal.id, true);
+  await claimInvitation(seller, token);
+  const { version } = await submitSellerOffer(
+    seller,
+    deal.id,
+    { details: { fullName: 'بائع الصفقة' }, location: LOC, payout: { type: 'INSTAPAY', holderName: 'بائع الصفقة', instapayAddress: 'typed@instapay' }, offer: { shippingFee: '0', deliveryMethod: 'شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1 }, returnPolicy: { type: 'NONE' } },
+    true,
+  );
+  await respondToOffer(buyer, deal.id, version, 'ACCEPT');
+  const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
+  const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await confirmPayment(admin, p.id, submission.id);
+  await markDealDelivered(seller, deal.id, 'تم التسليم', [{ data: pdf(), name: 'w.pdf' }]);
+  const view = await deliveryOtpForBuyer(buyer, deal.id);
+  await verifyDeliveryOtp(seller, deal.id, view!.testCode!);
+  await confirmDealReceipt(buyer, deal.id);
+  const [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
+  const payout = d.buyerPays! - Math.min(d.feeAmount, d.buyerPays!);
+  await makerRequest('DEAL_RELEASE', deal.id, payout);
+  await releaseDeal(await makeAdmin(['FINANCE_CHECKER']), deal.id, { expectedPayout: payout, reason: 'إتاحة بعد تأكيد المشتري' });
+  return { dealId: deal.id, payout: (await db.select().from(dealPayouts).where(eq(dealPayouts.dealId, deal.id)))[0] };
+}
+
+describe('Flow G — Protected-Deal earnings (no store)', () => {
+  it('request to a verified receiving account is cancellable before approval; cancel restores nothing because nothing was reserved; approved → not cancellable', async () => {
+    const u = await makeUser();
+    const seller = customerActor(u.id);
+    const d1 = await payableDeal(seller, '1000');
+    // A verified receiving account (staff verification happens in the admin console).
+    const dest = await submitReceivingDestination(seller, { type: 'INSTAPAY', holderName: 'مستخدم اختبار ثلاثي الاسم', instapayAddress: `pd${randomUUID().slice(0, 6)}@instapay` });
+    await reviewReceivingDestination(await makeAdmin(['FINANCE_CHECKER']), dest.id, 'APPROVE', { holderMatchesIdentity: true });
+    if ((await identityStatus(db, u.id)) !== 'APPROVED') await approveIdentity(u.id);
+    const t = await login(u.email!);
+
+    const w = await call(walletRoute, '/wallet', { token: t });
+    expect(w.status, JSON.stringify(w.body)).toBe(200);
+    expect(w.body.sources.map((x: { source: string }) => x.source)).toEqual(['PROTECTED_DEAL']);
+    expect(w.body.balances.availablePiastres).toBe(d1.payout.amount);
+    expect(w.body.items.find((i: { entityId: string }) => i.entityId === d1.dealId)).toMatchObject({ kind: 'DEAL', bucket: 'available' });
+    expect(w.body.payout.destinations).toEqual([expect.objectContaining({ key: dest.id, scope: 'DEALS_ONLY' })]);
+
+    const entries = (await db.select().from(journalEntries)).length;
+    const r = await call(requestRoute, '/wallet/payout-requests', { token: t, body: { amountPiastres: d1.payout.amount, destination: dest.id, clientKey: key() } });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.request).toMatchObject({ status: 'REQUESTED', cancellable: true });
+    expect((await db.select().from(journalEntries)).length).toBe(entries);
+    const c = await call(cancelRoute, `/wallet/payout-requests/${r.body.request.id}/cancel`, { token: t, idem: key(), params: { requestId: r.body.request.id } });
+    expect(c.status, JSON.stringify(c.body)).toBe(200);
+    expect(c.body.items.find((x: { id: string }) => x.id === r.body.request.id)).toMatchObject({ status: 'CANCELLED', cancellable: false });
+    const w2 = await call(walletRoute, '/wallet', { token: t });
+    expect(w2.body.balances.availablePiastres).toBe(d1.payout.amount);
+    expect(w2.body.balances.reservedPiastres).toBe(0);
+
+    // Approved (reserved) requests can no longer be cancelled from the app.
+    const r2 = await call(requestRoute, '/wallet/payout-requests', { token: t, body: { amountPiastres: d1.payout.amount, destination: dest.id, clientKey: key() } });
+    await approveWithdrawal(await makeAdmin(['FINANCE_CHECKER']), r2.body.request.id);
+    const listed = (await call(requestsRoute, '/wallet/payout-requests', { token: t })).body.items.find((x: { id: string }) => x.id === r2.body.request.id);
+    expect(listed).toMatchObject({ status: 'APPROVED', cancellable: false });
+    expect(listed.sources).toEqual([expect.objectContaining({ source: 'PROTECTED_DEAL', amountPiastres: d1.payout.amount })]);
+    expect((await call(cancelRoute, `/wallet/payout-requests/${r2.body.request.id}/cancel`, { token: t, idem: key(), params: { requestId: r2.body.request.id } })).status).toBeGreaterThanOrEqual(400);
+    expect((await call(walletRoute, '/wallet', { token: t })).body.balances).toMatchObject({ availablePiastres: 0, reservedPiastres: d1.payout.amount });
+    const inv = await financialInvariants(db);
+    expect(inv.checks.filter((x) => x.count > 0).map((x) => x.code)).toEqual([]);
   });
 });

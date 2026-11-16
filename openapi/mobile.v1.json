@@ -8173,6 +8173,735 @@
         }
       }
     },
+    "/api/v1/disputes": {
+      "post": {
+        "operationId": "openDispute",
+        "summary": "Open a dispute on one of my seller orders or protected deals (the related funds stay frozen until EDMN decides)",
+        "tags": [
+          "Disputes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sellerOrderId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "dealId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "enum": [
+                      "NOT_RECEIVED",
+                      "NOT_AS_DESCRIBED",
+                      "DAMAGED",
+                      "DEFECTIVE",
+                      "WRONG_ITEM",
+                      "COUNTERFEIT",
+                      "SELLER_UNRESPONSIVE",
+                      "OTHER"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 20,
+                    "maxLength": 4000
+                  },
+                  "claimedAmountPiastres": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "reasonCode",
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      },
+      "get": {
+        "operationId": "listMyDisputes",
+        "summary": "Disputes I opened or that concern me",
+        "tags": [
+          "Disputes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DisputeSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/disputes/{disputeId}": {
+      "get": {
+        "operationId": "getMyDispute",
+        "summary": "One dispute: messages, evidence, EDMN decision and refunds",
+        "tags": [
+          "Disputes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "disputeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/disputes/{disputeId}/messages": {
+      "post": {
+        "operationId": "replyDispute",
+        "summary": "Reply in a dispute, optionally with one evidence file",
+        "tags": [
+          "Disputes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "disputeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 4000
+                  },
+                  "attachment": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
     "/api/v1/files/{fileId}": {
       "get": {
         "operationId": "getFile",
@@ -11838,6 +12567,1362 @@
         }
       }
     },
+    "/api/v1/returns": {
+      "post": {
+        "operationId": "createReturn",
+        "summary": "Request a return of delivered units (photos required for damaged / defective / wrong / not-as-described)",
+        "tags": [
+          "Returns"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sellerOrderId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "CHANGED_MIND",
+                      "WRONG_ITEM",
+                      "DAMAGED",
+                      "DEFECTIVE",
+                      "MISSING_PARTS",
+                      "NOT_AS_DESCRIBED",
+                      "COUNTERFEIT_SUSPECTED",
+                      "OTHER"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  },
+                  "items": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "JSON array of {orderItemId, quantity}"
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "maxItems": 6,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "sellerOrderId",
+                  "reason",
+                  "description",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      },
+      "get": {
+        "operationId": "listMyReturns",
+        "summary": "My return requests",
+        "tags": [
+          "Returns"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ReturnSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/returns/{returnId}": {
+      "get": {
+        "operationId": "getMyReturn",
+        "summary": "One of my returns: status, store decision, ship-back address, refund state",
+        "tags": [
+          "Returns"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/returns/{returnId}/escalate": {
+      "post": {
+        "operationId": "escalateMyReturn",
+        "summary": "Escalate a rejected return to an EDMN dispute",
+        "tags": [
+          "Returns",
+          "Disputes"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalatedReturn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/returns/{returnId}/ship-back": {
+      "post": {
+        "operationId": "shipBackReturn",
+        "summary": "I sent the item back (carrier and tracking)",
+        "tags": [
+          "Returns"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "carrier": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80
+                  },
+                  "tracking": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "carrier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/reviews/products": {
+      "post": {
+        "operationId": "reviewProduct",
+        "summary": "Review a product I received (once per order item; up to 4 photos)",
+        "tags": [
+          "Reviews"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orderItemId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 3000
+                  },
+                  "photos": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                },
+                "required": [
+                  "orderItemId",
+                  "rating"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/reviews/sellers": {
+      "post": {
+        "operationId": "reviewSeller",
+        "summary": "Review the store of a delivered seller order (once per seller order)",
+        "tags": [
+          "Reviews"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sellerOrderId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "deliveryRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "packagingRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "accuracyRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "communicationRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "body": {
+                    "type": "string",
+                    "maxLength": 3000
+                  }
+                },
+                "required": [
+                  "sellerOrderId",
+                  "rating"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
     "/api/v1/seller-orders/{sellerOrderId}/cancellation-request": {
       "post": {
         "operationId": "requestCancellation",
@@ -12600,6 +14685,487 @@
           ]
         },
         "x-idempotency": "required"
+      }
+    },
+    "/api/v1/seller-orders/{sellerOrderId}/return-options": {
+      "get": {
+        "operationId": "getReturnOptions",
+        "summary": "What can be returned now: returnable units, the policy windows and deadline, reasons and which need photos",
+        "tags": [
+          "Returns"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sellerOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eligible": {
+                      "type": "boolean"
+                    },
+                    "blockReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "NOT_DELIVERED",
+                            "WINDOW_CLOSED",
+                            "NOTHING_RETURNABLE"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "window": {
+                      "type": "object",
+                      "properties": {
+                        "statutoryDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "voluntaryDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "effectiveDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "disputeDays": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "deliveredAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "deadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "protectedDeadline": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "statutoryDays",
+                        "voluntaryDays",
+                        "effectiveDays",
+                        "disputeDays",
+                        "deliveredAt",
+                        "deadline",
+                        "protectedDeadline"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "CHANGED_MIND",
+                              "WRONG_ITEM",
+                              "DAMAGED",
+                              "DEFECTIVE",
+                              "MISSING_PARTS",
+                              "NOT_AS_DESCRIBED",
+                              "COUNTERFEIT_SUSPECTED",
+                              "OTHER"
+                            ]
+                          },
+                          "requiresEvidence": {
+                            "type": "boolean"
+                          },
+                          "protected": {
+                            "type": "boolean"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "requiresEvidence",
+                          "protected",
+                          "available"
+                        ]
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "orderItemId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "variantLabel": {
+                            "type": "string"
+                          },
+                          "unitPricePiastres": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "returnableQuantity": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "orderItemId",
+                          "title",
+                          "variantLabel",
+                          "unitPricePiastres",
+                          "quantity",
+                          "returnableQuantity"
+                        ]
+                      }
+                    },
+                    "returnShippingPayer": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "eligible",
+                    "blockReason",
+                    "window",
+                    "reasons",
+                    "items",
+                    "returnShippingPayer"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller-orders/{sellerOrderId}/review-options": {
+      "get": {
+        "operationId": "getReviewOptions",
+        "summary": "What I can still review on a delivered order (verified purchase only, once each)",
+        "tags": [
+          "Reviews"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sellerOrderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
       }
     },
     "/api/v1/seller/application": {
@@ -15284,6 +17850,517 @@
             60
           ]
         }
+      }
+    },
+    "/api/v1/seller/disputes": {
+      "get": {
+        "operationId": "listStoreDisputes",
+        "summary": "Disputes against the store (orders.manage or returns.manage)",
+        "tags": [
+          "Disputes",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DisputeSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller/disputes/{disputeId}": {
+      "get": {
+        "operationId": "getStoreDispute",
+        "summary": "One dispute against the store",
+        "tags": [
+          "Disputes",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "disputeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller/disputes/{disputeId}/messages": {
+      "post": {
+        "operationId": "replyStoreDispute",
+        "summary": "Store reply in a dispute, optionally with one evidence file",
+        "tags": [
+          "Disputes",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "disputeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 4000
+                  },
+                  "attachment": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "body"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
       }
     },
     "/api/v1/seller/funds": {
@@ -19714,6 +22791,734 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SellerProductEditor"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/seller/returns": {
+      "get": {
+        "operationId": "listStoreReturns",
+        "summary": "The store's return requests (returns.manage)",
+        "tags": [
+          "Returns",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ReturnSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller/returns/{returnId}": {
+      "get": {
+        "operationId": "getStoreReturn",
+        "summary": "One return of the store with the steps allowed now",
+        "tags": [
+          "Returns",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCase"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/seller/returns/{returnId}/escalate": {
+      "post": {
+        "operationId": "escalateStoreReturn",
+        "summary": "Store: the inspection failed / the claim is contested — escalate to an EDMN dispute",
+        "tags": [
+          "Returns",
+          "Disputes",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalatedReturn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden, seller_required",
+            "x-error-codes": [
+              "forbidden",
+              "seller_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "seller",
+        "x-rate-limit": {
+          "tier": "sensitive",
+          "perUser": [
+            10,
+            900
+          ],
+          "perInstallation": [
+            5,
+            900
+          ],
+          "perIp": [
+            100,
+            900
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
+    "/api/v1/seller/returns/{returnId}/steps": {
+      "post": {
+        "operationId": "runStoreReturnStep",
+        "summary": "Store step on a return (must be in allowedActions). ACCEPT only REQUESTS the refund for the returned units.",
+        "tags": [
+          "Returns",
+          "Seller"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "returnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "step": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVE",
+                      "REJECT",
+                      "MARK_RECEIVED",
+                      "START_INSPECTION",
+                      "ACCEPT"
+                    ]
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "includeShipping": {
+                    "type": "boolean"
+                  },
+                  "restock": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "step"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCase"
                 }
               }
             }
@@ -26109,6 +29914,345 @@
           "userAgent"
         ]
       },
+      "DisputeCase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CLAIMANT",
+              "RESPONDENT"
+            ]
+          },
+          "context": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ORDER",
+                  "DEAL"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "orderId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ref": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "id",
+              "orderId",
+              "ref"
+            ]
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "claimedAmountPiastres": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "returnId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "from": {
+                  "type": "string",
+                  "enum": [
+                    "CLAIMANT",
+                    "RESPONDENT",
+                    "EDMN"
+                  ]
+                },
+                "mine": {
+                  "type": "boolean"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "from",
+                "mine",
+                "body",
+                "createdAt"
+              ]
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fileId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "mimeType": {
+                  "type": "string"
+                },
+                "mine": {
+                  "type": "boolean"
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "fileId",
+                "mimeType",
+                "mine",
+                "note",
+                "createdAt"
+              ]
+            }
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "amountPiastres": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "decidedAt": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "code",
+                  "amountPiastres",
+                  "note",
+                  "decidedAt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "amountPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "amountPiastres",
+                "reference"
+              ]
+            }
+          },
+          "fundsFrozen": {
+            "type": "boolean"
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "REPLY",
+                "ADD_EVIDENCE"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "role",
+          "context",
+          "reasonCode",
+          "description",
+          "claimedAmountPiastres",
+          "createdAt",
+          "returnId",
+          "messages",
+          "evidence",
+          "decision",
+          "refunds",
+          "fundsFrozen",
+          "allowedActions"
+        ]
+      },
+      "DisputeSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "CLAIMANT",
+              "RESPONDENT"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ORDER",
+              "DEAL"
+            ]
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "decision": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "role",
+          "kind",
+          "reasonCode",
+          "decision",
+          "createdAt"
+        ]
+      },
       "ErrorCode": {
         "type": "string",
         "enum": [
@@ -26129,6 +30273,19 @@
           "idempotency_key_reused",
           "idempotency_in_progress",
           "internal_error"
+        ]
+      },
+      "EscalatedReturn": {
+        "type": "object",
+        "properties": {
+          "disputeId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "disputeId"
         ]
       },
       "IdentityStatus": {
@@ -26732,7 +30889,9 @@
                       "ADD_TRACKING_EVENT",
                       "SUBMIT_DELIVERY_EVIDENCE",
                       "ACCEPT_CANCELLATION",
-                      "MESSAGE_SELLER"
+                      "MESSAGE_SELLER",
+                      "REQUEST_RETURN",
+                      "WRITE_REVIEW"
                     ]
                   }
                 }
@@ -28119,6 +32278,256 @@
           "allowedActions"
         ]
       },
+      "ReturnCase": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "BUYER",
+              "STORE"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "orderLabel": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "sellerOrderId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "storeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orderItemId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "variantLabel": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "unitPricePiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                }
+              },
+              "required": [
+                "orderItemId",
+                "title",
+                "variantLabel",
+                "quantity",
+                "unitPricePiastres"
+              ]
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fileId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "mimeType": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fileId",
+                "mimeType"
+              ]
+            }
+          },
+          "decisionReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "returnCarrier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "returnTracking": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shipBackTo": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string"
+                  },
+                  "governorateId": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "shippingPayer": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "address",
+                  "governorateId",
+                  "shippingPayer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refundAmountPiastres": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refunds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "amountPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "reference": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "amountPiastres",
+                "reference"
+              ]
+            }
+          },
+          "disputeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allowedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "side",
+          "reason",
+          "description",
+          "orderLabel",
+          "orderId",
+          "sellerOrderId",
+          "storeName",
+          "createdAt",
+          "items",
+          "evidence",
+          "decisionReason",
+          "returnCarrier",
+          "returnTracking",
+          "shipBackTo",
+          "refundAmountPiastres",
+          "refunds",
+          "disputeId",
+          "allowedActions"
+        ]
+      },
       "ReturnPolicy": {
         "type": "object",
         "properties": {
@@ -28164,6 +32573,50 @@
           "shippingPayer",
           "notes",
           "summaryAr"
+        ]
+      },
+      "ReturnSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "number": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "refundAmountPiastres": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991,
+                "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "reason",
+          "refundAmountPiastres",
+          "createdAt"
         ]
       },
       "Review": {
@@ -28213,6 +32666,57 @@
           "author",
           "sellerResponse",
           "createdAt"
+        ]
+      },
+      "ReviewOptions": {
+        "type": "object",
+        "properties": {
+          "eligible": {
+            "type": "boolean"
+          },
+          "storeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sellerReviewed": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orderItemId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "variantLabel": {
+                  "type": "string"
+                },
+                "reviewed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "orderItemId",
+                "title",
+                "variantLabel",
+                "reviewed"
+              ]
+            }
+          }
+        },
+        "required": [
+          "eligible",
+          "storeName",
+          "sellerReviewed",
+          "items"
         ]
       },
       "SellerApplication": {

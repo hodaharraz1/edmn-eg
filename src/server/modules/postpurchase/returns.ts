@@ -49,7 +49,8 @@ export async function returnWindow(conn: DbOrTx, sellerId: string, items?: { ret
   return { statutory, voluntary, effective: Math.max(statutory, voluntary) };
 }
 
-async function openReturnedQty(tx: DbOrTx, orderItemId: string) {
+/** Units of an order item already in an open (not rejected / refunded) return. */
+export async function openReturnedQty(tx: DbOrTx, orderItemId: string) {
   const [r] = await tx
     .select({ q: sql<string>`coalesce(sum(${returnItems.quantity}),0)` })
     .from(returnItems)

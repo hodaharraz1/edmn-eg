@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -348,4 +349,48 @@ class MobileApi {
   Future<GetSellerStatementResponse> sellerStatement() async => GetSellerStatementResponse.fromJson(await client.getJson(MobileApiPaths.getSellerStatement.path));
   Future<GetSellerPayoutAccountResponse> sellerPayoutAccount() async =>
       GetSellerPayoutAccountResponse.fromJson(await client.getJson(MobileApiPaths.getSellerPayoutAccount.path));
+
+  // ── Returns, disputes, reviews ──────────────────────────────────────────────────────────────────────────────
+  // `store: true` = Seller Center side (returns.manage / orders.manage). Refunds are only REQUESTED; EDMN approves.
+  Future<GetReturnOptionsResponse> returnOptions(String sellerOrderId) async =>
+      GetReturnOptionsResponse.fromJson(await client.getJson(fillPath(MobileApiPaths.getReturnOptions.path, {'sellerOrderId': sellerOrderId})));
+  Future<ReturnCase> createReturn({required String sellerOrderId, required String reason, required String description, required List<Map<String, Object>> items, List<(Uint8List, String)> evidence = const [], required String idempotencyKey}) async =>
+      ReturnCase.fromJson(await _multipart(MobileApiPaths.createReturn.path,
+          fields: {'sellerOrderId': sellerOrderId, 'reason': reason, 'description': description, 'items': jsonEncode(items)}, files: {'evidence': evidence}, idempotencyKey: idempotencyKey));
+  Future<List<ReturnSummary>> returns({bool store = false}) async => (store
+          ? ListStoreReturnsResponse.fromJson(await client.getJson(MobileApiPaths.listStoreReturns.path)).items
+          : ListMyReturnsResponse.fromJson(await client.getJson(MobileApiPaths.listMyReturns.path)).items);
+  Future<ReturnCase> returnCase(String id, {bool store = false}) async => ReturnCase.fromJson(
+      await client.getJson(fillPath(store ? MobileApiPaths.getStoreReturn.path : MobileApiPaths.getMyReturn.path, {'returnId': id})));
+  Future<ReturnCase> shipBackReturn(String id, String carrier, String tracking, {required String idempotencyKey}) async => ReturnCase.fromJson(await client.sendJson(
+      'POST', fillPath(MobileApiPaths.shipBackReturn.path, {'returnId': id}), body: {'carrier': carrier, 'tracking': tracking}, idempotencyKey: idempotencyKey));
+  Future<String> escalateReturn(String id, String description, {bool store = false, required String idempotencyKey}) async => EscalatedReturn.fromJson(await client.sendJson('POST',
+          fillPath(store ? MobileApiPaths.escalateStoreReturn.path : MobileApiPaths.escalateMyReturn.path, {'returnId': id}),
+          body: {'description': description}, idempotencyKey: idempotencyKey))
+      .disputeId;
+  Future<ReturnCase> storeReturnStep(String id, String step, {String? note, String? reason, bool? includeShipping, bool? restock, required String idempotencyKey}) async =>
+      ReturnCase.fromJson(await client.sendJson('POST', fillPath(MobileApiPaths.runStoreReturnStep.path, {'returnId': id}),
+          body: {'step': step, 'note': ?note, 'reason': ?reason, 'includeShipping': ?includeShipping, 'restock': ?restock}, idempotencyKey: idempotencyKey));
+
+  Future<DisputeCase> openDispute({String? sellerOrderId, String? dealId, required String reasonCode, required String description, int? claimedAmountPiastres, List<(Uint8List, String)> evidence = const [], required String idempotencyKey}) async =>
+      DisputeCase.fromJson(await _multipart(MobileApiPaths.openDispute.path,
+          fields: {'sellerOrderId': ?sellerOrderId, 'dealId': ?dealId, 'reasonCode': reasonCode, 'description': description, if (claimedAmountPiastres != null) 'claimedAmountPiastres': '$claimedAmountPiastres'},
+          files: {'evidence': evidence}, idempotencyKey: idempotencyKey));
+  Future<List<DisputeSummary>> disputes({bool store = false}) async => (store
+          ? ListStoreDisputesResponse.fromJson(await client.getJson(MobileApiPaths.listStoreDisputes.path)).items
+          : ListMyDisputesResponse.fromJson(await client.getJson(MobileApiPaths.listMyDisputes.path)).items);
+  Future<DisputeCase> dispute(String id, {bool store = false}) async => DisputeCase.fromJson(
+      await client.getJson(fillPath(store ? MobileApiPaths.getStoreDispute.path : MobileApiPaths.getMyDispute.path, {'disputeId': id})));
+  Future<DisputeCase> replyDispute(String id, String body, {(Uint8List, String)? attachment, bool store = false, required String idempotencyKey}) async => DisputeCase.fromJson(await _multipart(
+      fillPath(store ? MobileApiPaths.replyStoreDispute.path : MobileApiPaths.replyDispute.path, {'disputeId': id}),
+      fields: {'body': body}, files: {'attachment': [?attachment]}, idempotencyKey: idempotencyKey));
+
+  Future<ReviewOptions> reviewOptions(String sellerOrderId) async =>
+      ReviewOptions.fromJson(await client.getJson(fillPath(MobileApiPaths.getReviewOptions.path, {'sellerOrderId': sellerOrderId})));
+  Future<ReviewOptions> reviewProduct(String orderItemId, int rating, {String? title, String? body, List<(Uint8List, String)> photos = const [], required String idempotencyKey}) async =>
+      ReviewOptions.fromJson(await _multipart(MobileApiPaths.reviewProduct.path,
+          fields: {'orderItemId': orderItemId, 'rating': '$rating', if (title != null && title.isNotEmpty) 'title': title, if (body != null && body.isNotEmpty) 'body': body},
+          files: {'photos': photos}, idempotencyKey: idempotencyKey));
+  Future<ReviewOptions> reviewSeller(String sellerOrderId, int rating, {String? body, required String idempotencyKey}) async => ReviewOptions.fromJson(await client.sendJson(
+      'POST', MobileApiPaths.reviewSeller.path, body: {'sellerOrderId': sellerOrderId, 'rating': rating, if (body != null && body.isNotEmpty) 'body': body}, idempotencyKey: idempotencyKey));
 }

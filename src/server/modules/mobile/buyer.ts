@@ -298,6 +298,8 @@ export async function buyerOrder(actor: Actor, orderId: string) {
           ...sellerOrderAllowedActions({ status: so.status, role: o.customerId === userId ? 'BUYER' : 'NONE', cancellationPending, openDispute, disputeWindowClosed }),
           // Messaging opens once the payment is confirmed (same rule as the messaging service).
           ...(o.customerId === userId && sellerOrderMessagingAvailable(so) ? (['MESSAGE_SELLER'] as const) : []),
+          // Returns and reviews open after delivery; the exact window / units are checked by return-options and the services.
+          ...(o.customerId === userId && (so.status === 'DELIVERED' || so.status === 'COMPLETED') ? (['REQUEST_RETURN', 'WRITE_REVIEW'] as const) : []),
         ],
       };
     }),

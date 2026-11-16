@@ -986,5 +986,174 @@
       }
     }
   },
-  "noEarningsYet": "لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا."
+  "noEarningsYet": "لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.",
+  "acceptRefundNote": "القبول بيطلب استرداد للوحدات المرتجعة بسعر الشراء المسجل. فريق أضمن هو اللي بيعتمد ويحوّل.",
+  "acceptReturnRefund": "قبول الإرجاع وطلب الاسترداد",
+  "addEvidenceFile": "إرفاق دليل",
+  "againstYou": "مفتوح عليك",
+  "approveReturn": "الموافقة على الإرجاع",
+  "buyerParty": "المشتري",
+  "chooseItemToReturn": "اختار منتج واحد على الأقل وكميته",
+  "chooseReason": "اختار السبب",
+  "claimedAmount": "المبلغ المطلوب",
+  "contactSupportAboutDispute": "تواصل مع الدعم بخصوص النزاع",
+  "decFullRefund": "استرداد كامل",
+  "decPartialRefund": "استرداد جزئي",
+  "decRejectClaim": "رفض المطالبة",
+  "decReleaseToSeller": "المبلغ للبائع",
+  "decReplacement": "استبدال المنتج",
+  "decReturnRequired": "مطلوب إرجاع المنتج",
+  "describeMore": "اشرح السبب في 10 حروف على الأقل",
+  "describeMore20": "احكي اللي حصل في 20 حرف على الأقل",
+  "disputeConversation": "الردود",
+  "disputeDescriptionHint": "احكي اللي حصل بالتفصيل",
+  "disputeFreezeNote": "طول ما النزاع مفتوح، مستحقات البائع عن الطلب ده بتفضل متجمّدة لحد ما فريق أضمن ياخد قراره.",
+  "disputeFundsFrozen": "المبلغ المتعلق بالنزاع متجمّد لحد قرار فريق أضمن.",
+  "disputeLabel": "نزاع",
+  "disputeOpened": "تم فتح النزاع",
+  "disputeReasonTitle": "نوع المشكلة",
+  "disputeTryFirst": "جرّب الأول تتواصل مع البائع أو تطلب إرجاع. لو المشكلة ما اتحلتش، افتح نزاع.",
+  "drNotReceived": "ما استلمتش الطلب",
+  "drSellerUnresponsive": "البائع مش بيرد",
+  "dspAwaitingInfo": "مطلوب معلومات",
+  "dspClosed": "مغلق",
+  "dspOpen": "مفتوح",
+  "dspResolved": "صدر القرار",
+  "dspUnderReview": "قيد المراجعة",
+  "edmnDecision": "قرار فريق أضمن",
+  "escalateHint": "اشرح ليه محتاج فريق أضمن يتدخل",
+  "escalateToEdmn": "تحويل لفريق أضمن (نزاع)",
+  "evidenceTitle": "الأدلة",
+  "iShippedItBack": "بعت المنتج للبائع",
+  "includeShippingRefund": "استرداد مصاريف الشحن كمان",
+  "markReturnReceived": "استلمت المنتج المرتجع",
+  "myDisputes": "النزاعات",
+  "myReturns": "طلبات الإرجاع",
+  "noDisputes": "مفيش نزاعات",
+  "noMessagesYet": "لسه مفيش ردود",
+  "noReturns": "مفيش طلبات إرجاع",
+  "openDispute": "فتح نزاع",
+  "orderRefLabel": "طلب",
+  "photosRequired": "ارفع صور توضّح المشكلة",
+  "publishReview": "نشر التقييم",
+  "rateProducts": "قيّم المنتجات",
+  "reasonWindowClosed": "انتهت مدة الإرجاع لهذا السبب",
+  "refundByEdmnNote": "الاسترداد بيتعتمد ويتحوّل من فريق أضمن لوسيلة الدفع الأصلية — مش من التطبيق.",
+  "refundRequested": "تم طلب الاسترداد",
+  "rejectReasonHint": "سبب الرفض (بيظهر للمشتري)",
+  "rejectReturn": "رفض الإرجاع",
+  "requestReturn": "طلب إرجاع",
+  "restockItems": "رجّع الكمية للمخزون",
+  "retApproved": "اتقبل",
+  "retDisputed": "محوّل لفريق أضمن",
+  "retInTransit": "في الطريق للبائع",
+  "retReceived": "البائع استلم",
+  "retRefundPending": "الاسترداد قيد الاعتماد",
+  "retRefunded": "المبلغ اترد",
+  "retRejected": "مرفوض",
+  "retRequested": "تم الطلب",
+  "returnDescriptionHint": "اشرح سبب الإرجاع بالتفصيل",
+  "returnLabel": "إرجاع",
+  "returnNotDelivered": "تقدر تطلب الإرجاع بعد ما تأكّد استلام الطلب.",
+  "returnNothingLeft": "كل الوحدات في الطلب ده اترجعت أو عليها طلب إرجاع.",
+  "returnReason": "سبب الإرجاع",
+  "returnRefundNote": "لو الإرجاع اتقبل، الاسترداد بيتعتمد من فريق أضمن ويرجع لوسيلة الدفع الأصلية.",
+  "returnRequestSent": "تم إرسال طلب الإرجاع",
+  "returnShipBuyerPays": "مصاريف شحن المرتجع على المشتري",
+  "returnShipByReason": "مصاريف الشحن حسب السبب: على البائع لو المنتج معيب أو مختلف",
+  "returnShipSellerPays": "مصاريف شحن المرتجع على البائع",
+  "returnWindowClosed": "انتهت مدة الإرجاع. لو المنتج معيب، تقدر تفتح نزاع.",
+  "returnWindowTitle": "مدة الإرجاع",
+  "returnedItems": "المنتجات المرتجعة",
+  "reviewAfterDelivery": "التقييم متاح بعد استلام الطلب.",
+  "reviewBodyHint": "اكتب رأيك (اختياري)",
+  "reviewPublished": "تم نشر التقييم",
+  "reviewTitleHint": "عنوان التقييم (اختياري)",
+  "reviewVerifiedNote": "التقييم متاح بس للمشتري الفعلي، ومرة واحدة لكل منتج ولكل طلب.",
+  "reviewed": "اتقيّم",
+  "rrChangedMind": "غيرت رأيي",
+  "rrCounterfeit": "شاكك إنه مش أصلي",
+  "rrDamaged": "وصل تالف",
+  "rrDefective": "معيب / مش شغال",
+  "rrMissingParts": "ناقص أجزاء",
+  "rrNotAsDescribed": "مش مطابق للوصف",
+  "rrOther": "سبب تاني",
+  "rrWrongItem": "منتج مختلف",
+  "sellerParty": "البائع",
+  "sendReturnRequest": "إرسال طلب الإرجاع",
+  "shipBackTitle": "ابعت المنتج على",
+  "startInspection": "بدء الفحص",
+  "storeDecision": "قرار البائع",
+  "storeDisputes": "نزاعات المتجر",
+  "storeReturnRequests": "مرتجعات المتجر",
+  "theClaim": "المطالبة",
+  "viewDispute": "عرض النزاع",
+  "whichItems": "هترجع إيه؟",
+  "writeReview": "اكتب تقييم",
+  "youOpenedIt": "أنت فتحته",
+  "changeOfMindUntil": "الإرجاع لأي سبب لحد {date}",
+  "@changeOfMindUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "protectedUntil": "المنتج المعيب أو المختلف لحد {date}",
+  "@protectedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "shippedBackWith": "اتشحن مع {carrier} — رقم التتبع {tracking}",
+  "@shippedBackWith": {
+    "placeholders": {
+      "carrier": {
+        "type": "String"
+      },
+      "tracking": {
+        "type": "String"
+      }
+    }
+  },
+  "rateStore": "قيّم المتجر {store}",
+  "@rateStore": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "evidenceLabel": "صور أو مستندات (حتى {max})",
+  "@evidenceLabel": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "returnWindowBody": "مدة الإرجاع {days} يوم من الاستلام (الحد القانوني {statutory} يوم).",
+  "@returnWindowBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "statutory": {
+        "type": "int"
+      }
+    }
+  },
+  "returnableOf": "متاح للإرجاع {n} من {total}",
+  "@returnableOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }

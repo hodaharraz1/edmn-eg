@@ -17,6 +17,7 @@ import 'features/deals/deals_screens.dart';
 import 'features/messages/messages_screens.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
+import 'features/postpurchase/postpurchase_screens.dart';
 import 'features/seller/seller_screens.dart';
 import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
@@ -24,7 +25,7 @@ import 'features/wallet/wallet_screens.dart';
 import 'providers.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
-const _protected = ['/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support', '/messages'];
+const _protected = ['/returns', '/disputes', '/reviews', '/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support', '/messages'];
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SignedInListenable(ref);
@@ -76,6 +77,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/deals/new', builder: (c, s) => const NewDealScreen()),
       GoRoute(path: '/deals/join', builder: (c, s) => JoinDealScreen(token: s.uri.queryParameters['token'])),
       GoRoute(path: '/deals/:id', builder: (c, s) => DealScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/returns', builder: (c, s) => const ReturnsScreen()),
+      GoRoute(path: '/returns/new', builder: (c, s) => NewReturnScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
+      GoRoute(path: '/returns/:id', builder: (c, s) => ReturnScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/seller/returns', builder: (c, s) => const ReturnsScreen(store: true)),
+      GoRoute(path: '/seller/returns/:id', builder: (c, s) => ReturnScreen(id: s.pathParameters['id']!, store: true)),
+      GoRoute(path: '/disputes', builder: (c, s) => const DisputesScreen()),
+      GoRoute(path: '/disputes/new', builder: (c, s) => NewDisputeScreen(sellerOrderId: s.uri.queryParameters['so'], dealId: s.uri.queryParameters['deal'])),
+      GoRoute(path: '/disputes/:id', builder: (c, s) => DisputeScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/seller/disputes', builder: (c, s) => const DisputesScreen(store: true)),
+      GoRoute(path: '/seller/disputes/:id', builder: (c, s) => DisputeScreen(id: s.pathParameters['id']!, store: true)),
+      GoRoute(path: '/reviews/new', builder: (c, s) => WriteReviewScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
       GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen()),
       GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
       GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(item: s.extra as ListWalletActivityResponseItemsItem?)),

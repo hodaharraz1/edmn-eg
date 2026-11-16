@@ -821,5 +821,174 @@
       }
     }
   },
-  "noEarningsYet": "No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here."
+  "noEarningsYet": "No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here.",
+  "acceptRefundNote": "Accepting requests a refund for the returned units at the recorded price. EDMN approves and pays it.",
+  "acceptReturnRefund": "Accept and request refund",
+  "addEvidenceFile": "Attach evidence",
+  "againstYou": "Opened against you",
+  "approveReturn": "Approve return",
+  "buyerParty": "Buyer",
+  "chooseItemToReturn": "Choose at least one item and quantity",
+  "chooseReason": "Choose a reason",
+  "claimedAmount": "Amount claimed",
+  "contactSupportAboutDispute": "Contact support about this dispute",
+  "decFullRefund": "Full refund",
+  "decPartialRefund": "Partial refund",
+  "decRejectClaim": "Claim rejected",
+  "decReleaseToSeller": "Released to the seller",
+  "decReplacement": "Replacement",
+  "decReturnRequired": "Return required",
+  "describeMore": "Describe the reason in at least 10 characters",
+  "describeMore20": "Describe what happened in at least 20 characters",
+  "disputeConversation": "Replies",
+  "disputeDescriptionHint": "Describe what happened in detail",
+  "disputeFreezeNote": "While the dispute is open, the seller’s funds for this order stay frozen until EDMN decides.",
+  "disputeFundsFrozen": "The disputed amount is frozen until EDMN decides.",
+  "disputeLabel": "Dispute",
+  "disputeOpened": "Dispute opened",
+  "disputeReasonTitle": "Problem",
+  "disputeTryFirst": "Try messaging the seller or requesting a return first. If it is not solved, open a dispute.",
+  "drNotReceived": "Not received",
+  "drSellerUnresponsive": "Seller not responding",
+  "dspAwaitingInfo": "Information needed",
+  "dspClosed": "Closed",
+  "dspOpen": "Open",
+  "dspResolved": "Decided",
+  "dspUnderReview": "Under review",
+  "edmnDecision": "EDMN decision",
+  "escalateHint": "Explain why EDMN should step in",
+  "escalateToEdmn": "Escalate to EDMN (dispute)",
+  "evidenceTitle": "Evidence",
+  "iShippedItBack": "I shipped it back",
+  "includeShippingRefund": "Also refund shipping",
+  "markReturnReceived": "Item received",
+  "myDisputes": "Disputes",
+  "myReturns": "Returns",
+  "noDisputes": "No disputes",
+  "noMessagesYet": "No replies yet",
+  "noReturns": "No returns",
+  "openDispute": "Open a dispute",
+  "orderRefLabel": "Order",
+  "photosRequired": "Upload photos showing the problem",
+  "publishReview": "Publish review",
+  "rateProducts": "Rate the products",
+  "reasonWindowClosed": "Return period over for this reason",
+  "refundByEdmnNote": "Refunds are approved and paid by EDMN to the original payment method — not from the app.",
+  "refundRequested": "Refund requested",
+  "rejectReasonHint": "Reason (shown to the buyer)",
+  "rejectReturn": "Reject return",
+  "requestReturn": "Request a return",
+  "restockItems": "Put units back in stock",
+  "retApproved": "Approved",
+  "retDisputed": "With EDMN",
+  "retInTransit": "On its way back",
+  "retReceived": "Received by seller",
+  "retRefundPending": "Refund being approved",
+  "retRefunded": "Refunded",
+  "retRejected": "Rejected",
+  "retRequested": "Requested",
+  "returnDescriptionHint": "Explain the reason in detail",
+  "returnLabel": "Return",
+  "returnNotDelivered": "You can request a return after confirming delivery.",
+  "returnNothingLeft": "All units are already returned or in a return.",
+  "returnReason": "Reason",
+  "returnRefundNote": "If accepted, EDMN approves the refund to your original payment method.",
+  "returnRequestSent": "Return request sent",
+  "returnShipBuyerPays": "Return shipping paid by the buyer",
+  "returnShipByReason": "Return shipping by reason: the seller pays for faulty or wrong items",
+  "returnShipSellerPays": "Return shipping paid by the seller",
+  "returnWindowClosed": "The return period is over. If the item is faulty, you can open a dispute.",
+  "returnWindowTitle": "Return period",
+  "returnedItems": "Returned items",
+  "reviewAfterDelivery": "Reviews open after delivery.",
+  "reviewBodyHint": "Your review (optional)",
+  "reviewPublished": "Review published",
+  "reviewTitleHint": "Title (optional)",
+  "reviewVerifiedNote": "Only verified buyers can review, once per item and per order.",
+  "reviewed": "Reviewed",
+  "rrChangedMind": "Changed my mind",
+  "rrCounterfeit": "Suspected counterfeit",
+  "rrDamaged": "Arrived damaged",
+  "rrDefective": "Defective",
+  "rrMissingParts": "Missing parts",
+  "rrNotAsDescribed": "Not as described",
+  "rrOther": "Other",
+  "rrWrongItem": "Wrong item",
+  "sellerParty": "Seller",
+  "sendReturnRequest": "Send return request",
+  "shipBackTitle": "Send the item to",
+  "startInspection": "Start inspection",
+  "storeDecision": "Store decision",
+  "storeDisputes": "Store disputes",
+  "storeReturnRequests": "Store returns",
+  "theClaim": "The claim",
+  "viewDispute": "View dispute",
+  "whichItems": "What are you returning?",
+  "writeReview": "Write a review",
+  "youOpenedIt": "You opened it",
+  "changeOfMindUntil": "Any-reason return until {date}",
+  "@changeOfMindUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "protectedUntil": "Faulty or wrong items until {date}",
+  "@protectedUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "shippedBackWith": "Shipped with {carrier} — tracking {tracking}",
+  "@shippedBackWith": {
+    "placeholders": {
+      "carrier": {
+        "type": "String"
+      },
+      "tracking": {
+        "type": "String"
+      }
+    }
+  },
+  "rateStore": "Rate the store {store}",
+  "@rateStore": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
+  "evidenceLabel": "Photos or documents (up to {max})",
+  "@evidenceLabel": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "returnWindowBody": "Return period: {days} days from delivery (legal minimum {statutory} days).",
+  "@returnWindowBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "statutory": {
+        "type": "int"
+      }
+    }
+  },
+  "returnableOf": "{n} of {total} returnable",
+  "@returnableOf": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }
