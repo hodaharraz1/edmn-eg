@@ -495,6 +495,7 @@ class _DealScreenState extends ConsumerState<DealScreen> {
                   final msg = await _ask(context, t.problemNotReceived, t.problemDescriptionHint, min: 10);
                   if (msg != null) await _act('not-received', (k) => api.reportDealNotReceived(d.id, msg, idempotencyKey: k));
                 }, danger: true),
+              if (a.contains('OPEN_DISPUTE')) btn('dispute', t.openDispute, () => context.push('/disputes/new?deal=${d.id}'), danger: true),
               if (a.contains('CANCEL'))
                 btn('cancel', t.cancelDeal, () async {
                   final msg = await _ask(context, t.cancelDeal, t.cancellationReasonHint, min: 5);

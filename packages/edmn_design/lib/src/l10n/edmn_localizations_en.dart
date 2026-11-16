@@ -2436,6 +2436,365 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
       'No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here.';
 
   @override
+  String get acceptRefundNote =>
+      'Accepting requests a refund for the returned units at the recorded price. EDMN approves and pays it.';
+
+  @override
+  String get acceptReturnRefund => 'Accept and request refund';
+
+  @override
+  String get addEvidenceFile => 'Attach evidence';
+
+  @override
+  String get againstYou => 'Opened against you';
+
+  @override
+  String get approveReturn => 'Approve return';
+
+  @override
+  String get buyerParty => 'Buyer';
+
+  @override
+  String get chooseItemToReturn => 'Choose at least one item and quantity';
+
+  @override
+  String get chooseReason => 'Choose a reason';
+
+  @override
+  String get claimedAmount => 'Amount claimed';
+
+  @override
+  String get contactSupportAboutDispute => 'Contact support about this dispute';
+
+  @override
+  String get decFullRefund => 'Full refund';
+
+  @override
+  String get decPartialRefund => 'Partial refund';
+
+  @override
+  String get decRejectClaim => 'Claim rejected';
+
+  @override
+  String get decReleaseToSeller => 'Released to the seller';
+
+  @override
+  String get decReplacement => 'Replacement';
+
+  @override
+  String get decReturnRequired => 'Return required';
+
+  @override
+  String get describeMore => 'Describe the reason in at least 10 characters';
+
+  @override
+  String get describeMore20 =>
+      'Describe what happened in at least 20 characters';
+
+  @override
+  String get disputeConversation => 'Replies';
+
+  @override
+  String get disputeDescriptionHint => 'Describe what happened in detail';
+
+  @override
+  String get disputeFreezeNote =>
+      'While the dispute is open, the seller’s funds for this order stay frozen until EDMN decides.';
+
+  @override
+  String get disputeFundsFrozen =>
+      'The disputed amount is frozen until EDMN decides.';
+
+  @override
+  String get disputeLabel => 'Dispute';
+
+  @override
+  String get disputeOpened => 'Dispute opened';
+
+  @override
+  String get disputeReasonTitle => 'Problem';
+
+  @override
+  String get disputeTryFirst =>
+      'Try messaging the seller or requesting a return first. If it is not solved, open a dispute.';
+
+  @override
+  String get drNotReceived => 'Not received';
+
+  @override
+  String get drSellerUnresponsive => 'Seller not responding';
+
+  @override
+  String get dspAwaitingInfo => 'Information needed';
+
+  @override
+  String get dspClosed => 'Closed';
+
+  @override
+  String get dspOpen => 'Open';
+
+  @override
+  String get dspResolved => 'Decided';
+
+  @override
+  String get dspUnderReview => 'Under review';
+
+  @override
+  String get edmnDecision => 'EDMN decision';
+
+  @override
+  String get escalateHint => 'Explain why EDMN should step in';
+
+  @override
+  String get escalateToEdmn => 'Escalate to EDMN (dispute)';
+
+  @override
+  String get evidenceTitle => 'Evidence';
+
+  @override
+  String get iShippedItBack => 'I shipped it back';
+
+  @override
+  String get includeShippingRefund => 'Also refund shipping';
+
+  @override
+  String get markReturnReceived => 'Item received';
+
+  @override
+  String get myDisputes => 'Disputes';
+
+  @override
+  String get myReturns => 'Returns';
+
+  @override
+  String get noDisputes => 'No disputes';
+
+  @override
+  String get noMessagesYet => 'No replies yet';
+
+  @override
+  String get noReturns => 'No returns';
+
+  @override
+  String get openDispute => 'Open a dispute';
+
+  @override
+  String get orderRefLabel => 'Order';
+
+  @override
+  String get photosRequired => 'Upload photos showing the problem';
+
+  @override
+  String get publishReview => 'Publish review';
+
+  @override
+  String get rateProducts => 'Rate the products';
+
+  @override
+  String get reasonWindowClosed => 'Return period over for this reason';
+
+  @override
+  String get refundByEdmnNote =>
+      'Refunds are approved and paid by EDMN to the original payment method — not from the app.';
+
+  @override
+  String get refundRequested => 'Refund requested';
+
+  @override
+  String get rejectReasonHint => 'Reason (shown to the buyer)';
+
+  @override
+  String get rejectReturn => 'Reject return';
+
+  @override
+  String get requestReturn => 'Request a return';
+
+  @override
+  String get restockItems => 'Put units back in stock';
+
+  @override
+  String get retApproved => 'Approved';
+
+  @override
+  String get retDisputed => 'With EDMN';
+
+  @override
+  String get retInTransit => 'On its way back';
+
+  @override
+  String get retReceived => 'Received by seller';
+
+  @override
+  String get retRefundPending => 'Refund being approved';
+
+  @override
+  String get retRefunded => 'Refunded';
+
+  @override
+  String get retRejected => 'Rejected';
+
+  @override
+  String get retRequested => 'Requested';
+
+  @override
+  String get returnDescriptionHint => 'Explain the reason in detail';
+
+  @override
+  String get returnLabel => 'Return';
+
+  @override
+  String get returnNotDelivered =>
+      'You can request a return after confirming delivery.';
+
+  @override
+  String get returnNothingLeft =>
+      'All units are already returned or in a return.';
+
+  @override
+  String get returnReason => 'Reason';
+
+  @override
+  String get returnRefundNote =>
+      'If accepted, EDMN approves the refund to your original payment method.';
+
+  @override
+  String get returnRequestSent => 'Return request sent';
+
+  @override
+  String get returnShipBuyerPays => 'Return shipping paid by the buyer';
+
+  @override
+  String get returnShipByReason =>
+      'Return shipping by reason: the seller pays for faulty or wrong items';
+
+  @override
+  String get returnShipSellerPays => 'Return shipping paid by the seller';
+
+  @override
+  String get returnWindowClosed =>
+      'The return period is over. If the item is faulty, you can open a dispute.';
+
+  @override
+  String get returnWindowTitle => 'Return period';
+
+  @override
+  String get returnedItems => 'Returned items';
+
+  @override
+  String get reviewAfterDelivery => 'Reviews open after delivery.';
+
+  @override
+  String get reviewBodyHint => 'Your review (optional)';
+
+  @override
+  String get reviewPublished => 'Review published';
+
+  @override
+  String get reviewTitleHint => 'Title (optional)';
+
+  @override
+  String get reviewVerifiedNote =>
+      'Only verified buyers can review, once per item and per order.';
+
+  @override
+  String get reviewed => 'Reviewed';
+
+  @override
+  String get rrChangedMind => 'Changed my mind';
+
+  @override
+  String get rrCounterfeit => 'Suspected counterfeit';
+
+  @override
+  String get rrDamaged => 'Arrived damaged';
+
+  @override
+  String get rrDefective => 'Defective';
+
+  @override
+  String get rrMissingParts => 'Missing parts';
+
+  @override
+  String get rrNotAsDescribed => 'Not as described';
+
+  @override
+  String get rrOther => 'Other';
+
+  @override
+  String get rrWrongItem => 'Wrong item';
+
+  @override
+  String get sellerParty => 'Seller';
+
+  @override
+  String get sendReturnRequest => 'Send return request';
+
+  @override
+  String get shipBackTitle => 'Send the item to';
+
+  @override
+  String get startInspection => 'Start inspection';
+
+  @override
+  String get storeDecision => 'Store decision';
+
+  @override
+  String get storeDisputes => 'Store disputes';
+
+  @override
+  String get storeReturnRequests => 'Store returns';
+
+  @override
+  String get theClaim => 'The claim';
+
+  @override
+  String get viewDispute => 'View dispute';
+
+  @override
+  String get whichItems => 'What are you returning?';
+
+  @override
+  String get writeReview => 'Write a review';
+
+  @override
+  String get youOpenedIt => 'You opened it';
+
+  @override
+  String changeOfMindUntil(String date) {
+    return 'Any-reason return until $date';
+  }
+
+  @override
+  String protectedUntil(String date) {
+    return 'Faulty or wrong items until $date';
+  }
+
+  @override
+  String shippedBackWith(String carrier, String tracking) {
+    return 'Shipped with $carrier — tracking $tracking';
+  }
+
+  @override
+  String rateStore(String store) {
+    return 'Rate the store $store';
+  }
+
+  @override
+  String evidenceLabel(int max) {
+    return 'Photos or documents (up to $max)';
+  }
+
+  @override
+  String returnWindowBody(int days, int statutory) {
+    return 'Return period: $days days from delivery (legal minimum $statutory days).';
+  }
+
+  @override
+  String returnableOf(int n, int total) {
+    return '$n of $total returnable';
+  }
+
+  @override
   String get previousPage => 'Previous page';
 
   @override

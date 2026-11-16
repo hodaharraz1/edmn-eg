@@ -1,6 +1,7 @@
 # Mobile audit fixes
 
-Base: `a99ffcdd408236124ab5e4e37e3b8ed7b0f08058`, targeting `claude/edmn-mobile-integration`.
+Audit base: `a99ffcdd408236124ab5e4e37e3b8ed7b0f08058`, targeting `claude/edmn-mobile-integration`.
+Upstream Phase 5 (`540d860`) was merged without dropping its returns/disputes/reviews screens, contracts or tests.
 
 | Finding | Change | Regression coverage |
 |---|---|---|
@@ -26,5 +27,6 @@ so new operations can shift page boundaries during concurrent browsing.
 The CI workflow now runs Flutter analysis and tests for all five packages/apps on Flutter 3.47.8 in addition to the
 existing backend gates. Vercel auto-deploy is explicitly disabled for `codex/mobile-audit-fixes`.
 
-This fixes the audited defects. Missing product features in SCREEN_INVENTORY (returns/disputes UI, notifications,
-password-reset deep link, top-up business decisions, physical-device QA) remain separate work.
+This fixes the audited defects. Phase 5 returns/disputes/reviews are preserved from upstream; a complete audit of
+that new phase is separate work. Remaining roadmap items such as notifications, the password-reset deep link,
+top-up business decisions and physical-device QA are not claimed as completed by this fix.

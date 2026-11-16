@@ -113,6 +113,72 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // Returns / disputes / reviews
+  String returnBlock = '';
+  List<String> returnActions = const [];
+  String returnSide = 'BUYER';
+  String disputeState = 'OPEN';
+  final storeSteps = <String>[];
+  final sellerRatings = <int>[];
+  bool sellerReviewed = false;
+  @override
+  Future<List<ReturnSummary>> returns({bool store = false}) async => const [];
+  @override
+  Future<List<DisputeSummary>> disputes({bool store = false}) async => const [];
+  @override
+  Future<GetReturnOptionsResponse> returnOptions(String sellerOrderId) async => GetReturnOptionsResponse.fromJson({
+        'eligible': returnBlock.isEmpty, 'blockReason': returnBlock.isEmpty ? null : returnBlock,
+        'window': {'statutoryDays': 14, 'voluntaryDays': 0, 'effectiveDays': 14, 'disputeDays': 30, 'deliveredAt': '2030-01-01T10:00:00Z', 'deadline': '2030-01-15T10:00:00Z', 'protectedDeadline': '2030-01-31T10:00:00Z'},
+        'reasons': [
+          {'code': 'CHANGED_MIND', 'requiresEvidence': false, 'protected': false, 'available': false},
+          {'code': 'DAMAGED', 'requiresEvidence': true, 'protected': true, 'available': true},
+        ],
+        'items': [{'orderItemId': '22222222-2222-4222-8222-222222222222', 'title': 'سماعة لاسلكية', 'variantLabel': '', 'unitPricePiastres': 125050, 'quantity': 2, 'returnableQuantity': 2}],
+        'returnShippingPayer': 'BY_REASON',
+      });
+  @override
+  Future<ReturnCase> returnCase(String id, {bool store = false}) async => ReturnCase.fromJson({
+        'id': id, 'number': '9001', 'status': returnActions.contains('SHIP_BACK') ? 'APPROVED' : 'REQUESTED', 'side': returnSide, 'reason': 'DAMAGED', 'description': 'الشاشة مكسورة',
+        'orderLabel': '100001-A', 'orderId': '11111111-1111-4111-8111-111111111111', 'sellerOrderId': '33333333-3333-4333-8333-333333333333', 'storeName': 'متجر القاهرة',
+        'createdAt': '2030-01-02T10:00:00Z',
+        'items': [{'orderItemId': '22222222-2222-4222-8222-222222222222', 'title': 'سماعة لاسلكية', 'variantLabel': '', 'quantity': 1, 'unitPricePiastres': 125050}],
+        'evidence': <Map<String, dynamic>>[], 'decisionReason': null, 'returnCarrier': null, 'returnTracking': null,
+        'shipBackTo': returnActions.contains('SHIP_BACK') ? {'address': '12 شارع التحرير، الدقي', 'governorateId': 2, 'shippingPayer': 'SELLER'} : null,
+        'refundAmountPiastres': null, 'refunds': <Map<String, dynamic>>[], 'disputeId': null, 'allowedActions': returnActions,
+      });
+  @override
+  Future<ReturnCase> storeReturnStep(String id, String step, {String? note, String? reason, bool? includeShipping, bool? restock, required String idempotencyKey}) async {
+    storeSteps.add(step);
+    returnActions = const ['MARK_RECEIVED'];
+    return returnCase(id, store: true);
+  }
+  @override
+  Future<DisputeCase> dispute(String id, {bool store = false}) async {
+    final open = disputeState == 'OPEN';
+    return DisputeCase.fromJson({
+      'id': id, 'number': '8001', 'status': disputeState, 'role': 'CLAIMANT',
+      'context': {'kind': 'ORDER', 'id': '33333333-3333-4333-8333-333333333333', 'orderId': '11111111-1111-4111-8111-111111111111', 'ref': '#100001-A'},
+      'reasonCode': 'NOT_AS_DESCRIBED', 'description': 'اللون مختلف عن الإعلان تمامًا', 'claimedAmountPiastres': 125050, 'createdAt': '2030-01-03T10:00:00Z', 'returnId': null,
+      'messages': [{'id': 'dm1', 'from': 'RESPONDENT', 'mine': false, 'body': 'المنتج مطابق', 'createdAt': '2030-01-03T12:00:00Z'}],
+      'evidence': <Map<String, dynamic>>[],
+      'decision': open ? null : {'code': 'FULL_REFUND', 'amountPiastres': 125050, 'note': 'الصور بتثبت الاختلاف', 'decidedAt': '2030-01-05T10:00:00Z'},
+      'refunds': open ? <Map<String, dynamic>>[] : [{'id': '44444444-4444-4444-8444-444444444444', 'status': 'REQUESTED', 'amountPiastres': 125050, 'reference': null}],
+      'fundsFrozen': open, 'allowedActions': open ? ['REPLY', 'ADD_EVIDENCE'] : <String>[],
+    });
+  }
+  Map<String, dynamic> _reviewOpts() => {
+        'eligible': true, 'storeName': 'متجر القاهرة', 'sellerReviewed': sellerReviewed,
+        'items': [{'orderItemId': '22222222-2222-4222-8222-222222222222', 'title': 'سماعة لاسلكية', 'variantLabel': '', 'reviewed': true}],
+      };
+  @override
+  Future<ReviewOptions> reviewOptions(String sellerOrderId) async => ReviewOptions.fromJson(_reviewOpts());
+  @override
+  Future<ReviewOptions> reviewSeller(String sellerOrderId, int rating, {String? body, required String idempotencyKey}) async {
+    sellerRatings.add(rating);
+    sellerReviewed = true;
+    return ReviewOptions.fromJson(_reviewOpts());
+  }
+
   // Wallet
   String? walletBlock;
   int requestFailures = 0;
@@ -924,6 +990,78 @@ void main() {
     expect(api.requestKeys[0], api.requestKeys[1]);
     await t.scrollUntilVisible(find.byKey(const Key('payout-result')), -250, scrollable: _mainList);
     expect(find.byKey(const Key('payout-result')), findsOneWidget);
+  });
+
+  testWidgets('return request: the policy window and reasons come from the server; a closed window offers a dispute instead', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/returns/new?so=s1');
+    expect(find.byKey(const Key('return-window')), findsOneWidget);
+    expect(find.textContaining('انتهت مدة الإرجاع لهذا السبب'), findsOneWidget); // change-of-mind closed by the server
+    api.returnBlock = 'WINDOW_CLOSED';
+    await _go(t, '/returns');
+    await _go(t, '/returns/new?so=s1');
+    expect(find.byKey(const Key('return-blocked')), findsOneWidget);
+    expect(find.byKey(const Key('ret-reasons')), findsNothing);
+  });
+
+  testWidgets('returns: the buyer sees only buyer steps with the ship-back address; the store sees only the steps the server allows', (t) async {
+    final api = FakeMobileApi()..returnActions = const ['SHIP_BACK'];
+    await _start(t, api, signedIn: true);
+    await _go(t, '/returns/r1');
+    await _reveal(t, find.byKey(const Key('ret-ship')));
+    expect(find.byKey(const Key('ship-back-to'), skipOffstage: false), findsOneWidget);
+    for (final k in ['ret-approve', 'ret-reject', 'ret-accept']) {
+      expect(find.byKey(Key(k)), findsNothing);
+    }
+    api
+      ..returnSide = 'STORE'
+      ..returnActions = const ['APPROVE', 'REJECT']
+      ..isSeller = true
+      ..isOwner = true;
+    await _go(t, '/returns');
+    await _go(t, '/seller/returns/r1');
+    await _reveal(t, find.byKey(const Key('ret-approve')));
+    expect(find.byKey(const Key('ret-accept')), findsNothing); // refund request not allowed yet
+    await t.tap(find.byKey(const Key('ret-approve')));
+    await t.pumpAndSettle();
+    expect(api.storeSteps, ['APPROVE']);
+  });
+
+  testWidgets('dispute: frozen-funds notice and reply while open; after EDMN decides, the decision and refund state show and replying is gone', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/disputes/d1');
+    expect(find.byKey(const Key('dsp-frozen')), findsOneWidget);
+    await _reveal(t, find.byKey(const Key('dsp-send')));
+    expect(find.byKey(const Key('dsp-decision')), findsNothing);
+    api.disputeState = 'RESOLVED';
+    await _go(t, '/disputes');
+    await _go(t, '/disputes/d1');
+    expect(find.byKey(const Key('dsp-frozen')), findsNothing);
+    expect(find.byKey(const Key('dsp-decision')), findsOneWidget);
+    expect(find.text('استرداد كامل'), findsOneWidget);
+    await _reveal(t, find.byKey(const Key('dsp-support')));
+    expect(find.byKey(const Key('dsp-send')), findsNothing);
+    for (final k in ['dsp-resolve', 'dsp-refund', 'dsp-release']) {
+      expect(find.byKey(Key(k)), findsNothing);
+    }
+  });
+
+  testWidgets('reviews: an already reviewed item cannot be reviewed again; the store review is sent once', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/reviews/new?so=s1');
+    expect(find.byKey(const Key('reviewed-22222222-2222-4222-8222-222222222222')), findsOneWidget);
+    await _reveal(t, find.byKey(const Key('rev-form-seller-submit')));
+    await t.tap(find.byKey(const Key('rev-form-seller-star-4')));
+    await t.pumpAndSettle();
+    await _reveal(t, find.byKey(const Key('rev-form-seller-submit')));
+    await t.tap(find.byKey(const Key('rev-form-seller-submit')));
+    await t.pumpAndSettle();
+    expect(api.sellerRatings, [4]);
+    expect(find.byKey(const Key('seller-reviewed')), findsOneWidget);
+    expect(find.byKey(const Key('rev-form-seller-submit')), findsNothing);
   });
 
   test('version comparison', () {

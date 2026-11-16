@@ -2407,6 +2407,364 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
       'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.';
 
   @override
+  String get acceptRefundNote =>
+      'القبول بيطلب استرداد للوحدات المرتجعة بسعر الشراء المسجل. فريق أضمن هو اللي بيعتمد ويحوّل.';
+
+  @override
+  String get acceptReturnRefund => 'قبول الإرجاع وطلب الاسترداد';
+
+  @override
+  String get addEvidenceFile => 'إرفاق دليل';
+
+  @override
+  String get againstYou => 'مفتوح عليك';
+
+  @override
+  String get approveReturn => 'الموافقة على الإرجاع';
+
+  @override
+  String get buyerParty => 'المشتري';
+
+  @override
+  String get chooseItemToReturn => 'اختار منتج واحد على الأقل وكميته';
+
+  @override
+  String get chooseReason => 'اختار السبب';
+
+  @override
+  String get claimedAmount => 'المبلغ المطلوب';
+
+  @override
+  String get contactSupportAboutDispute => 'تواصل مع الدعم بخصوص النزاع';
+
+  @override
+  String get decFullRefund => 'استرداد كامل';
+
+  @override
+  String get decPartialRefund => 'استرداد جزئي';
+
+  @override
+  String get decRejectClaim => 'رفض المطالبة';
+
+  @override
+  String get decReleaseToSeller => 'المبلغ للبائع';
+
+  @override
+  String get decReplacement => 'استبدال المنتج';
+
+  @override
+  String get decReturnRequired => 'مطلوب إرجاع المنتج';
+
+  @override
+  String get describeMore => 'اشرح السبب في 10 حروف على الأقل';
+
+  @override
+  String get describeMore20 => 'احكي اللي حصل في 20 حرف على الأقل';
+
+  @override
+  String get disputeConversation => 'الردود';
+
+  @override
+  String get disputeDescriptionHint => 'احكي اللي حصل بالتفصيل';
+
+  @override
+  String get disputeFreezeNote =>
+      'طول ما النزاع مفتوح، مستحقات البائع عن الطلب ده بتفضل متجمّدة لحد ما فريق أضمن ياخد قراره.';
+
+  @override
+  String get disputeFundsFrozen =>
+      'المبلغ المتعلق بالنزاع متجمّد لحد قرار فريق أضمن.';
+
+  @override
+  String get disputeLabel => 'نزاع';
+
+  @override
+  String get disputeOpened => 'تم فتح النزاع';
+
+  @override
+  String get disputeReasonTitle => 'نوع المشكلة';
+
+  @override
+  String get disputeTryFirst =>
+      'جرّب الأول تتواصل مع البائع أو تطلب إرجاع. لو المشكلة ما اتحلتش، افتح نزاع.';
+
+  @override
+  String get drNotReceived => 'ما استلمتش الطلب';
+
+  @override
+  String get drSellerUnresponsive => 'البائع مش بيرد';
+
+  @override
+  String get dspAwaitingInfo => 'مطلوب معلومات';
+
+  @override
+  String get dspClosed => 'مغلق';
+
+  @override
+  String get dspOpen => 'مفتوح';
+
+  @override
+  String get dspResolved => 'صدر القرار';
+
+  @override
+  String get dspUnderReview => 'قيد المراجعة';
+
+  @override
+  String get edmnDecision => 'قرار فريق أضمن';
+
+  @override
+  String get escalateHint => 'اشرح ليه محتاج فريق أضمن يتدخل';
+
+  @override
+  String get escalateToEdmn => 'تحويل لفريق أضمن (نزاع)';
+
+  @override
+  String get evidenceTitle => 'الأدلة';
+
+  @override
+  String get iShippedItBack => 'بعت المنتج للبائع';
+
+  @override
+  String get includeShippingRefund => 'استرداد مصاريف الشحن كمان';
+
+  @override
+  String get markReturnReceived => 'استلمت المنتج المرتجع';
+
+  @override
+  String get myDisputes => 'النزاعات';
+
+  @override
+  String get myReturns => 'طلبات الإرجاع';
+
+  @override
+  String get noDisputes => 'مفيش نزاعات';
+
+  @override
+  String get noMessagesYet => 'لسه مفيش ردود';
+
+  @override
+  String get noReturns => 'مفيش طلبات إرجاع';
+
+  @override
+  String get openDispute => 'فتح نزاع';
+
+  @override
+  String get orderRefLabel => 'طلب';
+
+  @override
+  String get photosRequired => 'ارفع صور توضّح المشكلة';
+
+  @override
+  String get publishReview => 'نشر التقييم';
+
+  @override
+  String get rateProducts => 'قيّم المنتجات';
+
+  @override
+  String get reasonWindowClosed => 'انتهت مدة الإرجاع لهذا السبب';
+
+  @override
+  String get refundByEdmnNote =>
+      'الاسترداد بيتعتمد ويتحوّل من فريق أضمن لوسيلة الدفع الأصلية — مش من التطبيق.';
+
+  @override
+  String get refundRequested => 'تم طلب الاسترداد';
+
+  @override
+  String get rejectReasonHint => 'سبب الرفض (بيظهر للمشتري)';
+
+  @override
+  String get rejectReturn => 'رفض الإرجاع';
+
+  @override
+  String get requestReturn => 'طلب إرجاع';
+
+  @override
+  String get restockItems => 'رجّع الكمية للمخزون';
+
+  @override
+  String get retApproved => 'اتقبل';
+
+  @override
+  String get retDisputed => 'محوّل لفريق أضمن';
+
+  @override
+  String get retInTransit => 'في الطريق للبائع';
+
+  @override
+  String get retReceived => 'البائع استلم';
+
+  @override
+  String get retRefundPending => 'الاسترداد قيد الاعتماد';
+
+  @override
+  String get retRefunded => 'المبلغ اترد';
+
+  @override
+  String get retRejected => 'مرفوض';
+
+  @override
+  String get retRequested => 'تم الطلب';
+
+  @override
+  String get returnDescriptionHint => 'اشرح سبب الإرجاع بالتفصيل';
+
+  @override
+  String get returnLabel => 'إرجاع';
+
+  @override
+  String get returnNotDelivered =>
+      'تقدر تطلب الإرجاع بعد ما تأكّد استلام الطلب.';
+
+  @override
+  String get returnNothingLeft =>
+      'كل الوحدات في الطلب ده اترجعت أو عليها طلب إرجاع.';
+
+  @override
+  String get returnReason => 'سبب الإرجاع';
+
+  @override
+  String get returnRefundNote =>
+      'لو الإرجاع اتقبل، الاسترداد بيتعتمد من فريق أضمن ويرجع لوسيلة الدفع الأصلية.';
+
+  @override
+  String get returnRequestSent => 'تم إرسال طلب الإرجاع';
+
+  @override
+  String get returnShipBuyerPays => 'مصاريف شحن المرتجع على المشتري';
+
+  @override
+  String get returnShipByReason =>
+      'مصاريف الشحن حسب السبب: على البائع لو المنتج معيب أو مختلف';
+
+  @override
+  String get returnShipSellerPays => 'مصاريف شحن المرتجع على البائع';
+
+  @override
+  String get returnWindowClosed =>
+      'انتهت مدة الإرجاع. لو المنتج معيب، تقدر تفتح نزاع.';
+
+  @override
+  String get returnWindowTitle => 'مدة الإرجاع';
+
+  @override
+  String get returnedItems => 'المنتجات المرتجعة';
+
+  @override
+  String get reviewAfterDelivery => 'التقييم متاح بعد استلام الطلب.';
+
+  @override
+  String get reviewBodyHint => 'اكتب رأيك (اختياري)';
+
+  @override
+  String get reviewPublished => 'تم نشر التقييم';
+
+  @override
+  String get reviewTitleHint => 'عنوان التقييم (اختياري)';
+
+  @override
+  String get reviewVerifiedNote =>
+      'التقييم متاح بس للمشتري الفعلي، ومرة واحدة لكل منتج ولكل طلب.';
+
+  @override
+  String get reviewed => 'اتقيّم';
+
+  @override
+  String get rrChangedMind => 'غيرت رأيي';
+
+  @override
+  String get rrCounterfeit => 'شاكك إنه مش أصلي';
+
+  @override
+  String get rrDamaged => 'وصل تالف';
+
+  @override
+  String get rrDefective => 'معيب / مش شغال';
+
+  @override
+  String get rrMissingParts => 'ناقص أجزاء';
+
+  @override
+  String get rrNotAsDescribed => 'مش مطابق للوصف';
+
+  @override
+  String get rrOther => 'سبب تاني';
+
+  @override
+  String get rrWrongItem => 'منتج مختلف';
+
+  @override
+  String get sellerParty => 'البائع';
+
+  @override
+  String get sendReturnRequest => 'إرسال طلب الإرجاع';
+
+  @override
+  String get shipBackTitle => 'ابعت المنتج على';
+
+  @override
+  String get startInspection => 'بدء الفحص';
+
+  @override
+  String get storeDecision => 'قرار البائع';
+
+  @override
+  String get storeDisputes => 'نزاعات المتجر';
+
+  @override
+  String get storeReturnRequests => 'مرتجعات المتجر';
+
+  @override
+  String get theClaim => 'المطالبة';
+
+  @override
+  String get viewDispute => 'عرض النزاع';
+
+  @override
+  String get whichItems => 'هترجع إيه؟';
+
+  @override
+  String get writeReview => 'اكتب تقييم';
+
+  @override
+  String get youOpenedIt => 'أنت فتحته';
+
+  @override
+  String changeOfMindUntil(String date) {
+    return 'الإرجاع لأي سبب لحد $date';
+  }
+
+  @override
+  String protectedUntil(String date) {
+    return 'المنتج المعيب أو المختلف لحد $date';
+  }
+
+  @override
+  String shippedBackWith(String carrier, String tracking) {
+    return 'اتشحن مع $carrier — رقم التتبع $tracking';
+  }
+
+  @override
+  String rateStore(String store) {
+    return 'قيّم المتجر $store';
+  }
+
+  @override
+  String evidenceLabel(int max) {
+    return 'صور أو مستندات (حتى $max)';
+  }
+
+  @override
+  String returnWindowBody(int days, int statutory) {
+    return 'مدة الإرجاع $days يوم من الاستلام (الحد القانوني $statutory يوم).';
+  }
+
+  @override
+  String returnableOf(int n, int total) {
+    return 'متاح للإرجاع $n من $total';
+  }
+
+  @override
   String get previousPage => 'الصفحة السابقة';
 
   @override

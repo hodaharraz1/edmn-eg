@@ -59,6 +59,8 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-addresses'), icon: Icons.location_on_outlined, title: t.addressesTitle, onTap: () => context.push('/account/addresses')),
                   EdmnMenuItem(key: const Key('menu-payment-methods'), icon: Icons.credit_card_outlined, title: t.paymentMethods, onTap: () => context.push('/account/payment-methods')),
                   EdmnMenuItem(key: const Key('menu-wallet'), icon: Icons.account_balance_wallet_outlined, title: t.wallet, onTap: () => context.push('/wallet')),
+                  EdmnMenuItem(key: const Key('menu-returns'), icon: Icons.assignment_return_outlined, title: t.myReturns, onTap: () => context.push('/returns')),
+                  EdmnMenuItem(key: const Key('menu-disputes'), icon: Icons.gavel_outlined, title: t.myDisputes, onTap: () => context.push('/disputes')),
                   EdmnMenuItem(key: const Key('menu-messages'), icon: Icons.chat_bubble_outline_rounded, title: t.messages, onTap: () => context.push('/messages')),
                   EdmnMenuItem(key: const Key('menu-notifications'), icon: Icons.notifications_none_rounded, title: t.notifications, onTap: () => context.push('/notifications')),
                   EdmnMenuItem(key: const Key('menu-support'), icon: Icons.help_outline_rounded, title: t.helpSupport, onTap: () => context.push('/support')),
