@@ -1,8 +1,8 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { requireSeller, requireUser, type Actor } from '@/server/core/actor';
 import { forbidden, notFound } from '@/server/core/errors';
 import { db } from '@/server/db/client';
-import { externalDeals, orders, payments, receivingDestinations, refunds, sellers, withdrawalRequests } from '@/server/db/schema';
+import { receivingDestinations, sellers, withdrawalRequests } from '@/server/db/schema';
 import { sellerFinancialView, type SourceBalances } from '@/server/modules/finance/seller-wallet';
 import { sellerStatement } from '@/server/modules/finance/seller-statement';
 import { accountWithdrawals, cancelWithdrawal, previewAccountWithdrawal, requestAccountWithdrawal, type AccountDestination } from '@/server/modules/finance/withdrawals';
@@ -83,100 +83,71 @@ export async function walletView(actor: Actor) {
 
 export type ActivityKind = 'PAYMENT' | 'REFUND' | 'PAYOUT';
 
-export async function walletActivity(actor: Actor, kind?: ActivityKind, q?: string) {
+type ActivityRow = {
+  kind: ActivityKind; id: string; direction: 'OUT' | 'IN'; amount: number; status: string;
+  ref: string; method: string | null; reference: string | null; note: string | null;
+  is_test: boolean | null; created_at: string; link_kind: 'ORDER' | 'DEAL' | 'PAYMENT' | null; link_id: string | null;
+};
+
+/** Search all owned records BEFORE pagination. No global money-mode setting may relabel historical refunds. */
+export async function walletActivity(actor: Actor, kind?: ActivityKind, q?: string, page = 1, pageSize = 50, activityId?: string) {
   const userId = requireUser(actor);
-  const digits = (q ?? '').replace(/\D/g, '');
-  const rows: {
-    kind: ActivityKind;
-    id: string;
-    direction: 'OUT' | 'IN';
-    amountPiastres: number;
-    status: string;
-    ref: string;
-    method: string | null;
-    reference: string | null;
-    note: string | null;
-    isTest: boolean;
-    createdAt: string;
-    link: { kind: 'ORDER' | 'DEAL' | 'PAYMENT'; id: string } | null;
-  }[] = [];
-  if (!kind || kind === 'PAYMENT') {
-    const ps = await db
-      .select({ p: payments, orderNumber: orders.number, dealNumber: externalDeals.number })
-      .from(payments)
-      .leftJoin(orders, eq(orders.id, payments.orderId))
-      .leftJoin(externalDeals, eq(externalDeals.id, payments.dealId))
-      .where(eq(payments.payerUserId, userId))
-      .orderBy(desc(payments.createdAt))
-      .limit(100);
-    for (const r of ps) {
-      rows.push({
-        kind: 'PAYMENT',
-        id: r.p.id,
-        direction: 'OUT',
-        amountPiastres: r.p.amountDue,
-        status: r.p.status,
-        ref: r.p.orderId ? `#${r.orderNumber}` : `EDMN-${String(r.dealNumber).padStart(8, '0')}`,
-        method: r.p.method,
-        reference: r.p.providerReference,
-        note: null,
-        isTest: r.p.isTest,
-        createdAt: r.p.createdAt.toISOString(),
-        link: { kind: 'PAYMENT', id: r.p.id },
-      });
-    }
-  }
-  if (!kind || kind === 'REFUND') {
-    // Refunds carry no own test flag: they follow the platform's Real Money mode.
-    const testMode = !(await getSetting('payments.realMoneyEnabled', db));
-    const rs = await db.select().from(refunds).where(eq(refunds.customerId, userId)).orderBy(desc(refunds.createdAt)).limit(100);
-    for (const r of rs) {
-      rows.push({
-        kind: 'REFUND',
-        id: r.id,
-        direction: 'IN',
-        amountPiastres: r.amount,
-        status: r.status,
-        ref: `#${r.number}`,
-        method: null,
-        reference: r.status === 'PAID' ? r.paidReference : null,
-        note: r.status === 'REJECTED' ? r.rejectReason : r.reason,
-        isTest: testMode,
-        createdAt: r.createdAt.toISOString(),
-        link: r.dealId ? { kind: 'DEAL', id: r.dealId } : null,
-      });
-    }
-  }
-  if (!kind || kind === 'PAYOUT') {
-    for (const { w } of await accountWithdrawals(userId)) {
-      rows.push({
-        kind: 'PAYOUT',
-        id: w.id,
-        direction: 'OUT',
-        amountPiastres: w.amount,
-        status: w.status,
-        ref: `#${w.number}`,
-        method: w.payoutType,
-        reference: w.status === 'PAID' ? w.paidReference : null,
-        note: w.status === 'REJECTED' ? w.rejectReason : w.payoutMasked,
-        isTest: w.isTest,
-        createdAt: w.createdAt.toISOString(),
-        link: null,
-      });
-    }
-  }
-  const filtered = digits ? rows.filter((r) => r.ref.replace(/\D/g, '').includes(digits) || (r.reference ?? '').includes(digits)) : rows;
-  filtered.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  return { items: filtered.slice(0, 150) };
+  // Normalize Arabic-Indic digits without discarding letters in provider references.
+  const search = (q ?? '').trim().replace(/[٠-٩۰-۹]/g, (c) => String(c.charCodeAt(0) - (c <= '٩' ? 0x660 : 0x6f0))).toLowerCase();
+  const result = await db.execute<ActivityRow>(sql`
+    with activity as (
+      select 'PAYMENT'::text kind, p.id, 'OUT'::text direction, p.amount_due amount, p.status,
+        case when p.order_id is not null then '#' || o.number::text else 'EDMN-' || lpad(d.number::text, 8, '0') end ref,
+        p.method, p.provider_reference reference, null::text note, p.is_test, p.created_at,
+        'PAYMENT'::text link_kind, p.id link_id
+      from payments p left join orders o on o.id = p.order_id left join external_deals d on d.id = p.deal_id
+      where p.payer_user_id = ${userId}
+      union all
+      select 'REFUND', r.id, 'IN', r.amount, r.status, '#' || r.number::text, null,
+        case when r.status = 'PAID' then r.paid_reference end,
+        case when r.status = 'REJECTED' then r.reject_reason else r.reason end,
+        p.is_test, r.created_at, case when r.deal_id is not null then 'DEAL' end, r.deal_id
+      from refunds r left join payments p on p.id = r.original_payment_id
+      where r.customer_id = ${userId}
+      union all
+      select 'PAYOUT', w.id, 'OUT', w.amount, w.status, '#' || w.number::text, w.payout_type,
+        case when w.status = 'PAID' then w.paid_reference end,
+        case when w.status = 'REJECTED' then w.reject_reason else w.payout_masked end,
+        w.is_test, w.created_at, null, null::uuid
+      from withdrawal_requests w where w.user_id = ${userId}
+    )
+    select * from activity
+    where ${kind ? sql`kind = ${kind}` : sql`true`}
+      and ${activityId ? sql`id = ${activityId}` : sql`true`}
+      and ${search ? sql`(strpos(lower(ref), ${search}) > 0 or strpos(lower(coalesce(reference, '')), ${search}) > 0)` : sql`true`}
+    order by created_at desc, kind, id
+    limit ${pageSize + 1} offset ${(page - 1) * pageSize}
+  `);
+  return {
+    items: result.rows.slice(0, pageSize).map((r) => ({
+      kind: r.kind, id: r.id, direction: r.direction, amountPiastres: Number(r.amount), status: r.status,
+      ref: r.ref, method: r.method, reference: r.reference, note: r.note, isTest: r.is_test,
+      createdAt: new Date(r.created_at).toISOString(),
+      link: r.link_kind && r.link_id ? { kind: r.link_kind, id: r.link_id } : null,
+    })),
+    page, pageSize, hasMore: result.rows.length > pageSize,
+  };
+}
+
+/** Fetch fresh status directly by id, with the same owner filter as the list. */
+export async function walletActivityDetail(actor: Actor, id: string) {
+  const result = await walletActivity(actor, undefined, undefined, 1, 1, id);
+  if (!result.items[0]) throw notFound('العملية');
+  return result.items[0];
 }
 
 /* ───────── Payout requests (request only; owner decision §20) ───────── */
 
 const toDestination = (key: string): AccountDestination => (key === 'STORE_PAYOUT_METHOD' ? { kind: 'STORE_PAYOUT_METHOD' } : { kind: 'RECEIVING_DESTINATION', id: key });
 
-export async function accountPayoutRequests(actor: Actor) {
+export async function accountPayoutRequests(actor: Actor, id?: string) {
   const userId = requireUser(actor);
-  const rows = await accountWithdrawals(userId);
+  const rows = await accountWithdrawals(userId, id);
   return {
     items: rows.map(({ w, allocations }) => ({
       id: w.id,
@@ -202,7 +173,8 @@ export async function previewAccountPayout(actor: Actor, amountPiastres: number,
   return {
     amountPiastres: p.amount,
     availablePiastres: p.available,
-    fits: !!p.plan,
+    fits: !!p.plan && !p.violations.length,
+    transferCostPiastres: p.transferCost, netPiastres: p.net, violations: p.violations, warnings: p.warnings,
     destination: p.masked,
     sources: (p.plan ?? []).map((x) => ({ source: x.sourceType, amountPiastres: x.amount })),
   };
@@ -211,7 +183,7 @@ export async function previewAccountPayout(actor: Actor, amountPiastres: number,
 /** clientKey is the request's idempotency key: a retried submit returns the original request (created=false). */
 export async function requestAccountPayout(actor: Actor, amountPiastres: number, destinationKey: string, clientKey: string) {
   const r = await requestAccountWithdrawal(actor, { amount: amountPiastres, clientKey, destination: toDestination(destinationKey) });
-  const list = await accountPayoutRequests(actor);
+  const list = await accountPayoutRequests(actor, r.withdrawal.id);
   return { created: r.created, request: list.items.find((x) => x.id === r.withdrawal.id)! };
 }
 
@@ -250,16 +222,8 @@ export async function storeStatement(actor: Actor) {
   const sellerId = requireSeller(actor, 'finance.view');
   if (!sellerId) throw forbidden();
   const s = await sellerStatement(sellerId, 200);
-  let gross = 0;
-  let fees = 0;
-  let refunded = 0;
-  for (const r of s.rows) {
-    gross += r.grossSale;
-    fees += r.sellerFee;
-    refunded += r.refund;
-  }
   return {
-    totals: { grossSalesPiastres: gross, edmnFeesPiastres: fees, refundsPiastres: refunded, pendingPiastres: s.totals.pending, ledgerAvailablePiastres: s.totals.available, reservedPiastres: s.totals.reserved, debtPiastres: s.totals.liability },
+    totals: { grossSalesPiastres: s.totals.grossSales, edmnFeesPiastres: s.totals.sellerFees, refundsPiastres: s.totals.refunds, pendingPiastres: s.totals.pending, ledgerAvailablePiastres: s.totals.available, reservedPiastres: s.totals.reserved, debtPiastres: s.totals.liability },
     rows: s.rows.map((r) => ({
       id: r.entryId,
       date: r.date,

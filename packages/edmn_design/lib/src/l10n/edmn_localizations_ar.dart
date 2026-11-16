@@ -2405,4 +2405,17 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get noEarningsYet =>
       'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.';
+
+  @override
+  String get previousPage => 'الصفحة السابقة';
+
+  @override
+  String get downloadPdf => 'تنزيل ملف PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.';
+
+  @override
+  String get payoutNetAmount => 'صافي المبلغ المتوقع استلامه';
 }

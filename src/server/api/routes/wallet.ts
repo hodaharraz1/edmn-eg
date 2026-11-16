@@ -11,6 +11,7 @@ import {
   storePayoutAccount,
   storeStatement,
   walletActivity,
+  walletActivityDetail,
   walletView,
 } from '@/server/modules/mobile/wallet';
 import { defineRoute } from '../http';
@@ -54,34 +55,24 @@ const walletOut = z.object({
 export const getWallet = defineRoute({ ...base, id: 'getWallet', method: 'GET', path: '/api/v1/wallet', summary: 'My wallet: earnings by source and bucket, what can be requested now, and where', rate: 'read', errors, response: walletOut, handler: ({ actor }) => walletView(actor!) });
 
 const activityKind = z.enum(['PAYMENT', 'REFUND', 'PAYOUT']);
+const activityItem = z.object({
+  kind: activityKind, id: uuid, direction: z.enum(['OUT', 'IN']), amountPiastres: piastres, status: z.string(),
+  ref: z.string(), method: z.string().nullable(), reference: z.string().nullable(), note: z.string().nullable(),
+  isTest: z.boolean().nullable().meta({ description: 'null when a legacy refund has no original payment; never inferred from current money mode.' }),
+  createdAt: isoDateTime, link: z.object({ kind: z.enum(['ORDER', 'DEAL', 'PAYMENT']), id: uuid }).nullable(),
+});
 export const listWalletActivity = defineRoute({
-  ...base,
-  id: 'listWalletActivity',
-  method: 'GET',
-  path: '/api/v1/wallet/activity',
-  summary: 'My money activity: payments I made, refunds to me, my payout requests (newest first)',
-  rate: 'read',
-  errors,
-  query: z.object({ kind: activityKind.optional(), q: z.string().trim().max(40).optional() }),
-  response: z.object({
-    items: z.array(
-      z.object({
-        kind: activityKind,
-        id: uuid,
-        direction: z.enum(['OUT', 'IN']),
-        amountPiastres: piastres,
-        status: z.string(),
-        ref: z.string(),
-        method: z.string().nullable(),
-        reference: z.string().nullable(),
-        note: z.string().nullable(),
-        isTest: z.boolean(),
-        createdAt: isoDateTime,
-        link: z.object({ kind: z.enum(['ORDER', 'DEAL', 'PAYMENT']), id: uuid }).nullable(),
-      }),
-    ),
-  }),
-  handler: ({ actor, query }) => walletActivity(actor!, query.kind, query.q),
+  ...base, id: 'listWalletActivity', method: 'GET', path: '/api/v1/wallet/activity',
+  summary: 'My money activity: search all owned records, newest first, paginated', rate: 'read', errors,
+  query: z.object({ kind: activityKind.optional(), q: z.string().trim().max(40).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), pageSize: z.coerce.number().int().min(1).max(100).default(50) }),
+  response: z.object({ items: z.array(activityItem), page: z.number().int(), pageSize: z.number().int(), hasMore: z.boolean() }),
+  handler: ({ actor, query }) => walletActivity(actor!, query.kind, query.q, query.page, query.pageSize),
+});
+export const getWalletActivity = defineRoute({
+  ...base, id: 'getWalletActivity', method: 'GET', path: '/api/v1/wallet/activity/{activityId}',
+  summary: 'Fresh details of one of my money activities', rate: 'read', errors,
+  params: z.object({ activityId: uuid }), response: activityItem,
+  handler: ({ actor, params }) => walletActivityDetail(actor!, params.activityId),
 });
 
 const requestOut = z.object({
@@ -108,9 +99,9 @@ export const previewAccountPayoutRequest = defineRoute({
   path: '/api/v1/wallet/payout-requests/preview',
   summary: 'Read-only: would this amount fit, and from which sources (moves nothing)',
   rate: 'read',
-  errors,
+  errors: [...errors, 'validation_failed' as const],
   body: z.object({ amountPiastres: z.number().int().positive(), destination: z.string().min(1).max(60) }),
-  response: z.object({ amountPiastres: piastres, availablePiastres: piastres, fits: z.boolean(), destination: z.string(), sources: z.array(z.object({ source: z.enum(['MARKETPLACE', 'PROTECTED_DEAL']), amountPiastres: piastres })) }),
+  response: z.object({ amountPiastres: piastres, availablePiastres: piastres, fits: z.boolean(), transferCostPiastres: piastres, netPiastres: z.number().int(), violations: z.array(z.string()), warnings: z.array(z.string()), destination: z.string(), sources: z.array(z.object({ source: z.enum(['MARKETPLACE', 'PROTECTED_DEAL']), amountPiastres: piastres })) }),
   handler: ({ actor, body }) => previewAccountPayout(actor!, body.amountPiastres, body.destination),
 });
 
@@ -122,7 +113,7 @@ export const createAccountPayoutRequest = defineRoute({
   summary: 'Request a payout of available earnings to a verified account (request only — nothing moves until EDMN approves)',
   description: 'clientKey is the idempotency key: a retried submit returns the original request with created=false.',
   rate: 'sensitive',
-  errors: [...errors, 'validation_failed' as const],
+  errors: [...errors, 'validation_failed' as const, 'conflict' as const],
   body: z.object({ amountPiastres: z.number().int().positive(), destination: z.string().min(1).max(60), clientKey: z.string().regex(/^[A-Za-z0-9_-]{16,100}$/) }),
   response: z.object({ created: z.boolean(), request: requestOut }),
   handler: ({ actor, body }) => requestAccountPayout(actor!, body.amountPiastres, body.destination, body.clientKey),
@@ -221,6 +212,6 @@ export const getStorePayoutAccount = defineRoute({
 });
 
 export const walletRoutes = [
-  getWallet, listWalletActivity, listAccountPayoutRequests, previewAccountPayoutRequest, createAccountPayoutRequest, cancelAccountPayoutRequest,
+  getWallet, listWalletActivity, getWalletActivity, listAccountPayoutRequests, previewAccountPayoutRequest, createAccountPayoutRequest, cancelAccountPayoutRequest,
   listReceivingAccounts, addReceivingAccountRoute, archiveReceivingAccount, getStoreStatement, getStorePayoutAccount,
 ];

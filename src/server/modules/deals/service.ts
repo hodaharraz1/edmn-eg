@@ -589,7 +589,7 @@ async function finalizeTerms(tx: DbOrTx, actor: Actor, deal: Deal, v: typeof dea
 export const changeRequestSchema = z.object({ message: z.string().trim().min(3, 'اكتب التعديل المطلوب').max(1000) });
 
 /** Buyer reviews the seller's offer: accept it, request a change (return policy), or reject the deal. */
-export async function respondToOffer(actor: Actor, dealId: string, version: number, decision: 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT', change?: { returnPolicy: unknown; message: string }) {
+export async function respondToOffer(actor: Actor, dealId: string, version: number, decision: 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT', change?: { returnPolicy?: unknown; message: string }) {
   const userId = requireUser(actor);
   if (decision === 'ACCEPT') {
     const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
@@ -615,7 +615,8 @@ export async function respondToOffer(actor: Actor, dealId: string, version: numb
       if (deal.sellerUserId) await notify(tx, { event: 'EXTERNAL_DEAL_OFFER_REJECTED', userIds: [deal.sellerUserId], vars: { deal: dealRef(deal.number), reason: 'رفض المشتري العرض' }, link: `/account/deals/${deal.id}` });
       return { status: 'CANCELLED' };
     }
-    const policy = parse(returnPolicySchema, change?.returnPolicy);
+    // A text-only change must preserve the offered policy, not silently waive voluntary returns.
+    const policy = parse(returnPolicySchema, change?.returnPolicy ?? (v.terms as unknown as Terms).returnPolicy);
     const { message } = parse(changeRequestSchema, { message: change?.message ?? '' });
     const t = v.terms as unknown as Terms;
     const proposed: Terms = { ...t, returnPolicy: { ...policy, legalNoticeVersion: t.returnPolicy.legalNoticeVersion } };

@@ -477,7 +477,7 @@ class _DealScreenState extends ConsumerState<DealScreen> {
                 btn('change', t.requestChange, () async {
                   final msg = await _ask(context, t.requestChange, t.changeMessageHint);
                   if (msg == null) return;
-                  await _act('change', (k) => api.respondDealOffer(d.id, d.terms.currentVersion!, 'REQUEST_CHANGE', change: {'message': msg, 'returnPolicy': {'type': 'NONE'}}, idempotencyKey: k));
+                  await _act('change', (k) => api.respondDealOffer(d.id, d.terms.currentVersion!, 'REQUEST_CHANGE', change: {'message': msg}, idempotencyKey: k));
                 }, primary: false),
                 btn('reject', t.rejectOffer, () => _act('reject', (k) => api.respondDealOffer(d.id, d.terms.currentVersion!, 'REJECT', idempotencyKey: k), confirm: (t.rejectOffer, t.rejectOfferConfirm)), danger: true),
               ],

@@ -4615,6 +4615,30 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'لسه مفيش مستحقات ليك. لما تبيع في متجرك أو كبائع في صفقة محمية، مستحقاتك هتظهر هنا.'**
   String get noEarningsYet;
+
+  /// No description provided for @previousPage.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفحة السابقة'**
+  String get previousPage;
+
+  /// No description provided for @downloadPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنزيل ملف PDF'**
+  String get downloadPdf;
+
+  /// No description provided for @activityMoneyModeUnknown.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.'**
+  String get activityMoneyModeUnknown;
+
+  /// No description provided for @payoutNetAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'صافي المبلغ المتوقع استلامه'**
+  String get payoutNetAmount;
 }
 
 class _EdmnLocalizationsDelegate

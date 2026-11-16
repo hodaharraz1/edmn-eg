@@ -11,7 +11,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "claude/edmn-mobile-integration": false
+      "claude/edmn-mobile-integration": false,
+      "codex/mobile-audit-fixes": false
     }
   }
 }

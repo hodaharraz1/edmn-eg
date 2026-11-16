@@ -821,5 +821,9 @@
       }
     }
   },
-  "noEarningsYet": "No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here."
+  "noEarningsYet": "No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here.",
+  "previousPage": "Previous page",
+  "downloadPdf": "Download PDF",
+  "activityMoneyModeUnknown": "The money mode for this legacy activity is unavailable. Contact support to confirm.",
+  "payoutNetAmount": "Expected amount to receive"
 }

@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { withdrawalMachine } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireSeller, requireStepUp, SYSTEM_ACTOR, type Actor, requireAnyPermission } from '@/server/core/actor';
-import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
+import { DomainError, conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
 import { ledgerAdjustments, receivingDestinations, sellerPayoutMethods, sellers, settlements, withdrawalAllocations, withdrawalRequests, users, dealPayouts, externalDeals } from '@/server/db/schema';
@@ -177,25 +177,19 @@ export async function requestAccountWithdrawal(actor: Actor, input: { amount: st
   }
   if (!input.clientKey || input.clientKey.length < 8) throw validation('طلب غير صالح');
   return db.transaction(async (tx) => {
-    const [dupe] = await tx.select().from(withdrawalRequests).where(and(eq(withdrawalRequests.userId, userId), eq(withdrawalRequests.clientKey, input.clientKey)));
-    if (dupe) return { withdrawal: dupe, created: false };
-    const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
-    await requireApprovedIdentity(tx, actor, 'WITHDRAWAL_REQUEST', userId);
+    // Serialize retries before checking the key, including concurrent lost-response retries.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'account:' + userId}))`);
-    const closing = await tx.execute(sql`select 1 from account_closure_requests where user_id = ${userId} and status = 'PENDING' limit 1`);
-    if (closing.rows.length) throw invalidState('فيه طلب إغلاق حساب قيد التنفيذ');
-    const min = await getSetting('withdrawals.minimumAmount', tx);
-    if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
-    await assertNoLiability(tx, userId);
-    const { assertClaimsCoveredByAvailable } = await import('./holds');
-    await assertClaimsCoveredByAvailable(tx, userId, false); // friendly; re-checked under locks at approval/execution
-    const dest = await resolveAccountDestination(tx, userId, input.destination);
-    const { candidates } = await sourceCandidates(tx, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
-    const plan = planAllocation(candidates, amount);
-    // Early, friendly check only — the authoritative allocation runs at approval under locks.
+    const [dupe] = await tx.select().from(withdrawalRequests).where(and(eq(withdrawalRequests.userId, userId), eq(withdrawalRequests.clientKey, input.clientKey)));
+    if (dupe) {
+      const sameDestination = input.destination.kind === 'STORE_PAYOUT_METHOD'
+        ? !!dupe.payoutMethodId && !dupe.receivingDestinationId
+        : dupe.receivingDestinationId === input.destination.id;
+      if (dupe.amount !== amount || !sameDestination) throw conflict('مفتاح الطلب مستخدم لمبلغ أو وجهة مختلفة. راجع الطلب السابق أولاً');
+      return { withdrawal: dupe, created: false };
+    }
+    const { dest, plan, quote } = await accountRequestPreview(tx, actor, amount, input.destination);
     if (!plan) throw new DomainError('INSUFFICIENT_BALANCE', 'المبلغ أكبر من رصيدك المتاح للسحب لهذه الوجهة');
-    const quote = await quoteTransfer(tx, { payoutType: dest.type, amount, sellerId: dest.sellerId ?? '', payoutMethodId: dest.recipientKey });
-    const hard = quote.violations.filter((v) => v.startsWith('الحد الأقصى للعملية') || v.startsWith('مبلغ السحب أقل'));
+    const hard = requestViolations(quote);
     if (hard.length) throw validation(hard.join('، '));
     const kinds = new Set(plan.map((x) => x.sourceType));
     const slaHours = await getSetting('withdrawals.slaBusinessHours', tx);
@@ -227,15 +221,36 @@ export async function requestAccountWithdrawal(actor: Actor, input: { amount: st
   });
 }
 
-/** Read-only preview of the source split an account-level withdrawal would use now (allocation policy). */
-export async function previewAccountWithdrawal(actor: Actor, amountInput: string | number, destination: AccountDestination) {
+/** The same read-only eligibility checks serve preview and creation. Approval still revalidates under funds locks. */
+async function accountRequestPreview(conn: DbOrTx, actor: Actor, amount: number, destination: AccountDestination) {
   const userId = actor.userId;
-  if (!userId) throw forbidden();
+  if (!userId || actor.type !== 'CUSTOMER') throw forbidden();
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw validation('المبلغ غير صحيح');
+  const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
+  await requireApprovedIdentity(conn, actor, 'WITHDRAWAL_REQUEST', userId);
+  const closing = await conn.execute(sql`select 1 from account_closure_requests where user_id = ${userId} and status = 'PENDING' limit 1`);
+  if (closing.rows.length) throw invalidState('فيه طلب إغلاق حساب قيد التنفيذ');
+  const min = await getSetting('withdrawals.minimumAmount', conn);
+  if (amount < min) throw validation(`الحد الأدنى للسحب ${formatEGP(min)}`);
+  await assertNoLiability(conn, userId);
+  const { assertClaimsCoveredByAvailable } = await import('./holds');
+  await assertClaimsCoveredByAvailable(conn, userId, false);
+  const dest = await resolveAccountDestination(conn, userId, destination);
+  const { candidates } = await sourceCandidates(conn, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
+  const quote = await quoteTransfer(conn, { payoutType: dest.type, amount, sellerId: dest.sellerId ?? '', payoutMethodId: dest.recipientKey });
+  return { dest, plan: planAllocation(candidates, amount), available: candidates.reduce((n, c) => n + c.available, 0), quote };
+}
+
+// Keep the existing request policy: rolling channel limits are rechecked at approval; per-transfer limits block now.
+const requestViolations = (q: TransferQuote) => q.violations.filter((v) => v.startsWith('الحد الأقصى للعملية') || v.startsWith('مبلغ السحب أقل'));
+
+/** Read-only preview, including request eligibility, fees and the expected net transfer. */
+export async function previewAccountWithdrawal(actor: Actor, amountInput: string | number, destination: AccountDestination) {
   const amount = typeof amountInput === 'number' ? amountInput : parseEgp(amountInput);
-  const dest = await resolveAccountDestination(db, userId, destination);
-  const { candidates } = await sourceCandidates(db, { userId, sellerId: dest.sellerId, scope: dest.scope, lock: false });
-  const total = candidates.reduce((n, c) => n + c.available, 0);
-  return { amount, available: total, plan: planAllocation(candidates, amount), masked: dest.masked };
+  const p = await accountRequestPreview(db, actor, amount, destination);
+  return { amount, available: p.available, plan: p.plan, masked: p.dest.masked,
+    transferCost: p.quote.payer === 'SELLER_PAYS' ? p.quote.cost : 0, net: p.quote.net,
+    violations: requestViolations(p.quote), warnings: [...p.quote.warnings, ...p.quote.violations.filter((v) => !requestViolations(p.quote).includes(v))] };
 }
 
 /**
@@ -894,8 +909,8 @@ export async function withdrawalQueue(actor: Actor, statuses: string[], limit = 
 }
 
 /** A beneficiary's own withdrawals (account-level and store requests they own), with their source allocations. */
-export async function accountWithdrawals(userId: string) {
-  const rows = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.userId, userId)).orderBy(desc(withdrawalRequests.createdAt)).limit(50);
+export async function accountWithdrawals(userId: string, id?: string) {
+  const rows = await db.select().from(withdrawalRequests).where(and(eq(withdrawalRequests.userId, userId), id ? eq(withdrawalRequests.id, id) : undefined)).orderBy(desc(withdrawalRequests.createdAt)).limit(50);
   const allocs = rows.length ? await db.select().from(withdrawalAllocations).where(inArray(withdrawalAllocations.withdrawalId, rows.map((r) => r.id))) : [];
   return rows.map((w) => ({ w, allocations: allocs.filter((a) => a.withdrawalId === w.id).sort((x, y) => x.seq - y.seq) }));
 }

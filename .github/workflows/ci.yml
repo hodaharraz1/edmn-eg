@@ -41,3 +41,23 @@ jobs:
       - run: npx vitest run
       - name: Secret leak scan (tree + history, prints locations only)
         run: npx tsx scripts/secret-scan.ts && npx tsx scripts/secret-scan.ts --history
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [packages/edmn_core, packages/edmn_api, packages/edmn_design, apps/customer_mobile, apps/admin_mobile]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

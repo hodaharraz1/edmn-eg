@@ -24,3 +24,15 @@ class PlatformFilePicker implements FilePickerService {
 }
 
 final filePickerProvider = Provider<FilePickerService>((ref) => PlatformFilePicker());
+
+/// Saving a private attachment is an explicit user action; it is never written to disk while merely viewing chat.
+abstract class FileSaverService {
+  Future<void> save(String name, Uint8List bytes);
+}
+class PlatformFileSaver implements FileSaverService {
+  @override
+  Future<void> save(String name, Uint8List bytes) async {
+    await FilePicker.saveFile(fileName: name, bytes: bytes, mimeType: 'application/pdf');
+  }
+}
+final fileSaverProvider = Provider<FileSaverService>((ref) => PlatformFileSaver());

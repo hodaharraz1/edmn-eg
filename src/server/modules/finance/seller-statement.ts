@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { db } from '@/server/db/client';
+import { db, type DbOrTx } from '@/server/db/client';
 
 /**
  * Seller financial statement built from the immutable ledger (every row = one journal entry touching
@@ -47,8 +47,8 @@ const REFERENCE_FALLBACK: Record<string, string> = {
   seller_order: 'طلب',
 };
 
-export async function sellerStatement(sellerId: string, limit = 300): Promise<{ rows: StatementRow[]; totals: { pending: number; available: number; reserved: number; liability: number } }> {
-  const r = await db.execute<{
+export async function sellerStatement(sellerId: string, limit = 300, conn: Pick<DbOrTx, 'execute'> = db): Promise<{ rows: StatementRow[]; totals: { pending: number; available: number; reserved: number; liability: number; grossSales: number; sellerFees: number; refunds: number } }> {
+  const r = await conn.execute<{
     entry_id: string; created_at: string; entry_type: string; source_type: string; source_id: string; description: string;
     pending: string; available: string; reserved: string;
     so_ref: string | null; so_merch: string | null; so_ship: string | null; so_seller_fee: string | null; so_buyer_fee: string | null; so_commission: string | null; so_source: string | null;
@@ -108,5 +108,9 @@ export async function sellerStatement(sellerId: string, limit = 300): Promise<{ 
       reserved,
     };
   });
-  return { rows: rows.reverse().slice(0, limit), totals: { pending, available, reserved, liability: available < 0 ? -available : 0 } };
+  // Aggregate the full history before limiting display rows.
+  const grossSales = rows.reduce((n, r) => n + r.grossSale, 0);
+  const sellerFees = rows.reduce((n, r) => n + r.sellerFee, 0);
+  const refunds = rows.reduce((n, r) => n + r.refund, 0);
+  return { rows: rows.reverse().slice(0, limit), totals: { pending, available, reserved, liability: available < 0 ? -available : 0, grossSales, sellerFees, refunds } };
 }

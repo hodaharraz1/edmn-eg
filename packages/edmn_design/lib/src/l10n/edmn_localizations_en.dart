@@ -2434,4 +2434,17 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get noEarningsYet =>
       'No earnings yet. When you sell in your store or as the seller in a Protected Deal, your earnings appear here.';
+
+  @override
+  String get previousPage => 'Previous page';
+
+  @override
+  String get downloadPdf => 'Download PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'The money mode for this legacy activity is unavailable. Contact support to confirm.';
+
+  @override
+  String get payoutNetAmount => 'Expected amount to receive';
 }

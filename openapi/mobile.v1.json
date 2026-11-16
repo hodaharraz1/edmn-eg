@@ -3294,8 +3294,9 @@
             }
           },
           "409": {
-            "description": "Problem: invalid_state",
+            "description": "Problem: conflict, invalid_state",
             "x-error-codes": [
+              "conflict",
               "invalid_state"
             ],
             "content": {
@@ -7209,7 +7210,6 @@
                       }
                     },
                     "required": [
-                      "returnPolicy",
                       "message"
                     ]
                   }
@@ -14684,8 +14684,9 @@
             }
           },
           "409": {
-            "description": "Problem: invalid_state",
+            "description": "Problem: conflict, invalid_state",
             "x-error-codes": [
+              "conflict",
               "invalid_state"
             ],
             "content": {
@@ -23365,7 +23366,7 @@
     "/api/v1/wallet/activity": {
       "get": {
         "operationId": "listWalletActivity",
-        "summary": "My money activity: payments I made, refunds to me, my payout requests (newest first)",
+        "summary": "My money activity: search all owned records, newest first, paginated",
         "tags": [
           "Wallet"
         ],
@@ -23395,6 +23396,28 @@
             "schema": {
               "type": "string",
               "maxLength": 40
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
             }
           }
         ],
@@ -23462,7 +23485,11 @@
                             ]
                           },
                           "isTest": {
-                            "type": "boolean"
+                            "description": "null when a legacy refund has no original payment; never inferred from current money mode.",
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
                           },
                           "createdAt": {
                             "type": "string",
@@ -23513,10 +23540,284 @@
                           "link"
                         ]
                       }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "hasMore": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
-                    "items"
+                    "items",
+                    "page",
+                    "pageSize",
+                    "hasMore"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/wallet/activity/{activityId}": {
+      "get": {
+        "operationId": "getWalletActivity",
+        "summary": "Fresh details of one of my money activities",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "activityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "PAYMENT",
+                        "REFUND",
+                        "PAYOUT"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "OUT",
+                        "IN"
+                      ]
+                    },
+                    "amountPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "ref": {
+                      "type": "string"
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reference": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "isTest": {
+                      "description": "null when a legacy refund has no original payment; never inferred from current money mode.",
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "link": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "ORDER",
+                                "DEAL",
+                                "PAYMENT"
+                              ]
+                            },
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "id"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "direction",
+                    "amountPiastres",
+                    "status",
+                    "ref",
+                    "method",
+                    "reference",
+                    "note",
+                    "isTest",
+                    "createdAt",
+                    "link"
                   ]
                 }
               }
@@ -24093,8 +24394,9 @@
             }
           },
           "409": {
-            "description": "Problem: invalid_state",
+            "description": "Problem: conflict, invalid_state",
             "x-error-codes": [
+              "conflict",
               "invalid_state"
             ],
             "content": {
@@ -24519,6 +24821,29 @@
                     "fits": {
                       "type": "boolean"
                     },
+                    "transferCostPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "netPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "violations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "destination": {
                       "type": "string"
                     },
@@ -24552,6 +24877,10 @@
                     "amountPiastres",
                     "availablePiastres",
                     "fits",
+                    "transferCostPiastres",
+                    "netPiastres",
+                    "violations",
+                    "warnings",
                     "destination",
                     "sources"
                   ]

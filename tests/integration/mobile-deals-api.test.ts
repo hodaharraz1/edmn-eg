@@ -103,7 +103,7 @@ describe('Flow C — Protected Deal between two app users', () => {
         location: { governorateId: 2, city: 'الجيزة', street: 'شارع الهرم' },
         payout: { type: 'INSTAPAY', holderName: 'بائع الصفقة', instapayAddress: `d${key().slice(0, 6)}@instapay` },
         offer: { shippingFee: '0', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1, defects: 'لا يوجد', accessories: 'الشاحن الأصلي' },
-        returnPolicy: { type: 'NONE' },
+        returnPolicy: { type: 'VOLUNTARY', windowDays: 14 },
         acceptTerms: true,
       },
     });
@@ -119,12 +119,25 @@ describe('Flow C — Protected Deal between two app users', () => {
     expect(bv.body.money).toMatchObject({ basis: 'OFFER', buyerPaysPiastres: offered.buyerPays, sellerReceivesPiastres: offered.sellerReceives, buyerFeePiastres: offered.buyerFee, goodsTotalPiastres: offered.goodsTotal });
     expect(bv.body.money.totalPiastres + bv.body.money.buyerFeePiastres).toBe(bv.body.money.buyerPaysPiastres);
 
+    // A text-only mobile change preserves the offered return policy.
+    const textChange = await call(offerRespRoute, `/deals/${id}/offer-response`, {
+      token: bt, idem: key(), params: p,
+      body: { version: v1, decision: 'REQUEST_CHANGE', change: { message: 'محتاج تغيير موعد التسليم' } },
+    });
+    expect(textChange.status, JSON.stringify(textChange.body)).toBe(200);
+    expect(textChange.body.terms.history.at(-1).terms.returnPolicy).toMatchObject({ type: 'VOLUNTARY', windowDays: 14 });
+    // Reject this change to re-propose the original seller offer, then exercise an explicit policy change.
+    const rejectedChange = await call(changeRespRoute, `/deals/${id}/change-response`, {
+      token: st, idem: key(), params: p, body: { version: textChange.body.terms.currentVersion, decision: 'REJECT' },
+    });
+    expect(rejectedChange.status, JSON.stringify(rejectedChange.body)).toBe(200);
+    const currentVersion = rejectedChange.body.terms.currentVersion;
     // Buyer requests a change → seller must re-approve material terms.
     const change = await call(offerRespRoute, `/deals/${id}/offer-response`, {
       token: bt,
       idem: key(),
       params: p,
-      body: { version: v1, decision: 'REQUEST_CHANGE', change: { returnPolicy: { type: 'VOLUNTARY', windowDays: 7 }, message: 'محتاج مدة إرجاع أسبوع' } },
+      body: { version: currentVersion, decision: 'REQUEST_CHANGE', change: { returnPolicy: { type: 'VOLUNTARY', windowDays: 7 }, message: 'محتاج مدة إرجاع أسبوع' } },
     });
     expect(change.status, JSON.stringify(change.body)).toBe(200);
     expect(change.body.status).toBe('CHANGE_REQUESTED');

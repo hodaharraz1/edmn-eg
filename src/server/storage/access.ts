@@ -93,7 +93,7 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
       return one(sql`select 1 from refunds r where r.paid_proof_file_id = ${f.id} and r.customer_id = ${uid}`);
     case 'SUPPORT_ATTACHMENT':
       if (hasPermission(actor, 'support.manage')) return true;
-      return one(sql`select 1 from support_messages m join support_tickets t on t.id = m.ticket_id where m.attachment_file_id = ${f.id} and t.requester_user_id = ${uid}`);
+      return one(sql`select 1 from support_messages m join support_tickets t on t.id = m.ticket_id where m.attachment_file_id = ${f.id} and not m.is_internal and t.requester_user_id = ${uid}`);
     case 'MESSAGE_ATTACHMENT': {
       // Staff with message access (each view audited below); otherwise only a participant of the very
       // conversation the file was sent in, and never once staff have hidden that message.

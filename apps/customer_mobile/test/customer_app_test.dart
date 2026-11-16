@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_customer/src/app.dart';
+import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
 import 'package:edmn_customer/src/common/ui.dart';
 import 'package:edmn_customer/src/providers.dart';
@@ -135,7 +136,7 @@ class FakeMobileApi extends MobileApi {
     });
   }
   @override
-  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson({'items': <Map<String, dynamic>>[]});
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q, int page = 1}) async => ListWalletActivityResponse.fromJson({'items': <Map<String, dynamic>>[], 'page': page, 'pageSize': 50, 'hasMore': false});
   @override
   Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async => ListAccountPayoutRequestsResponse.fromJson({
         'items': [
@@ -147,6 +148,7 @@ class FakeMobileApi extends MobileApi {
   Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson({
         'amountPiastres': amountPiastres, 'availablePiastres': 125000, 'fits': amountPiastres <= 125000, 'destination': 'إنستاباي ••••ab',
         'sources': [{'source': 'MARKETPLACE', 'amountPiastres': amountPiastres}],
+        'transferCostPiastres': 100, 'netPiastres': amountPiastres - 100, 'violations': <String>[], 'warnings': <String>[],
       });
   @override
   Future<CreateAccountPayoutRequestResponse> requestAccountPayout(int amountPiastres, String destination, String clientKey) async {
@@ -159,11 +161,26 @@ class FakeMobileApi extends MobileApi {
     });
   }
 
+  final activityDetailCalls = <String>[];
+  @override
+  Future<GetWalletActivityResponse> walletActivityDetail(String id) async {
+    activityDetailCalls.add(id);
+    return GetWalletActivityResponse.fromJson({'kind': 'PAYOUT', 'id': id, 'direction': 'OUT', 'amountPiastres': 20000,
+      'status': 'TRANSFER_UNCERTAIN', 'ref': '#7001', 'method': null, 'reference': null, 'note': null, 'isTest': true,
+      'createdAt': '2030-01-01T10:00:00Z', 'link': null});
+  }
+  @override
+  Future<Uint8List> file(String fileId) async => Uint8List.fromList([37, 80, 68, 70]);
+
   // Messaging / support
   bool convCanWrite = true;
   int sendFailures = 0;
   final sendKeys = <String>[];
   final seenUpTo = <String?>[];
+  int messageCount = 2;
+  bool pdfMessage = false;
+  final sentBodies = <String>[];
+  Map<String, dynamic>? lastChange;
   List<String> ticketActions = const ['REPLY'];
   final ticketRatings = <int>[];
 
@@ -176,11 +193,12 @@ class FakeMobileApi extends MobileApi {
         'id': id, 'context': 'SELLER_ORDER', 'side': 'BUYER', 'ref': 'طلب #100001-A', 'title': 'سماعة لاسلكية', 'status': 'PAID', 'otherParty': 'متجر القاهرة',
         'link': {'kind': 'ORDER', 'id': '11111111-1111-4111-8111-111111111111'}, 'canWrite': convCanWrite,
         'readOnlyReason': convCanWrite ? null : 'الطلب ده خلص من فترة، والمحادثة بقت للقراءة بس.',
-        'messages': [_msg('m1', mine: true), _msg('m2')],
+        'messages': [for (var i = 1; i <= messageCount; i++) {..._msg('m$i', mine: i == 1), if (pdfMessage && i == messageCount) 'attachments': [{'fileId': 'pdf1', 'mimeType': 'application/pdf'}]}],
       });
   @override
   Future<SendMessageResponse> sendMessage(String id, String body, String clientKey, {List<(Uint8List, String)> attachments = const [], bool store = false}) async {
     sendKeys.add(clientKey);
+    sentBodies.add(body);
     if (sendFailures-- > 0) throw const ApiFailure(code: ApiErrorCode.rateLimited, status: 429);
     return SendMessageResponse.fromJson({'id': 'm3', 'createdAt': '2030-01-01T10:01:00Z'});
   }
@@ -231,6 +249,7 @@ class FakeMobileApi extends MobileApi {
   Future<ProtectedDeal> deal(String id) async => ProtectedDeal.fromJson(dealJson);
   @override
   Future<ProtectedDeal> respondDealOffer(String id, int version, String decision, {Map<String, dynamic>? change, required String idempotencyKey}) async {
+    lastChange = change;
     dealDecisions.add((decision, idempotencyKey));
     dealJson = _deal(status: 'ACCEPTED', actions: const ['START_PAYMENT', 'CANCEL']);
     return ProtectedDeal.fromJson(dealJson);
@@ -433,12 +452,20 @@ class _FakePicker implements FilePickerService {
   Future<PickedFile?> pick({bool allowPdf = true}) async => PickedFile(name: 'receipt.png', bytes: Uint8List.fromList([1, 2, 3]));
 }
 
+class _FakeSaver implements FileSaverService {
+  final names = <String>[];
+  @override
+  Future<void> save(String name, Uint8List bytes) async { names.add(name); }
+}
+final _saver = _FakeSaver();
+
 Widget _app(FakeMobileApi api, {bool signedIn = false}) => ProviderScope(overrides: [
       buildConfigProvider.overrideWithValue(_config),
       sessionStoreProvider.overrideWithValue(MemorySessionStore()),
       appPrefsProvider.overrideWithValue(MemoryAppPrefs({'onboarded': '1'})),
       mobileApiProvider.overrideWithValue(api),
       filePickerProvider.overrideWithValue(_FakePicker()),
+      fileSaverProvider.overrideWithValue(_saver),
       if (signedIn) signedInProvider.overrideWith(_AlwaysSignedIn.new),
     ], child: const CustomerApp());
 
@@ -666,6 +693,19 @@ void main() {
     expect(find.byKey(const Key('new-payout')), findsOneWidget);
   });
 
+  testWidgets('a text-only deal change never silently sends a no-return policy', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals/d1');
+    await _reveal(t, find.byKey(const Key('deal-change')));
+    await t.tap(find.byKey(const Key('deal-change')));
+    await t.pumpAndSettle();
+    await t.enterText(find.descendant(of: find.byKey(const Key('ask-text')), matching: find.byType(EditableText)), 'محتاج تغيير موعد التسليم');
+    await t.tap(find.byKey(const Key('ask-ok')));
+    await t.pumpAndSettle();
+    expect(api.lastChange, {'message': 'محتاج تغيير موعد التسليم'});
+  });
+
   testWidgets('protected deal: buyer sees server money and accepts the offer only after confirming; no release/refund button exists', (t) async {
     final api = FakeMobileApi();
     await _start(t, api, signedIn: true);
@@ -789,6 +829,50 @@ void main() {
     expect(api.ticketRatings, [4]);
     expect(find.byKey(const Key('rate-ticket')), findsNothing);
     expect(find.byKey(const Key('reopen-ticket')), findsOneWidget);
+  });
+
+  testWidgets('chat does not mark new messages read under another route or outside the viewport', (t) async {
+    final api = FakeMobileApi()..messageCount = 60;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(api.seenUpTo.last, 'm60');
+    final list = find.descendant(of: find.byType(ConversationScreen), matching: find.byType(ListView));
+    await t.drag(list, const Offset(0, 1000));
+    await t.pumpAndSettle();
+    api.messageCount = 61;
+    await t.pump(const Duration(seconds: 11));
+    await t.pumpAndSettle();
+    expect(api.seenUpTo, isNot(contains('m61')));
+    // Cover the conversation without disposing it.
+    final context = t.element(find.byKey(const Key('conv-context')));
+    GoRouter.of(context).push('/orders/11111111-1111-4111-8111-111111111111');
+    await t.pumpAndSettle();
+    final before = api.seenUpTo.length;
+    api.messageCount = 62;
+    await t.pump(const Duration(seconds: 11));
+    await t.pumpAndSettle();
+    expect(api.seenUpTo.length, before);
+    await _go(t, '/');
+  });
+
+  testWidgets('PDF attachments download through the private file API on user action', (t) async {
+    _saver.names.clear();
+    final api = FakeMobileApi()..pdfMessage = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(_saver.names, isEmpty);
+    await t.tap(find.byKey(const Key('download-pdf1')));
+    await t.pumpAndSettle();
+    expect(_saver.names, ['pdf1.pdf']);
+    await _go(t, '/');
+  });
+
+  testWidgets('activity details load fresh from the route id without an in-memory row', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/activity/r1');
+    expect(api.activityDetailCalls, ['r1']);
+    expect(find.textContaining('جاري التحقق'), findsWidgets);
   });
 
   testWidgets('wallet: server balances, held money is not shown as available, TEST notice in the wallet, no top-up flow', (t) async {
