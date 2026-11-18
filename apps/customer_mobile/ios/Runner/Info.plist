@@ -26,6 +26,15 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Only local-network hosts (LAN IPs, .local) may use plain HTTP, for the local dev server. All
+		     public hosts still require HTTPS, and staging/production builds refuse a non-HTTPS API URL. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>يحتاج التطبيق للوصول للشبكة المحلية للاتصال بخادم الاختبار.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
