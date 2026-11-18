@@ -754,6 +754,7 @@ void main() {
     await t.pumpAndSettle();
     expect(api.resetCalls.single.$1, 'abcdefghijklmnopqrstuvwxyz012345');
     expect(find.byKey(const Key('reset-error')), findsOneWidget);
+    expect(find.textContaining('انتهت صلاحيته'), findsOneWidget);
     expect(find.byKey(const Key('reset-new-link')), findsOneWidget);
   });
 

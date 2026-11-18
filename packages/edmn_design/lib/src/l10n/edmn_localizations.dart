@@ -5449,6 +5449,12 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'غير مقروءة ({n})'**
   String unreadCount(int n);
+
+  /// No description provided for @resetLinkExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.'**
+  String get resetLinkExpired;
 }
 
 class _EdmnLocalizationsDelegate

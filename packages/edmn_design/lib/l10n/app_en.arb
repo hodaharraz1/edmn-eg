@@ -1025,5 +1025,6 @@
         "type": "int"
       }
     }
-  }
+  },
+  "resetLinkExpired": "This link has expired, was already used, or a newer link was requested. Request a new link."
 }

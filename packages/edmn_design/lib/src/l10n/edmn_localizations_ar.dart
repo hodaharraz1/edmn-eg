@@ -2854,4 +2854,8 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String unreadCount(int n) {
     return 'غير مقروءة ($n)';
   }
+
+  @override
+  String get resetLinkExpired =>
+      'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.';
 }

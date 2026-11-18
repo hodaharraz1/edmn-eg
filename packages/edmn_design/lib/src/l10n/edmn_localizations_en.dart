@@ -2885,4 +2885,8 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String unreadCount(int n) {
     return 'Unread ($n)';
   }
+
+  @override
+  String get resetLinkExpired =>
+      'This link has expired, was already used, or a newer link was requested. Request a new link.';
 }

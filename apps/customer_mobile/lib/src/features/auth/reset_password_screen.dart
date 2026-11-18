@@ -1,3 +1,4 @@
+import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +54,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     });
     if (token == null) return setState(() => _problem = t.resetLinkInvalid);
     if (_password.text.length < 8) return setState(() => _problem = t.passwordTooShort);
+    // Same rule as the server (letters and digits), so a server refusal below can only mean the link.
+    if (!RegExp(r'[A-Za-z\u0600-\u06FF]').hasMatch(_password.text) || !RegExp(r'\d').hasMatch(_password.text)) return setState(() => _problem = t.passwordRules);
     if (_password.text != _confirm.text) return setState(() => _problem = t.passwordsDoNotMatch);
     setState(() => _busy = true);
     try {
@@ -94,7 +97,12 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               const SizedBox(height: EdmnSpacing.md),
               if (_problem != null) ...[EdmnNotice(key: const Key('reset-problem'), message: _problem!, tone: EdmnTone.danger), const SizedBox(height: EdmnSpacing.sm)],
               if (_error != null) ...[
-                EdmnNotice(key: const Key('reset-error'), message: apiErrorMessage(context, _error!), tone: EdmnTone.danger),
+                EdmnNotice(
+                  key: const Key('reset-error'),
+                  // The password was checked locally, so a validation refusal is the link (expired, used or replaced).
+                  message: _error is ApiFailure && (_error as ApiFailure).code == ApiErrorCode.validationFailed ? t.resetLinkExpired : apiErrorMessage(context, _error!),
+                  tone: EdmnTone.danger,
+                ),
                 const SizedBox(height: EdmnSpacing.xs),
                 Align(alignment: AlignmentDirectional.centerStart, child: TextButton(key: const Key('reset-new-link'), onPressed: () => context.go('/forgot-password'), child: Text(t.requestNewResetLink))),
                 const SizedBox(height: EdmnSpacing.sm),
