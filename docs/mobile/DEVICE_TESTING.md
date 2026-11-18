@@ -186,6 +186,78 @@ flutter run --debug -d <معرّف-الـiPhone> \
 | i5 | حذف التطبيق ثم تثبيته من جديد | **سجّل ما يحدث**: بيانات Keychain تبقى بعد الحذف على iOS، فقد يفتح التطبيق مسجّلًا بالحساب السابق. المطلوب قرار: هل هذا مقبول؟ |
 | i6 | قفل الهاتف أثناء رفع مرفق ثم فتحه | لا انهيار؛ إما يكتمل الرفع أو تظهر رسالة خطأ واضحة مع إعادة محاولة لا تُكرّر |
 
+### 5هـ. محاكي iOS على الـ Mac (قبل الهاتف الحقيقي)
+
+**المرحلة 0 — حالة المشروع** (لا تغيّر شيئًا قبلها):
+```bash
+cd <مسار-المستودع>
+git status --short                       # احفظ أي تعديل محلي (مثل pubspec.lock): لا تستخدم reset ولا checkout عليه
+git fetch origin claude/mobile-unified-integration
+git log --oneline -1 origin/claude/mobile-unified-integration
+git merge --ff-only origin/claude/mobile-unified-integration   # آمن مع تعديل pubspec.lock المحلي: لم يتغير في الفرع بعد 07d0df2
+grep -c NSAllowsLocalNetworking apps/customer_mobile/ios/Runner/Info.plist   # يجب أن يكون 1 (من commit 74af50d)
+```
+
+**المرحلة 1 — الخادم المحلي:** نفّذ القسم 3 كاملًا على الـ Mac (Postgres 16 محلي، `.env.local`، `npm run db:setup`، ثم `npx next dev -H 0.0.0.0 -p 3000`). بعدها تحقّق:
+```bash
+curl -s http://localhost:3000/api/v1/app/config   # يجب أن يحتوي "realMoneyEnabled":false و"currency":"EGP"
+```
+
+**المرحلة 2 — عنوان الـ API للمحاكي:**
+- محاكي iOS يشارك شبكة الـ Mac نفسها، فالعنوان الصحيح هو `http://localhost:3000`.
+- العنوان الافتراضي في الكود `http://10.0.2.2:3000` خاص بمحاكي Android، ولا يعمل على iOS.
+- لا تغيّر الكود؛ مرّر العنوان عند التشغيل:
+```bash
+cd apps/customer_mobile
+xcrun simctl list devices booted         # تأكد أن المحاكي المطلوب يعمل
+flutter run --debug -d <معرّف-المحاكي> \
+  --dart-define=EDMN_ENV=local \
+  --dart-define=EDMN_API_BASE_URL=http://localhost:3000 \
+  --dart-define=EDMN_APP_VERSION=1.0.0-device-test
+```
+- لو رفض iOS الاتصال برسالة App Transport Security، استخدم اسم الـ Mac: `http://$(scutil --get LocalHostName).local:3000`. اسم `.local` مغطى صراحةً بـ `NSAllowsLocalNetworking`.
+
+**المرحلة 3 — رحلة آمنة من الواجهة إلى قاعدة البيانات** (بلا أي عملية مالية):
+1. سجّل الدخول بحساب `mona@demo.edmn.local` / `Demo@12345`. **المتوقع:** الصفحة الرئيسية تعرض منتجات من الخادم.
+2. افتح «طلباتي». **المتوقع:** الطلب 100002 بثلاثة بائعين.
+3. افتح الإشعارات. **المتوقع:** 8 إشعارات. ثم «قراءة الكل».
+4. افتح تذكرة دعم من نوع «مشكلة تقنية» بعنوان `اختبار محاكي iOS`.
+5. تحقّق من قاعدة البيانات أن الكتابة وصلت:
+   ```bash
+   psql postgresql://edmn:edmn@localhost:5432/edmn_dev -c \
+     "select number, type, status, subject from support_tickets order by created_at desc limit 1"
+   psql postgresql://edmn:edmn@localhost:5432/edmn_dev -c \
+     "select count(*) filter (where read_at is null) as unread from notifications n join users u on u.id=n.user_id where u.email='mona@demo.edmn.local'"
+   ```
+   **المتوقع:** التذكرة الجديدة بحالة `OPEN`، وعدد غير المقروء 0.
+6. اختياري: افتح المحفظة بحساب `techzone@demo.edmn.local`. **المتوقع:** المتاح 20,544.21 ج.م. **لا ترسل** طلب سحب في هذه الرحلة.
+
+### 5و. خطأ التوقيع «resource fork, Finder information, or similar detritus not allowed»
+
+**السبب:** `codesign` يرفض أي ملف أو مجلد عليه الخاصية الممتدة `com.apple.FinderInfo`. عندما يكون المستودع داخل `~/Desktop` أو `~/Documents`، ومزامنة iCloud لهذين المجلدين مفعّلة، يضيف نظام المزامنة هذه الخصائص على ملفات البناء أثناء إنشائها. لهذا ينجح الحذف اليدوي ثم يعود الخطأ عند إعادة البناء.
+
+**تحقّق أولًا:**
+```bash
+xattr -lr apps/customer_mobile/build 2>/dev/null | grep -c FinderInfo
+ls -ld@ ~/Desktop                  # خصائص com.apple.file-provider* تعني أن المجلد تحت مزامنة iCloud
+```
+
+**الحل الدائم المقترح:** انقل المستودع خارج المجلدات المتزامنة. مثلًا `mv ~/Desktop/edmn-eg ~/Developer/edmn-eg`:
+- النقل يحتفظ بكل التعديلات غير المحفوظة، ومنها `pubspec.lock`؛
+- بعد النقل احذف الرابط المؤقت: `rm apps/customer_mobile/build`؛
+- ثم `flutter clean` لهذا التطبيق فقط.
+
+**لو كان لا بد من بقاء المستودع على سطح المكتب:** أبقِ `build` رابطًا رمزيًا، لكن إلى مكان دائم بدل `/tmp`، لأن `/tmp` يُمسح عند إعادة التشغيل:
+```bash
+mkdir -p ~/Library/Caches/edmn/customer_mobile-build
+rm apps/customer_mobile/build        # يحذف الرابط فقط، لا الملفات
+ln -s ~/Library/Caches/edmn/customer_mobile-build apps/customer_mobile/build
+echo "/apps/customer_mobile/build" >> .git/info/exclude   # إخفاء الرابط محليًا من git status
+```
+
+- `.gitignore` في التطبيق يتجاهل `/build/` بشرطة في آخره، وهذه تطابق المجلدات فقط. git يعامل الرابط الرمزي كملف، لذلك يظهر الرابط «غير متتبع» ويمكن أن يُضاف إلى commit بالخطأ.
+- السطر في `.git/info/exclude` إعداد محلي لا يُرفع.
+
 ## 6. قائمة الفحص على الهاتف
 
 ابدأ ببيانات تجريبية جديدة: `npm run db:setup` على قاعدة فارغة. البيانات المذكورة أدناه هي ما تنشئه هذه الخطوة.
