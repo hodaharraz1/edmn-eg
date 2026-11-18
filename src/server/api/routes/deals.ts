@@ -220,7 +220,7 @@ export const respondDealOffer = defineRoute({
   idempotency: 'required',
   errors: [...errors, 'conflict', 'identity_required'],
   params: id,
-  body: z.object({ version: z.number().int().min(1), decision: z.enum(['ACCEPT', 'REQUEST_CHANGE', 'REJECT']), change: z.object({ returnPolicy: z.record(z.string(), z.unknown()), message: z.string().max(1000) }).optional() }),
+  body: z.object({ version: z.number().int().min(1), decision: z.enum(['ACCEPT', 'REQUEST_CHANGE', 'REJECT']), change: z.object({ returnPolicy: z.record(z.string(), z.unknown()).optional(), message: z.string().max(1000) }).optional() }),
   response: deal,
   handler: ({ actor, params, body }) => answerOffer(actor!, params.dealId, body.version, body.decision, body.change),
 });

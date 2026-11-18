@@ -58,6 +58,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-profile'), icon: Icons.person_outline_rounded, title: t.personalInfo, onTap: () => context.push('/account/profile')),
                   EdmnMenuItem(key: const Key('menu-addresses'), icon: Icons.location_on_outlined, title: t.addressesTitle, onTap: () => context.push('/account/addresses')),
                   EdmnMenuItem(key: const Key('menu-payment-methods'), icon: Icons.credit_card_outlined, title: t.paymentMethods, onTap: () => context.push('/account/payment-methods')),
+                  EdmnMenuItem(key: const Key('menu-wishlist'), icon: Icons.favorite_border_rounded, title: t.wishlistTitle, onTap: () => context.push('/account/wishlist')),
                   EdmnMenuItem(key: const Key('menu-wallet'), icon: Icons.account_balance_wallet_outlined, title: t.wallet, onTap: () => context.push('/wallet')),
                   EdmnMenuItem(key: const Key('menu-returns'), icon: Icons.assignment_return_outlined, title: t.myReturns, onTap: () => context.push('/returns')),
                   EdmnMenuItem(key: const Key('menu-disputes'), icon: Icons.gavel_outlined, title: t.myDisputes, onTap: () => context.push('/disputes')),
@@ -456,23 +457,6 @@ class LegalScreen extends ConsumerWidget {
           Text(d.body, style: EdmnType.body.copyWith(color: EdmnColors.textPrimary)),
         ]),
       ),
-    );
-  }
-}
-
-/// A service whose mobile API is not built yet. It says so plainly — it never shows a fake balance, list or button
-/// that pretends to work. Each use is listed in docs/mobile/SCREEN_INVENTORY.md as NOT DONE.
-class NotYetAvailableScreen extends StatelessWidget {
-  const NotYetAvailableScreen({super.key, required this.title, required this.icon});
-  final String title;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EdmnLocalizations.of(context);
-    return EdmnAppScaffold(
-      title: title,
-      body: EdmnEmptyState(key: const Key('not-yet-available'), icon: icon, title: t.comingFromServer, message: t.notAvailableYetBody),
     );
   }
 }

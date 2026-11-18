@@ -2,9 +2,12 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
+import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton;
 import 'package:edmn_customer/src/app.dart';
+import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
 import 'package:edmn_customer/src/common/ui.dart';
+import 'package:edmn_customer/src/features/auth/reset_password_screen.dart' show resetTokenFrom;
 import 'package:edmn_customer/src/providers.dart';
 import 'package:edmn_customer/src/version.dart';
 import 'package:flutter/material.dart';
@@ -112,6 +115,60 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // B22: wishlist (server-authoritative; add/remove idempotent)
+  final saved = <String>[];
+  final wishlistKeys = <(String, String, String)>[];
+  ApiFailure? wishlistError;
+  Wishlist _wl() => Wishlist(
+        items: [
+          for (final id in saved)
+            ProductCard(id: id, slug: 'headphones', titleAr: 'سماعة لاسلكية', condition: 'NEW', usedGrade: null, minPricePiastres: 125050, compareAtPricePiastres: null,
+                inStock: true, ratingAvg: 4.5, ratingCount: 3, store: const ProductCardStore(name: 'متجر القاهرة', slug: 'cairo', verified: true), imageUrl: null, defaultVariantId: 'v1', variantCount: 1),
+        ],
+        productIds: List.of(saved),
+      );
+  @override
+  Future<Wishlist> wishlist() async => _wl();
+  @override
+  Future<Wishlist> addToWishlist(String productId, {required String idempotencyKey}) async {
+    if (wishlistError != null) throw wishlistError!;
+    wishlistKeys.add(('ADD', productId, idempotencyKey));
+    if (!saved.contains(productId)) saved.insert(0, productId);
+    return _wl();
+  }
+  @override
+  Future<Wishlist> removeFromWishlist(String productId, {required String idempotencyKey}) async {
+    wishlistKeys.add(('REMOVE', productId, idempotencyKey));
+    saved.remove(productId);
+    return _wl();
+  }
+  // Phase 6: notifications + password reset
+  List<Map<String, dynamic>> notifs = [];
+  final readCalls = <List<String>?>[];
+  final resetCalls = <(String, String)>[];
+  ApiFailure? resetError;
+  @override
+  Future<ListNotificationsResponse> notifications({bool unreadOnly = false, String? before}) async => ListNotificationsResponse.fromJson({
+        'items': [for (final n in notifs) if (!unreadOnly || n['read'] == false) n],
+        'unread': notifs.where((n) => n['read'] == false).length,
+        'nextBefore': null,
+      });
+  @override
+  Future<int> unreadNotifications() async => notifs.where((n) => n['read'] == false).length;
+  @override
+  Future<int> markNotificationsRead({List<String>? ids}) async {
+    readCalls.add(ids);
+    for (final n in notifs) {
+      if (ids == null || ids.contains(n['id'])) n['read'] = true;
+    }
+    return notifs.where((n) => n['read'] == false).length;
+  }
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    resetCalls.add((token, newPassword));
+    if (resetError != null) throw resetError!;
+  }
+
   // Returns / disputes / reviews
   String returnBlock = '';
   List<String> returnActions = const [];
@@ -201,7 +258,7 @@ class FakeMobileApi extends MobileApi {
     });
   }
   @override
-  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson({'items': <Map<String, dynamic>>[]});
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q, int page = 1}) async => ListWalletActivityResponse.fromJson({'items': <Map<String, dynamic>>[], 'page': page, 'pageSize': 50, 'hasMore': false});
   @override
   Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async => ListAccountPayoutRequestsResponse.fromJson({
         'items': [
@@ -213,6 +270,7 @@ class FakeMobileApi extends MobileApi {
   Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson({
         'amountPiastres': amountPiastres, 'availablePiastres': 125000, 'fits': amountPiastres <= 125000, 'destination': 'إنستاباي ••••ab',
         'sources': [{'source': 'MARKETPLACE', 'amountPiastres': amountPiastres}],
+        'transferCostPiastres': 100, 'netPiastres': amountPiastres - 100, 'violations': <String>[], 'warnings': <String>[],
       });
   @override
   Future<CreateAccountPayoutRequestResponse> requestAccountPayout(int amountPiastres, String destination, String clientKey) async {
@@ -225,11 +283,26 @@ class FakeMobileApi extends MobileApi {
     });
   }
 
+  final activityDetailCalls = <String>[];
+  @override
+  Future<GetWalletActivityResponse> walletActivityDetail(String id) async {
+    activityDetailCalls.add(id);
+    return GetWalletActivityResponse.fromJson({'kind': 'PAYOUT', 'id': id, 'direction': 'OUT', 'amountPiastres': 20000,
+      'status': 'TRANSFER_UNCERTAIN', 'ref': '#7001', 'method': null, 'reference': null, 'note': null, 'isTest': true,
+      'createdAt': '2030-01-01T10:00:00Z', 'link': null});
+  }
+  @override
+  Future<Uint8List> file(String fileId) async => Uint8List.fromList([37, 80, 68, 70]);
+
   // Messaging / support
   bool convCanWrite = true;
   int sendFailures = 0;
   final sendKeys = <String>[];
   final seenUpTo = <String?>[];
+  int messageCount = 2;
+  bool pdfMessage = false;
+  final sentBodies = <String>[];
+  Map<String, dynamic>? lastChange;
   List<String> ticketActions = const ['REPLY'];
   final ticketRatings = <int>[];
 
@@ -242,11 +315,12 @@ class FakeMobileApi extends MobileApi {
         'id': id, 'context': 'SELLER_ORDER', 'side': 'BUYER', 'ref': 'طلب #100001-A', 'title': 'سماعة لاسلكية', 'status': 'PAID', 'otherParty': 'متجر القاهرة',
         'link': {'kind': 'ORDER', 'id': '11111111-1111-4111-8111-111111111111'}, 'canWrite': convCanWrite,
         'readOnlyReason': convCanWrite ? null : 'الطلب ده خلص من فترة، والمحادثة بقت للقراءة بس.',
-        'messages': [_msg('m1', mine: true), _msg('m2')],
+        'messages': [for (var i = 1; i <= messageCount; i++) {..._msg('m$i', mine: i == 1), if (pdfMessage && i == messageCount) 'attachments': [{'fileId': 'pdf1', 'mimeType': 'application/pdf'}]}],
       });
   @override
   Future<SendMessageResponse> sendMessage(String id, String body, String clientKey, {List<(Uint8List, String)> attachments = const [], bool store = false}) async {
     sendKeys.add(clientKey);
+    sentBodies.add(body);
     if (sendFailures-- > 0) throw const ApiFailure(code: ApiErrorCode.rateLimited, status: 429);
     return SendMessageResponse.fromJson({'id': 'm3', 'createdAt': '2030-01-01T10:01:00Z'});
   }
@@ -297,6 +371,7 @@ class FakeMobileApi extends MobileApi {
   Future<ProtectedDeal> deal(String id) async => ProtectedDeal.fromJson(dealJson);
   @override
   Future<ProtectedDeal> respondDealOffer(String id, int version, String decision, {Map<String, dynamic>? change, required String idempotencyKey}) async {
+    lastChange = change;
     dealDecisions.add((decision, idempotencyKey));
     dealJson = _deal(status: 'ACCEPTED', actions: const ['START_PAYMENT', 'CANCEL']);
     return ProtectedDeal.fromJson(dealJson);
@@ -499,12 +574,20 @@ class _FakePicker implements FilePickerService {
   Future<PickedFile?> pick({bool allowPdf = true}) async => PickedFile(name: 'receipt.png', bytes: Uint8List.fromList([1, 2, 3]));
 }
 
+class _FakeSaver implements FileSaverService {
+  final names = <String>[];
+  @override
+  Future<void> save(String name, Uint8List bytes) async { names.add(name); }
+}
+final _saver = _FakeSaver();
+
 Widget _app(FakeMobileApi api, {bool signedIn = false}) => ProviderScope(overrides: [
       buildConfigProvider.overrideWithValue(_config),
       sessionStoreProvider.overrideWithValue(MemorySessionStore()),
       appPrefsProvider.overrideWithValue(MemoryAppPrefs({'onboarded': '1'})),
       mobileApiProvider.overrideWithValue(api),
       filePickerProvider.overrideWithValue(_FakePicker()),
+      fileSaverProvider.overrideWithValue(_saver),
       if (signedIn) signedInProvider.overrideWith(_AlwaysSignedIn.new),
     ], child: const CustomerApp());
 
@@ -665,11 +748,77 @@ void main() {
     expect(api.confirmKeys, hasLength(1));
   });
 
-  testWidgets('services without a mobile API say so honestly (no fake list)', (t) async {
-    await _start(t, FakeMobileApi(), signedIn: true);
+  testWidgets('notifications: empty state; a tap marks only that one read and opens its typed target; no target = no navigation', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
     await _go(t, '/notifications');
-    expect(find.byKey(const Key('not-yet-available')), findsOneWidget);
-    expect(find.textContaining('ج.م'), findsNothing);
+    expect(find.byKey(const Key('notif-empty')), findsOneWidget);
+    api.notifs = [
+      {'id': 'n1', 'event': 'SUPPORT_REPLY', 'title': 'رد على تذكرتك', 'body': 'فريق أضمن رد على التذكرة #1042', 'read': false, 'createdAt': '2030-01-02T10:00:00Z', 'target': {'kind': 'TICKET', 'id': '11111111-1111-4111-8111-111111111111'}},
+      {'id': 'n2', 'event': 'RETURN_UPDATED', 'title': 'تحديث الإرجاع', 'body': 'الإرجاع اتقبل', 'read': false, 'createdAt': '2030-01-01T10:00:00Z', 'target': null},
+    ];
+    await _go(t, '/orders');
+    await _go(t, '/notifications');
+    expect(find.byKey(const Key('notif-n1')), findsOneWidget);
+    expect(find.text('غير مقروءة (2)'), findsOneWidget);
+    await t.tap(find.byKey(const Key('notif-n2')));
+    await t.pumpAndSettle();
+    expect(api.readCalls.last, ['n2']);
+    expect(find.byKey(const Key('notif-n1')), findsOneWidget); // still on the list: nothing to open
+    await t.tap(find.byKey(const Key('notif-read-all')));
+    await t.pumpAndSettle();
+    expect(api.readCalls.last, isNull); // «mark all» sends no ids
+    expect(find.byKey(const Key('notif-read-all')), findsNothing);
+  });
+
+  testWidgets('reset password: token from the link; mismatch is caught locally; success signs out and offers sign-in', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api);
+    const token = 'abcdefghijklmnopqrstuvwxyz012345';
+    await _go(t, '/reset-password?token=$token');
+    expect(find.byKey(const Key('reset-link')), findsNothing); // the link already carries the token
+    Future<void> type(String k, String v) => t.enterText(find.descendant(of: find.byKey(Key(k)), matching: find.byType(EditableText)), v);
+    await type('reset-password', 'NewPass2030');
+    await type('reset-confirm', 'Different2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('reset-problem')), findsOneWidget);
+    expect(api.resetCalls, isEmpty);
+    await type('reset-confirm', 'NewPass2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(api.resetCalls.single, (token, 'NewPass2030'));
+    expect(find.byKey(const Key('reset-done')), findsOneWidget);
+    expect(find.byKey(const Key('reset-to-sign-in')), findsOneWidget);
+  });
+
+  testWidgets('reset password: an expired / used link shows the server error and a way to get a new link', (t) async {
+    final api = FakeMobileApi()..resetError = const ApiFailure(code: ApiErrorCode.validationFailed, status: 422);
+    await _start(t, api);
+    await _go(t, '/reset-password');
+    Future<void> type(String k, String v) => t.enterText(find.descendant(of: find.byKey(Key(k)), matching: find.byType(EditableText)), v);
+    await type('reset-link', 'not a link');
+    await type('reset-password', 'NewPass2030');
+    await type('reset-confirm', 'NewPass2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('reset-problem')), findsOneWidget);
+    expect(api.resetCalls, isEmpty);
+    await type('reset-link', 'https://edmneg.com/reset-password?token=abcdefghijklmnopqrstuvwxyz012345');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(api.resetCalls.single.$1, 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(find.byKey(const Key('reset-error')), findsOneWidget);
+    expect(find.textContaining('انتهت صلاحيته'), findsOneWidget);
+    expect(find.byKey(const Key('reset-new-link')), findsOneWidget);
+  });
+
+  test('reset token is taken from a pasted link or a bare token, and nothing else', () {
+    expect(resetTokenFrom('https://x.test/reset-password?token=abcdefghijklmnopqrstuvwxyz012345'), 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(resetTokenFrom(' abcdefghijklmnopqrstuvwxyz012345 '), 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(resetTokenFrom('short'), isNull);
+    expect(resetTokenFrom('https://x.test/reset-password?token=<script>'), isNull);
+    expect(resetTokenFrom(''), isNull);
   });
 
   testWidgets('English flips to LTR with the English money format', (t) async {
@@ -730,6 +879,19 @@ void main() {
     expect(find.byKey(const Key('cancel-payout-w2')), findsOneWidget);
     expect(find.text('تم التحويل'), findsNothing);
     expect(find.byKey(const Key('new-payout')), findsOneWidget);
+  });
+
+  testWidgets('a text-only deal change never silently sends a no-return policy', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals/d1');
+    await _reveal(t, find.byKey(const Key('deal-change')));
+    await t.tap(find.byKey(const Key('deal-change')));
+    await t.pumpAndSettle();
+    await t.enterText(find.descendant(of: find.byKey(const Key('ask-text')), matching: find.byType(EditableText)), 'محتاج تغيير موعد التسليم');
+    await t.tap(find.byKey(const Key('ask-ok')));
+    await t.pumpAndSettle();
+    expect(api.lastChange, {'message': 'محتاج تغيير موعد التسليم'});
   });
 
   testWidgets('protected deal: buyer sees server money and accepts the offer only after confirming; no release/refund button exists', (t) async {
@@ -855,6 +1017,50 @@ void main() {
     expect(api.ticketRatings, [4]);
     expect(find.byKey(const Key('rate-ticket')), findsNothing);
     expect(find.byKey(const Key('reopen-ticket')), findsOneWidget);
+  });
+
+  testWidgets('chat does not mark new messages read under another route or outside the viewport', (t) async {
+    final api = FakeMobileApi()..messageCount = 60;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(api.seenUpTo.last, 'm60');
+    final list = find.descendant(of: find.byType(ConversationScreen), matching: find.byType(ListView));
+    await t.drag(list, const Offset(0, 1000));
+    await t.pumpAndSettle();
+    api.messageCount = 61;
+    await t.pump(const Duration(seconds: 11));
+    await t.pumpAndSettle();
+    expect(api.seenUpTo, isNot(contains('m61')));
+    // Cover the conversation without disposing it.
+    final context = t.element(find.byKey(const Key('conv-context')));
+    GoRouter.of(context).push('/orders/11111111-1111-4111-8111-111111111111');
+    await t.pumpAndSettle();
+    final before = api.seenUpTo.length;
+    api.messageCount = 62;
+    await t.pump(const Duration(seconds: 11));
+    await t.pumpAndSettle();
+    expect(api.seenUpTo.length, before);
+    await _go(t, '/');
+  });
+
+  testWidgets('PDF attachments download through the private file API on user action', (t) async {
+    _saver.names.clear();
+    final api = FakeMobileApi()..pdfMessage = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/messages/c1');
+    expect(_saver.names, isEmpty);
+    await t.tap(find.byKey(const Key('download-pdf1')));
+    await t.pumpAndSettle();
+    expect(_saver.names, ['pdf1.pdf']);
+    await _go(t, '/');
+  });
+
+  testWidgets('activity details load fresh from the route id without an in-memory row', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/activity/r1');
+    expect(api.activityDetailCalls, ['r1']);
+    expect(find.textContaining('جاري التحقق'), findsWidgets);
   });
 
   testWidgets('wallet: server balances, held money is not shown as available, TEST notice in the wallet, no top-up flow', (t) async {
@@ -990,5 +1196,67 @@ void main() {
     expect(parseEgpToPiastres('1,250.5'), 125050);
     expect(parseEgpToPiastres('12.345'), isNull);
     expect(parseEgpToPiastres('abc'), isNull);
+  });
+
+  testWidgets('wishlist (B22): heart on cards and product page, server-authoritative, one key per tap, empty state', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    // Home card: not saved → tap → saved (filled heart), announced, one ADD with its own key.
+    final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
+    expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
+    await t.tap(heart);
+    await t.pumpAndSettle();
+    expect(api.saved, ['p1']);
+    expect(find.text('اتضاف للمفضلة'), findsOneWidget);
+    expect(t.widget<EdmnSaveButton>(heart).saved, isTrue);
+
+    // The product page shows the same saved state; removing there updates the list.
+    await _go(t, '/products/headphones');
+    expect(t.widget<EdmnSaveButton>(find.byKey(const Key('product-save'))).saved, isTrue);
+    await t.tap(find.byKey(const Key('product-save')));
+    await t.pumpAndSettle();
+    expect(api.saved, isEmpty);
+    expect(api.wishlistKeys.map((k) => k.$1), ['ADD', 'REMOVE']);
+    expect(api.wishlistKeys[0].$3, isNot(api.wishlistKeys[1].$3));
+
+    // Wishlist screen: empty state, then the saved card.
+    await _go(t, '/account/wishlist');
+    expect(find.byKey(const Key('wishlist-empty')), findsOneWidget);
+    api.saved.add('p1');
+    await _go(t, '/orders');
+    await _go(t, '/account/wishlist');
+    expect(find.byKey(const Key('wishlist-grid')), findsOneWidget);
+    expect(find.text('سماعة لاسلكية'), findsWidgets);
+  });
+
+  testWidgets('wishlist (B22): signed-out heart goes to sign-in; a server refusal is shown and nothing changes', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api);
+    await t.tap(find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton)));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('sign-in')), findsOneWidget);
+    expect(api.wishlistKeys, isEmpty);
+  });
+
+  testWidgets('wishlist (B22): a server refusal (product no longer available) is shown and the heart stays empty', (t) async {
+    final api = FakeMobileApi()..wishlistError = const ApiFailure(code: ApiErrorCode.notFound, status: 404);
+    await _start(t, api, signedIn: true);
+    final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
+    await t.tap(heart);
+    await t.pumpAndSettle();
+    expect(api.saved, isEmpty);
+    expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
+
+  testWidgets('an unknown or broken link shows the Arabic not-found screen with a way home (never a framework error page)', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/products/x/nonexistent');
+    expect(find.byKey(const Key('not-found')), findsOneWidget);
+    expect(find.text('الصفحة دي مش موجودة'), findsOneWidget);
+    expect(find.textContaining('GoException'), findsNothing);
+    await t.tap(find.text('الرئيسية').last);
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('not-found')), findsNothing);
   });
 }

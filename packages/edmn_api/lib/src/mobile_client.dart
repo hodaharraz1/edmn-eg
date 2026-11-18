@@ -328,8 +328,10 @@ class MobileApi {
   // Every amount is computed by the server from the ledger. A payout request moves nothing; EDMN approves, reserves
   // and transfers in the admin console.
   Future<GetWalletResponse> wallet() async => GetWalletResponse.fromJson(await client.getJson(MobileApiPaths.getWallet.path));
-  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q}) async => ListWalletActivityResponse.fromJson(
-      await client.getJson(MobileApiPaths.listWalletActivity.path, query: {'kind': ?kind, if (q != null && q.isNotEmpty) 'q': q}));
+  Future<ListWalletActivityResponse> walletActivity({String? kind, String? q, int page = 1}) async => ListWalletActivityResponse.fromJson(
+      await client.getJson(MobileApiPaths.listWalletActivity.path, query: {'kind': ?kind, if (q != null && q.isNotEmpty) 'q': q, 'page': page}));
+  Future<GetWalletActivityResponse> walletActivityDetail(String id) async => GetWalletActivityResponse.fromJson(
+      await client.getJson(fillPath(MobileApiPaths.getWalletActivity.path, {'activityId': id})));
   Future<ListAccountPayoutRequestsResponse> accountPayoutRequests() async =>
       ListAccountPayoutRequestsResponse.fromJson(await client.getJson(MobileApiPaths.listAccountPayoutRequests.path));
   Future<PreviewAccountPayoutRequestResponse> previewAccountPayout(int amountPiastres, String destination) async => PreviewAccountPayoutRequestResponse.fromJson(
@@ -393,4 +395,26 @@ class MobileApi {
           files: {'photos': photos}, idempotencyKey: idempotencyKey));
   Future<ReviewOptions> reviewSeller(String sellerOrderId, int rating, {String? body, required String idempotencyKey}) async => ReviewOptions.fromJson(await client.sendJson(
       'POST', MobileApiPaths.reviewSeller.path, body: {'sellerOrderId': sellerOrderId, 'rating': rating, if (body != null && body.isNotEmpty) 'body': body}, idempotencyKey: idempotencyKey));
+
+  // ── Phase 6: notification center and password reset ──────────────────────────────────────────────────────────
+  Future<ListNotificationsResponse> notifications({bool unreadOnly = false, String? before}) async => ListNotificationsResponse.fromJson(
+      await client.getJson(MobileApiPaths.listNotifications.path, query: {if (unreadOnly) 'unread': '1', 'before': ?before}));
+  Future<int> unreadNotifications() async => GetUnreadNotificationsResponse.fromJson(await client.getJson(MobileApiPaths.getUnreadNotifications.path)).unread;
+  /// Marks the given notifications read, or all of mine when [ids] is null. Returns the new unread count.
+  Future<int> markNotificationsRead({List<String>? ids}) async =>
+      MarkNotificationsReadResponse.fromJson(await client.sendJson('POST', MobileApiPaths.markNotificationsRead.path, body: {'ids': ?ids})).unread;
+  Future<NotificationPreferences> notificationPreferences() async =>
+      NotificationPreferences.fromJson(await client.getJson(MobileApiPaths.getNotificationPreferences.path));
+  Future<NotificationPreferences> saveNotificationPreferences(Map<String, bool> changes) async =>
+      NotificationPreferences.fromJson(await client.sendJson('PUT', MobileApiPaths.saveNotificationPreferences.path, body: changes));
+  /// Sets a new password with the token from the reset link. Every session is signed out; no tokens are returned.
+  Future<void> resetPassword(String token, String newPassword) =>
+      client.sendJson('POST', MobileApiPaths.resetPassword.path, body: {'token': token, 'newPassword': newPassword}, skipAuth: true);
+
+  // ── Wishlist (add/remove are idempotent: a retry never flips the state) ────────────────────────────────────────
+  Future<Wishlist> wishlist() async => Wishlist.fromJson(await client.getJson(MobileApiPaths.getWishlist.path));
+  Future<Wishlist> addToWishlist(String productId, {required String idempotencyKey}) async => Wishlist.fromJson(
+      await client.sendJson('PUT', fillPath(MobileApiPaths.addWishlistItem.path, {'productId': productId}), idempotencyKey: idempotencyKey));
+  Future<Wishlist> removeFromWishlist(String productId, {required String idempotencyKey}) async => Wishlist.fromJson(
+      await client.sendJson('DELETE', fillPath(MobileApiPaths.removeWishlistItem.path, {'productId': productId}), idempotencyKey: idempotencyKey));
 }

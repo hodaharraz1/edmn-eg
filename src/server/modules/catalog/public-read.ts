@@ -3,7 +3,7 @@ import { absoluteUrl } from '@/server/core/urls';
 import { db, type DbOrTx } from '@/server/db/client';
 import { categories, files, governorates, products, sellers, stores } from '@/server/db/schema';
 import { productReviewsPublic, reviewerDisplayName, sellerReviewsPublic } from '@/server/modules/reviews/service';
-import { productDetailBySlug, searchProducts, type SearchQuery } from './search';
+import { productDetailBySlug, productsByIds, searchProducts, type SearchQuery } from './search';
 import { categoryTree } from './taxonomy';
 
 /**
@@ -45,6 +45,33 @@ export async function publicGovernorates(conn: DbOrTx = db) {
     .orderBy(asc(governorates.sortOrder));
 }
 
+type CardRow = Awaited<ReturnType<typeof searchProducts>>['items'][number];
+
+/** The public product card (allow-list), shared by search, store pages and the wishlist. */
+export function publicProductCard(p: CardRow) {
+  return {
+    id: p.id,
+    slug: p.slug,
+    titleAr: p.titleAr,
+    condition: p.condition,
+    usedGrade: p.usedGrade ?? null,
+    minPricePiastres: p.minPrice ?? null,
+    compareAtPricePiastres: p.maxCompareAtPrice ?? null,
+    inStock: p.totalAvailable > 0,
+    ratingAvg: Number(p.ratingAvg),
+    ratingCount: p.ratingCount,
+    store: { name: p.storeName, slug: p.storeSlug, verified: !!p.storeVerified },
+    imageUrl: publicMediaUrl(p.imageKey, 'md'),
+    defaultVariantId: p.defaultVariantId ?? null,
+    variantCount: Number(p.variantCount ?? 0),
+  };
+}
+
+/** Products of a list of ids, in that order, keeping only those publicly visible now (others are silently omitted). */
+export async function publicProductCards(ids: string[]) {
+  return (await productsByIds(ids)).map(publicProductCard);
+}
+
 export async function publicProductSearch(query: SearchQuery & { storeSlug?: string }) {
   const { storeSlug, ...rest } = query;
   // A store filter only ever narrows to a publicly visible store; an unknown or hidden store is an empty page.
@@ -57,22 +84,7 @@ export async function publicProductSearch(query: SearchQuery & { storeSlug?: str
   }
   const r = await searchProducts(rest);
   return {
-    items: r.items.map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      titleAr: p.titleAr,
-      condition: p.condition,
-      usedGrade: p.usedGrade ?? null,
-      minPricePiastres: p.minPrice ?? null,
-      compareAtPricePiastres: p.maxCompareAtPrice ?? null,
-      inStock: p.totalAvailable > 0,
-      ratingAvg: Number(p.ratingAvg),
-      ratingCount: p.ratingCount,
-      store: { name: p.storeName, slug: p.storeSlug, verified: !!p.storeVerified },
-      imageUrl: publicMediaUrl(p.imageKey, 'md'),
-      defaultVariantId: p.defaultVariantId ?? null,
-      variantCount: Number(p.variantCount ?? 0),
-    })),
+    items: r.items.map(publicProductCard),
     page: r.page,
     pageSize: r.pageSize,
     total: r.total,

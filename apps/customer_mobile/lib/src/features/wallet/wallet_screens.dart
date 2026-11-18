@@ -18,6 +18,10 @@ import '../seller/seller_setup_screens.dart' show payoutStatus;
 final walletProvider = FutureProvider.autoDispose<GetWalletResponse>((ref) => ref.watch(mobileApiProvider).wallet());
 final walletActivityProvider = FutureProvider.autoDispose.family<ListWalletActivityResponse, ({String? kind, String q})>(
     (ref, a) => ref.watch(mobileApiProvider).walletActivity(kind: a.kind, q: a.q));
+final walletActivityPageProvider = FutureProvider.autoDispose.family<ListWalletActivityResponse, ({String? kind, String q, int page})>(
+    (ref, a) => ref.watch(mobileApiProvider).walletActivity(kind: a.kind, q: a.q, page: a.page));
+final walletActivityDetailProvider = FutureProvider.autoDispose.family<ListWalletActivityResponseItemsItem, String>((ref, id) async =>
+    ListWalletActivityResponseItemsItem.fromJson((await ref.watch(mobileApiProvider).walletActivityDetail(id)).toJson()));
 final accountPayoutsProvider = FutureProvider.autoDispose<ListAccountPayoutRequestsResponse>((ref) => ref.watch(mobileApiProvider).accountPayoutRequests());
 final receivingAccountsProvider = FutureProvider.autoDispose<ListReceivingAccountsResponse>((ref) => ref.watch(mobileApiProvider).receivingAccounts());
 final sellerStatementProvider = FutureProvider.autoDispose<GetSellerStatementResponse>((ref) => ref.watch(mobileApiProvider).sellerStatement());
@@ -227,7 +231,7 @@ class ActivityRow extends StatelessWidget {
       title: activityTitle(t, x),
       subtitle: formatDateTime(context, x.createdAt),
       amountPiastres: x.direction == 'IN' ? x.amountPiastres : -x.amountPiastres,
-      status: EdmnStatusChip(label: x.isTest ? '$l · ${t.testTag}' : l, tone: tone),
+      status: EdmnStatusChip(label: x.isTest == true ? '$l · ${t.testTag}' : l, tone: tone),
       onTap: () => context.push('/wallet/activity/${x.id}', extra: x),
     );
   }
@@ -241,6 +245,7 @@ class WalletActivityScreen extends ConsumerStatefulWidget {
 
 class _WalletActivityScreenState extends ConsumerState<WalletActivityScreen> {
   String? _kind;
+  int _page = 1;
   String _q = '';
   final _search = TextEditingController();
 
@@ -253,8 +258,8 @@ class _WalletActivityScreenState extends ConsumerState<WalletActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final t = EdmnLocalizations.of(context);
-    final args = (kind: _kind, q: _q);
-    final list = ref.watch(walletActivityProvider(args));
+    final args = (kind: _kind, q: _q, page: _page);
+    final list = ref.watch(walletActivityPageProvider(args));
     return EdmnAppScaffold(
       title: t.transactionHistory,
       body: ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
@@ -263,45 +268,58 @@ class _WalletActivityScreenState extends ConsumerState<WalletActivityScreen> {
           controller: _search,
           hint: t.searchByReference,
           icon: Icons.search_rounded,
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.text,
           textInputAction: TextInputAction.search,
-          onSubmitted: (v) => setState(() => _q = v.trim()),
+          onSubmitted: (v) => setState(() { _q = v.trim(); _page = 1; }),
         ),
         const SizedBox(height: EdmnSpacing.sm),
         EdmnFilterPills<String?>(
           options: [(null, t.filterAll), ('PAYMENT', t.filterPayments), ('REFUND', t.filterRefunds), ('PAYOUT', t.filterPayouts)],
           selected: _kind,
-          onSelected: (v) => setState(() => _kind = v),
+          onSelected: (v) => setState(() { _kind = v; _page = 1; }),
         ),
         const SizedBox(height: EdmnSpacing.sm),
         list.when(
           loading: () => const EdmnSkeletonList(),
-          error: (e, _) => EdmnErrorState(error: e, onRetry: () => ref.invalidate(walletActivityProvider(args))),
+          error: (e, _) => EdmnErrorState(error: e, onRetry: () => ref.invalidate(walletActivityPageProvider(args))),
           data: (r) => r.items.isEmpty
               ? EdmnEmptyState(icon: Icons.receipt_long_outlined, title: t.noActivity)
-              : EdmnCard(padding: EdgeInsets.zero, child: Column(children: [for (final x in r.items) ActivityRow(x: x)])),
+              : Column(children: [
+                  EdmnCard(padding: EdgeInsets.zero, child: Column(children: [for (final x in r.items) ActivityRow(x: x)])),
+                  if (r.hasMore) EdmnSecondaryButton(key: const Key('activity-next'), label: t.next, onPressed: () => setState(() => _page++)),
+                ]),
         ),
+        if (_page > 1) EdmnSecondaryButton(key: const Key('activity-previous'), label: t.previousPage, onPressed: () => setState(() => _page--)),
       ]),
     );
   }
 }
 
-class WalletActivityDetailScreen extends StatelessWidget {
-  const WalletActivityDetailScreen({super.key, required this.item});
-  final ListWalletActivityResponseItemsItem? item;
+class WalletActivityDetailScreen extends ConsumerWidget {
+  const WalletActivityDetailScreen({super.key, required this.id});
+  final String id;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => AsyncView(
+    value: ref.watch(walletActivityDetailProvider(id)),
+    onRetry: () => ref.invalidate(walletActivityDetailProvider(id)),
+    data: (x) => RefreshIndicator(
+      onRefresh: () => ref.refresh(walletActivityDetailProvider(id).future),
+      child: _ActivityDetailBody(item: x),
+    ),
+  );
+}
 
+class _ActivityDetailBody extends StatelessWidget {
+  const _ActivityDetailBody({required this.item});
+  final ListWalletActivityResponseItemsItem item;
   @override
   Widget build(BuildContext context) {
     final t = EdmnLocalizations.of(context);
     final x = item;
-    if (x == null) {
-      // Opened without its row (e.g. a restored route): the list is the source, never a guessed record.
-      return EdmnAppScaffold(title: t.transactionDetails, body: EdmnEmptyState(icon: Icons.receipt_long_outlined, title: t.openFromHistory, actionLabel: t.transactionHistory, onAction: () => context.go('/wallet/activity')));
-    }
     final (l, tone) = activityStatus(t, x);
     return EdmnAppScaffold(
       title: t.transactionDetails,
-      body: ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
+      body: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
         EdmnCard(
           child: Column(children: [
             Text(activityTitle(t, x), style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textSecondary)),
@@ -311,7 +329,8 @@ class WalletActivityDetailScreen extends StatelessWidget {
             EdmnStatusChip(label: l, tone: tone),
           ]),
         ),
-        if (x.isTest) ...[const SizedBox(height: EdmnSpacing.sm), EdmnTestMoneyNotice(message: t.activityTestNotice)],
+        if (x.isTest == true) ...[const SizedBox(height: EdmnSpacing.sm), EdmnTestMoneyNotice(message: t.activityTestNotice)],
+        if (x.isTest == null) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(message: t.activityMoneyModeUnknown)],
         if (x.kind == 'PAYOUT' && x.status == 'TRANSFER_UNCERTAIN') ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(message: t.payoutUncertainNote, tone: EdmnTone.warning)],
         const SizedBox(height: EdmnSpacing.md),
         EdmnCard(
@@ -374,6 +393,8 @@ class _AccountPayoutScreenState extends ConsumerState<AccountPayoutScreen> {
   PreviewAccountPayoutRequestResponse? _preview;
   CreateAccountPayoutRequestResponse? _done;
   bool _busy = false;
+  int? _pendingAmount;
+  String? _pendingDest;
 
   @override
   void dispose() {
@@ -421,6 +442,7 @@ class _AccountPayoutScreenState extends ConsumerState<AccountPayoutScreen> {
               EdmnRadioCard<String>(
                 value: _dest!,
                 onChanged: (v) => setState(() {
+                  if (_busy || _pendingAmount != null) return;
                   _dest = v;
                   _preview = null;
                 }),
@@ -437,6 +459,7 @@ class _AccountPayoutScreenState extends ConsumerState<AccountPayoutScreen> {
               const SizedBox(height: EdmnSpacing.md),
               EdmnTextField(
                 key: const Key('payout-amount'),
+                enabled: !_busy && _pendingAmount == null,
                 controller: _amount,
                 hint: t.amountEgpHint,
                 icon: Icons.payments_outlined,
@@ -456,6 +479,9 @@ class _AccountPayoutScreenState extends ConsumerState<AccountPayoutScreen> {
                         Expanded(child: Text(s.source == 'MARKETPLACE' ? t.sourceStore : t.protectedDeal, style: EdmnType.body)),
                         EgpText(s.amountPiastres, style: EdmnType.bodyStrong),
                       ]),
+                    _Line(t.transferCost, _preview!.transferCostPiastres, null),
+                    _Line(t.payoutNetAmount, _preview!.netPiastres, null),
+                    for (final note in [..._preview!.violations, ..._preview!.warnings]) EdmnNotice(message: note, tone: EdmnTone.warning),
                     Text(t.payoutPreviewNote, style: EdmnType.caption.copyWith(color: EdmnColors.textSecondary)),
                   ]),
                 ),
@@ -482,15 +508,25 @@ class _AccountPayoutScreenState extends ConsumerState<AccountPayoutScreen> {
                   label: t.sendPayoutRequest,
                   loading: _busy,
                   onPressed: () async {
-                    final amount = parseEgpToPiastres(_amount.text)!;
+                    final amount = _pendingAmount ?? parseEgpToPiastres(_amount.text)!;
                     final ok = await showEdmnConfirmation(context, title: t.sendPayoutRequest, message: t.payoutConfirmBody(egpOf(context, amount), dests.firstWhere((d) => d.key == _dest).label), confirmLabel: t.sendPayoutRequest);
                     if (!ok || !context.mounted) return;
+                    _pendingAmount ??= amount;
+                    _pendingDest ??= _dest!;
                     setState(() => _busy = true);
                     final sent = await runAction(context, () async {
-                      final r = await api.requestAccountPayout(amount, _dest!, _intent.value);
-                      if (mounted) setState(() => _done = r);
+                      try {
+                        final r = await api.requestAccountPayout(_pendingAmount!, _pendingDest!, _intent.value);
+                        if (mounted) setState(() => _done = r);
+                      } catch (e) {
+                        if (!isRetryableError(e)) { _pendingAmount = null; _pendingDest = null; _intent.reset(); }
+                        rethrow;
+                      }
                     });
+                    if (!mounted) return;
                     if (sent) {
+                      _pendingAmount = null;
+                      _pendingDest = null;
                       _intent.reset();
                       _amount.clear();
                       _preview = null;
@@ -531,7 +567,7 @@ class _RequestCard extends ConsumerWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: EdmnSpacing.xs, runSpacing: EdmnSpacing.xxs, children: [
           EgpText(x.amountPiastres, style: EdmnType.price.copyWith(color: EdmnColors.textPrimary)),
-          EdmnStatusChip(label: x.isTest ? '$l · ${t.testTag}' : l, tone: tone),
+          EdmnStatusChip(label: x.isTest == true ? '$l · ${t.testTag}' : l, tone: tone),
         ]),
         Text('#${x.number} · ${x.destination}', style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
         Text(formatDateTime(context, x.createdAt), style: EdmnType.caption.copyWith(color: EdmnColors.textSecondary)),

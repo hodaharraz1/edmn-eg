@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/account/account_screens.dart';
 import 'features/account/devices_screen.dart';
+import 'features/auth/reset_password_screen.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/auth/splash_onboarding.dart';
 import 'features/cart/cart_providers.dart';
@@ -15,6 +16,7 @@ import 'features/catalog/catalog_home_screen.dart';
 import 'features/checkout/checkout_screen.dart';
 import 'features/deals/deals_screens.dart';
 import 'features/messages/messages_screens.dart';
+import 'features/notifications/notifications_screens.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
 import 'features/postpurchase/postpurchase_screens.dart';
@@ -23,6 +25,7 @@ import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
 import 'features/wallet/wallet_screens.dart';
 import 'providers.dart';
+import 'features/wishlist/wishlist_screens.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
 const _protected = ['/returns', '/disputes', '/reviews', '/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support', '/messages'];
@@ -30,6 +33,7 @@ const _protected = ['/returns', '/disputes', '/reviews', '/account/', '/checkout
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SignedInListenable(ref);
   return GoRouter(
+    errorBuilder: (context, state) => EdmnNotFoundScreen(onHome: () => context.go('/')),
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -44,6 +48,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sign-in', builder: (c, s) => SignInScreen(next: s.uri.queryParameters['next'])),
       GoRoute(path: '/register', builder: (c, s) => const RegisterScreen()),
       GoRoute(path: '/forgot-password', builder: (c, s) => const ForgotPasswordScreen()),
+      // Same path as the web reset link, so an opened link lands here; the token stays out of logs and storage.
+      GoRoute(path: '/reset-password', builder: (c, s) => ResetPasswordScreen(token: s.uri.queryParameters['token'])),
       GoRoute(path: '/verify', builder: (c, s) => VerifyScreen(channel: s.uri.queryParameters['channel'] == 'EMAIL' ? 'EMAIL' : 'PHONE')),
       // Board bottom navigation: الرئيسية · الأقسام · إعادة الطلب · طلباتي (each tab keeps its own stack and scroll).
       StatefulShellRoute.indexedStack(
@@ -64,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/orders/:id', builder: (c, s) => OrderScreen(orderId: s.pathParameters['id']!, justPlaced: s.uri.queryParameters['placed'] == '1')),
       GoRoute(path: '/payments/:id', builder: (c, s) => PaymentScreen(paymentId: s.pathParameters['id']!)),
       GoRoute(path: '/account', builder: (c, s) => const AccountScreen()),
+      GoRoute(path: '/account/wishlist', builder: (c, s) => const WishlistScreen()),
       GoRoute(path: '/account/profile', builder: (c, s) => const ProfileScreen()),
       GoRoute(path: '/account/security', builder: (c, s) => const SecurityScreen()),
       GoRoute(path: '/account/devices', builder: (c, s) => const DevicesScreen()),
@@ -90,7 +97,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/reviews/new', builder: (c, s) => WriteReviewScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
       GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen()),
       GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
-      GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(item: s.extra as ListWalletActivityResponseItemsItem?)),
+      GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/wallet/payout', builder: (c, s) => const AccountPayoutScreen()),
       GoRoute(path: '/wallet/accounts', builder: (c, s) => const ReceivingAccountsScreen()),
       GoRoute(path: '/seller/statement', builder: (c, s) => const SellerStatementScreen()),
@@ -106,7 +113,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/payouts', builder: (c, s) => const PayoutRequestsScreen()),
       GoRoute(path: '/account/identity', builder: (c, s) => const IdentityScreen()),
       GoRoute(path: '/seller/funds', builder: (c, s) => const SellerFundsScreen()),
-      GoRoute(path: '/notifications', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).notifications, icon: Icons.notifications_none_rounded)),
+      GoRoute(path: '/notifications', builder: (c, s) => const NotificationsScreen()),
+      GoRoute(path: '/notifications/settings', builder: (c, s) => const NotificationSettingsScreen()),
       GoRoute(path: '/messages', builder: (c, s) => const InboxScreen()),
       GoRoute(path: '/messages/:id', builder: (c, s) => ConversationScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/seller/messages', builder: (c, s) => const InboxScreen(store: true)),

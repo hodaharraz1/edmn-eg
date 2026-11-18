@@ -182,7 +182,7 @@ export async function offer(actor: Actor, dealId: string, input: Parameters<type
   return dealView(actor, dealId);
 }
 
-export async function answerOffer(actor: Actor, dealId: string, version: number, decision: 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT', change?: { returnPolicy: unknown; message: string }) {
+export async function answerOffer(actor: Actor, dealId: string, version: number, decision: 'ACCEPT' | 'REQUEST_CHANGE' | 'REJECT', change?: { returnPolicy?: unknown; message: string }) {
   await respondToOffer(actor, dealId, version, decision, change);
   return dealView(actor, dealId);
 }

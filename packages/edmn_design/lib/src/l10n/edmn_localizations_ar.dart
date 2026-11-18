@@ -2766,4 +2766,138 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get disputeClaimHint => 'المبلغ اللي بتطالب بيه بالجنيه (اختياري)';
+
+  @override
+  String get previousPage => 'الصفحة السابقة';
+
+  @override
+  String get downloadPdf => 'تنزيل ملف PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.';
+
+  @override
+  String get payoutNetAmount => 'صافي المبلغ المتوقع استلامه';
+
+  @override
+  String get confirmPasswordHint => 'أكّد كلمة المرور الجديدة';
+
+  @override
+  String get devicePushNote =>
+      'إشعارات الموبايل الفورية (Push) لسه مش مفعّلة في التطبيق؛ الإعدادات دي بتتطبق على الإشعارات داخل التطبيق والإيميل، وعلى Push لما يتفعّل.';
+
+  @override
+  String get haveResetLink => 'معايا رابط إعادة التعيين';
+
+  @override
+  String get markAllRead => 'تعليم الكل كمقروء';
+
+  @override
+  String get messageNotifications => 'تنبيهات الرسائل';
+
+  @override
+  String get noNotifications => 'مفيش إشعارات لحد دلوقتي';
+
+  @override
+  String get noUnreadNotifications => 'مفيش إشعارات جديدة';
+
+  @override
+  String get notificationSettings => 'إعدادات الإشعارات';
+
+  @override
+  String get passwordChangedBody =>
+      'اتسجّل خروجك من كل الأجهزة. ادخل بكلمة المرور الجديدة.';
+
+  @override
+  String get passwordRules => '8 حروف على الأقل، وفيها حروف وأرقام.';
+
+  @override
+  String get passwordsDoNotMatch => 'كلمتين المرور مش متطابقين';
+
+  @override
+  String get pasteResetLink => 'الصق رابط إعادة التعيين اللي وصلك';
+
+  @override
+  String get prefEmail => 'إيميل لما ما أكونش متصل';
+
+  @override
+  String get prefEmailHint => 'بعد فترة لو الرسالة ما اتقرتش';
+
+  @override
+  String get prefInApp => 'داخل التطبيق';
+
+  @override
+  String get prefPush => 'إشعارات Push';
+
+  @override
+  String get prefPushHint => 'على الأجهزة اللي فعّلتها';
+
+  @override
+  String get prefPushPreview => 'عرض نص الرسالة في الإشعار';
+
+  @override
+  String get prefPushPreviewHint => 'مقفول افتراضيًا لحماية خصوصيتك';
+
+  @override
+  String get prefSound => 'صوت التنبيه';
+
+  @override
+  String get requestNewResetLink => 'اطلب رابط جديد';
+
+  @override
+  String get resetLinkInvalid =>
+      'الرابط ده مش صحيح. الصق الرابط كامل زي ما وصلك.';
+
+  @override
+  String get resetPasswordBody =>
+      'اختار كلمة مرور جديدة. الرابط بيستخدم مرة واحدة وليه مدة صلاحية.';
+
+  @override
+  String get resetPasswordTitle => 'إعادة تعيين كلمة المرور';
+
+  @override
+  String get saveNewPassword => 'حفظ كلمة المرور الجديدة';
+
+  @override
+  String get securityNotificationsNote =>
+      'إشعارات الأمان والطلبات والمدفوعات بتوصلك دايمًا ومش بتتقفل من هنا.';
+
+  @override
+  String unreadCount(int n) {
+    return 'غير مقروءة ($n)';
+  }
+
+  @override
+  String get resetLinkExpired =>
+      'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.';
+
+  @override
+  String get wishlistTitle => 'المفضلة';
+
+  @override
+  String get wishlistEmpty => 'المفضلة فاضية';
+
+  @override
+  String get wishlistEmptyHint =>
+      'احفظ المنتجات اللي عجبتك بالضغط على القلب، وهتلاقيها هنا. المنتجات غير المتاحة دلوقتي مش بتظهر.';
+
+  @override
+  String get wishlistAdd => 'أضف للمفضلة';
+
+  @override
+  String get wishlistRemove => 'شيل من المفضلة';
+
+  @override
+  String get wishlistAdded => 'اتضاف للمفضلة';
+
+  @override
+  String get wishlistRemoved => 'اتشال من المفضلة';
+
+  @override
+  String get pageNotFoundTitle => 'الصفحة دي مش موجودة';
+
+  @override
+  String get pageNotFoundBody =>
+      'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.';
 }

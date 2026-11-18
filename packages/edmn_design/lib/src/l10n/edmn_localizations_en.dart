@@ -2796,4 +2796,139 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get disputeClaimHint => 'Amount you are claiming in EGP (optional)';
+
+  @override
+  String get previousPage => 'Previous page';
+
+  @override
+  String get downloadPdf => 'Download PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'The money mode for this legacy activity is unavailable. Contact support to confirm.';
+
+  @override
+  String get payoutNetAmount => 'Expected amount to receive';
+
+  @override
+  String get confirmPasswordHint => 'Confirm the new password';
+
+  @override
+  String get devicePushNote =>
+      'Mobile push is not enabled in the app yet; these settings apply to in-app and email alerts, and to push once it is enabled.';
+
+  @override
+  String get haveResetLink => 'I have the reset link';
+
+  @override
+  String get markAllRead => 'Mark all as read';
+
+  @override
+  String get messageNotifications => 'Message alerts';
+
+  @override
+  String get noNotifications => 'No notifications yet';
+
+  @override
+  String get noUnreadNotifications => 'No unread notifications';
+
+  @override
+  String get notificationSettings => 'Notification settings';
+
+  @override
+  String get passwordChangedBody =>
+      'You were signed out on every device. Sign in with the new password.';
+
+  @override
+  String get passwordRules =>
+      'At least 8 characters, with letters and numbers.';
+
+  @override
+  String get passwordsDoNotMatch => 'The passwords do not match';
+
+  @override
+  String get pasteResetLink => 'Paste the reset link you received';
+
+  @override
+  String get prefEmail => 'Email when I am away';
+
+  @override
+  String get prefEmailHint => 'After a while if the message is still unread';
+
+  @override
+  String get prefInApp => 'In the app';
+
+  @override
+  String get prefPush => 'Push notifications';
+
+  @override
+  String get prefPushHint => 'On devices where you enabled them';
+
+  @override
+  String get prefPushPreview => 'Show message text in the notification';
+
+  @override
+  String get prefPushPreviewHint => 'Off by default for your privacy';
+
+  @override
+  String get prefSound => 'Alert sound';
+
+  @override
+  String get requestNewResetLink => 'Request a new link';
+
+  @override
+  String get resetLinkInvalid =>
+      'This link is not valid. Paste the full link you received.';
+
+  @override
+  String get resetPasswordBody =>
+      'Choose a new password. The link works once and expires.';
+
+  @override
+  String get resetPasswordTitle => 'Reset password';
+
+  @override
+  String get saveNewPassword => 'Save new password';
+
+  @override
+  String get securityNotificationsNote =>
+      'Security, order and payment notices always reach you and cannot be turned off here.';
+
+  @override
+  String unreadCount(int n) {
+    return 'Unread ($n)';
+  }
+
+  @override
+  String get resetLinkExpired =>
+      'This link has expired, was already used, or a newer link was requested. Request a new link.';
+
+  @override
+  String get wishlistTitle => 'Wishlist';
+
+  @override
+  String get wishlistEmpty => 'Your wishlist is empty';
+
+  @override
+  String get wishlistEmptyHint =>
+      'Tap the heart on a product to save it here. Products that are not available right now are not shown.';
+
+  @override
+  String get wishlistAdd => 'Save to wishlist';
+
+  @override
+  String get wishlistRemove => 'Remove from wishlist';
+
+  @override
+  String get wishlistAdded => 'Saved to your wishlist';
+
+  @override
+  String get wishlistRemoved => 'Removed from your wishlist';
+
+  @override
+  String get pageNotFoundTitle => 'This page doesn\'t exist';
+
+  @override
+  String get pageNotFoundBody =>
+      'The link is wrong or no longer available. Go back home and continue from there.';
 }

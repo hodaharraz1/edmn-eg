@@ -9,6 +9,8 @@ After Phase 2 (Protected Deal): Blocked by API 1, Blocked by Business Decision 5
 After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decision 5, Implemented 77, Merged 38, Missing 17, Reused 2.
 After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implemented 83, Merged 37, Missing 12, Reused 2.
 After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Business Decision 5, Implemented 92, Merged 38, Missing 2, Reused 2.
+After Phase 6 (Notifications, Reset password): Blocked by API 1, Blocked by Business Decision 5, Implemented 95, Merged 37, Reused 2.
+After the unified integration (Wishlist B22): Blocked by Business Decision 5, Implemented 96, Merged 37, Reused 2. Missing 0, Blocked by API 0.
 
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
@@ -19,7 +21,7 @@ After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Busines
 | B05 | Register | /register | Implemented | auth/register | backend | — |
 | B06 | OTP verification | /verify | Implemented | me/verification/* | backend | — |
 | B07 | Forgot password | /forgot-password | Implemented | auth/password/forgot | backend | — |
-| B08 | Reset password | — | Missing | auth/password/reset (API exists; needs deep-link screen) | backend | — |
+| B08 | Reset password | /reset-password?token= (web link path) or paste link; /forgot-password → «معايا رابط» | Implemented | POST /auth/password/reset (single-use, expiring, policy, all sessions revoked) | widget+backend | yes |
 | B09 | Marketplace home | / | Implemented | catalog | widget | yes |
 | B10 | Location selection | governorate sheet + addresses | Merged | governorates | — | yes |
 | B11 | Categories | /categories | Implemented | catalog/categories | — | yes |
@@ -33,7 +35,7 @@ After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Busines
 | B19 | Product reviews | reviews in B17 | Merged | …/reviews | — | yes |
 | B20 | Public seller store | /stores/:slug | Implemented | stores/{slug} | backend | yes |
 | B21 | Store products | /stores/:slug | Merged | catalog?storeSlug | backend | yes |
-| B22 | Wishlist | — | Blocked by API | no wishlist API | — | — |
+| B22 | Wishlist | /account/wishlist (+ hearts on cards and product page) | Implemented | GET /wishlist, PUT/DELETE /wishlist/{productId} (same wishlist_items as web) | widget+backend+UI journey | yes |
 | B23 | Cart | /cart | Implemented | cart | widget+backend | yes |
 | B24 | Cart validation | /cart issues | Merged | cart, acknowledge-prices | backend | yes |
 | B25 | Checkout address | /checkout step 1 | Implemented | checkout, addresses | widget | yes |
@@ -148,8 +150,8 @@ After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Busines
 | C24 | Edit profile | /account/profile | Implemented | PATCH me | backend | — |
 | C25 | Addresses & contact | /account/addresses | Implemented | me/addresses | backend | yes |
 | C26 | Security | /account/security, /account/devices | Implemented | me/password, me/sessions | widget+backend | yes |
-| C27 | Notifications center | /notifications stub | Missing | notifications table / markRead | — | — |
-| C28 | Preferences & language | language in /account | Merged | prefsFor/savePrefs | widget | yes |
+| C27 | Notifications center | /notifications | Implemented | GET /notifications, /notifications/unread, POST /notifications/read | widget+backend | yes |
+| C28 | Preferences & language | /notifications/settings; language in /account | Implemented | GET/PUT /notifications/preferences | backend | yes |
 | C29 | Legal & privacy | /legal/:slug | Implemented | content/legal | — | — |
 | C30 | Deletion & logout | logout in /account | Merged | logout; deletion API missing | — | — |
 

@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gt, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
+import { sha256 } from '@/server/core/crypto';
 import { enforce } from '@/server/auth/rate-limit';
 import { hasPermission, requirePermission, requireUser, type Actor } from '@/server/core/actor';
 import { conflict, DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
@@ -9,6 +10,7 @@ import {
   conversationMessageReports,
   conversationMessages,
   conversationReads,
+  idempotencyKeys,
   conversations,
   disputes,
   externalDeals,
@@ -225,25 +227,33 @@ export async function sendMessage(
   if (!body && !attachments.length) throw validation('اكتب رسالتك أو ضيف مرفق');
   if (attachments.length > MAX_ATTACHMENTS) throw validation(`تقدر ترفق ${MAX_ATTACHMENTS} ملفات بالكتير في الرسالة`);
 
-  // A retried send (same client key) returns the original message — never a duplicate.
-  const [dupe] = await db
-    .select()
-    .from(conversationMessages)
-    .where(and(eq(conversationMessages.senderUserId, access.userId), eq(conversationMessages.clientKey, clientKey)));
-  if (dupe) {
+  // Hash the original upload bytes, not re-encoded file bytes. Store the fingerprint atomically with the message.
+  const requestHash = sha256(JSON.stringify([access.conv.id, body, attachments.map((a) => [a.name, sha256(a.data)])]));
+  const scope = `message-intent:${access.userId}`;
+  const replayed = async (conn: DbOrTx) => {
+    const [dupe] = await conn.select().from(conversationMessages)
+      .where(and(eq(conversationMessages.senderUserId, access.userId), eq(conversationMessages.clientKey, clientKey)));
+    if (!dupe) return null;
     if (dupe.conversationId !== access.conv.id) throw validation('حاول تاني');
-    return dupe;
-  }
-
-  const ws = await writeState(access.conv, access.side);
-  if (!ws.canWrite) throw invalidState(ws.reason ?? 'مينفعش تبعت رسايل في المحادثة دي دلوقتي');
-
+    const [intent] = await conn.select().from(idempotencyKeys).where(and(eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, clientKey)));
+    if (dupe.body !== body || (intent?.requestHash && intent.requestHash !== requestHash)) {
+      throw conflict('مفتاح الرسالة مستخدم لمحتوى أو مرفقات مختلفة. راجع الرسالة السابقة أولاً');
+    }
+    return dupe; // Old messages without a fingerprint retain their previous replay behavior.
+  };
+  const previous = await replayed(db);
+  if (previous) return previous;
+  // Counters use their own connection: do not wait for one while holding a transaction connection/intent lock.
   await enforce(`msg:min:${access.userId}`, LIMITS.perMinute, 60);
   await enforce(`msg:conv:${access.conv.id}:${access.userId}`, LIMITS.perHourPerConversation, 3600);
   for (let i = 0; i < attachments.length; i++) await enforce(`msg:att:${access.userId}`, LIMITS.attachmentsPerHour, 3600);
-
   let pushIds: string[] = [];
   const msg = await db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${scope + ':' + clientKey}))`);
+    const duplicate = await replayed(tx);
+    if (duplicate) return duplicate;
+    const ws = await writeState(access.conv, access.side, tx);
+    if (!ws.canWrite) throw invalidState(ws.reason ?? 'مينفعش تبعت رسايل في المحادثة دي دلوقتي');
     const fileIds: string[] = [];
     for (const a of attachments) {
       const stored = await storeUpload(tx, actor, { purpose: 'MESSAGE_ATTACHMENT', data: a.data, originalName: a.name });
@@ -253,9 +263,11 @@ export async function sendMessage(
       .insert(conversationMessages)
       .values({ conversationId: access.conv.id, senderUserId: access.userId, senderRole: access.side, body, clientKey })
       .returning();
+    await tx.insert(idempotencyKeys).values({ scope, key: clientKey, requestHash, resultRef: msg.id });
     if (fileIds.length) await tx.insert(conversationMessageAttachments).values(fileIds.map((fileId) => ({ messageId: msg.id, fileId })));
     await tx.update(conversations).set({ lastMessageAt: msg.createdAt }).where(eq(conversations.id, access.conv.id));
-    await markReadTx(tx, access.conv.id, access.userId);
+    // Sending is not evidence that incoming messages outside the viewport were read.
+    // Only the explicit seen endpoint advances the read position.
     // Notification fan-out is recorded in the same transaction (so it exists iff the message exists), but no
     // provider is contacted here: a push/email outage can never lose, delay or roll back a message.
     pushIds = await notifyRecipients(tx, access.conv, access.side, msg.id, fileIds.length > 0);
