@@ -10,6 +10,7 @@ After Phase 3 (Messaging & Support): Blocked by API 1, Blocked by Business Decis
 After Phase 4 (Wallet): Blocked by API 1, Blocked by Business Decision 5, Implemented 83, Merged 37, Missing 12, Reused 2.
 After Phase 5 (Returns, Disputes, Reviews): Blocked by API 1, Blocked by Business Decision 5, Implemented 92, Merged 38, Missing 2, Reused 2.
 After Phase 6 (Notifications, Reset password): Blocked by API 1, Blocked by Business Decision 5, Implemented 95, Merged 37, Reused 2.
+After the unified integration (Wishlist B22): Blocked by Business Decision 5, Implemented 96, Merged 37, Reused 2. Missing 0, Blocked by API 0.
 
 | ID | Screen | Route | Status | API / service | Tests | Shot |
 |---|---|---|---|---|---|---|
@@ -34,7 +35,7 @@ After Phase 6 (Notifications, Reset password): Blocked by API 1, Blocked by Busi
 | B19 | Product reviews | reviews in B17 | Merged | …/reviews | — | yes |
 | B20 | Public seller store | /stores/:slug | Implemented | stores/{slug} | backend | yes |
 | B21 | Store products | /stores/:slug | Merged | catalog?storeSlug | backend | yes |
-| B22 | Wishlist | — | Blocked by API | no wishlist API | — | — |
+| B22 | Wishlist | /account/wishlist (+ hearts on cards and product page) | Implemented | GET /wishlist, PUT/DELETE /wishlist/{productId} (same wishlist_items as web) | widget+backend+UI journey | yes |
 | B23 | Cart | /cart | Implemented | cart | widget+backend | yes |
 | B24 | Cart validation | /cart issues | Merged | cart, acknowledge-prices | backend | yes |
 | B25 | Checkout address | /checkout step 1 | Implemented | checkout, addresses | widget | yes |

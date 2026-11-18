@@ -26,7 +26,7 @@ logo, two-line headline, dots, white "ابدأ الآن", sign-in link).
 | V-01 | "أضمن" wordmark + "ماركت EDMN" | Original logo file (kufic "إضمن" + EDMN) + text "ماركت" in cyan | Only the original logo was supplied; directive forbids redrawing | Supply the official "أضمن ماركت" lockup files if it should differ |
 | V-02 | 3D cart/shield illustration in the Protected Deal banner and deal hero | Original emblem | Illustration not among supplied assets | Supply the illustration (would be listed in BRAND doc) |
 | V-03 | Colorful 3D category illustrations | Line icons in brand blue mapped from the category's icon field | Not supplied; categories come from the database | Supply per-category artwork or keep icons |
-| V-04 | Heart (wishlist) on product cards / product page, share icon | Not shown | No wishlist / share API — a button that does nothing is forbidden | Approve a wishlist API, or remove from the design |
+| V-04 | Heart (wishlist) on product cards / product page, share icon | **Heart: shown** (card image corner, product page header). Share: not shown | Wishlist API added (mirrors the web wishlist). Share has no API — a button that does nothing is forbidden | Heart resolved. Share: approve a share capability or remove from the design |
 | V-05 | Apple / Google sign-in buttons | Not shown; "تصفح بدون تسجيل" in their place | Backend has no social login | Approve adding OAuth (needs provider keys) |
 | V-06 | Mic icon in search | Not shown | No voice search | Remove or approve |
 | V-07 | "توصيل مجاني لطلبات القادم عند الشراء بقيمة 499 ج.م أو أكثر" strip | Not shown | Would be a hardcoded promise; free-shipping thresholds are per seller on the server | Approve a server-driven promo strip |

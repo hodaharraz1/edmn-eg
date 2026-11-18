@@ -105,6 +105,17 @@ Not exposed, by design: dispute decision (resolveDispute), refund approval and p
 | preferences | GET/PUT /notifications/preferences (customer) | prefsFor / savePrefs |
 | reset password | POST /auth/password/forgot, POST /auth/password/reset (none) | requestPasswordReset, resetPassword |
 
+## Wishlist (B22)
+
+| Operation | Route (auth) | Service |
+|---|---|---|
+| my wishlist | GET /wishlist (customer) | mobile/wishlist.myWishlist → wishlist_items (mine) + publicProductCards (visible products only, newest first) |
+| save | PUT /wishlist/{productId} (customer, Idempotency-Key) | addToWishlist: 404 unless publicly visible; already saved = no change |
+| remove | DELETE /wishlist/{productId} (customer, Idempotency-Key) | removeFromWishlist: not saved = no change |
+
+Explicit add/remove instead of the web's toggle: a retried request never flips the state. Same rows as the web
+/account/wishlist page.
+
 Each notification returns a typed `target` (`ORDER`, `DEAL`, `RETURN`, `DISPUTE`, `TICKET`, `CONVERSATION`, `WALLET`, …)
 mapped on the server from known internal pages; external, admin or unknown links return `null` and the raw link is never
 sent.
