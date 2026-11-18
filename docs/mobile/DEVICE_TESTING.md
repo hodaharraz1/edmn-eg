@@ -17,7 +17,7 @@
 | البند | Android | iPhone |
 |---|---|---|
 | الجهاز | أي حاسوب (Windows / macOS / Linux) | **Mac** عليه Xcode (الإصدار الذي يطلبه Flutter 3.47) |
-| Flutter | 3.47.x stable (نفس إصدار CI: 3.47.8) | نفسه، + CocoaPods |
+| Flutter | 3.47.x stable (نفس إصدار CI: 3.47.8) | نفسه. لا حاجة لـ CocoaPods: المشروع يستخدم Swift Package Manager |
 | الهاتف | Android 7+ مع تفعيل «خيارات المطوّر» و«تصحيح USB» | iOS 15+ مع تفعيل **Developer Mode** |
 | الشبكة | الحاسوب والهاتف على **نفس شبكة Wi-Fi** | نفس الشيء |
 | الخادم | Node.js 22+ وPostgreSQL 16 على الحاسوب | نفسه |
@@ -114,33 +114,77 @@ flutter run --debug \
   adb install -r build/app/outputs/flutter-apk/app-debug.apk
   ```
 
-## 5. iPhone على Mac
+## 5. iPhone على Mac (Debug Development Build فقط)
+
+### 5أ. فحص بيئة الـ Mac (مرة واحدة)
+
+```bash
+sw_vers                      # إصدار macOS
+xcodebuild -version          # Xcode: الإصدار الذي يطلبه Flutter 3.47
+xcode-select -p              # يجب أن يشير إلى /Applications/Xcode.app/...
+sudo xcodebuild -runFirstLaunch
+flutter --version            # 3.47.x stable
+flutter doctor -v            # قسم Xcode يجب أن يكون ✓
+xcrun devicectl list devices # الـ iPhone يظهر بعد توصيله والثقة بالـ Mac
+```
+
+- **لا تحتاج CocoaPods ولا `pod install`.** المشروع يستخدم Swift Package Manager: Xcode مربوط بـ `FlutterGeneratedPluginSwiftPackage`، ولا يوجد `Podfile`.
+- الإضافات الثلاث (`file_picker_darwin` و`flutter_secure_storage_darwin` و`path_provider_foundation`) تدعم Swift Package Manager، وتحتاج iOS 13–14. المشروع يستهدف iOS 15.
+- لو ظهر في `flutter doctor` أن CocoaPods مطلوب، فهذا فقط لأن Swift Package Manager معطَّل في إعداداتك. فعّله بالأمر `flutter config --enable-swift-package-manager` بدل تثبيت CocoaPods.
+
+### 5ب. التوقيع (Development فقط، بلا شهادات توزيع)
 
 ```bash
 cd apps/customer_mobile
 flutter pub get
-cd ios && pod install && cd ..
 open ios/Runner.xcworkspace
 ```
 
 في Xcode:
-1. اختر Runner، ثم **Signing & Capabilities**، ثم **Team**، واختر حساب Apple الشخصي (Personal Team).
-   - لو ظهر تعارض في المعرّف، غيّر **Bundle Identifier** محليًا فقط (مثلًا `com.edmneg.edmnCustomer.dev.<اسمك>`) ولا ترفع هذا التغيير.
-2. وصّل الـ iPhone بكابل، وفعّل على الهاتف: الإعدادات ← الخصوصية والأمان ← Developer Mode.
-3. بعد أول تثبيت: الإعدادات ← عام ← VPN وإدارة الجهاز ← ثق بالمطوّر.
+1. اختر Runner، ثم **Signing & Capabilities**:
+   - اترك **Automatically manage signing** مفعّلًا؛
+   - في **Team** اختر حسابك. حساب Apple مجاني (Personal Team) يكفي.
+   - Xcode ينشئ شهادة **Apple Development** فقط. **لا تنشئ** شهادة Distribution، ولا تستخدم Archive، ولا Distribute App.
+2. لو ظهر تعارض في **Bundle Identifier** (لأن `com.edmneg.edmnCustomer` مسجَّل في فريق آخر):
+   - غيّره محليًا، مثلًا `com.edmneg.edmnCustomer.dev.<اسمك>`؛
+   - **لا تعمل commit** لهذا التغيير: `git checkout ios/Runner.xcodeproj` بعد الاختبار.
+3. وصّل الـ iPhone بكابل، واضغط «ثق» على الهاتف.
+4. على الهاتف: الإعدادات ← الخصوصية والأمان ← **Developer Mode** ← تشغيل، ثم أعد تشغيل الهاتف.
+5. بعد أول تثبيت: الإعدادات ← عام ← VPN وإدارة الجهاز ← ثق بالمطوّر.
 
-ثم من الطرفية:
+### 5ج. التشغيل على الهاتف
+
+الـ iPhone لا يملك مثل `adb reverse`، لذا يتصل بالـ Mac عبر **نفس شبكة Wi-Fi**. استخدم اسم الـ Mac على الشبكة المحلية:
 ```bash
-flutter devices
-flutter run --debug \
-  --dart-define=EDMN_ENV=local \
-  --dart-define=EDMN_API_BASE_URL=http://192.168.1.20:3000
+scutil --get LocalHostName      # مثال: Hodas-MacBook  ←  العنوان: http://Hodas-MacBook.local:3000
 ```
 
-- عند أول اتصال سيسأل iOS عن **الوصول إلى الشبكة المحلية**. اختر «سماح»، وإلا لن يصل التطبيق للخادم. لو رفضت بالخطأ: الإعدادات ← الخصوصية ← الشبكة المحلية ← اضمن.
-- `Info.plist` يسمح بـ HTTP فقط لعناوين الشبكة المحلية (`NSAllowsLocalNetworking`). كل العناوين العامة ما زالت تتطلب HTTPS.
+افتح `http://<الاسم>.local:3000` من Safari على الـ iPhone أولًا للتأكد من الوصول، ثم:
+```bash
+flutter devices
+flutter run --debug -d <معرّف-الـiPhone> \
+  --dart-define=EDMN_ENV=local \
+  --dart-define=EDMN_API_BASE_URL=http://<الاسم>.local:3000 \
+  --dart-define=EDMN_APP_VERSION=1.0.0-device-test
+```
+
+- عناوين `.local` مغطاة صراحةً باستثناء `NSAllowsLocalNetworking` في `Info.plist`. لو استخدمت عنوان IP بدلًا منها (مثل `http://192.168.1.20:3000`) ورفض iOS الاتصال، فارجع إلى اسم `.local`.
+- عند أول اتصال سيسأل iOS عن **الوصول إلى الشبكة المحلية**. اختر «سماح»، وإلا لن يصل التطبيق للخادم. لو رفضت بالخطأ: الإعدادات ← الخصوصية والأمان ← الشبكة المحلية ← اضمن.
+- كل العناوين العامة ما زالت تتطلب HTTPS. نسخ staging وproduction ترفض أي عنوان غير HTTPS.
 - شهادة Personal Team تنتهي بعد 7 أيام. أعد `flutter run` لتجديدها.
-- لا TestFlight ولا App Store دون موافقة.
+- **لقطات الشاشة:** زر الجانب + رفع الصوت على الهاتف، أو `xcrun devicectl device info …`. **سجل التطبيق:** نافذة `flutter run` نفسها.
+- لا TestFlight ولا App Store ولا Archive.
+
+### 5د. فحوص خاصة بالـ iPhone (تُضاف إلى الـ 13)
+
+| # | ما نتحقق منه | المتوقع |
+|---|---|---|
+| i1 | منتقي الملفات (صورة من «الصور» عبر تطبيق «الملفات»، وPDF) في المحادثة والدعم والإرجاع | يفتح المنتقي، يُرفع الملف، والصورة تظهر مصغّرة |
+| i2 | لوحة المفاتيح العربية والإيموجي في حقول الشات والدعم | لا يختفي الحقل خلف اللوحة؛ الاتجاه صحيح للعربي والإنجليزي المختلط |
+| i3 | الإيماءات: السحب من حافة الشاشة للرجوع في RTL | الرجوع يعمل ولا يتعارض مع القوائم |
+| i4 | Dynamic Type (أكبر حجم خط من الإعدادات) | لا قص ولا تداخل في البطاقات المالية وأزرار الدفع |
+| i5 | حذف التطبيق ثم تثبيته من جديد | **سجّل ما يحدث**: بيانات Keychain تبقى بعد الحذف على iOS، فقد يفتح التطبيق مسجّلًا بالحساب السابق. المطلوب قرار: هل هذا مقبول؟ |
+| i6 | قفل الهاتف أثناء رفع مرفق ثم فتحه | لا انهيار؛ إما يكتمل الرفع أو تظهر رسالة خطأ واضحة مع إعادة محاولة لا تُكرّر |
 
 ## 6. قائمة الفحص على الهاتف
 
