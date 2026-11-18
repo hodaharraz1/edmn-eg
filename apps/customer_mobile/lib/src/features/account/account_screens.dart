@@ -461,23 +461,6 @@ class LegalScreen extends ConsumerWidget {
   }
 }
 
-/// A service whose mobile API is not built yet. It says so plainly — it never shows a fake balance, list or button
-/// that pretends to work. Each use is listed in docs/mobile/SCREEN_INVENTORY.md as NOT DONE.
-class NotYetAvailableScreen extends StatelessWidget {
-  const NotYetAvailableScreen({super.key, required this.title, required this.icon});
-  final String title;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = EdmnLocalizations.of(context);
-    return EdmnAppScaffold(
-      title: title,
-      body: EdmnEmptyState(key: const Key('not-yet-available'), icon: icon, title: t.comingFromServer, message: t.notAvailableYetBody),
-    );
-  }
-}
-
 /// Payment methods: the methods are chosen per order at checkout (manual transfer); no card is ever stored.
 class PaymentMethodsScreen extends ConsumerWidget {
   const PaymentMethodsScreen({super.key});
