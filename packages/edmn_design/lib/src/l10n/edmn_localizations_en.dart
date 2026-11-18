@@ -2796,4 +2796,93 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get disputeClaimHint => 'Amount you are claiming in EGP (optional)';
+
+  @override
+  String get confirmPasswordHint => 'Confirm the new password';
+
+  @override
+  String get devicePushNote =>
+      'Mobile push is not enabled in the app yet; these settings apply to in-app and email alerts, and to push once it is enabled.';
+
+  @override
+  String get haveResetLink => 'I have the reset link';
+
+  @override
+  String get markAllRead => 'Mark all as read';
+
+  @override
+  String get messageNotifications => 'Message alerts';
+
+  @override
+  String get noNotifications => 'No notifications yet';
+
+  @override
+  String get noUnreadNotifications => 'No unread notifications';
+
+  @override
+  String get notificationSettings => 'Notification settings';
+
+  @override
+  String get passwordChangedBody =>
+      'You were signed out on every device. Sign in with the new password.';
+
+  @override
+  String get passwordRules =>
+      'At least 8 characters, with letters and numbers.';
+
+  @override
+  String get passwordsDoNotMatch => 'The passwords do not match';
+
+  @override
+  String get pasteResetLink => 'Paste the reset link you received';
+
+  @override
+  String get prefEmail => 'Email when I am away';
+
+  @override
+  String get prefEmailHint => 'After a while if the message is still unread';
+
+  @override
+  String get prefInApp => 'In the app';
+
+  @override
+  String get prefPush => 'Push notifications';
+
+  @override
+  String get prefPushHint => 'On devices where you enabled them';
+
+  @override
+  String get prefPushPreview => 'Show message text in the notification';
+
+  @override
+  String get prefPushPreviewHint => 'Off by default for your privacy';
+
+  @override
+  String get prefSound => 'Alert sound';
+
+  @override
+  String get requestNewResetLink => 'Request a new link';
+
+  @override
+  String get resetLinkInvalid =>
+      'This link is not valid. Paste the full link you received.';
+
+  @override
+  String get resetPasswordBody =>
+      'Choose a new password. The link works once and expires.';
+
+  @override
+  String get resetPasswordTitle => 'Reset password';
+
+  @override
+  String get saveNewPassword => 'Save new password';
+
+  @override
+  String get securityNotificationsNote =>
+      'Security, order and payment notices always reach you and cannot be turned off here.';
+
+  @override
+  String unreadCount(int n) {
+    return 'Unread ($n)';
+  }
 }

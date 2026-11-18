@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/account/account_screens.dart';
 import 'features/account/devices_screen.dart';
+import 'features/auth/reset_password_screen.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/auth/splash_onboarding.dart';
 import 'features/cart/cart_providers.dart';
@@ -15,6 +16,7 @@ import 'features/catalog/catalog_home_screen.dart';
 import 'features/checkout/checkout_screen.dart';
 import 'features/deals/deals_screens.dart';
 import 'features/messages/messages_screens.dart';
+import 'features/notifications/notifications_screens.dart';
 import 'features/orders/orders_screens.dart';
 import 'features/orders/payment_screen.dart';
 import 'features/postpurchase/postpurchase_screens.dart';
@@ -44,6 +46,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sign-in', builder: (c, s) => SignInScreen(next: s.uri.queryParameters['next'])),
       GoRoute(path: '/register', builder: (c, s) => const RegisterScreen()),
       GoRoute(path: '/forgot-password', builder: (c, s) => const ForgotPasswordScreen()),
+      // Same path as the web reset link, so an opened link lands here; the token stays out of logs and storage.
+      GoRoute(path: '/reset-password', builder: (c, s) => ResetPasswordScreen(token: s.uri.queryParameters['token'])),
       GoRoute(path: '/verify', builder: (c, s) => VerifyScreen(channel: s.uri.queryParameters['channel'] == 'EMAIL' ? 'EMAIL' : 'PHONE')),
       // Board bottom navigation: الرئيسية · الأقسام · إعادة الطلب · طلباتي (each tab keeps its own stack and scroll).
       StatefulShellRoute.indexedStack(
@@ -106,7 +110,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/payouts', builder: (c, s) => const PayoutRequestsScreen()),
       GoRoute(path: '/account/identity', builder: (c, s) => const IdentityScreen()),
       GoRoute(path: '/seller/funds', builder: (c, s) => const SellerFundsScreen()),
-      GoRoute(path: '/notifications', builder: (c, s) => NotYetAvailableScreen(title: EdmnLocalizations.of(c).notifications, icon: Icons.notifications_none_rounded)),
+      GoRoute(path: '/notifications', builder: (c, s) => const NotificationsScreen()),
+      GoRoute(path: '/notifications/settings', builder: (c, s) => const NotificationSettingsScreen()),
       GoRoute(path: '/messages', builder: (c, s) => const InboxScreen()),
       GoRoute(path: '/messages/:id', builder: (c, s) => ConversationScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/seller/messages', builder: (c, s) => const InboxScreen(store: true)),
