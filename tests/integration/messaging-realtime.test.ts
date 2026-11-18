@@ -128,7 +128,9 @@ describe('live sync (no refresh)', () => {
     expect(toBuyer.ref).toMatch(/^الطلب \u2066#\d+-\w+\u2069$/);
     expect(buyerNext.unreadMessages).toBe(1);
     expect((await listForUser(c.actor)).find((x) => x.id === conv.id)?.unread).toBe(1); // 9
-    expect(await unreadForSeller(s.actor)).toBe(0); // replying means the seller had the conversation open
+    expect(await unreadForSeller(s.actor)).toBe(1); // sending cannot prove the incoming bubble was visible
+    await markRead(s.actor, conv.id, m1.id);
+    expect(await unreadForSeller(s.actor)).toBe(0);
   });
 
   it('4-6 — open conversation delta, background poll and reconnect after missed messages (no loss, no duplicates)', async () => {

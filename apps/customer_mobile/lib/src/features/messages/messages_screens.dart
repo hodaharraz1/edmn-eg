@@ -134,6 +134,11 @@ class ConversationScreen extends ConsumerStatefulWidget {
 class _ConversationScreenState extends ConsumerState<ConversationScreen> with WidgetsBindingObserver {
   final _text = TextEditingController();
   final _scroll = ScrollController();
+  final _viewport = GlobalKey();
+  final _messageKeys = <String, GlobalKey>{};
+  GetConversationResponse? _rendered;
+  String? _pendingBody;
+  List<PickedFile>? _pendingFiles;
   /// One key per message the user is trying to send; a retry after a failure reuses it (no duplicate on the server).
   final _intent = IntentKey();
   final _files = <PickedFile>[];
@@ -147,6 +152,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scroll.addListener(_scheduleSeen);
     // Light polling while the conversation is on screen (no server push channel for the app yet).
     _poll = Timer.periodic(const Duration(seconds: 10), (_) {
       if (_visible) ref.invalidate(conversationProvider(_args));
@@ -164,7 +170,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
 
   bool get _visible {
     final s = WidgetsBinding.instance.lifecycleState;
-    return s == null || s == AppLifecycleState.resumed;
+    return mounted && (s == null || s == AppLifecycleState.resumed) && (ModalRoute.of(context)?.isCurrent ?? false);
   }
 
   @override
@@ -172,30 +178,54 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
     if (state == AppLifecycleState.resumed) ref.invalidate(conversationProvider(_args));
   }
 
-  /// Marks read only what was actually rendered while the app is in the foreground.
+  void _scheduleSeen() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = _rendered;
+      if (mounted && c != null) _markSeen(c);
+    });
+  }
+
+  /// Only a bubble intersecting the actual viewport on the current route can advance the read position.
   void _markSeen(GetConversationResponse c) {
-    final incoming = c.messages.where((m) => !m.mine);
-    if (incoming.isEmpty || !_visible) return;
-    final last = c.messages.last.id;
-    if (_seenUpTo == last) return;
+    if (!_visible) return;
+    final viewport = _viewport.currentContext?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return;
+    final bounds = viewport.localToGlobal(Offset.zero) & viewport.size;
+    String? last;
+    for (final m in c.messages) {
+      if (m.side == c.side) continue;
+      final box = _messageKeys[m.id]?.currentContext?.findRenderObject();
+      if (box is RenderBox && box.attached && box.hasSize && bounds.overlaps(box.localToGlobal(Offset.zero) & box.size)) last = m.id;
+    }
+    if (last == null || _seenUpTo == last) return;
     _seenUpTo = last;
     ref.read(mobileApiProvider).markConversationSeen(widget.id, upToMessageId: last, store: widget.store).then((_) {
-      ref.invalidate(inboxProvider);
-    }, onError: (_) => _seenUpTo = null);
+      if (mounted) ref.invalidate(inboxProvider);
+    }, onError: (_) { if (mounted) _seenUpTo = null; });
   }
 
   Future<void> _send() async {
     final t = EdmnLocalizations.of(context);
-    final body = _text.text.trim();
+    final body = _pendingBody ?? _text.text.trim();
     if (body.isEmpty && _files.isEmpty) return;
+    _pendingBody = body;
+    _pendingFiles ??= List.of(_files);
     setState(() => _sending = true);
     try {
-      await ref.read(mobileApiProvider).sendMessage(widget.id, body, _intent.value, attachments: [for (final f in _files) (f.bytes, f.name)], store: widget.store);
+      await ref.read(mobileApiProvider).sendMessage(widget.id, body, _intent.value, attachments: [for (final f in _pendingFiles!) (f.bytes, f.name)], store: widget.store);
+      if (!mounted) return;
       _intent.reset();
+      _pendingBody = null;
+      _pendingFiles = null;
       _text.clear();
       _files.clear();
       ref.invalidate(conversationProvider(_args));
     } catch (e) {
+      if (!isRetryableError(e)) {
+        _pendingBody = null;
+        _pendingFiles = null;
+        _intent.reset();
+      }
       // Retryable failures keep the text and the key: sending again cannot create a duplicate on the server.
       if (mounted) showEdmnMessage(context, isRetryableError(e) ? t.messageNotSentRetry : apiErrorMessage(context, e), error: true);
     } finally {
@@ -209,7 +239,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
     final conv = ref.watch(conversationProvider(_args));
     ref.listen(conversationProvider(_args), (_, next) {
       final c = next.value;
-      if (c != null) WidgetsBinding.instance.addPostFrameCallback((_) => _markSeen(c));
+      if (c != null) {
+        _rendered = c;
+        _scheduleSeen();
+      }
     });
     final c = conv.value;
     return EdmnAppScaffold(
@@ -235,11 +268,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
             child: c.messages.isEmpty
                 ? EdmnEmptyState(icon: Icons.forum_outlined, title: t.startConversation, message: t.messagesEvidenceNote)
                 : ListView.builder(
+                    key: _viewport,
                     controller: _scroll,
                     reverse: true,
                     padding: const EdgeInsetsDirectional.all(EdmnSpacing.md),
                     itemCount: c.messages.length,
-                    itemBuilder: (_, i) => _Bubble(m: c.messages[c.messages.length - 1 - i], store: widget.store),
+                    itemBuilder: (_, i) {
+                      final m = c.messages[c.messages.length - 1 - i];
+                      return KeyedSubtree(key: _messageKeys.putIfAbsent(m.id, () => GlobalKey()), child: _Bubble(m: m, store: widget.store));
+                    },
                   ),
           ),
           if (!c.canWrite)
@@ -249,6 +286,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
               text: _text,
               files: _files,
               sending: _sending,
+              locked: _pendingBody != null,
               onPick: () async {
                 if (_files.length >= 3) return showEdmnMessage(context, t.maxAttachments(3), error: true);
                 final f = await ref.read(filePickerProvider).pick();
@@ -264,10 +302,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> with Wi
 }
 
 class _Composer extends StatelessWidget {
-  const _Composer({required this.text, required this.files, required this.sending, required this.onPick, required this.onRemove, required this.onSend});
+  const _Composer({required this.text, required this.files, required this.sending, required this.locked, required this.onPick, required this.onRemove, required this.onSend});
   final TextEditingController text;
   final List<PickedFile> files;
   final bool sending;
+  final bool locked;
   final VoidCallback onPick;
   final void Function(PickedFile) onRemove;
   final VoidCallback onSend;
@@ -285,11 +324,11 @@ class _Composer extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             if (files.isNotEmpty)
               Wrap(spacing: EdmnSpacing.xs, children: [
-                for (final f in files) InputChip(label: Text(f.name, overflow: TextOverflow.ellipsis), onDeleted: () => onRemove(f)),
+                for (final f in files) InputChip(label: Text(f.name, overflow: TextOverflow.ellipsis), onDeleted: locked ? null : () => onRemove(f)),
               ]),
             Row(children: [
-              IconButton(key: const Key('attach'), tooltip: t.attachFile, icon: const Icon(Icons.attach_file_rounded), color: EdmnColors.primary, onPressed: sending ? null : onPick),
-              Expanded(child: EdmnTextField(key: const Key('message-input'), controller: text, hint: t.typeMessage, minLines: 1, maxLines: 4, maxLength: 2000)),
+              IconButton(key: const Key('attach'), tooltip: t.attachFile, icon: const Icon(Icons.attach_file_rounded), color: EdmnColors.primary, onPressed: sending || locked ? null : onPick),
+              Expanded(child: EdmnTextField(key: const Key('message-input'), enabled: !locked, controller: text, hint: t.typeMessage, minLines: 1, maxLines: 4, maxLength: 2000)),
               const SizedBox(width: EdmnSpacing.xs),
               IconButton.filled(
                 key: const Key('send'),
@@ -361,13 +400,14 @@ class _Attachment extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = EdmnLocalizations.of(context);
     if (!mimeType.startsWith('image/')) {
-      return Padding(
-        padding: const EdgeInsetsDirectional.only(top: EdmnSpacing.xxs),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.picture_as_pdf_outlined, color: onDark ? EdmnColors.onPrimary : EdmnColors.error),
-          const SizedBox(width: 4),
-          Text(t.pdfAttachment, style: EdmnType.secondary.copyWith(color: onDark ? EdmnColors.onPrimary : EdmnColors.textPrimary)),
-        ]),
+      return TextButton.icon(
+        key: Key('download-$fileId'),
+        icon: Icon(Icons.download_outlined, color: onDark ? EdmnColors.onPrimary : EdmnColors.primary),
+        label: Text(t.downloadPdf, style: EdmnType.secondary.copyWith(color: onDark ? EdmnColors.onPrimary : EdmnColors.primary)),
+        onPressed: () => runAction(context, () async {
+          final data = await ref.read(mobileApiProvider).file(fileId);
+          await ref.read(fileSaverProvider).save('$fileId.pdf', data);
+        }),
       );
     }
     final bytes = ref.watch(fileBytesProvider(fileId));

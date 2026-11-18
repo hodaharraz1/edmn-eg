@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { reviewedHistoricalFixture } from './lib/historical-secret-fixtures';
 
 /**
  * SECRET LEAK SCAN (Batch 2) — docs/runbooks/SECRET_ROTATION.md.
@@ -22,22 +23,24 @@ const RULES: { name: string; re: RegExp }[] = [
 ];
 const SKIP = /(^|\/)(package-lock\.json|node_modules\/|\.next\/|drizzle\/meta\/)|\.(png|jpe?g|webp|ico|woff2?|pdf)$/;
 
-function scanText(text: string, where: (line: number) => string, out: string[]) {
+function scanText(text: string, where: (line: number) => string, out: string[], history?: { commit: string; file: string }) {
   const lines = text.split('\n');
   lines.forEach((l, i) => {
-    for (const r of RULES) if (r.re.test(l)) out.push(`${where(i + 1)} ${r.name}`);
+    for (const r of RULES) {
+      if (r.re.test(l) && !(history && reviewedHistoricalFixture(history.commit, history.file, l, r.name))) out.push(`${where(i + 1)} ${r.name}`);
+    }
   });
 }
 
 const findings: string[] = [];
 if (process.argv.includes('--history')) {
-  const log = execFileSync('git', ['log', '-p', '--no-color', '--unified=0', '--format=__COMMIT__ %h'], { maxBuffer: 1 << 30 }).toString();
+  const log = execFileSync('git', ['log', '-p', '--no-color', '--unified=0', '--format=__COMMIT__ %H'], { maxBuffer: 1 << 30 }).toString();
   let commit = '';
   let file = '';
   for (const l of log.split('\n')) {
     if (l.startsWith('__COMMIT__ ')) commit = l.slice(11);
     else if (l.startsWith('+++ b/')) file = l.slice(6);
-    else if (l.startsWith('+') && !l.startsWith('+++') && !SKIP.test(file)) scanText(l.slice(1), () => `${commit}:${file}`, findings);
+    else if (l.startsWith('+') && !l.startsWith('+++') && !SKIP.test(file)) scanText(l.slice(1), () => `${commit.slice(0, 7)}:${file}`, findings, { commit, file });
   }
 } else {
   const files = execFileSync('git', ['ls-files']).toString().split('\n').filter((f) => f && !SKIP.test(f));

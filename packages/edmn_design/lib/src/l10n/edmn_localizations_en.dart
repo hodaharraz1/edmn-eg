@@ -2796,4 +2796,17 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get disputeClaimHint => 'Amount you are claiming in EGP (optional)';
+
+  @override
+  String get previousPage => 'Previous page';
+
+  @override
+  String get downloadPdf => 'Download PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'The money mode for this legacy activity is unavailable. Contact support to confirm.';
+
+  @override
+  String get payoutNetAmount => 'Expected amount to receive';
 }

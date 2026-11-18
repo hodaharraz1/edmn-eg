@@ -2766,4 +2766,17 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get disputeClaimHint => 'المبلغ اللي بتطالب بيه بالجنيه (اختياري)';
+
+  @override
+  String get previousPage => 'الصفحة السابقة';
+
+  @override
+  String get downloadPdf => 'تنزيل ملف PDF';
+
+  @override
+  String get activityMoneyModeUnknown =>
+      'نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.';
+
+  @override
+  String get payoutNetAmount => 'صافي المبلغ المتوقع استلامه';
 }

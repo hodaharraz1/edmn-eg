@@ -991,5 +991,9 @@
       }
     }
   },
-  "disputeClaimHint": "Amount you are claiming in EGP (optional)"
+  "disputeClaimHint": "Amount you are claiming in EGP (optional)",
+  "previousPage": "Previous page",
+  "downloadPdf": "Download PDF",
+  "activityMoneyModeUnknown": "The money mode for this legacy activity is unavailable. Contact support to confirm.",
+  "payoutNetAmount": "Expected amount to receive"
 }
