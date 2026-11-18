@@ -393,4 +393,19 @@ class MobileApi {
           files: {'photos': photos}, idempotencyKey: idempotencyKey));
   Future<ReviewOptions> reviewSeller(String sellerOrderId, int rating, {String? body, required String idempotencyKey}) async => ReviewOptions.fromJson(await client.sendJson(
       'POST', MobileApiPaths.reviewSeller.path, body: {'sellerOrderId': sellerOrderId, 'rating': rating, if (body != null && body.isNotEmpty) 'body': body}, idempotencyKey: idempotencyKey));
+
+  // ── Phase 6: notification center and password reset ──────────────────────────────────────────────────────────
+  Future<ListNotificationsResponse> notifications({bool unreadOnly = false, String? before}) async => ListNotificationsResponse.fromJson(
+      await client.getJson(MobileApiPaths.listNotifications.path, query: {if (unreadOnly) 'unread': '1', 'before': ?before}));
+  Future<int> unreadNotifications() async => GetUnreadNotificationsResponse.fromJson(await client.getJson(MobileApiPaths.getUnreadNotifications.path)).unread;
+  /// Marks the given notifications read, or all of mine when [ids] is null. Returns the new unread count.
+  Future<int> markNotificationsRead({List<String>? ids}) async =>
+      MarkNotificationsReadResponse.fromJson(await client.sendJson('POST', MobileApiPaths.markNotificationsRead.path, body: {'ids': ?ids})).unread;
+  Future<NotificationPreferences> notificationPreferences() async =>
+      NotificationPreferences.fromJson(await client.getJson(MobileApiPaths.getNotificationPreferences.path));
+  Future<NotificationPreferences> saveNotificationPreferences(Map<String, bool> changes) async =>
+      NotificationPreferences.fromJson(await client.sendJson('PUT', MobileApiPaths.saveNotificationPreferences.path, body: changes));
+  /// Sets a new password with the token from the reset link. Every session is signed out; no tokens are returned.
+  Future<void> resetPassword(String token, String newPassword) =>
+      client.sendJson('POST', MobileApiPaths.resetPassword.path, body: {'token': token, 'newPassword': newPassword}, skipAuth: true);
 }

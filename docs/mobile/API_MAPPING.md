@@ -97,6 +97,18 @@ Not exposed, by design: approval, reservation, transfer, uncertain resolution, t
 
 Not exposed, by design: dispute decision (resolveDispute), refund approval and payout, review moderation.
 
+## Notifications and password reset (Phase 6)
+
+| Operation | Route (auth) | Service |
+|---|---|---|
+| notification center | GET /notifications?unread=1&before=<id>, GET /notifications/unread, POST /notifications/read {ids?} (customer) | notifications table (mine, GENERAL, message alerts excluded), unreadGeneralNotifications, markRead |
+| preferences | GET/PUT /notifications/preferences (customer) | prefsFor / savePrefs |
+| reset password | POST /auth/password/forgot, POST /auth/password/reset (none) | requestPasswordReset, resetPassword |
+
+Each notification returns a typed `target` (`ORDER`, `DEAL`, `RETURN`, `DISPUTE`, `TICKET`, `CONVERSATION`, `WALLET`, …)
+mapped on the server from known internal pages; external, admin or unknown links return `null` and the raw link is never
+sent.
+
 ## Not yet exposed to mobile (needed for the remaining phases)
 
 Protected Deal (create, invitation, terms, accept, pay, evidence, delivery OTP, confirm), disputes/returns

@@ -5,6 +5,7 @@ import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
 import 'package:edmn_customer/src/common/ui.dart';
+import 'package:edmn_customer/src/features/auth/reset_password_screen.dart' show resetTokenFrom;
 import 'package:edmn_customer/src/providers.dart';
 import 'package:edmn_customer/src/version.dart';
 import 'package:flutter/material.dart';
@@ -112,6 +113,33 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // Phase 6: notifications + password reset
+  List<Map<String, dynamic>> notifs = [];
+  final readCalls = <List<String>?>[];
+  final resetCalls = <(String, String)>[];
+  ApiFailure? resetError;
+  @override
+  Future<ListNotificationsResponse> notifications({bool unreadOnly = false, String? before}) async => ListNotificationsResponse.fromJson({
+        'items': [for (final n in notifs) if (!unreadOnly || n['read'] == false) n],
+        'unread': notifs.where((n) => n['read'] == false).length,
+        'nextBefore': null,
+      });
+  @override
+  Future<int> unreadNotifications() async => notifs.where((n) => n['read'] == false).length;
+  @override
+  Future<int> markNotificationsRead({List<String>? ids}) async {
+    readCalls.add(ids);
+    for (final n in notifs) {
+      if (ids == null || ids.contains(n['id'])) n['read'] = true;
+    }
+    return notifs.where((n) => n['read'] == false).length;
+  }
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    resetCalls.add((token, newPassword));
+    if (resetError != null) throw resetError!;
+  }
+
   // Returns / disputes / reviews
   String returnBlock = '';
   List<String> returnActions = const [];
@@ -665,11 +693,77 @@ void main() {
     expect(api.confirmKeys, hasLength(1));
   });
 
-  testWidgets('services without a mobile API say so honestly (no fake list)', (t) async {
-    await _start(t, FakeMobileApi(), signedIn: true);
+  testWidgets('notifications: empty state; a tap marks only that one read and opens its typed target; no target = no navigation', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
     await _go(t, '/notifications');
-    expect(find.byKey(const Key('not-yet-available')), findsOneWidget);
-    expect(find.textContaining('ج.م'), findsNothing);
+    expect(find.byKey(const Key('notif-empty')), findsOneWidget);
+    api.notifs = [
+      {'id': 'n1', 'event': 'SUPPORT_REPLY', 'title': 'رد على تذكرتك', 'body': 'فريق أضمن رد على التذكرة #1042', 'read': false, 'createdAt': '2030-01-02T10:00:00Z', 'target': {'kind': 'TICKET', 'id': '11111111-1111-4111-8111-111111111111'}},
+      {'id': 'n2', 'event': 'RETURN_UPDATED', 'title': 'تحديث الإرجاع', 'body': 'الإرجاع اتقبل', 'read': false, 'createdAt': '2030-01-01T10:00:00Z', 'target': null},
+    ];
+    await _go(t, '/orders');
+    await _go(t, '/notifications');
+    expect(find.byKey(const Key('notif-n1')), findsOneWidget);
+    expect(find.text('غير مقروءة (2)'), findsOneWidget);
+    await t.tap(find.byKey(const Key('notif-n2')));
+    await t.pumpAndSettle();
+    expect(api.readCalls.last, ['n2']);
+    expect(find.byKey(const Key('notif-n1')), findsOneWidget); // still on the list: nothing to open
+    await t.tap(find.byKey(const Key('notif-read-all')));
+    await t.pumpAndSettle();
+    expect(api.readCalls.last, isNull); // «mark all» sends no ids
+    expect(find.byKey(const Key('notif-read-all')), findsNothing);
+  });
+
+  testWidgets('reset password: token from the link; mismatch is caught locally; success signs out and offers sign-in', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api);
+    const token = 'abcdefghijklmnopqrstuvwxyz012345';
+    await _go(t, '/reset-password?token=$token');
+    expect(find.byKey(const Key('reset-link')), findsNothing); // the link already carries the token
+    Future<void> type(String k, String v) => t.enterText(find.descendant(of: find.byKey(Key(k)), matching: find.byType(EditableText)), v);
+    await type('reset-password', 'NewPass2030');
+    await type('reset-confirm', 'Different2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('reset-problem')), findsOneWidget);
+    expect(api.resetCalls, isEmpty);
+    await type('reset-confirm', 'NewPass2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(api.resetCalls.single, (token, 'NewPass2030'));
+    expect(find.byKey(const Key('reset-done')), findsOneWidget);
+    expect(find.byKey(const Key('reset-to-sign-in')), findsOneWidget);
+  });
+
+  testWidgets('reset password: an expired / used link shows the server error and a way to get a new link', (t) async {
+    final api = FakeMobileApi()..resetError = const ApiFailure(code: ApiErrorCode.validationFailed, status: 422);
+    await _start(t, api);
+    await _go(t, '/reset-password');
+    Future<void> type(String k, String v) => t.enterText(find.descendant(of: find.byKey(Key(k)), matching: find.byType(EditableText)), v);
+    await type('reset-link', 'not a link');
+    await type('reset-password', 'NewPass2030');
+    await type('reset-confirm', 'NewPass2030');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('reset-problem')), findsOneWidget);
+    expect(api.resetCalls, isEmpty);
+    await type('reset-link', 'https://edmneg.com/reset-password?token=abcdefghijklmnopqrstuvwxyz012345');
+    await t.tap(find.byKey(const Key('reset-submit')));
+    await t.pumpAndSettle();
+    expect(api.resetCalls.single.$1, 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(find.byKey(const Key('reset-error')), findsOneWidget);
+    expect(find.textContaining('انتهت صلاحيته'), findsOneWidget);
+    expect(find.byKey(const Key('reset-new-link')), findsOneWidget);
+  });
+
+  test('reset token is taken from a pasted link or a bare token, and nothing else', () {
+    expect(resetTokenFrom('https://x.test/reset-password?token=abcdefghijklmnopqrstuvwxyz012345'), 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(resetTokenFrom(' abcdefghijklmnopqrstuvwxyz012345 '), 'abcdefghijklmnopqrstuvwxyz012345');
+    expect(resetTokenFrom('short'), isNull);
+    expect(resetTokenFrom('https://x.test/reset-password?token=<script>'), isNull);
+    expect(resetTokenFrom(''), isNull);
   });
 
   testWidgets('English flips to LTR with the English money format', (t) async {

@@ -314,7 +314,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       showBack: true,
       children: [
         if (_sent)
-          EdmnNotice(key: const Key('reset-sent'), message: t.resetLinkSent, tone: EdmnTone.success)
+          ...[
+            EdmnNotice(key: const Key('reset-sent'), message: t.resetLinkSent, tone: EdmnTone.success),
+            const SizedBox(height: EdmnSpacing.sm),
+            EdmnSecondaryButton(key: const Key('have-reset-link'), label: t.haveResetLink, icon: Icons.link_rounded, onPressed: () => context.push('/reset-password')),
+          ]
         else ...[
           EdmnTextField(key: const Key('forgot-identifier'), controller: _identifier, hint: t.phoneHint, icon: Icons.phone_outlined, keyboardType: TextInputType.emailAddress),
           const SizedBox(height: EdmnSpacing.md),
