@@ -9,6 +9,7 @@ import '../../common/ui.dart';
 import '../../providers.dart';
 import '../cart/cart_providers.dart';
 import 'catalog_providers.dart';
+import '../wishlist/wishlist_screens.dart' show toggleWishlist, wishlistIdsProvider;
 
 /// Board "الرئيسية": blue header (logo, account and cart shortcuts, tagline, governorate, guarantee badge, search,
 /// category icon row) and the white sheet with the Protected Deal banner and product carousels from the API.
@@ -314,6 +315,9 @@ class _ProductCardTileState extends ConsumerState<ProductCardTile> {
       unavailableLabel: p.inStock ? null : t.unavailable,
       addLabel: t.add,
       adding: _adding,
+      saved: ref.watch(wishlistIdsProvider).contains(p.id),
+      saveLabel: ref.watch(wishlistIdsProvider).contains(p.id) ? t.wishlistRemove : t.wishlistAdd,
+      onToggleSaved: () => toggleWishlist(context, ref, p.id),
       onTap: () => context.push('/products/${Uri.encodeComponent(p.slug)}'),
       onAdd: () async {
         if (!direct) {

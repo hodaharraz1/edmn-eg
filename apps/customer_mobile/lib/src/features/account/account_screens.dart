@@ -58,6 +58,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-profile'), icon: Icons.person_outline_rounded, title: t.personalInfo, onTap: () => context.push('/account/profile')),
                   EdmnMenuItem(key: const Key('menu-addresses'), icon: Icons.location_on_outlined, title: t.addressesTitle, onTap: () => context.push('/account/addresses')),
                   EdmnMenuItem(key: const Key('menu-payment-methods'), icon: Icons.credit_card_outlined, title: t.paymentMethods, onTap: () => context.push('/account/payment-methods')),
+                  EdmnMenuItem(key: const Key('menu-wishlist'), icon: Icons.favorite_border_rounded, title: t.wishlistTitle, onTap: () => context.push('/account/wishlist')),
                   EdmnMenuItem(key: const Key('menu-wallet'), icon: Icons.account_balance_wallet_outlined, title: t.wallet, onTap: () => context.push('/wallet')),
                   EdmnMenuItem(key: const Key('menu-returns'), icon: Icons.assignment_return_outlined, title: t.myReturns, onTap: () => context.push('/returns')),
                   EdmnMenuItem(key: const Key('menu-disputes'), icon: Icons.gavel_outlined, title: t.myDisputes, onTap: () => context.push('/disputes')),

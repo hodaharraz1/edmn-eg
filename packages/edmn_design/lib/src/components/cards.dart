@@ -41,8 +41,8 @@ class EdmnCard extends StatelessWidget {
   );
 }
 
-/// Board product card: image, 2-line title, bold price, outlined "أضف" with cart icon. No rating/heart unless the
-/// server provides it (wishlist is not an API capability — recorded in VISUAL_AUDIT.md).
+/// Board product card: image, 2-line title, bold price, outlined "أضف" with cart icon, and the board's heart in the
+/// image corner when the screen passes [saved] / [onToggleSaved] (the wishlist API, VISUAL_AUDIT V-04).
 class EdmnProductCard extends StatelessWidget {
   const EdmnProductCard({
     super.key,
@@ -57,6 +57,9 @@ class EdmnProductCard extends StatelessWidget {
     this.unavailableLabel,
     this.adding = false,
     this.width = 156,
+    this.saved,
+    this.onToggleSaved,
+    this.saveLabel,
   });
   final String title;
   final String? imageUrl;
@@ -73,6 +76,13 @@ class EdmnProductCard extends StatelessWidget {
   final String? unavailableLabel;
   final bool adding;
   final double? width;
+
+  /// Wishlist state; the heart is shown only when this is non-null.
+  final bool? saved;
+  final VoidCallback? onToggleSaved;
+
+  /// Accessibility label of the heart ("أضف للمفضلة" / "شيل من المفضلة").
+  final String? saveLabel;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -99,6 +109,12 @@ class EdmnProductCard extends StatelessWidget {
                     top: 0,
                     start: 0,
                     child: EdmnStatusChipSmall(label: badge!),
+                  ),
+                if (saved != null)
+                  PositionedDirectional(
+                    top: 0,
+                    end: 0,
+                    child: EdmnSaveButton(saved: saved!, onPressed: onToggleSaved, label: saveLabel),
                   ),
               ],
             ),
@@ -985,6 +1001,39 @@ class EdmnNotificationItem extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    ),
+  );
+}
+
+/// The board's wishlist heart: outlined when not saved, filled brand red when saved, on a white circle.
+class EdmnSaveButton extends StatelessWidget {
+  const EdmnSaveButton({super.key, required this.saved, required this.onPressed, this.label, this.size = 32});
+  final bool saved;
+  final VoidCallback? onPressed;
+  final String? label;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    toggled: saved,
+    label: label,
+    child: Material(
+      color: EdmnColors.surface,
+      shape: const CircleBorder(side: BorderSide(color: EdmnColors.border)),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(
+            saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            size: size * 0.56,
+            color: saved ? EdmnColors.brandRed : EdmnColors.textSecondary,
+          ),
+        ),
       ),
     ),
   );

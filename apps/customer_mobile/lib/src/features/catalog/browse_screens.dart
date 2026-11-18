@@ -8,6 +8,7 @@ import '../../common/ui.dart';
 import '../cart/cart_providers.dart';
 import 'catalog_home_screen.dart';
 import 'catalog_providers.dart';
+import '../wishlist/wishlist_screens.dart' show toggleWishlist, wishlistIdsProvider;
 
 /// Board "الأقسام": search field and the category grid (from the database — no invented categories).
 class CategoriesScreen extends ConsumerStatefulWidget {
@@ -254,8 +255,16 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
     final variant = p == null || p.variants.isEmpty
         ? null
         : p.variants.firstWhere((v) => v.id == _variantId, orElse: () => p.variants.firstWhere((v) => v.available, orElse: () => p.variants.first));
+    final saved = p != null && ref.watch(wishlistIdsProvider).contains(p.id);
     return EdmnAppScaffold(
       title: t.productTitle,
+      actions: [
+        if (p != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: EdmnSpacing.xs),
+            child: Center(child: EdmnSaveButton(key: const Key('product-save'), saved: saved, label: saved ? t.wishlistRemove : t.wishlistAdd, onPressed: () => toggleWishlist(context, ref, p.id))),
+          ),
+      ],
       bottomBar: variant == null
           ? null
           : EdmnPrimaryButton(

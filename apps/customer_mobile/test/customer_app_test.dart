@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
+import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton;
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
@@ -114,6 +115,33 @@ class FakeMobileApi extends MobileApi {
   Map<String, dynamic> dealJson = _deal();
   final dealDecisions = <(String, String)>[];
   int inviteCalls = 0;
+  // B22: wishlist (server-authoritative; add/remove idempotent)
+  final saved = <String>[];
+  final wishlistKeys = <(String, String, String)>[];
+  ApiFailure? wishlistError;
+  Wishlist _wl() => Wishlist(
+        items: [
+          for (final id in saved)
+            ProductCard(id: id, slug: 'headphones', titleAr: 'سماعة لاسلكية', condition: 'NEW', usedGrade: null, minPricePiastres: 125050, compareAtPricePiastres: null,
+                inStock: true, ratingAvg: 4.5, ratingCount: 3, store: const ProductCardStore(name: 'متجر القاهرة', slug: 'cairo', verified: true), imageUrl: null, defaultVariantId: 'v1', variantCount: 1),
+        ],
+        productIds: List.of(saved),
+      );
+  @override
+  Future<Wishlist> wishlist() async => _wl();
+  @override
+  Future<Wishlist> addToWishlist(String productId, {required String idempotencyKey}) async {
+    if (wishlistError != null) throw wishlistError!;
+    wishlistKeys.add(('ADD', productId, idempotencyKey));
+    if (!saved.contains(productId)) saved.insert(0, productId);
+    return _wl();
+  }
+  @override
+  Future<Wishlist> removeFromWishlist(String productId, {required String idempotencyKey}) async {
+    wishlistKeys.add(('REMOVE', productId, idempotencyKey));
+    saved.remove(productId);
+    return _wl();
+  }
   // Phase 6: notifications + password reset
   List<Map<String, dynamic>> notifs = [];
   final readCalls = <List<String>?>[];
@@ -1168,5 +1196,56 @@ void main() {
     expect(parseEgpToPiastres('1,250.5'), 125050);
     expect(parseEgpToPiastres('12.345'), isNull);
     expect(parseEgpToPiastres('abc'), isNull);
+  });
+
+  testWidgets('wishlist (B22): heart on cards and product page, server-authoritative, one key per tap, empty state', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    // Home card: not saved → tap → saved (filled heart), announced, one ADD with its own key.
+    final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
+    expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
+    await t.tap(heart);
+    await t.pumpAndSettle();
+    expect(api.saved, ['p1']);
+    expect(find.text('اتضاف للمفضلة'), findsOneWidget);
+    expect(t.widget<EdmnSaveButton>(heart).saved, isTrue);
+
+    // The product page shows the same saved state; removing there updates the list.
+    await _go(t, '/products/headphones');
+    expect(t.widget<EdmnSaveButton>(find.byKey(const Key('product-save'))).saved, isTrue);
+    await t.tap(find.byKey(const Key('product-save')));
+    await t.pumpAndSettle();
+    expect(api.saved, isEmpty);
+    expect(api.wishlistKeys.map((k) => k.$1), ['ADD', 'REMOVE']);
+    expect(api.wishlistKeys[0].$3, isNot(api.wishlistKeys[1].$3));
+
+    // Wishlist screen: empty state, then the saved card.
+    await _go(t, '/account/wishlist');
+    expect(find.byKey(const Key('wishlist-empty')), findsOneWidget);
+    api.saved.add('p1');
+    await _go(t, '/orders');
+    await _go(t, '/account/wishlist');
+    expect(find.byKey(const Key('wishlist-grid')), findsOneWidget);
+    expect(find.text('سماعة لاسلكية'), findsWidgets);
+  });
+
+  testWidgets('wishlist (B22): signed-out heart goes to sign-in; a server refusal is shown and nothing changes', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api);
+    await t.tap(find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton)));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('sign-in')), findsOneWidget);
+    expect(api.wishlistKeys, isEmpty);
+  });
+
+  testWidgets('wishlist (B22): a server refusal (product no longer available) is shown and the heart stays empty', (t) async {
+    final api = FakeMobileApi()..wishlistError = const ApiFailure(code: ApiErrorCode.notFound, status: 404);
+    await _start(t, api, signedIn: true);
+    final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
+    await t.tap(heart);
+    await t.pumpAndSettle();
+    expect(api.saved, isEmpty);
+    expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
+    expect(find.byType(SnackBar), findsOneWidget);
   });
 }

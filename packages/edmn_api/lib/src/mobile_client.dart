@@ -410,4 +410,11 @@ class MobileApi {
   /// Sets a new password with the token from the reset link. Every session is signed out; no tokens are returned.
   Future<void> resetPassword(String token, String newPassword) =>
       client.sendJson('POST', MobileApiPaths.resetPassword.path, body: {'token': token, 'newPassword': newPassword}, skipAuth: true);
+
+  // ── Wishlist (add/remove are idempotent: a retry never flips the state) ────────────────────────────────────────
+  Future<Wishlist> wishlist() async => Wishlist.fromJson(await client.getJson(MobileApiPaths.getWishlist.path));
+  Future<Wishlist> addToWishlist(String productId, {required String idempotencyKey}) async => Wishlist.fromJson(
+      await client.sendJson('PUT', fillPath(MobileApiPaths.addWishlistItem.path, {'productId': productId}), idempotencyKey: idempotencyKey));
+  Future<Wishlist> removeFromWishlist(String productId, {required String idempotencyKey}) async => Wishlist.fromJson(
+      await client.sendJson('DELETE', fillPath(MobileApiPaths.removeWishlistItem.path, {'productId': productId}), idempotencyKey: idempotencyKey));
 }

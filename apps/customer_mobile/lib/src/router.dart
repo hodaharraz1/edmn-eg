@@ -25,6 +25,7 @@ import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
 import 'features/wallet/wallet_screens.dart';
 import 'providers.dart';
+import 'features/wishlist/wishlist_screens.dart';
 
 /// Routes that need a session; signed-out users go to sign-in and come back.
 const _protected = ['/returns', '/disputes', '/reviews', '/account/', '/checkout', '/payments', '/orders/', '/wallet', '/deals', '/seller', '/notifications', '/support', '/messages'];
@@ -68,6 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/orders/:id', builder: (c, s) => OrderScreen(orderId: s.pathParameters['id']!, justPlaced: s.uri.queryParameters['placed'] == '1')),
       GoRoute(path: '/payments/:id', builder: (c, s) => PaymentScreen(paymentId: s.pathParameters['id']!)),
       GoRoute(path: '/account', builder: (c, s) => const AccountScreen()),
+      GoRoute(path: '/account/wishlist', builder: (c, s) => const WishlistScreen()),
       GoRoute(path: '/account/profile', builder: (c, s) => const ProfileScreen()),
       GoRoute(path: '/account/security', builder: (c, s) => const SecurityScreen()),
       GoRoute(path: '/account/devices', builder: (c, s) => const DevicesScreen()),

@@ -62,6 +62,7 @@ const BUYER_WRITES = new Set([
   'addCartItem', 'setCartItemQuantity', 'acknowledgeCartPrices',
   'placeOrder', 'cancelUnpaidOrder', 'confirmReceipt', 'requestCancellation', 'reportOrderProblem',
   'submitPaymentProof',
+  'addWishlistItem', 'removeWishlistItem',
 ]);
 
 describe('mobile API contract (OpenAPI 3.1)', () => {

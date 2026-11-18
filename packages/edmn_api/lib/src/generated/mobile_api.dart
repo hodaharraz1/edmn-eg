@@ -9,6 +9,7 @@ abstract final class MobileApiPaths {
   static const addReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts');
   static const addSellerPayoutAccount = (method: 'POST', path: '/api/v1/seller/application/payout-account');
   static const addSellerProductImages = (method: 'POST', path: '/api/v1/seller/products/{productId}/images');
+  static const addWishlistItem = (method: 'PUT', path: '/api/v1/wishlist/{productId}');
   static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
   static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
@@ -71,6 +72,7 @@ abstract final class MobileApiPaths {
   static const getUnreadNotifications = (method: 'GET', path: '/api/v1/notifications/unread');
   static const getWallet = (method: 'GET', path: '/api/v1/wallet');
   static const getWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity/{activityId}');
+  static const getWishlist = (method: 'GET', path: '/api/v1/wishlist');
   static const inviteDealSeller = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation');
   static const listAccountPayoutRequests = (method: 'GET', path: '/api/v1/wallet/payout-requests');
   static const listAddresses = (method: 'GET', path: '/api/v1/me/addresses');
@@ -112,6 +114,7 @@ abstract final class MobileApiPaths {
   static const refreshToken = (method: 'POST', path: '/api/v1/auth/token/refresh');
   static const regenerateDealDeliveryCode = (method: 'POST', path: '/api/v1/deals/{dealId}/delivery-code/regenerate');
   static const register = (method: 'POST', path: '/api/v1/auth/register');
+  static const removeWishlistItem = (method: 'DELETE', path: '/api/v1/wishlist/{productId}');
   static const reopenSupportTicket = (method: 'POST', path: '/api/v1/support/tickets/{ticketId}/reopen');
   static const replyDispute = (method: 'POST', path: '/api/v1/disputes/{disputeId}/messages');
   static const replyStoreDispute = (method: 'POST', path: '/api/v1/seller/disputes/{disputeId}/messages');
@@ -5615,4 +5618,18 @@ class VerifyDealDeliveryCodeRequest {
   final String code;
 
   Map<String, dynamic> toJson() => {'code': code};
+}
+
+class Wishlist {
+  const Wishlist({required this.items, required this.productIds});
+
+  factory Wishlist.fromJson(Map<String, dynamic> json) => Wishlist(items: (json['items'] as List).map((e) => ProductCard.fromJson(e as Map<String, dynamic>)).toList(), productIds: (json['productIds'] as List).map((e) => e as String).toList());
+
+  /// Saved products that are publicly visible now, newest first.
+  final List<ProductCard> items;
+
+  /// Ids of the items above, for marking hearts on other screens.
+  final List<String> productIds;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'productIds': productIds.map((e) => e).toList()};
 }

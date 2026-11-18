@@ -1030,5 +1030,12 @@
       }
     }
   },
-  "resetLinkExpired": "This link has expired, was already used, or a newer link was requested. Request a new link."
+  "resetLinkExpired": "This link has expired, was already used, or a newer link was requested. Request a new link.",
+  "wishlistTitle": "Wishlist",
+  "wishlistEmpty": "Your wishlist is empty",
+  "wishlistEmptyHint": "Tap the heart on a product to save it here. Products that are not available right now are not shown.",
+  "wishlistAdd": "Save to wishlist",
+  "wishlistRemove": "Remove from wishlist",
+  "wishlistAdded": "Saved to your wishlist",
+  "wishlistRemoved": "Removed from your wishlist"
 }

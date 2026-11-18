@@ -5479,6 +5479,48 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.'**
   String get resetLinkExpired;
+
+  /// No description provided for @wishlistTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المفضلة'**
+  String get wishlistTitle;
+
+  /// No description provided for @wishlistEmpty.
+  ///
+  /// In ar, this message translates to:
+  /// **'المفضلة فاضية'**
+  String get wishlistEmpty;
+
+  /// No description provided for @wishlistEmptyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'احفظ المنتجات اللي عجبتك بالضغط على القلب، وهتلاقيها هنا. المنتجات غير المتاحة دلوقتي مش بتظهر.'**
+  String get wishlistEmptyHint;
+
+  /// No description provided for @wishlistAdd.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف للمفضلة'**
+  String get wishlistAdd;
+
+  /// No description provided for @wishlistRemove.
+  ///
+  /// In ar, this message translates to:
+  /// **'شيل من المفضلة'**
+  String get wishlistRemove;
+
+  /// No description provided for @wishlistAdded.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتضاف للمفضلة'**
+  String get wishlistAdded;
+
+  /// No description provided for @wishlistRemoved.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتشال من المفضلة'**
+  String get wishlistRemoved;
 }
 
 class _EdmnLocalizationsDelegate

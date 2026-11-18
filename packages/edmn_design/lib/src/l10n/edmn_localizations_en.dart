@@ -2902,4 +2902,26 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get resetLinkExpired =>
       'This link has expired, was already used, or a newer link was requested. Request a new link.';
+
+  @override
+  String get wishlistTitle => 'Wishlist';
+
+  @override
+  String get wishlistEmpty => 'Your wishlist is empty';
+
+  @override
+  String get wishlistEmptyHint =>
+      'Tap the heart on a product to save it here. Products that are not available right now are not shown.';
+
+  @override
+  String get wishlistAdd => 'Save to wishlist';
+
+  @override
+  String get wishlistRemove => 'Remove from wishlist';
+
+  @override
+  String get wishlistAdded => 'Saved to your wishlist';
+
+  @override
+  String get wishlistRemoved => 'Removed from your wishlist';
 }

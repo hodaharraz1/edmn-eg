@@ -2871,4 +2871,26 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get resetLinkExpired =>
       'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.';
+
+  @override
+  String get wishlistTitle => 'المفضلة';
+
+  @override
+  String get wishlistEmpty => 'المفضلة فاضية';
+
+  @override
+  String get wishlistEmptyHint =>
+      'احفظ المنتجات اللي عجبتك بالضغط على القلب، وهتلاقيها هنا. المنتجات غير المتاحة دلوقتي مش بتظهر.';
+
+  @override
+  String get wishlistAdd => 'أضف للمفضلة';
+
+  @override
+  String get wishlistRemove => 'شيل من المفضلة';
+
+  @override
+  String get wishlistAdded => 'اتضاف للمفضلة';
+
+  @override
+  String get wishlistRemoved => 'اتشال من المفضلة';
 }
