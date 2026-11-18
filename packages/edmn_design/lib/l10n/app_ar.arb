@@ -1202,5 +1202,7 @@
   "wishlistAdd": "أضف للمفضلة",
   "wishlistRemove": "شيل من المفضلة",
   "wishlistAdded": "اتضاف للمفضلة",
-  "wishlistRemoved": "اتشال من المفضلة"
+  "wishlistRemoved": "اتشال من المفضلة",
+  "pageNotFoundTitle": "الصفحة دي مش موجودة",
+  "pageNotFoundBody": "الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك."
 }

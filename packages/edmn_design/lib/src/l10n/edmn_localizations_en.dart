@@ -2924,4 +2924,11 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get wishlistRemoved => 'Removed from your wishlist';
+
+  @override
+  String get pageNotFoundTitle => 'This page doesn\'t exist';
+
+  @override
+  String get pageNotFoundBody =>
+      'The link is wrong or no longer available. Go back home and continue from there.';
 }

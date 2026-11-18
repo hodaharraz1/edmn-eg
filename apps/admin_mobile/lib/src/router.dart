@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:edmn_design/edmn_design.dart' show EdmnNotFoundScreen;
 import 'package:go_router/go_router.dart';
 
 import 'features/auth/mfa_screen.dart';
@@ -12,6 +13,7 @@ import 'providers.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SessionListenable(ref);
   return GoRouter(
+    errorBuilder: (context, state) => EdmnNotFoundScreen(onHome: () => context.go('/')),
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {

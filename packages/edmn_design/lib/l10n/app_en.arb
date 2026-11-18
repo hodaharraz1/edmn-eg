@@ -1037,5 +1037,7 @@
   "wishlistAdd": "Save to wishlist",
   "wishlistRemove": "Remove from wishlist",
   "wishlistAdded": "Saved to your wishlist",
-  "wishlistRemoved": "Removed from your wishlist"
+  "wishlistRemoved": "Removed from your wishlist",
+  "pageNotFoundTitle": "This page doesn't exist",
+  "pageNotFoundBody": "The link is wrong or no longer available. Go back home and continue from there."
 }

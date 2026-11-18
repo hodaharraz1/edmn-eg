@@ -2893,4 +2893,11 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get wishlistRemoved => 'اتشال من المفضلة';
+
+  @override
+  String get pageNotFoundTitle => 'الصفحة دي مش موجودة';
+
+  @override
+  String get pageNotFoundBody =>
+      'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.';
 }

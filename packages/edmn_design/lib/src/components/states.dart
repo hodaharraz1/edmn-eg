@@ -338,3 +338,26 @@ void showEdmnMessage(
       ),
     );
 }
+
+/// Shown for any unknown or broken link (deep link, notification, typo): never a framework error page.
+class EdmnNotFoundScreen extends StatelessWidget {
+  const EdmnNotFoundScreen({super.key, required this.onHome});
+  final VoidCallback onHome;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: EdmnEmptyState(
+          key: const Key('not-found'),
+          icon: Icons.link_off_rounded,
+          title: t.pageNotFoundTitle,
+          message: t.pageNotFoundBody,
+          actionLabel: t.home,
+          onAction: onHome,
+        ),
+      ),
+    );
+  }
+}

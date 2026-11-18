@@ -5521,6 +5521,18 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'اتشال من المفضلة'**
   String get wishlistRemoved;
+
+  /// No description provided for @pageNotFoundTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفحة دي مش موجودة'**
+  String get pageNotFoundTitle;
+
+  /// No description provided for @pageNotFoundBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.'**
+  String get pageNotFoundBody;
 }
 
 class _EdmnLocalizationsDelegate

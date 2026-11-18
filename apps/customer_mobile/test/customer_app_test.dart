@@ -1248,4 +1248,15 @@ void main() {
     expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
     expect(find.byType(SnackBar), findsOneWidget);
   });
+
+  testWidgets('an unknown or broken link shows the Arabic not-found screen with a way home (never a framework error page)', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/products/x/nonexistent');
+    expect(find.byKey(const Key('not-found')), findsOneWidget);
+    expect(find.text('الصفحة دي مش موجودة'), findsOneWidget);
+    expect(find.textContaining('GoException'), findsNothing);
+    await t.tap(find.text('الرئيسية').last);
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('not-found')), findsNothing);
+  });
 }

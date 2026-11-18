@@ -33,6 +33,7 @@ const _protected = ['/returns', '/disputes', '/reviews', '/account/', '/checkout
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _SignedInListenable(ref);
   return GoRouter(
+    errorBuilder: (context, state) => EdmnNotFoundScreen(onHome: () => context.go('/')),
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
