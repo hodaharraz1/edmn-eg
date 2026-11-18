@@ -5311,6 +5311,174 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'صافي المبلغ المتوقع استلامه'**
   String get payoutNetAmount;
+
+  /// No description provided for @confirmPasswordHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكّد كلمة المرور الجديدة'**
+  String get confirmPasswordHint;
+
+  /// No description provided for @devicePushNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إشعارات الموبايل الفورية (Push) لسه مش مفعّلة في التطبيق؛ الإعدادات دي بتتطبق على الإشعارات داخل التطبيق والإيميل، وعلى Push لما يتفعّل.'**
+  String get devicePushNote;
+
+  /// No description provided for @haveResetLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'معايا رابط إعادة التعيين'**
+  String get haveResetLink;
+
+  /// No description provided for @markAllRead.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعليم الكل كمقروء'**
+  String get markAllRead;
+
+  /// No description provided for @messageNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيهات الرسائل'**
+  String get messageNotifications;
+
+  /// No description provided for @noNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش إشعارات لحد دلوقتي'**
+  String get noNotifications;
+
+  /// No description provided for @noUnreadNotifications.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش إشعارات جديدة'**
+  String get noUnreadNotifications;
+
+  /// No description provided for @notificationSettings.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعدادات الإشعارات'**
+  String get notificationSettings;
+
+  /// No description provided for @passwordChangedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتسجّل خروجك من كل الأجهزة. ادخل بكلمة المرور الجديدة.'**
+  String get passwordChangedBody;
+
+  /// No description provided for @passwordRules.
+  ///
+  /// In ar, this message translates to:
+  /// **'8 حروف على الأقل، وفيها حروف وأرقام.'**
+  String get passwordRules;
+
+  /// No description provided for @passwordsDoNotMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمتين المرور مش متطابقين'**
+  String get passwordsDoNotMatch;
+
+  /// No description provided for @pasteResetLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصق رابط إعادة التعيين اللي وصلك'**
+  String get pasteResetLink;
+
+  /// No description provided for @prefEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيميل لما ما أكونش متصل'**
+  String get prefEmail;
+
+  /// No description provided for @prefEmailHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد فترة لو الرسالة ما اتقرتش'**
+  String get prefEmailHint;
+
+  /// No description provided for @prefInApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'داخل التطبيق'**
+  String get prefInApp;
+
+  /// No description provided for @prefPush.
+  ///
+  /// In ar, this message translates to:
+  /// **'إشعارات Push'**
+  String get prefPush;
+
+  /// No description provided for @prefPushHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'على الأجهزة اللي فعّلتها'**
+  String get prefPushHint;
+
+  /// No description provided for @prefPushPreview.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض نص الرسالة في الإشعار'**
+  String get prefPushPreview;
+
+  /// No description provided for @prefPushPreviewHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'مقفول افتراضيًا لحماية خصوصيتك'**
+  String get prefPushPreviewHint;
+
+  /// No description provided for @prefSound.
+  ///
+  /// In ar, this message translates to:
+  /// **'صوت التنبيه'**
+  String get prefSound;
+
+  /// No description provided for @requestNewResetLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'اطلب رابط جديد'**
+  String get requestNewResetLink;
+
+  /// No description provided for @resetLinkInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرابط ده مش صحيح. الصق الرابط كامل زي ما وصلك.'**
+  String get resetLinkInvalid;
+
+  /// No description provided for @resetPasswordBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختار كلمة مرور جديدة. الرابط بيستخدم مرة واحدة وليه مدة صلاحية.'**
+  String get resetPasswordBody;
+
+  /// No description provided for @resetPasswordTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة تعيين كلمة المرور'**
+  String get resetPasswordTitle;
+
+  /// No description provided for @saveNewPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ كلمة المرور الجديدة'**
+  String get saveNewPassword;
+
+  /// No description provided for @securityNotificationsNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إشعارات الأمان والطلبات والمدفوعات بتوصلك دايمًا ومش بتتقفل من هنا.'**
+  String get securityNotificationsNote;
+
+  /// No description provided for @unreadCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مقروءة ({n})'**
+  String unreadCount(int n);
+
+  /// No description provided for @resetLinkExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد.'**
+  String get resetLinkExpired;
 }
 
 class _EdmnLocalizationsDelegate

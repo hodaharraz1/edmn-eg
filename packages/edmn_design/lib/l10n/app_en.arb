@@ -995,5 +995,40 @@
   "previousPage": "Previous page",
   "downloadPdf": "Download PDF",
   "activityMoneyModeUnknown": "The money mode for this legacy activity is unavailable. Contact support to confirm.",
-  "payoutNetAmount": "Expected amount to receive"
+  "payoutNetAmount": "Expected amount to receive",
+  "confirmPasswordHint": "Confirm the new password",
+  "devicePushNote": "Mobile push is not enabled in the app yet; these settings apply to in-app and email alerts, and to push once it is enabled.",
+  "haveResetLink": "I have the reset link",
+  "markAllRead": "Mark all as read",
+  "messageNotifications": "Message alerts",
+  "noNotifications": "No notifications yet",
+  "noUnreadNotifications": "No unread notifications",
+  "notificationSettings": "Notification settings",
+  "passwordChangedBody": "You were signed out on every device. Sign in with the new password.",
+  "passwordRules": "At least 8 characters, with letters and numbers.",
+  "passwordsDoNotMatch": "The passwords do not match",
+  "pasteResetLink": "Paste the reset link you received",
+  "prefEmail": "Email when I am away",
+  "prefEmailHint": "After a while if the message is still unread",
+  "prefInApp": "In the app",
+  "prefPush": "Push notifications",
+  "prefPushHint": "On devices where you enabled them",
+  "prefPushPreview": "Show message text in the notification",
+  "prefPushPreviewHint": "Off by default for your privacy",
+  "prefSound": "Alert sound",
+  "requestNewResetLink": "Request a new link",
+  "resetLinkInvalid": "This link is not valid. Paste the full link you received.",
+  "resetPasswordBody": "Choose a new password. The link works once and expires.",
+  "resetPasswordTitle": "Reset password",
+  "saveNewPassword": "Save new password",
+  "securityNotificationsNote": "Security, order and payment notices always reach you and cannot be turned off here.",
+  "unreadCount": "Unread ({n})",
+  "@unreadCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "resetLinkExpired": "This link has expired, was already used, or a newer link was requested. Request a new link."
 }

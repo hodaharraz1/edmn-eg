@@ -46,6 +46,7 @@ abstract final class MobileApiPaths {
   static const getMyIdentity = (method: 'GET', path: '/api/v1/me/identity');
   static const getMyReturn = (method: 'GET', path: '/api/v1/returns/{returnId}');
   static const getMySellerMembership = (method: 'GET', path: '/api/v1/me/seller');
+  static const getNotificationPreferences = (method: 'GET', path: '/api/v1/notifications/preferences');
   static const getOrder = (method: 'GET', path: '/api/v1/orders/{orderId}');
   static const getPayment = (method: 'GET', path: '/api/v1/payments/{paymentId}');
   static const getProduct = (method: 'GET', path: '/api/v1/catalog/products/{slug}');
@@ -67,6 +68,7 @@ abstract final class MobileApiPaths {
   static const getStoreUnreadMessages = (method: 'GET', path: '/api/v1/seller/conversations/unread');
   static const getSupportTicket = (method: 'GET', path: '/api/v1/support/tickets/{ticketId}');
   static const getUnreadMessages = (method: 'GET', path: '/api/v1/conversations/unread');
+  static const getUnreadNotifications = (method: 'GET', path: '/api/v1/notifications/unread');
   static const getWallet = (method: 'GET', path: '/api/v1/wallet');
   static const getWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity/{activityId}');
   static const inviteDealSeller = (method: 'POST', path: '/api/v1/deals/{dealId}/invitation');
@@ -79,6 +81,7 @@ abstract final class MobileApiPaths {
   static const listMyDisputes = (method: 'GET', path: '/api/v1/disputes');
   static const listMyReturns = (method: 'GET', path: '/api/v1/returns');
   static const listMySessions = (method: 'GET', path: '/api/v1/me/sessions');
+  static const listNotifications = (method: 'GET', path: '/api/v1/notifications');
   static const listOrders = (method: 'GET', path: '/api/v1/orders');
   static const listProductReviews = (method: 'GET', path: '/api/v1/catalog/products/{slug}/reviews');
   static const listReceivingAccounts = (method: 'GET', path: '/api/v1/wallet/receiving-accounts');
@@ -94,6 +97,7 @@ abstract final class MobileApiPaths {
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
   static const markDealShipped = (method: 'POST', path: '/api/v1/deals/{dealId}/shipped');
+  static const markNotificationsRead = (method: 'POST', path: '/api/v1/notifications/read');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
   static const openDispute = (method: 'POST', path: '/api/v1/disputes');
@@ -128,6 +132,7 @@ abstract final class MobileApiPaths {
   static const runSellerOrderStep = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/steps');
   static const runStoreReturnStep = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/steps');
   static const saveDealStep = (method: 'PUT', path: '/api/v1/deals/{dealId}/steps/{step}');
+  static const saveNotificationPreferences = (method: 'PUT', path: '/api/v1/notifications/preferences');
   static const saveSellerApplicationBusiness = (method: 'PUT', path: '/api/v1/seller/application/business');
   static const saveSellerApplicationIdentity = (method: 'PUT', path: '/api/v1/seller/application/identity');
   static const saveSellerApplicationStore = (method: 'POST', path: '/api/v1/seller/application/store');
@@ -1922,6 +1927,16 @@ class GetUnreadMessagesResponse {
   Map<String, dynamic> toJson() => {'unread': unread};
 }
 
+class GetUnreadNotificationsResponse {
+  const GetUnreadNotificationsResponse({required this.unread});
+
+  factory GetUnreadNotificationsResponse.fromJson(Map<String, dynamic> json) => GetUnreadNotificationsResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
 class GetWalletActivityResponse {
   const GetWalletActivityResponse({required this.kind, required this.id, required this.direction, required this.amountPiastres, required this.status, required this.ref, required this.method, required this.reference, required this.note, required this.isTest, required this.createdAt, required this.link});
 
@@ -2400,6 +2415,57 @@ class ListMySessionsResponse {
   Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
 }
 
+class ListNotificationsResponse {
+  const ListNotificationsResponse({required this.items, required this.unread, required this.nextBefore});
+
+  factory ListNotificationsResponse.fromJson(Map<String, dynamic> json) => ListNotificationsResponse(items: (json['items'] as List).map((e) => ListNotificationsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), unread: (json['unread'] as num).toInt(), nextBefore: json['nextBefore'] as String?);
+
+  final List<ListNotificationsResponseItemsItem> items;
+
+  final int unread;
+
+  final String? nextBefore;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'unread': unread, 'nextBefore': nextBefore};
+}
+
+class ListNotificationsResponseItemsItem {
+  const ListNotificationsResponseItemsItem({required this.id, required this.event, required this.title, required this.body, required this.read, required this.createdAt, required this.target});
+
+  factory ListNotificationsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListNotificationsResponseItemsItem(id: json['id'] as String, event: json['event'] as String, title: json['title'] as String, body: json['body'] as String, read: json['read'] as bool, createdAt: json['createdAt'] as String, target: json['target'] == null ? null : ListNotificationsResponseItemsItemTarget.fromJson(json['target'] as Map<String, dynamic>));
+
+  final String id;
+
+  final String event;
+
+  final String title;
+
+  final String body;
+
+  final bool read;
+
+  final String createdAt;
+
+  /// Where the app opens this notification. Mapped by the server from known internal pages only; null = nothing to open.
+  final ListNotificationsResponseItemsItemTarget? target;
+
+  Map<String, dynamic> toJson() => {'id': id, 'event': event, 'title': title, 'body': body, 'read': read, 'createdAt': createdAt, 'target': target?.toJson()};
+}
+
+/// Where the app opens this notification. Mapped by the server from known internal pages only; null = nothing to open.
+class ListNotificationsResponseItemsItemTarget {
+  const ListNotificationsResponseItemsItemTarget({required this.kind, required this.id});
+
+  factory ListNotificationsResponseItemsItemTarget.fromJson(Map<String, dynamic> json) => ListNotificationsResponseItemsItemTarget(kind: json['kind'] as String, id: json['id'] as String?);
+
+  /// One of: ORDER, PAYMENT, DEAL, RETURN, STORE_RETURN, DISPUTE, TICKET, CONVERSATION, STORE_CONVERSATION, STORE_ORDER, STORE_PRODUCT, WALLET, IDENTITY, STORE, RECEIVING_ACCOUNTS, ORDERS, DEALS (kept as String for forward compatibility).
+  final String kind;
+
+  final String? id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
+}
+
 class ListOrdersResponse {
   const ListOrdersResponse({required this.page, required this.pageSize, required this.items});
 
@@ -2818,6 +2884,26 @@ class MarkConversationSeenResponse {
   Map<String, dynamic> toJson() => {'unread': unread};
 }
 
+class MarkNotificationsReadRequest {
+  const MarkNotificationsReadRequest({this.ids});
+
+  factory MarkNotificationsReadRequest.fromJson(Map<String, dynamic> json) => MarkNotificationsReadRequest(ids: json['ids'] == null ? null : (json['ids'] as List).map((e) => e as String).toList());
+
+  final List<String>? ids;
+
+  Map<String, dynamic> toJson() => {if (ids != null) 'ids': ids?.map((e) => e).toList()};
+}
+
+class MarkNotificationsReadResponse {
+  const MarkNotificationsReadResponse({required this.unread});
+
+  factory MarkNotificationsReadResponse.fromJson(Map<String, dynamic> json) => MarkNotificationsReadResponse(unread: (json['unread'] as num).toInt());
+
+  final int unread;
+
+  Map<String, dynamic> toJson() => {'unread': unread};
+}
+
 class MarkStoreConversationSeenRequest {
   const MarkStoreConversationSeenRequest({this.upToMessageId});
 
@@ -2836,6 +2922,24 @@ class MarkStoreConversationSeenResponse {
   final int unread;
 
   Map<String, dynamic> toJson() => {'unread': unread};
+}
+
+class NotificationPreferences {
+  const NotificationPreferences({required this.messagesInApp, required this.messagesSound, required this.messagesPush, required this.messagesEmail, required this.pushPreview});
+
+  factory NotificationPreferences.fromJson(Map<String, dynamic> json) => NotificationPreferences(messagesInApp: json['messagesInApp'] as bool, messagesSound: json['messagesSound'] as bool, messagesPush: json['messagesPush'] as bool, messagesEmail: json['messagesEmail'] as bool, pushPreview: json['pushPreview'] as bool);
+
+  final bool messagesInApp;
+
+  final bool messagesSound;
+
+  final bool messagesPush;
+
+  final bool messagesEmail;
+
+  final bool pushPreview;
+
+  Map<String, dynamic> toJson() => {'messagesInApp': messagesInApp, 'messagesSound': messagesSound, 'messagesPush': messagesPush, 'messagesEmail': messagesEmail, 'pushPreview': pushPreview};
 }
 
 class Ok {
@@ -4508,6 +4612,24 @@ class RunStoreReturnStepRequest {
   final bool? restock;
 
   Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note, if (reason != null) 'reason': reason, if (includeShipping != null) 'includeShipping': includeShipping, if (restock != null) 'restock': restock};
+}
+
+class SaveNotificationPreferencesRequest {
+  const SaveNotificationPreferencesRequest({this.messagesInApp, this.messagesSound, this.messagesPush, this.messagesEmail, this.pushPreview});
+
+  factory SaveNotificationPreferencesRequest.fromJson(Map<String, dynamic> json) => SaveNotificationPreferencesRequest(messagesInApp: json['messagesInApp'] == null ? null : json['messagesInApp'] as bool, messagesSound: json['messagesSound'] == null ? null : json['messagesSound'] as bool, messagesPush: json['messagesPush'] == null ? null : json['messagesPush'] as bool, messagesEmail: json['messagesEmail'] == null ? null : json['messagesEmail'] as bool, pushPreview: json['pushPreview'] == null ? null : json['pushPreview'] as bool);
+
+  final bool? messagesInApp;
+
+  final bool? messagesSound;
+
+  final bool? messagesPush;
+
+  final bool? messagesEmail;
+
+  final bool? pushPreview;
+
+  Map<String, dynamic> toJson() => {if (messagesInApp != null) 'messagesInApp': messagesInApp, if (messagesSound != null) 'messagesSound': messagesSound, if (messagesPush != null) 'messagesPush': messagesPush, if (messagesEmail != null) 'messagesEmail': messagesEmail, if (pushPreview != null) 'pushPreview': pushPreview};
 }
 
 class SaveSellerApplicationBusinessRequest {

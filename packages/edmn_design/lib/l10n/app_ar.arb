@@ -1160,5 +1160,40 @@
   "previousPage": "الصفحة السابقة",
   "downloadPdf": "تنزيل ملف PDF",
   "activityMoneyModeUnknown": "نوع الأموال لهذه العملية القديمة غير متاح. راجع الدعم للتأكد.",
-  "payoutNetAmount": "صافي المبلغ المتوقع استلامه"
+  "payoutNetAmount": "صافي المبلغ المتوقع استلامه",
+  "confirmPasswordHint": "أكّد كلمة المرور الجديدة",
+  "devicePushNote": "إشعارات الموبايل الفورية (Push) لسه مش مفعّلة في التطبيق؛ الإعدادات دي بتتطبق على الإشعارات داخل التطبيق والإيميل، وعلى Push لما يتفعّل.",
+  "haveResetLink": "معايا رابط إعادة التعيين",
+  "markAllRead": "تعليم الكل كمقروء",
+  "messageNotifications": "تنبيهات الرسائل",
+  "noNotifications": "مفيش إشعارات لحد دلوقتي",
+  "noUnreadNotifications": "مفيش إشعارات جديدة",
+  "notificationSettings": "إعدادات الإشعارات",
+  "passwordChangedBody": "اتسجّل خروجك من كل الأجهزة. ادخل بكلمة المرور الجديدة.",
+  "passwordRules": "8 حروف على الأقل، وفيها حروف وأرقام.",
+  "passwordsDoNotMatch": "كلمتين المرور مش متطابقين",
+  "pasteResetLink": "الصق رابط إعادة التعيين اللي وصلك",
+  "prefEmail": "إيميل لما ما أكونش متصل",
+  "prefEmailHint": "بعد فترة لو الرسالة ما اتقرتش",
+  "prefInApp": "داخل التطبيق",
+  "prefPush": "إشعارات Push",
+  "prefPushHint": "على الأجهزة اللي فعّلتها",
+  "prefPushPreview": "عرض نص الرسالة في الإشعار",
+  "prefPushPreviewHint": "مقفول افتراضيًا لحماية خصوصيتك",
+  "prefSound": "صوت التنبيه",
+  "requestNewResetLink": "اطلب رابط جديد",
+  "resetLinkInvalid": "الرابط ده مش صحيح. الصق الرابط كامل زي ما وصلك.",
+  "resetPasswordBody": "اختار كلمة مرور جديدة. الرابط بيستخدم مرة واحدة وليه مدة صلاحية.",
+  "resetPasswordTitle": "إعادة تعيين كلمة المرور",
+  "saveNewPassword": "حفظ كلمة المرور الجديدة",
+  "securityNotificationsNote": "إشعارات الأمان والطلبات والمدفوعات بتوصلك دايمًا ومش بتتقفل من هنا.",
+  "unreadCount": "غير مقروءة ({n})",
+  "@unreadCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "resetLinkExpired": "الرابط ده انتهت صلاحيته أو اتستخدم قبل كده، أو اتطلب رابط أحدث منه. اطلب رابط جديد."
 }

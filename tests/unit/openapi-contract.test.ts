@@ -51,6 +51,8 @@ const ACCOUNT_PAYOUT_ROUTES = new Set(['listAccountPayoutRequests', 'previewAcco
  */
 const BUYER_POSTPURCHASE_WRITES = new Set(['createReturn', 'shipBackReturn', 'escalateMyReturn', 'openDispute', 'replyDispute', 'reviewProduct', 'reviewSeller']);
 const STORE_POSTPURCHASE_WRITES = new Set(['runStoreReturnStep', 'escalateStoreReturn', 'replyStoreDispute']);
+/** Notification center writes: mark my notifications read, change my own preferences. Naturally idempotent. */
+const NOTIFICATION_WRITES = new Set(['markNotificationsRead', 'saveNotificationPreferences']);
 const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
@@ -128,6 +130,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...WALLET_WRITES,
       ...BUYER_POSTPURCHASE_WRITES,
       ...STORE_POSTPURCHASE_WRITES,
+      ...NOTIFICATION_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -166,6 +169,11 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       expect(r.idempotency, r.id).toBe('required');
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity or decision`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId|decision|amount|refundAmount)$/i);
+    }
+    for (const r of writes.filter((w) => NOTIFICATION_WRITES.has(w.id))) {
+      expect(r.auth, r.id).toBe('customer');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }
     // No dispute DECISION and no refund execution on the mobile API.
     for (const r of ALL_API_ROUTES) expect(r.id, r.id).not.toMatch(/resolveDispute|decideDispute|closeDispute|approveRefund|payRefund/i);

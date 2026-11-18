@@ -126,3 +126,29 @@ with the claimed amount overflowed.
 - Blocked by API (1): **B22** wishlist.
 - Blocked by business decision (5): **D28–D31** deposits, **D34** wallet transfer.
 - Not verified on a physical device: all (no device, no Mac in this environment).
+
+## Phase 6: notification center (C27) and password reset (B08)
+
+Branch `claude/mobile-phase6-notifications`, from `claude/edmn-mobile-integration` at `3728827`.
+
+| Check | Result |
+|---|---|
+| Backend `tsc`, `eslint`, `openapi --check`, Dart models `--check` | pass |
+| Vitest | 796/796 on this branch |
+| `mobile-notifications-reset.test.ts` | 3/3: own notifications only; message alerts excluded from the bell; another user can neither see nor mark mine; external / admin / unknown links → no target; paging and unread filter; mark one / all; preferences per user; 401 without a session; reset link request does not reveal accounts; bad / expired / used tokens refused; a weak password does not consume the token; a reset signs out every session and only the new password works |
+| Flutter customer widget tests | 34/34 |
+| Trial merge with `codex/mobile-audit-fixes` (local only, not pushed) | conflicts only in ARB files and generated code, all additive (no key changed differently on both sides); resolved as a union + regeneration: vitest 799/799, customer widget tests 38/38 |
+| Real screenshots (local isolated backend) | `docs/mobile/screenshots/phase6/` (10) |
+| HawkScan | NOT RUN (no HAWK_API_KEY) |
+
+Findings while capturing:
+- requesting a new reset link invalidates older links (server behaviour, correct);
+- an expired / used / replaced link showed only a generic validation message; the app now checks the password rules
+  locally first and shows a specific link message.
+
+Remaining after Phase 6:
+- Missing: none.
+- Blocked by API: **B22** wishlist.
+- Blocked by business decision: **D28–D31** deposits, **D34** wallet transfer.
+- Not done in the app: device push (FCM/APNs) and native deep-link registration (Android App Links / iOS Universal
+  Links) for `/reset-password`; both need signing / store configuration that requires owner approval.
