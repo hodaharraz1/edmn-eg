@@ -125,4 +125,24 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const Key('revoke-user-sessions')), findsNothing);
   });
+
+  testWidgets('the app is covered whenever it leaves the foreground (app-switcher snapshot), and uncovered on return', (t) async {
+    await t.pumpWidget(_app(FakeAdminApi()));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('privacy-shield')), findsNothing);
+    for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+      t.binding.handleAppLifecycleStateChanged(state);
+      await t.pump();
+      expect(find.byKey(const Key('privacy-shield')), findsOneWidget, reason: '$state');
+    }
+    // Coming back goes through the real order; the cover stays until the app is fully in front again.
+    for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive]) {
+      t.binding.handleAppLifecycleStateChanged(state);
+      await t.pump();
+      expect(find.byKey(const Key('privacy-shield')), findsOneWidget, reason: '$state');
+    }
+    t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await t.pump();
+    expect(find.byKey(const Key('privacy-shield')), findsNothing);
+  });
 }
