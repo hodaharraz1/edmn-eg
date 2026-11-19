@@ -1,0 +1,9 @@
+PASS sign-in — POST /api/v1/auth/login 200
+PASS cart: UI → POST /cart/items — POST /api/v1/cart/items 200
+PASS checkout: UI → POST /orders — POST /api/v1/orders 201
+PASS checkout: exactly one new order row — 6 → 7
+PASS checkout: order awaits payment, total from the server in piastres — status=PENDING_PAYMENT total=1937898
+PASS checkout: cart emptied — cart items=0
+PASS payment: UI → POST /payments/{id}/proof — POST /api/v1/payments/405d6c65-2112-4918-96dd-3f1fe9bce653/proof 201
+PASS payment: one submission row, payment awaits staff review (no money moved) — submissions=1 status=PAYMENT_SUBMITTED
+PASS payment: receipt stored PRIVATE — scan|visibility=UNSCANNED|PRIVATE

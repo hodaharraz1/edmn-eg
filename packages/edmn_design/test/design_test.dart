@@ -86,4 +86,28 @@ void main() {
     expect(EdmnColors.accentCyan, const Color(0xFF1FA7E1));
     expect(EdmnColors.brandRed, const Color(0xFFED181E));
   });
+
+  testWidgets('radio cards: each option is ONE accessible radio named by its label, and tapping it selects', (t) async {
+    final handle = t.ensureSemantics();
+    String? picked;
+    await t.pumpWidget(_app(StatefulBuilder(builder: (context, set) => EdmnRadioCard<String>(
+          value: picked,
+          onChanged: (v) => set(() => picked = v),
+          options: const [
+            EdmnRadioOption(value: 'INSTAPAY', label: 'إنستاباي', icon: Icons.bolt, subtitle: 'حوّل المبلغ'),
+            EdmnRadioOption(value: 'BANK', label: 'تحويل بنكي', icon: Icons.account_balance),
+          ],
+        ))));
+    final node = t.getSemantics(find.byKey(const Key('radio-INSTAPAY')));
+    expect(node.label, contains('إنستاباي'));
+    expect(node.label, contains('حوّل المبلغ'));
+    expect(find.bySemanticsLabel(RegExp('تحويل بنكي')), findsOneWidget);
+    await t.tap(find.text('تحويل بنكي'));
+    await t.pump();
+    expect(picked, 'BANK');
+    List<String> flags(String v) => t.getSemantics(find.byKey(Key('radio-$v'))).getSemanticsData().flagsCollection.toStrings();
+    expect(flags('BANK'), containsAll(['isChecked', 'isInMutuallyExclusiveGroup']));
+    expect(flags('INSTAPAY'), isNot(contains('isChecked')));
+    handle.dispose();
+  });
 }
