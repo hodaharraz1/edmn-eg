@@ -19,10 +19,12 @@
 
 **N/A و EXCEPTION تحتاج اعتماد المسؤول الأمني** (المبدأ 5). كلها هنا **مقترحة** حتى الاعتماد.
 
-**الـ FAIL الثلاثة:**
+**الـ FAIL الأربعة (تحديث المرحلة 2، 19/11):**
 - SEC-002: لا أدوار أمنية معيّنة.
-- SEC-120: الأسرار المكشوفة سابقًا لم تُلغَ.
-- SEC-156: لا DAST.
+- SEC-111 / SEC-112: `main` غير محمي (تحقق عبر API)، ولا مراجعة أو فحوص إلزامية.
+- SEC-156: لا DAST (الخطة في `phase2/DAST_AND_PENTEST_PLAN.md`، تنتظر التصريح).
+
+SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 لم تكن في Git.
 
 كلها تحتاج إجراءً من المالك، ولا يمكن إغلاقها من الكود.
 
@@ -30,12 +32,12 @@
 
 | الحالة | العدد |
 |---|---|
-| PASS | 81 |
-| IN PROGRESS | 43 |
-| NOT TESTED | 25 |
+| PASS | 82 |
+| IN PROGRESS | 44 |
+| NOT TESTED | 22 |
 | EXCEPTION (مقترح) | 4 |
 | N/A (مقترح) | 4 |
-| FAIL | 3 |
+| FAIL | 4 |
 | **المجموع** | **160** |
 
 ## القسم 1: الحوكمة وإدارة المخاطر
@@ -106,7 +108,7 @@
 | SEC-042 | نعم | P1 | المطور | PASS | AES-256-GCM حقلي للهوية والصرف وTOTP (`core/crypto.ts`). وسم 16 بايت (SEC-F02) |
 | SEC-043 | نعم | P1 | المالك | IN PROGRESS | مفاتيح Staging في Vercel encrypted env. **لا KMS أو Secret Manager مخصص للإنتاج بعد** |
 | SEC-044 | نعم | P1 | المطور | PASS | فحص الأسرار (الشجرة + التاريخ) = 0. لا أسرار في تطبيقات Flutter (فحص). `NEXT_PUBLIC_*` بلا أسرار |
-| SEC-045 | نعم | P1 | المالك | IN PROGRESS | التدوير مدعوم (`DATA_ENCRYPTION_KEY_ID` و`_PREVIOUS` و`scripts/reencrypt.ts`، `SECRET_ROTATION.md`). **S7–S10 لم تُلغَ** (SEC-O01) |
+| SEC-045 | نعم | P1 | المالك | IN PROGRESS | التدوير مدعوم (`DATA_ENCRYPTION_KEY_ID` و`_PREVIOUS` و`scripts/reencrypt.ts`، `SECRET_ROTATION.md`). **S7–S10 لُصقت في محادثة إعداد ولم تُلغَ بعد** (SEC-O01). خطة لكل مزود مع تحقق 401: `phase2/SECRETS_S7_S10_PLAN.md` |
 | SEC-046 | نعم | P1 | المطور | PASS | مفاتيح لكل غرض. الإنتاج يرفض المفاتيح المشتقة (`keys.ts`)، والمفاتيح التجريبية عشوائية لكل تشغيل |
 | SEC-047 | نعم | P1 | المطور | PASS | تنقيح السجلات والأخطاء (`logger`، `error-tracking` redaction، `Telemetry.redact` في Flutter). روابط البريد السرية لا تُطبع |
 | SEC-048 | نعم | P1 | المطور | PASS | `node:crypto` فقط (scrypt، AES-GCM، HMAC، HKDF). لا خوارزميات مخصصة. Semgrep أكد ولم يجد غير SEC-F02 |
@@ -125,7 +127,7 @@
 | SEC-056 | نعم | P1 | المطور | PASS | `X-Frame-Options: DENY` + `frame-ancestors 'none'` |
 | SEC-057 | نعم | P1 | المطور | PASS | `safe-next.ts` (AUTH-06)، `tests/unit/safe-next.test.ts` |
 | SEC-058 | نعم | P1 | المطور | PASS | مفاتيح التخزين مولّدة على الخادم وليست أسماء المستخدم. `/media` يرجع 404 لغير الموجود. `FILE_AND_PRIVACY_AUDIT.md` |
-| SEC-059 | نعم | P1 | المطور | IN PROGRESS | فحص النوع بالمحتوى (magic) والحجم والأبعاد، إعادة ترميز `sharp`، تخزين خاص. **فاحص البرمجيات الخبيثة غير موجود للإنتاج** (SEC-O02) |
+| SEC-059 | نعم | P1 | المطور | IN PROGRESS | فحص النوع بالمحتوى (magic) والحجم والأبعاد، إعادة ترميز `sharp`، تخزين خاص. بوابة الإنتاج fail-closed مثبتة باختبار (`upload-scan-gate.test.ts`، commit `76d8395`). **لا فاحص مُشغَّل** (SEC-O02). الخيارات: `phase2/FILE_UPLOAD_SECURITY.md` |
 | SEC-060 | نعم | P1 | المطور | PASS | الأخطاء `internal_error` بلا stack، والإنتاج يرفض الإعداد غير الآمن |
 
 ## القسم 7: تأمين واجهات API والتكاملات
@@ -193,7 +195,7 @@
 | ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
 |---|---|---|---|---|---|
 | SEC-101 | نعم | P2 | المطور | PASS | قواعد المشروع (`AGENTS.md`، `CLAUDE.md`، حدود ESLint على DB في مسارات API، «الخادم يقرر») |
-| SEC-102 | نعم | P1 | المالك | NOT TESTED | المراجعة المستقلة قبل الدمج تعتمد على branch protection (يتحقق المالك). PRs الحالية Draft |
+| SEC-102 | نعم | P1 | المالك | IN PROGRESS | `.github/CODEOWNERS` (المالك مراجِع إلزامي، والمسارات الحساسة صريحة) وقالب PR بقائمة تحقق أمنية (commit `5ae2a2c`). **غير ملزِم** حتى تفعيل «Require review from Code Owners» (`phase2/GOVERNANCE_STEPS.md`) |
 | SEC-103 | نعم | P1 | المطور | IN PROGRESS | Semgrep نُفذ يدويًا هذه الجولة. **غير مدمج في CI بعد** |
 | SEC-104 | نعم | P1 | المطور | PASS | `secret-scan.ts` للشجرة والتاريخ في CI |
 | SEC-105 | نعم | P1 | المطور | PASS | `npm audit --omit=dev --audit-level=high` في CI (`c6fdec7`) + OSV للـ Dart (يدوي) |
@@ -207,8 +209,8 @@
 
 | ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
 |---|---|---|---|---|---|
-| SEC-111 | نعم | P1 | المالك | NOT TESTED | branch protection على `main`: إعدادات GitHub غير متاحة للجلسة |
-| SEC-112 | نعم | P1 | المالك | NOT TESTED | كما سبق |
+| SEC-111 | نعم | P1 | المالك | **FAIL** | تحقق 19/11: GitHub API يعيد `protected: false` لـ `main` ولكل الفروع. الخطوات: `phase2/GOVERNANCE_STEPS.md` §1 |
+| SEC-112 | نعم | P1 | المالك | **FAIL** | لا فحوص مطلوبة ولا مراجعة مطلوبة قبل الدمج (نفس الدليل). CI موجود لكنه غير إلزامي |
 | SEC-113 | نعم | P1 | المطور | PASS | `permissions: contents: read` في كل الـ workflows |
 | SEC-114 | نعم | P2 | المالك | IN PROGRESS | CI بلا أسرار ثابتة (مفاتيح تجريبية عشوائية لكل تشغيل). ترحيل Staging يستخدم سرًا ثابتًا في بيئة GitHub (`STAGING_MIGRATION_DATABASE_URL`) |
 | SEC-115 | نعم | P1 | المطور | PASS | `package-lock.json` و`pubspec.lock`، وإجراءات CI مثبتة بـ SHA (`c6fdec7`) |
@@ -216,19 +218,19 @@
 | SEC-117 | نعم | P3 | المطور | NOT TESTED | لا provenance أو attestations للبناء |
 | SEC-118 | نعم | P1 | المالك | IN PROGRESS | ربط Vercel بالـ commit تلقائي، والنشر التلقائي معطّل لفروع الوكلاء. سياسة «لا نشر بلا CI ناجح» غير مفروضة تقنيًا |
 | SEC-119 | نعم | P1 | المالك | IN PROGRESS | بيئة GitHub `staging` للترحيل (يُفترض بمراجعين). صلاحيات Vercel يتحقق منها المالك |
-| SEC-120 | نعم | P1 | المالك | **FAIL** | فحص التاريخ = 0 حاليًا، لكن S7–S10 المكشوفة سابقًا **لم تُلغَ بعد** (SEC-O01) |
+| SEC-120 | نعم | P1 | المالك | PASS | فحص الشجرة + التاريخ الكامل (`scripts/secret-scan.ts` و`--history`) = 0 في 19/11 على `claude/security-integration`، وفي CI. **تصحيح:** S7–S10 لم تُرفع إلى Git قط، بل لُصقت في محادثة؛ خطرها مسجل في SEC-045/SEC-O01 |
 
 ## القسم 13: حماية تطبيقات الموبايل
 
 | ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
 |---|---|---|---|---|---|
 | SEC-121 | نعم | P1 | المطور | IN PROGRESS | MASVS مطبّق جزئيًا (`THREAT_MODEL_MOBILE_AND_AI.md` §3). لم يُجرَ تقييم MASVS كامل على جهاز |
-| SEC-122 | نعم | P1 | المطور | PASS | `flutter_secure_storage` (Keychain `first_unlock_this_device`، Keystore). رمز الوصول في الذاكرة. لا نسخ احتياطي (SEC-F04) |
+| SEC-122 | نعم | P1 | المطور | PASS | `flutter_secure_storage` (Keychain `first_unlock_this_device`، Keystore). رمز الوصول في الذاكرة. لا نسخ احتياطي (SEC-F04). مسح الجلسة عند أول تشغيل بعد التثبيت (Q-1، `session_store_test.dart`، commit `c4a16c8`). التحقق على iPhone معلّق |
 | SEC-123 | نعم | P1 | المطور | PASS | لا كلمات مرور ولا أسرار مخزنة. سر TOTP يُعرض مرة ولا يُخزن (`mfa_screen.dart`) |
 | SEC-124 | نعم | P1 | المطور | EXCEPTION | TLS بتحقق نظام التشغيل، والنسخ المستضافة HTTPS فقط. **لا pinning** (SEC-O07 مقترح قبوله) |
 | SEC-125 | نعم | P2 | المطور | N/A | لا App Links ولا Universal Links مفعّلة بعد. يصبح إلزاميًا عند تفعيلها |
 | SEC-126 | نعم | P1 | المطور | PASS | Android: INTERNET فقط. iOS: لا أذونات كاميرا أو صور أو موقع أو جهات اتصال |
-| SEC-127 | نعم | P2 | المطور | IN PROGRESS | `FLAG_SECURE` لتطبيق الإدارة على Android. iOS غير منفذ (SEC-O03). لا Push بعد |
+| SEC-127 | نعم | P2 | المطور | IN PROGRESS | `FLAG_SECURE` لتطبيق الإدارة على Android. iOS: `EdmnPrivacyShield` يغطي الواجهة خارج `resumed` (اختبار دورة حياة، commit `c4a16c8`). **لم يُتحقق على جهاز** (SEC-O03). لا Push بعد |
 | SEC-128 | نعم | P3 | المطور | EXCEPTION | لا كشف root/jailbreak. الحماية بقرارات الخادم (مقترح قبوله) |
 | SEC-129 | نعم | P1 | المطور | NOT TESTED | MASTG على جهاز: لا جهاز أو Mac متصل |
 | SEC-130 | نعم | P1 | المالك | NOT TESTED | مفاتيح التوقيع والمتاجر لم تُنشأ بعد (بقرار المالك). عند إنشائها: خزنة + MFA للمتجر |
