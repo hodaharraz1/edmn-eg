@@ -2900,4 +2900,93 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get pageNotFoundBody =>
       'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.';
+
+  @override
+  String get adminDashboard => 'لوحة القيادة';
+
+  @override
+  String get adminRangeToday => 'اليوم';
+
+  @override
+  String get adminRange7d => '٧ أيام';
+
+  @override
+  String get adminRange30d => '٣٠ يوم';
+
+  @override
+  String get adminRange90d => '٩٠ يوم';
+
+  @override
+  String get adminRange365d => 'سنة';
+
+  @override
+  String get adminKpiGmv => 'إجمالي قيمة البضائع (GMV)';
+
+  @override
+  String get adminKpiRevenue => 'إيرادات اضمن';
+
+  @override
+  String get adminKpiOrders => 'الطلبات (المدفوعة / الكل)';
+
+  @override
+  String get adminKpiDeals => 'الصفقات المحمية';
+
+  @override
+  String get adminKpiBuyers => 'مشترون نشطون';
+
+  @override
+  String get adminKpiSellers => 'بائعون نشطون';
+
+  @override
+  String get adminKpiReturnRate => 'نسبة المرتجعات';
+
+  @override
+  String get adminKpiDisputeRate => 'نسبة النزاعات';
+
+  @override
+  String get adminQueues => 'قوائم الانتظار التشغيلية';
+
+  @override
+  String get adminQueueSellers => 'طلبات بائعين للمراجعة';
+
+  @override
+  String get adminQueueProducts => 'منتجات للمراجعة';
+
+  @override
+  String get adminQueuePayments => 'مدفوعات للتحقق';
+
+  @override
+  String get adminQueueWithdrawals => 'سحوبات قيد التنفيذ';
+
+  @override
+  String get adminQueueRefunds => 'مستردات بانتظار الصرف';
+
+  @override
+  String get adminQueueDisputes => 'نزاعات مفتوحة';
+
+  @override
+  String get adminQueueTickets => 'تذاكر دعم مفتوحة';
+
+  @override
+  String get adminQueueDeliveries => 'شحنات بلا تأكيد استلام';
+
+  @override
+  String get adminTopCategories => 'أعلى التصنيفات';
+
+  @override
+  String get adminTopSellers => 'أعلى البائعين';
+
+  @override
+  String get adminNoData => 'لا توجد بيانات في الفترة دي';
+
+  @override
+  String get adminTestMoneyNotice =>
+      'كل المبالغ هنا من مدفوعات تجريبية وليست إيرادات حقيقية.';
+
+  @override
+  String get adminReadOnlyNotice =>
+      'عرض فقط: الموافقات والإجراءات المالية من لوحة الإدارة على الويب.';
+
+  @override
+  String get adminAccount => 'الحساب والأمان';
 }

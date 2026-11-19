@@ -5533,6 +5533,180 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.'**
   String get pageNotFoundBody;
+
+  /// No description provided for @adminDashboard.
+  ///
+  /// In ar, this message translates to:
+  /// **'لوحة القيادة'**
+  String get adminDashboard;
+
+  /// No description provided for @adminRangeToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'اليوم'**
+  String get adminRangeToday;
+
+  /// No description provided for @adminRange7d.
+  ///
+  /// In ar, this message translates to:
+  /// **'٧ أيام'**
+  String get adminRange7d;
+
+  /// No description provided for @adminRange30d.
+  ///
+  /// In ar, this message translates to:
+  /// **'٣٠ يوم'**
+  String get adminRange30d;
+
+  /// No description provided for @adminRange90d.
+  ///
+  /// In ar, this message translates to:
+  /// **'٩٠ يوم'**
+  String get adminRange90d;
+
+  /// No description provided for @adminRange365d.
+  ///
+  /// In ar, this message translates to:
+  /// **'سنة'**
+  String get adminRange365d;
+
+  /// No description provided for @adminKpiGmv.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي قيمة البضائع (GMV)'**
+  String get adminKpiGmv;
+
+  /// No description provided for @adminKpiRevenue.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيرادات اضمن'**
+  String get adminKpiRevenue;
+
+  /// No description provided for @adminKpiOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات (المدفوعة / الكل)'**
+  String get adminKpiOrders;
+
+  /// No description provided for @adminKpiDeals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفقات المحمية'**
+  String get adminKpiDeals;
+
+  /// No description provided for @adminKpiBuyers.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشترون نشطون'**
+  String get adminKpiBuyers;
+
+  /// No description provided for @adminKpiSellers.
+  ///
+  /// In ar, this message translates to:
+  /// **'بائعون نشطون'**
+  String get adminKpiSellers;
+
+  /// No description provided for @adminKpiReturnRate.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسبة المرتجعات'**
+  String get adminKpiReturnRate;
+
+  /// No description provided for @adminKpiDisputeRate.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسبة النزاعات'**
+  String get adminKpiDisputeRate;
+
+  /// No description provided for @adminQueues.
+  ///
+  /// In ar, this message translates to:
+  /// **'قوائم الانتظار التشغيلية'**
+  String get adminQueues;
+
+  /// No description provided for @adminQueueSellers.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات بائعين للمراجعة'**
+  String get adminQueueSellers;
+
+  /// No description provided for @adminQueueProducts.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتجات للمراجعة'**
+  String get adminQueueProducts;
+
+  /// No description provided for @adminQueuePayments.
+  ///
+  /// In ar, this message translates to:
+  /// **'مدفوعات للتحقق'**
+  String get adminQueuePayments;
+
+  /// No description provided for @adminQueueWithdrawals.
+  ///
+  /// In ar, this message translates to:
+  /// **'سحوبات قيد التنفيذ'**
+  String get adminQueueWithdrawals;
+
+  /// No description provided for @adminQueueRefunds.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستردات بانتظار الصرف'**
+  String get adminQueueRefunds;
+
+  /// No description provided for @adminQueueDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نزاعات مفتوحة'**
+  String get adminQueueDisputes;
+
+  /// No description provided for @adminQueueTickets.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذاكر دعم مفتوحة'**
+  String get adminQueueTickets;
+
+  /// No description provided for @adminQueueDeliveries.
+  ///
+  /// In ar, this message translates to:
+  /// **'شحنات بلا تأكيد استلام'**
+  String get adminQueueDeliveries;
+
+  /// No description provided for @adminTopCategories.
+  ///
+  /// In ar, this message translates to:
+  /// **'أعلى التصنيفات'**
+  String get adminTopCategories;
+
+  /// No description provided for @adminTopSellers.
+  ///
+  /// In ar, this message translates to:
+  /// **'أعلى البائعين'**
+  String get adminTopSellers;
+
+  /// No description provided for @adminNoData.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بيانات في الفترة دي'**
+  String get adminNoData;
+
+  /// No description provided for @adminTestMoneyNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل المبالغ هنا من مدفوعات تجريبية وليست إيرادات حقيقية.'**
+  String get adminTestMoneyNotice;
+
+  /// No description provided for @adminReadOnlyNotice.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض فقط: الموافقات والإجراءات المالية من لوحة الإدارة على الويب.'**
+  String get adminReadOnlyNotice;
+
+  /// No description provided for @adminAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب والأمان'**
+  String get adminAccount;
 }
 
 class _EdmnLocalizationsDelegate

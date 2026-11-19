@@ -41,6 +41,14 @@ class AdminHomeScreen extends ConsumerWidget {
           final canRevoke = p.permissions.contains('customers.manage') || p.permissions.contains('roles.manage');
           return ListView(children: [
             ListTile(title: Text(p.fullName, style: Theme.of(context).textTheme.titleLarge), subtitle: Text(p.email ?? '')),
+            if (p.permissions.contains('dashboard.view'))
+              ListTile(
+                key: const Key('open-dashboard'),
+                leading: const Icon(Icons.dashboard_outlined),
+                title: Text(t.adminDashboard),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/dashboard'),
+              ),
             ListTile(leading: const Icon(Icons.verified_user), title: Text(t.permissions), trailing: Text('${p.permissions.length}', key: const Key('permission-count'))),
             if (canRevoke)
               ListTile(

@@ -3,6 +3,7 @@
 
 /// Operation paths of the Admin App API (method + OpenAPI path template).
 abstract final class AdminApiPaths {
+  static const adminGetDashboard = (method: 'GET', path: '/api/v1/admin/dashboard');
   static const adminGetMe = (method: 'GET', path: '/api/v1/admin/me');
   static const adminListMySessions = (method: 'GET', path: '/api/v1/admin/me/sessions');
   static const adminLogin = (method: 'POST', path: '/api/v1/admin/auth/login');
@@ -14,6 +15,123 @@ abstract final class AdminApiPaths {
   static const adminRevokeMySession = (method: 'DELETE', path: '/api/v1/admin/me/sessions/{sessionId}');
   static const adminRevokeUserSessions = (method: 'POST', path: '/api/v1/admin/users/{userId}/sessions/revoke');
   static const adminStepUp = (method: 'POST', path: '/api/v1/admin/auth/step-up');
+}
+
+class AdminGetDashboardResponse {
+  const AdminGetDashboardResponse({required this.range, required this.realMoney, required this.kpis, required this.queues, required this.topCategories, required this.topSellers, required this.daily});
+
+  factory AdminGetDashboardResponse.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponse(range: json['range'] as String, realMoney: json['realMoney'] as bool, kpis: AdminGetDashboardResponseKpis.fromJson(json['kpis'] as Map<String, dynamic>), queues: AdminGetDashboardResponseQueues.fromJson(json['queues'] as Map<String, dynamic>), topCategories: (json['topCategories'] as List).map((e) => AdminGetDashboardResponseTopCategoriesItem.fromJson(e as Map<String, dynamic>)).toList(), topSellers: (json['topSellers'] as List).map((e) => AdminGetDashboardResponseTopSellersItem.fromJson(e as Map<String, dynamic>)).toList(), daily: (json['daily'] as List).map((e) => AdminGetDashboardResponseDailyItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  /// One of: today, 7d, 30d, 90d, 365d (kept as String for forward compatibility).
+  final String range;
+
+  final bool realMoney;
+
+  final AdminGetDashboardResponseKpis kpis;
+
+  final AdminGetDashboardResponseQueues queues;
+
+  final List<AdminGetDashboardResponseTopCategoriesItem> topCategories;
+
+  final List<AdminGetDashboardResponseTopSellersItem> topSellers;
+
+  final List<AdminGetDashboardResponseDailyItem> daily;
+
+  Map<String, dynamic> toJson() => {'range': range, 'realMoney': realMoney, 'kpis': kpis.toJson(), 'queues': queues.toJson(), 'topCategories': topCategories.map((e) => e.toJson()).toList(), 'topSellers': topSellers.map((e) => e.toJson()).toList(), 'daily': daily.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetDashboardResponseDailyItem {
+  const AdminGetDashboardResponseDailyItem({required this.day, required this.gmv, required this.orders});
+
+  factory AdminGetDashboardResponseDailyItem.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponseDailyItem(day: json['day'] as String, gmv: (json['gmv'] as num).toInt(), orders: (json['orders'] as num).toInt());
+
+  final String day;
+
+  final int gmv;
+
+  final int orders;
+
+  Map<String, dynamic> toJson() => {'day': day, 'gmv': gmv, 'orders': orders};
+}
+
+class AdminGetDashboardResponseKpis {
+  const AdminGetDashboardResponseKpis({required this.gmv, required this.revenue, required this.ordersTotal, required this.ordersPaid, required this.aov, required this.deals, required this.dealsValue, required this.activeBuyers, required this.activeSellers, required this.returnRate, required this.disputeRate});
+
+  factory AdminGetDashboardResponseKpis.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponseKpis(gmv: (json['gmv'] as num).toInt(), revenue: (json['revenue'] as num).toInt(), ordersTotal: (json['ordersTotal'] as num).toInt(), ordersPaid: (json['ordersPaid'] as num).toInt(), aov: (json['aov'] as num).toInt(), deals: (json['deals'] as num).toInt(), dealsValue: (json['dealsValue'] as num).toInt(), activeBuyers: (json['activeBuyers'] as num).toInt(), activeSellers: (json['activeSellers'] as num).toInt(), returnRate: (json['returnRate'] as num).toDouble(), disputeRate: (json['disputeRate'] as num).toDouble());
+
+  final int gmv;
+
+  final int revenue;
+
+  final int ordersTotal;
+
+  final int ordersPaid;
+
+  final int aov;
+
+  final int deals;
+
+  final int dealsValue;
+
+  final int activeBuyers;
+
+  final int activeSellers;
+
+  final double returnRate;
+
+  final double disputeRate;
+
+  Map<String, dynamic> toJson() => {'gmv': gmv, 'revenue': revenue, 'ordersTotal': ordersTotal, 'ordersPaid': ordersPaid, 'aov': aov, 'deals': deals, 'dealsValue': dealsValue, 'activeBuyers': activeBuyers, 'activeSellers': activeSellers, 'returnRate': returnRate, 'disputeRate': disputeRate};
+}
+
+class AdminGetDashboardResponseQueues {
+  const AdminGetDashboardResponseQueues({required this.pendingSellers, required this.pendingProducts, required this.pendingPayments, required this.pendingWithdrawals, required this.pendingWithdrawalsAmount, required this.pendingRefunds, required this.openDisputes, required this.openTickets, required this.unconfirmedDeliveries});
+
+  factory AdminGetDashboardResponseQueues.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponseQueues(pendingSellers: (json['pendingSellers'] as num).toInt(), pendingProducts: (json['pendingProducts'] as num).toInt(), pendingPayments: (json['pendingPayments'] as num).toInt(), pendingWithdrawals: (json['pendingWithdrawals'] as num).toInt(), pendingWithdrawalsAmount: (json['pendingWithdrawalsAmount'] as num).toInt(), pendingRefunds: (json['pendingRefunds'] as num).toInt(), openDisputes: (json['openDisputes'] as num).toInt(), openTickets: (json['openTickets'] as num).toInt(), unconfirmedDeliveries: (json['unconfirmedDeliveries'] as num).toInt());
+
+  final int pendingSellers;
+
+  final int pendingProducts;
+
+  final int pendingPayments;
+
+  final int pendingWithdrawals;
+
+  final int pendingWithdrawalsAmount;
+
+  final int pendingRefunds;
+
+  final int openDisputes;
+
+  final int openTickets;
+
+  final int unconfirmedDeliveries;
+
+  Map<String, dynamic> toJson() => {'pendingSellers': pendingSellers, 'pendingProducts': pendingProducts, 'pendingPayments': pendingPayments, 'pendingWithdrawals': pendingWithdrawals, 'pendingWithdrawalsAmount': pendingWithdrawalsAmount, 'pendingRefunds': pendingRefunds, 'openDisputes': openDisputes, 'openTickets': openTickets, 'unconfirmedDeliveries': unconfirmedDeliveries};
+}
+
+class AdminGetDashboardResponseTopCategoriesItem {
+  const AdminGetDashboardResponseTopCategoriesItem({required this.name, required this.gmv});
+
+  factory AdminGetDashboardResponseTopCategoriesItem.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponseTopCategoriesItem(name: json['name'] as String, gmv: (json['gmv'] as num).toInt());
+
+  final String name;
+
+  final int gmv;
+
+  Map<String, dynamic> toJson() => {'name': name, 'gmv': gmv};
+}
+
+class AdminGetDashboardResponseTopSellersItem {
+  const AdminGetDashboardResponseTopSellersItem({required this.name, required this.gmv});
+
+  factory AdminGetDashboardResponseTopSellersItem.fromJson(Map<String, dynamic> json) => AdminGetDashboardResponseTopSellersItem(name: json['name'] as String, gmv: (json['gmv'] as num).toInt());
+
+  final String name;
+
+  final int gmv;
+
+  Map<String, dynamic> toJson() => {'name': name, 'gmv': gmv};
 }
 
 class AdminListMySessionsResponse {

@@ -2931,4 +2931,93 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get pageNotFoundBody =>
       'The link is wrong or no longer available. Go back home and continue from there.';
+
+  @override
+  String get adminDashboard => 'Dashboard';
+
+  @override
+  String get adminRangeToday => 'Today';
+
+  @override
+  String get adminRange7d => '7 days';
+
+  @override
+  String get adminRange30d => '30 days';
+
+  @override
+  String get adminRange90d => '90 days';
+
+  @override
+  String get adminRange365d => 'Year';
+
+  @override
+  String get adminKpiGmv => 'Gross merchandise value (GMV)';
+
+  @override
+  String get adminKpiRevenue => 'EDMN revenue';
+
+  @override
+  String get adminKpiOrders => 'Orders (paid / all)';
+
+  @override
+  String get adminKpiDeals => 'Protected deals';
+
+  @override
+  String get adminKpiBuyers => 'Active buyers';
+
+  @override
+  String get adminKpiSellers => 'Active sellers';
+
+  @override
+  String get adminKpiReturnRate => 'Return rate';
+
+  @override
+  String get adminKpiDisputeRate => 'Dispute rate';
+
+  @override
+  String get adminQueues => 'Operational queues';
+
+  @override
+  String get adminQueueSellers => 'Seller applications to review';
+
+  @override
+  String get adminQueueProducts => 'Products to review';
+
+  @override
+  String get adminQueuePayments => 'Payments to verify';
+
+  @override
+  String get adminQueueWithdrawals => 'Withdrawals in progress';
+
+  @override
+  String get adminQueueRefunds => 'Refunds awaiting payout';
+
+  @override
+  String get adminQueueDisputes => 'Open disputes';
+
+  @override
+  String get adminQueueTickets => 'Open support tickets';
+
+  @override
+  String get adminQueueDeliveries => 'Shipments without receipt';
+
+  @override
+  String get adminTopCategories => 'Top categories';
+
+  @override
+  String get adminTopSellers => 'Top sellers';
+
+  @override
+  String get adminNoData => 'No data for this period';
+
+  @override
+  String get adminTestMoneyNotice =>
+      'Every amount here comes from test payments, not real revenue.';
+
+  @override
+  String get adminReadOnlyNotice =>
+      'View only: approvals and financial actions stay in the web admin console.';
+
+  @override
+  String get adminAccount => 'Account and security';
 }

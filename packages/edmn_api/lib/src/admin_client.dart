@@ -28,6 +28,10 @@ class AdminApi {
     }
   }
 
+  /// Read-only operational dashboard (dashboard.view). [range]: today, 7d, 30d, 90d or 365d.
+  Future<AdminGetDashboardResponse> dashboard({String range = '30d'}) async =>
+      AdminGetDashboardResponse.fromJson(await client.getJson(AdminApiPaths.adminGetDashboard.path, query: {'range': range}));
+
   Future<Profile> me() async => Profile.fromJson(await client.getJson(AdminApiPaths.adminGetMe.path));
   Future<AdminListMySessionsResponse> mySessions() async => AdminListMySessionsResponse.fromJson(await client.getJson(AdminApiPaths.adminListMySessions.path));
   Future<void> revokeSession(String sessionId, {required String idempotencyKey}) =>

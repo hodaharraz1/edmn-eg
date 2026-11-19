@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/auth/mfa_screen.dart';
 import 'features/auth/sign_in_screen.dart';
+import 'features/dashboard/dashboard_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/security/revoke_user_sessions_screen.dart';
 import 'providers.dart';
@@ -29,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sign-in', builder: (c, s) => const AdminSignInScreen()),
       GoRoute(path: '/mfa', builder: (c, s) => const MfaScreen()),
       GoRoute(path: '/', builder: (c, s) => const AdminHomeScreen()),
+      GoRoute(path: '/dashboard', builder: (c, s) => const AdminDashboardScreen()),
       GoRoute(path: '/security/revoke-sessions', builder: (c, s) => const RevokeUserSessionsScreen()),
     ],
   );

@@ -2,6 +2,7 @@ import 'package:edmn_admin/src/app.dart';
 import 'package:edmn_admin/src/providers.dart';
 import 'package:edmn_api/admin.dart';
 import 'package:edmn_core/edmn_core.dart';
+import 'package:edmn_design/edmn_design.dart' show ErrorView;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,25 @@ class FakeAdminApi extends AdminApi {
     return Profile(id: 'a', fullName: 'مسؤول العمليات', email: 'ops@test.local', phone: null, locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: true, totpEnrolled: true, permissions: permissions);
   }
 
+  final dashboardRanges = <String>[];
+  bool dashboardForbidden = false;
+  bool realMoney = false;
+
+  @override
+  Future<AdminGetDashboardResponse> dashboard({String range = '30d'}) async {
+    dashboardRanges.add(range);
+    if (dashboardForbidden) throw const ApiFailure(code: ApiErrorCode.forbidden, status: 403);
+    return AdminGetDashboardResponse(
+      range: range,
+      realMoney: realMoney,
+      kpis: const AdminGetDashboardResponseKpis(gmv: 1234550, revenue: 61700, ordersTotal: 12, ordersPaid: 9, aov: 137172, deals: 3, dealsValue: 500000, activeBuyers: 7, activeSellers: 4, returnRate: 0.05, disputeRate: 0.0),
+      queues: const AdminGetDashboardResponseQueues(pendingSellers: 2, pendingProducts: 0, pendingPayments: 1, pendingWithdrawals: 1, pendingWithdrawalsAmount: 250000, pendingRefunds: 0, openDisputes: 1, openTickets: 3, unconfirmedDeliveries: 0),
+      topCategories: const [AdminGetDashboardResponseTopCategoriesItem(name: 'موبايلات', gmv: 900000)],
+      topSellers: const [],
+      daily: const [],
+    );
+  }
+
   @override
   Future<int> revokeUserSessions(String userId, {required String reason, required String idempotencyKey}) async {
     revokeAttempts++;
@@ -56,6 +76,13 @@ Widget _app(FakeAdminApi api) => ProviderScope(overrides: [
       sessionStoreProvider.overrideWithValue(MemorySessionStore()),
       adminApiProvider.overrideWithValue(api),
     ], child: const AdminApp());
+
+Future<void> _ready(WidgetTester t) async {
+  await _signIn(t);
+  await t.enterText(find.byKey(const Key('totp')), '123456');
+  await t.tap(find.byKey(const Key('verify')));
+  await t.pumpAndSettle();
+}
 
 Future<void> _signIn(WidgetTester t) async {
   await t.enterText(find.byKey(const Key('identifier')), 'ops@test.local');
@@ -144,5 +171,55 @@ void main() {
     t.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await t.pump();
     expect(find.byKey(const Key('privacy-shield')), findsNothing);
+  });
+
+  testWidgets('dashboard: server figures in EGP, test-money notice while Real Money is OFF, range reloads', (t) async {
+    final api = FakeAdminApi();
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-dashboard')));
+    await t.pumpAndSettle();
+    expect(api.dashboardRanges, ['30d']);
+    expect(find.byKey(const Key('test-money-notice')), findsOneWidget);
+    expect(find.text('12,345.5 ج.م'), findsOneWidget); // 1,234,550 piastres, formatted like the web formatEGP
+    expect(find.text('2,500 ج.م'), findsOneWidget); // pending withdrawals amount
+    await t.scrollUntilVisible(find.text('موبايلات'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('موبايلات'), findsOneWidget);
+    await t.drag(find.byType(ListView).first, const Offset(0, 2000));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('range-7d')));
+    await t.pumpAndSettle();
+    expect(api.dashboardRanges.last, '7d');
+  });
+
+  testWidgets('dashboard: the entry is hidden without dashboard.view', (t) async {
+    final noPerm = FakeAdminApi(permissions: const ['customers.manage']);
+    await t.pumpWidget(_app(noPerm));
+    await t.pumpAndSettle();
+    await _ready(t);
+    expect(find.byKey(const Key('open-dashboard')), findsNothing);
+  });
+
+  testWidgets('dashboard: a server refusal shows an error, never figures', (t) async {
+    final refused = FakeAdminApi()..dashboardForbidden = true;
+    await t.pumpWidget(_app(refused));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-dashboard')));
+    await t.pumpAndSettle();
+    expect(find.byType(ErrorView), findsOneWidget);
+    expect(find.byKey(const Key('kpi-gmv')), findsNothing);
+  });
+
+  testWidgets('dashboard: no test-money notice when the server reports Real Money ON', (t) async {
+    final api = FakeAdminApi()..realMoney = true;
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-dashboard')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('kpi-gmv')), findsOneWidget);
+    expect(find.byKey(const Key('test-money-notice')), findsNothing);
   });
 }
