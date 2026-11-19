@@ -1,0 +1,58 @@
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/decline | owner=ahmed attacker=mona 409 {"type":"https://docs.edmneg.com/mobile-api/errors/invalid_state","title":"invalid_state","status":409,"code":"invalid_state","detail":"الدعوة مش صالحة أو منتهي
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/invitation/refresh | owner=ahmed attacker=mona 429 {"type":"https://docs.edmneg.com/mobile-api/errors/rate_limited","title":"rate_limited","status":429,"code":"rate_limited"}
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/offer | owner=ahmed attacker=mona 429 {"type":"https://docs.edmneg.com/mobile-api/errors/rate_limited","title":"rate_limited","status":429,"code":"rate_limited"}
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/photos | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"pho
+INCONCLUSIVE | PUT | /api/v1/me/addresses/{addressId} | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","detail":"رقم الموبايل
+INCONCLUSIVE | POST | /api/v1/payments/{paymentId}/proof | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"pro
+INCONCLUSIVE | POST | /api/v1/returns/{returnId}/escalate | owner=omar attacker=mona 429 {"type":"https://docs.edmneg.com/mobile-api/errors/rate_limited","title":"rate_limited","status":429,"code":"rate_limited"}
+INCONCLUSIVE | POST | /api/v1/seller/products/{productId}/images | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"ima
+INCONCLUSIVE | PUT | /api/v1/seller/products/{productId}/variants | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"var
+SKIP | - | /api/v1/me/sessions/{sessionId} | no id
+SKIP | - | /api/v1/wishlist/{productId} | no id
+DENIED | POST | /api/v1/conversations/{conversationId}/messages | owner=mona attacker=omar 404 
+DENIED | POST | /api/v1/conversations/{conversationId}/seen | owner=mona attacker=omar 404 
+DENIED | POST | /api/v1/conversations/messages/{messageId}/report | owner=mona attacker=omar 404 
+DENIED | POST | /api/v1/deals/{dealId}/cancel | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/change-response | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/confirm-receipt | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/conversation | owner=ahmed attacker=mona 404 
+DENIED | POST | /api/v1/deals/{dealId}/delivery-code/regenerate | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/delivery-code/verify | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/invitation | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/invitation/revoke | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/not-received | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/offer-response | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/payment | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/shipped | owner=ahmed attacker=mona 403 
+DENIED | PUT | /api/v1/deals/{dealId}/steps/{step} | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/disputes/{disputeId}/messages | owner=mona attacker=omar 404 
+DENIED | DELETE | /api/v1/me/addresses/{addressId} | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/orders/{orderId}/cancel | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/returns/{returnId}/ship-back | owner=omar attacker=mona 403 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/cancellation-request | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/confirm-receipt | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/conversation | owner=mona attacker=omar 404 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/problem | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/seller/conversations/{conversationId}/messages | owner=anaqa attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/conversations/{conversationId}/seen | owner=anaqa attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/conversations/messages/{messageId}/report | owner=anaqa attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/disputes/{disputeId}/messages | owner=anaqa attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/orders/{sellerOrderId}/conversation | owner=techzone attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/orders/{sellerOrderId}/shipment | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/orders/{sellerOrderId}/steps | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/payout-requests/{requestId}/cancel | owner=techzone attacker=homestyle 403 
+DENIED | PUT | /api/v1/seller/products/{productId}/details | owner=techzone attacker=homestyle 403 
+DENIED | DELETE | /api/v1/seller/products/{productId}/images/{fileId} | owner=techzone attacker=homestyle 403 
+DENIED | PUT | /api/v1/seller/products/{productId}/logistics | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/products/{productId}/submit | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/products/{productId}/visibility | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/returns/{returnId}/escalate | owner=anaqa attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/returns/{returnId}/steps | owner=anaqa attacker=homestyle 404 
+DENIED | PUT | /api/v1/seller/variants/{variantId}/stock | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/support/tickets/{ticketId}/rating | owner=mona attacker=omar 404 
+DENIED | POST | /api/v1/support/tickets/{ticketId}/reopen | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/support/tickets/{ticketId}/replies | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/wallet/payout-requests/{requestId}/cancel | owner=techzone attacker=homestyle 404 
+DENIED | POST | /api/v1/wallet/receiving-accounts/{accountId}/archive | owner=techzone attacker=homestyle 404 
+
+SUMMARY {"INCONCLUSIVE":9,"SKIP":2,"DENIED":45}

@@ -1,0 +1,75 @@
+INCONCLUSIVE | POST | /api/v1/conversations/{conversationId}/messages | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/conversations/messages/{messageId}/report | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rea
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/cancel | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rea
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/change-response | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"ver
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/decline | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rea
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/delivery-code/verify | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"cod
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/invitation | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"acc
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/not-received | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"des
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/offer | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"off
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/offer-response | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"ver
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/payment | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"met
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/photos | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/deals/{dealId}/shipped | owner=ahmed attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/disputes/{disputeId}/messages | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | PUT | /api/v1/me/addresses/{addressId} | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rec
+INCONCLUSIVE | POST | /api/v1/payments/{paymentId}/proof | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/returns/{returnId}/escalate | owner=omar attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"des
+INCONCLUSIVE | POST | /api/v1/returns/{returnId}/ship-back | owner=omar attacker=mona 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"car
+INCONCLUSIVE | POST | /api/v1/seller-orders/{sellerOrderId}/cancellation-request | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"not
+INCONCLUSIVE | POST | /api/v1/seller-orders/{sellerOrderId}/problem | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"kin
+INCONCLUSIVE | POST | /api/v1/seller/conversations/{conversationId}/messages | owner=anaqa attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/seller/conversations/messages/{messageId}/report | owner=anaqa attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rea
+INCONCLUSIVE | POST | /api/v1/seller/disputes/{disputeId}/messages | owner=anaqa attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/seller/orders/{sellerOrderId}/shipment | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | POST | /api/v1/seller/orders/{sellerOrderId}/steps | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"ste
+INCONCLUSIVE | PUT | /api/v1/seller/products/{productId}/details | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"tit
+INCONCLUSIVE | POST | /api/v1/seller/products/{productId}/images | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+INCONCLUSIVE | PUT | /api/v1/seller/products/{productId}/logistics | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"wei
+INCONCLUSIVE | PUT | /api/v1/seller/products/{productId}/variants | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"var
+INCONCLUSIVE | POST | /api/v1/seller/products/{productId}/visibility | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"lis
+INCONCLUSIVE | POST | /api/v1/seller/returns/{returnId}/escalate | owner=anaqa attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"des
+INCONCLUSIVE | POST | /api/v1/seller/returns/{returnId}/steps | owner=anaqa attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"ste
+INCONCLUSIVE | PUT | /api/v1/seller/variants/{variantId}/stock | owner=techzone attacker=homestyle 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"sto
+INCONCLUSIVE | POST | /api/v1/support/tickets/{ticketId}/rating | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rat
+INCONCLUSIVE | POST | /api/v1/support/tickets/{ticketId}/reopen | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"rea
+INCONCLUSIVE | POST | /api/v1/support/tickets/{ticketId}/replies | owner=mona attacker=omar 422 {"type":"https://docs.edmneg.com/mobile-api/errors/validation_failed","title":"validation_failed","status":422,"code":"validation_failed","issues":[{"path":"","
+SKIP | - | /api/v1/me/sessions/{sessionId} | no id
+SKIP | - | /api/v1/wishlist/{productId} | no id
+DENIED | GET | /api/v1/conversations/{conversationId} | owner=mona 200 attacker=omar 404 
+DENIED | POST | /api/v1/conversations/{conversationId}/seen | owner=mona attacker=omar 404 
+DENIED | GET | /api/v1/deals/{dealId} | owner=ahmed 200 attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/confirm-receipt | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/conversation | owner=ahmed attacker=mona 404 
+DENIED | GET | /api/v1/deals/{dealId}/delivery-code | owner=ahmed 200 attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/delivery-code/regenerate | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/invitation/refresh | owner=ahmed attacker=mona 403 
+DENIED | POST | /api/v1/deals/{dealId}/invitation/revoke | owner=ahmed attacker=mona 403 
+DENIED | PUT | /api/v1/deals/{dealId}/steps/{step} | owner=ahmed attacker=mona 403 
+DENIED | GET | /api/v1/disputes/{disputeId} | owner=mona 200 attacker=omar 404 
+DENIED | GET | /api/v1/files/{fileId} | owner=mona 200 attacker=omar 404 
+DENIED | DELETE | /api/v1/me/addresses/{addressId} | owner=mona attacker=omar 403 
+DENIED | GET | /api/v1/orders/{orderId} | owner=mona 200 attacker=omar 403 
+DENIED | POST | /api/v1/orders/{orderId}/cancel | owner=mona attacker=omar 403 
+DENIED | GET | /api/v1/payments/{paymentId} | owner=mona 200 attacker=omar 403 
+DENIED | GET | /api/v1/returns/{returnId} | owner=omar 200 attacker=mona 404 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/confirm-receipt | owner=mona attacker=omar 403 
+DENIED | POST | /api/v1/seller-orders/{sellerOrderId}/conversation | owner=mona attacker=omar 404 
+DENIED | GET | /api/v1/seller-orders/{sellerOrderId}/return-options | owner=mona 200 attacker=omar 404 
+DENIED | GET | /api/v1/seller-orders/{sellerOrderId}/review-options | owner=mona 200 attacker=omar 404 
+DENIED | GET | /api/v1/seller/conversations/{conversationId} | owner=anaqa 200 attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/conversations/{conversationId}/seen | owner=anaqa attacker=homestyle 404 
+DENIED | GET | /api/v1/seller/disputes/{disputeId} | owner=anaqa 200 attacker=homestyle 404 
+DENIED | GET | /api/v1/seller/orders/{sellerOrderId} | owner=techzone 200 attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/orders/{sellerOrderId}/conversation | owner=techzone attacker=homestyle 404 
+DENIED | POST | /api/v1/seller/payout-requests/{requestId}/cancel | owner=techzone attacker=homestyle 403 
+DENIED | GET | /api/v1/seller/products/{productId} | owner=techzone 200 attacker=homestyle 403 
+DENIED | DELETE | /api/v1/seller/products/{productId}/images/{fileId} | owner=techzone attacker=homestyle 403 
+DENIED | POST | /api/v1/seller/products/{productId}/submit | owner=techzone attacker=homestyle 403 
+DENIED | GET | /api/v1/seller/returns/{returnId} | owner=anaqa 200 attacker=homestyle 404 
+DENIED | GET | /api/v1/support/tickets/{ticketId} | owner=mona 200 attacker=omar 403 
+DENIED | GET | /api/v1/wallet/activity/{activityId} | owner=mona 200 attacker=omar 404 
+DENIED | POST | /api/v1/wallet/payout-requests/{requestId}/cancel | owner=techzone attacker=homestyle 404 
+DENIED | POST | /api/v1/wallet/receiving-accounts/{accountId}/archive | owner=techzone attacker=homestyle 404 
+
+SUMMARY {"INCONCLUSIVE":36,"SKIP":2,"DENIED":35}
