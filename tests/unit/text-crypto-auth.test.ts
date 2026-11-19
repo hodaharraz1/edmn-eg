@@ -55,9 +55,11 @@ describe('passwords & TOTP', () => {
   });
   it('enforces password policy (stricter for staff)', () => {
     expect(passwordProblems('abc', CUSTOMER_POLICY)).not.toBeNull();
-    expect(passwordProblems('abcdefgh1', CUSTOMER_POLICY)).toBeNull();
-    expect(passwordProblems('abcdefgh1234', STAFF_POLICY)).not.toBeNull();
-    expect(passwordProblems('abcdefgh123!', STAFF_POLICY)).toBeNull();
+    expect(passwordProblems('tramhorse1', CUSTOMER_POLICY)).toBeNull();
+    expect(passwordProblems('tramhorselamp1', STAFF_POLICY)).not.toBeNull(); // staff: a symbol is required
+    expect(passwordProblems('tramhorse123!', STAFF_POLICY)).toBeNull();
+    // Common passwords that satisfy the composition rule are refused too (SEC-023; see common-passwords.test.ts).
+    expect(passwordProblems('abcdefgh1', CUSTOMER_POLICY)).not.toBeNull();
   });
   it('generates RFC 6238 codes (test vector) and verifies within the window', () => {
     // RFC 6238 SHA1 secret "12345678901234567890", T=59s → 94287082 (8 digits) → last 6: 287082

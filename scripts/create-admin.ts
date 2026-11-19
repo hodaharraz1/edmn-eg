@@ -26,7 +26,7 @@ async function main() {
   rl.close();
   if (!email.includes('@') || !fullName || !phone) throw new Error('invalid input');
   if (/\.local$/i.test(email)) throw new Error('reserved demo/test domain (.local) is not allowed for a real administrator');
-  const problem = passwordProblems(password, STAFF_POLICY);
+  const problem = passwordProblems(password, STAFF_POLICY, { email, phone });
   if (problem) throw new Error(problem);
   const [exists] = await db.select().from(users).where(eq(users.email, email));
   if (exists) throw new Error('user already exists');
