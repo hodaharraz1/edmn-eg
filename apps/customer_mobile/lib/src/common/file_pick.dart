@@ -14,12 +14,26 @@ abstract class FilePickerService {
   Future<PickedFile?> pick({bool allowPdf = true});
 }
 
+/// Exactly the formats the server sniffs and accepts (`src/server/storage/uploads.ts` ALLOWED_EXT: jpeg/png/webp/pdf).
+/// HEIC is deliberately absent: the server rejects it, so offering it would let a user pick a file that can never upload.
+List<String> pickableExtensions({required bool allowPdf}) => ['jpg', 'jpeg', 'png', 'webp', if (allowPdf) 'pdf'];
+
 class PlatformFilePicker implements FilePickerService {
   @override
   Future<PickedFile?> pick({bool allowPdf = true}) async {
-    final f = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'heic', if (allowPdf) 'pdf']);
+    final f = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: pickableExtensions(allowPdf: allowPdf));
     if (f == null) return null;
-    return PickedFile(name: f.name, bytes: await f.xFile.readAsBytes());
+    try {
+      return PickedFile(name: f.name, bytes: await f.xFile.readAsBytes());
+    } finally {
+      // The picker copies the file into the app cache (Android). Receipts and national-ID photos must not stay
+      // there after upload (MASVS-STORAGE); the bytes now live only in memory until they are sent.
+      try {
+        await FilePicker.clearTemporaryFiles();
+      } catch (_) {
+        // Not supported on this platform (web, desktop): nothing was copied.
+      }
+    }
   }
 }
 

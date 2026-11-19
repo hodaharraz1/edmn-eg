@@ -361,3 +361,52 @@ class EdmnNotFoundScreen extends StatelessWidget {
     );
   }
 }
+
+/// Covers the whole app while it is not in the foreground, so the system's app-switcher snapshot and screen
+/// recordings never show secrets or personal data (MASVS-PLATFORM, policy SEC-127). Used by the staff app; on Android
+/// it complements FLAG_SECURE, on iOS it is the only protection (iOS has no FLAG_SECURE).
+class EdmnPrivacyShield extends StatefulWidget {
+  const EdmnPrivacyShield({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<EdmnPrivacyShield> createState() => _EdmnPrivacyShieldState();
+}
+
+class _EdmnPrivacyShieldState extends State<EdmnPrivacyShield> with WidgetsBindingObserver {
+  bool _covered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final cover = state != AppLifecycleState.resumed;
+    if (cover != _covered) setState(() => _covered = cover);
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    textDirection: TextDirection.ltr,
+    children: [
+      widget.child,
+      if (_covered)
+        const Positioned.fill(
+          key: Key('privacy-shield'),
+          child: ColoredBox(
+            color: EdmnColors.primaryDeep,
+            child: Center(child: Icon(Icons.lock_outline_rounded, color: EdmnColors.surface, size: 56)),
+          ),
+        ),
+    ],
+  );
+}

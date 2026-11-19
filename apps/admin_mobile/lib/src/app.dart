@@ -17,5 +17,7 @@ class AdminApp extends ConsumerWidget {
         localizationsDelegates: const [EdmnLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
         theme: edmnTheme(),
         routerConfig: ref.watch(routerProvider),
+        // Staff screens show TOTP secrets, personal data and money queues: hidden whenever the app is not in front.
+        builder: (context, child) => EdmnPrivacyShield(child: child ?? const SizedBox.shrink()),
       );
 }

@@ -55,9 +55,18 @@ export function keyCheckValue(): string {
   return createHmac('sha256', key()).update('edmn-key-check-value-v1').digest('hex').slice(0, 32);
 }
 
+/** GCM tags are always 16 bytes here; a shorter tag is rejected instead of being verified with less strength. */
+export const GCM_TAG_BYTES = 16;
+
+export function gcmTag(tags: string): Buffer {
+  const tag = Buffer.from(tags, 'base64url');
+  if (tag.length !== GCM_TAG_BYTES) throw new Error('invalid authentication tag');
+  return tag;
+}
+
 function open(k: Buffer, ivs: string, tags: string, cts: string): string {
-  const decipher = createDecipheriv('aes-256-gcm', k, Buffer.from(ivs, 'base64url'));
-  decipher.setAuthTag(Buffer.from(tags, 'base64url'));
+  const decipher = createDecipheriv('aes-256-gcm', k, Buffer.from(ivs, 'base64url'), { authTagLength: GCM_TAG_BYTES });
+  decipher.setAuthTag(gcmTag(tags));
   return Buffer.concat([decipher.update(Buffer.from(cts, 'base64url')), decipher.final()]).toString('utf8');
 }
 

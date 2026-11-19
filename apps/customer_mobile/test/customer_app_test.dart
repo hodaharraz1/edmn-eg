@@ -620,6 +620,12 @@ Future<void> _go(WidgetTester t, String location) async {
 }
 
 void main() {
+  test('the picker offers only formats the server accepts (no HEIC)', () {
+    expect(pickableExtensions(allowPdf: true), ['jpg', 'jpeg', 'png', 'webp', 'pdf']);
+    expect(pickableExtensions(allowPdf: false), isNot(contains('pdf')));
+    expect(pickableExtensions(allowPdf: true), isNot(contains('heic')));
+  });
+
   testWidgets('starts in Arabic (RTL) on the home tab: products with EGP prices, no global TEST banner, board navigation', (t) async {
     await _start(t, FakeMobileApi());
     expect(Directionality.of(t.element(find.text('سماعة لاسلكية').first)), TextDirection.rtl);

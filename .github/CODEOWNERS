@@ -1,0 +1,14 @@
+# Required reviewers once branch protection enables "Require review from Code Owners" (SEC-102, SEC-112).
+# Security-sensitive paths are listed explicitly so they can later be given a separate security reviewer.
+*                                   @hodaharraz1
+/src/server/auth/                   @hodaharraz1
+/src/server/core/                   @hodaharraz1
+/src/server/modules/finance/        @hodaharraz1
+/src/server/modules/deals/          @hodaharraz1
+/src/server/storage/                @hodaharraz1
+/src/server/api/                    @hodaharraz1
+/drizzle/                           @hodaharraz1
+/.github/                           @hodaharraz1
+/vercel.json                        @hodaharraz1
+/apps/*/android/                    @hodaharraz1
+/apps/*/ios/                        @hodaharraz1

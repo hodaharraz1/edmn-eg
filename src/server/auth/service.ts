@@ -43,7 +43,7 @@ export async function register(input: z.input<typeof registerSchema>, meta: Requ
   const { fullName, email, password } = parsed.data;
   const phone = normalizeEgyptMobile(parsed.data.phone);
   if (!phone) throw validation('رقم الموبايل المصري غير صحيح', { phone: ['رقم الموبايل المصري غير صحيح'] });
-  const pwProblem = passwordProblems(password, CUSTOMER_POLICY);
+  const pwProblem = passwordProblems(password, CUSTOMER_POLICY, { email, phone });
   if (pwProblem) throw validation(pwProblem, { password: [pwProblem] });
   await enforce(`register:${meta.ip ?? 'unknown'}`, 10, 3600);
 
@@ -273,7 +273,7 @@ export async function resetPassword(token: string, newPassword: string, meta: Re
     .where(and(eq(authTokens.tokenHash, sha256(token)), eq(authTokens.purpose, 'PASSWORD_RESET'), isNull(authTokens.usedAt), gt(authTokens.expiresAt, new Date())));
   if (!row) throw validation('رابط تغيير كلمة المرور غير صالح أو انتهت صلاحيته');
   const [user] = await db.select().from(users).where(eq(users.id, row.userId));
-  const problem = passwordProblems(newPassword, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY);
+  const problem = passwordProblems(newPassword, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY, { email: user.email, phone: user.phone });
   if (problem) throw validation(problem);
   const hash = await hashPassword(newPassword);
   await db.transaction(async (tx) => {
@@ -294,7 +294,7 @@ export async function changePassword(userId: string, current: string, next: stri
   if (current.length > 256 || next.length > 256) throw validation('كلمة المرور طويلة جداً');
   const [user] = await db.select().from(users).where(eq(users.id, userId));
   if (!user || !(await verifyPassword(current, user.passwordHash))) throw validation('كلمة المرور الحالية غير صحيحة');
-  const problem = passwordProblems(next, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY);
+  const problem = passwordProblems(next, user.isStaff ? STAFF_POLICY : CUSTOMER_POLICY, { email: user.email, phone: user.phone });
   if (problem) throw validation(problem);
   const hash = await hashPassword(next);
   /** Every existing session (all devices) is invalidated; the current device gets a fresh session. */

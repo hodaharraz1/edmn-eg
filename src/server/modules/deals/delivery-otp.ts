@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import { GCM_TAG_BYTES, gcmTag } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { keyFor } from '@/server/core/keys';
 
@@ -48,9 +49,9 @@ export function sealBuyerCode(dealId: string, otpId: string, code: string): stri
 export function openBuyerCode(dealId: string, otpId: string, sealed: string): string {
   const [v, ivs, tags, cts] = sealed.split('.');
   if (v !== 'o1' || !ivs || !tags || !cts) throw new Error('unsupported sealed delivery code');
-  const decipher = createDecipheriv('aes-256-gcm', keyFor('delivery-otp-enc'), Buffer.from(ivs, 'base64url'));
+  const decipher = createDecipheriv('aes-256-gcm', keyFor('delivery-otp-enc'), Buffer.from(ivs, 'base64url'), { authTagLength: GCM_TAG_BYTES });
   decipher.setAAD(Buffer.from(`deal-delivery-otp-buyer:${dealId}:${otpId}`));
-  decipher.setAuthTag(Buffer.from(tags, 'base64url'));
+  decipher.setAuthTag(gcmTag(tags));
   return Buffer.concat([decipher.update(Buffer.from(cts, 'base64url')), decipher.final()]).toString('utf8');
 }
 
