@@ -34,7 +34,7 @@ jobs:
       - run: npm ci
       - name: Throwaway test secrets
         run: |
-          for name in SESSION_SECRET DATA_ENCRYPTION_KEY; do
+          for name in SESSION_SECRET DATA_ENCRYPTION_KEY DELIVERY_OTP_KEY; do
             value=$(openssl rand -base64 32)
             echo "::add-mask::$value"
             echo "$name=$value" >> "$GITHUB_ENV"
@@ -129,3 +129,37 @@ jobs:
           path: test-results/mobile-journey/
           if-no-files-found: ignore
           retention-days: 7
+  protected-deal-web-regression:
+    # Existing web journey provides supplemental state-machine and staff-review evidence, not Flutter UI coverage.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: edmn_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/edmn_e2e
+      E2E_PRIVATE_FLOW: '1'
+      EDMN_ENVIRONMENT: local
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Generate ephemeral test keys
+        run: |
+          for name in SESSION_SECRET DATA_ENCRYPTION_KEY; do
+            value=$(openssl rand -base64 32)
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+      - run: npx playwright install --with-deps chromium
+      # No traces/screenshots: this flow displays a one-time invitation and delivery code.
+      - run: npx playwright test tests/e2e/protected-deal.spec.ts --trace=off

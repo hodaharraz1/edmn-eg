@@ -33,7 +33,7 @@ export default defineConfig({
     baseURL: REMOTE ?? `http://localhost:${PORT}`,
     locale: 'ar-EG',
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    screenshot: process.env.E2E_PRIVATE_FLOW ? 'off' : 'only-on-failure',
     launchOptions: executablePath ? { executablePath } : {},
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

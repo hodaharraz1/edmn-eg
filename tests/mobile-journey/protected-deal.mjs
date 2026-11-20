@@ -16,7 +16,7 @@ const calls = [];
 page.on('response', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/api/v1/') && r.request().method() !== 'GET') calls.push([r.request().method(), u.pathname, r.status()]); });
 const sem = async () => { await page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click()); await page.waitForTimeout(600); };
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
-const type = async (locator, value) => { await locator.click(); await page.keyboard.insertText(value); };
+const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
 const tap = async (label) => { await page.getByRole('button', { name: label }).last().click(); await page.waitForTimeout(1500); await sem(); };
 const api = (method, regex, status) => assert(calls.some(([m, p, s]) => m === method && regex.test(p) && s === status), `Missing ${method} ${regex} ${status}; observed: ${JSON.stringify(calls)}`);
 try {
@@ -25,6 +25,7 @@ try {
   const skip = page.getByRole('button', { name: 'تخطي' }).first();
   if (await skip.count()) { await skip.click(); await page.waitForTimeout(1000); }
   await go('/sign-in');
+  await page.screenshot({ path: 'test-results/mobile-journey/sign-in-empty.png' });
   await type(page.getByRole('textbox').nth(0), 'ahmed@demo.edmn.local');
   await type(page.getByRole('textbox').nth(1), 'Demo@12345');
   const login = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/auth/login' && r.request().method() === 'POST', { timeout: 60000 });
