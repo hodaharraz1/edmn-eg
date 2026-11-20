@@ -11,6 +11,7 @@ abstract final class MobileApiPaths {
   static const addSellerProductImages = (method: 'POST', path: '/api/v1/seller/products/{productId}/images');
   static const addWishlistItem = (method: 'PUT', path: '/api/v1/wishlist/{productId}');
   static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
+  static const archiveSellerProduct = (method: 'POST', path: '/api/v1/seller/products/{productId}/archive');
   static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
@@ -100,6 +101,7 @@ abstract final class MobileApiPaths {
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
   static const markDealShipped = (method: 'POST', path: '/api/v1/deals/{dealId}/shipped');
   static const markNotificationsRead = (method: 'POST', path: '/api/v1/notifications/read');
+  static const markSellerProductOutOfStock = (method: 'POST', path: '/api/v1/seller/products/{productId}/out-of-stock');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
   static const openDispute = (method: 'POST', path: '/api/v1/disputes');
@@ -144,6 +146,7 @@ abstract final class MobileApiPaths {
   static const saveSellerProductVariants = (method: 'PUT', path: '/api/v1/seller/products/{productId}/variants');
   static const saveSellerShipment = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/shipment');
   static const saveSellerShippingRates = (method: 'PUT', path: '/api/v1/seller/shipping-rates');
+  static const saveSellerStoreMedia = (method: 'POST', path: '/api/v1/seller/store/media');
   static const saveSellerStoreSettings = (method: 'PUT', path: '/api/v1/seller/store');
   static const searchProducts = (method: 'GET', path: '/api/v1/catalog/products');
   static const sendMessage = (method: 'POST', path: '/api/v1/conversations/{conversationId}/messages');

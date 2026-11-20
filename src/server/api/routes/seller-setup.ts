@@ -20,6 +20,9 @@ import {
   saveSellerIdentity,
   saveSellerStore,
   saveShippingRates,
+  archiveMyProduct,
+  markMyProductOutOfStock,
+  saveStoreMedia,
   saveStoreSettings,
   sellerApplication,
   setProductVisible,
@@ -355,6 +358,10 @@ export const setSellerProductVisibility = defineRoute({
   handler: ({ actor, params, body }) => setProductVisible(actor!, params.productId, body.listed),
 });
 
+export const archiveSellerProduct = defineRoute({ ...sp, id: 'archiveSellerProduct', method: 'POST', path: '/api/v1/seller/products/{productId}/archive', summary: 'Archive (soft) one of my products; order history is kept', rate: 'write', idempotency: 'required', params: pid, handler: ({ actor, params }) => archiveMyProduct(actor!, params.productId) });
+
+export const markSellerProductOutOfStock = defineRoute({ ...sp, id: 'markSellerProductOutOfStock', method: 'POST', path: '/api/v1/seller/products/{productId}/out-of-stock', summary: 'Stop sales now: stock down to what is already reserved', rate: 'write', idempotency: 'required', params: pid, handler: ({ actor, params }) => markMyProductOutOfStock(actor!, params.productId) });
+
 /* ───────────────────────── Shipping & store ───────────────────────── */
 
 const rates = z.object({ items: z.array(z.object({ governorateId: z.number().int(), enabled: z.boolean(), feePiastres: piastres, etaMinDays: z.number().int(), etaMaxDays: z.number().int() })) });
@@ -411,6 +418,23 @@ export const saveSellerStoreSettingsRoute = defineRoute({
   body: storeSettingsSchema,
   response: store,
   handler: ({ actor, body }) => saveStoreSettings(actor!, body, null, null),
+});
+
+export const saveSellerStoreMediaRoute = defineRoute({
+  api: 'mobile',
+  auth: 'seller',
+  tags,
+  id: 'saveSellerStoreMedia',
+  method: 'POST',
+  path: '/api/v1/seller/store/media',
+  summary: 'Replace the store logo and/or banner (store.manage). Images only; validated and re-encoded by the server',
+  rate: 'write',
+  idempotency: 'required',
+  errors: ['forbidden', 'validation_failed', 'not_found'],
+  multipart: { files: { logo: { max: 1 }, banner: { max: 1 } } },
+  body: z.object({}),
+  response: store,
+  handler: ({ actor, files }) => saveStoreMedia(actor!, files.logo?.[0] ?? null, files.banner?.[0] ?? null),
 });
 
 /* ───────────────────────── Payout REQUESTS (no transfer, no release from the app) ───────────────────────── */
@@ -491,7 +515,7 @@ export const cancelSellerPayoutRequest = defineRoute({
 export const sellerSetupRoutes = [
   getMyIdentity, submitMyIdentityRoute,
   getSellerApplication, startSellerApplicationRoute, saveSellerIdentityRoute, saveSellerBusinessRoute, saveSellerStoreRoute, uploadSellerDocumentRoute, addSellerPayoutAccountRoute, submitSellerApplicationRoute,
-  getCategoryAttributes, getSellerProduct, createSellerProduct, saveSellerProductDetails, saveSellerProductLogistics, addSellerProductImages, deleteSellerProductImage, saveSellerProductVariants, submitSellerProduct, setSellerProductVisibility,
-  getSellerShippingRates, saveSellerShippingRates, getSellerStore, saveSellerStoreSettingsRoute,
+  getCategoryAttributes, getSellerProduct, createSellerProduct, saveSellerProductDetails, saveSellerProductLogistics, addSellerProductImages, deleteSellerProductImage, saveSellerProductVariants, submitSellerProduct, setSellerProductVisibility, archiveSellerProduct, markSellerProductOutOfStock,
+  getSellerShippingRates, saveSellerShippingRates, getSellerStore, saveSellerStoreSettingsRoute, saveSellerStoreMediaRoute,
   listSellerPayoutRequests, previewSellerPayoutRequest, createSellerPayoutRequest, cancelSellerPayoutRequest,
 ];
