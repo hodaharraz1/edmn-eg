@@ -11,9 +11,10 @@ await db.connect();
 const rows = async (query, args = []) => (await db.query(query, args)).rows;
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
-const page = await context.newPage();
+let page = await context.newPage();
+const observe = (p) => p.on('response', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/api/v1/') && r.request().method() !== 'GET') calls.push([r.request().method(), u.pathname, r.status()]); });
 const calls = [];
-page.on('response', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/api/v1/') && r.request().method() !== 'GET') calls.push([r.request().method(), u.pathname, r.status()]); });
+observe(page);
 const sem = async () => { await page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click()); await page.waitForTimeout(600); };
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
 const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
@@ -71,5 +72,34 @@ try {
   assert.equal(saved.status, 'DRAFT');
   assert(saved.wizard_step >= 6);
   await page.screenshot({ path: 'test-results/mobile-journey/details.png' });
-  console.log('PASS Flutter sign-in, input validation, add/remove/upload photo, wizard and deal details with database checks');
+  await tap('دعوة البائع');
+  const invitationResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/invitation` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('دعوة البائع');
+  const invitation = await invitationResponse;
+  assert.equal(invitation.status(), 200);
+  const invitationLink = (await invitation.json()).link;
+  assert(invitationLink && invitationLink.includes('/deal/invite/'));
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  await page.getByText('رابط الدعوة جاهز — أرسله للبائع فقط').waitFor({ state: 'visible' });
+  // The link is used only in memory; never print it or capture a screenshot while it is displayed.
+  const sellerContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
+  page = await sellerContext.newPage();
+  observe(page);
+  await page.goto('http://127.0.0.1:8099/', { waitUntil: 'networkidle' }); await page.waitForTimeout(2500); await sem();
+  const sellerSkip = page.getByRole('button', { name: 'تخطي' }).first();
+  if (await sellerSkip.count()) { await sellerSkip.click(); await page.waitForTimeout(1000); }
+  await go('/sign-in');
+  await type(page.getByRole('textbox').nth(0), 'techzone@demo.edmn.local');
+  await type(page.getByRole('textbox').nth(1), 'Demo@12345');
+  const sellerLogin = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/auth/login' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تسجيل الدخول'); assert.equal((await sellerLogin).status(), 200);
+  await go('/deals/join');
+  await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink);
+  const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('الانضمام للصفقة'); assert.equal((await claim).status(), 200);
+  const [joined] = await rows('select status, seller_user_id from external_deals where id=$1', [deal.id]);
+  assert.equal(joined.status, 'SELLER_JOINED');
+  assert(joined.seller_user_id);
+  await page.getByRole('button', { name: 'إرسال عرض' }).waitFor({ state: 'visible' });
+  console.log('PASS Flutter buyer sign-in, validation, photo upload, wizard, invitation and seller join with database checks');
 } finally { await browser.close(); await db.end(); }

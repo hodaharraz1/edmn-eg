@@ -63,7 +63,7 @@ and 15,500 instead of the offer's 15,550 ج.م. The view now picks the basis abo
 
 ## Not done yet
 
-- Photo picker in the wizard (D07): the API (`POST /deals/{id}/photos`, up to 8) exists, but the wizard has no picker yet.
+- The creation wizard offers a photo picker and uploads up to six images per request through `POST /deals/{id}/photos`. Full UI-to-database coverage of the deal journey is still pending; multiple requests are not a per-deal total limit.
 - Full deal dispute UI (D20) is in Phase 5. Only «not received» is wired now.
 - Screenshots exist up to the offer stage. Paid, shipped and code stages need an admin payment confirmation on the local
   `edmn_shots` DB, and are covered by the integration test only.
