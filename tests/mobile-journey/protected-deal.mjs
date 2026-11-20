@@ -96,6 +96,7 @@ try {
   assert.equal(Number(saved.unit_price), 300000);
   assert.equal(saved.delivery_method, 'Delivery service');
   assert(saved.buyer_location_enc);
+  console.log('PASS Flutter buyer login, validation, photo and DRAFT persistence');
   await page.screenshot({ path: 'test-results/mobile-journey/details.png' });
   await tap('دعوة البائع');
   const invitationResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/invitation` && r.request().method() === 'POST', { timeout: 60000 });
@@ -105,6 +106,7 @@ try {
   const invitationLink = (await invitation.json()).link;
   assert(invitationLink && invitationLink.includes('/deal/invite/'));
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  console.log('PASS Flutter invitation: API 200 and INVITED');
   await page.mouse.move(190, 350); await page.mouse.wheel(0, -8000); await page.waitForTimeout(1000); await sem();
   await page.getByRole('button', { name: 'نسخ الرابط' }).waitFor({ state: 'visible' });
   // The link is used only in memory; never print it or capture a screenshot while it is displayed.
@@ -128,6 +130,7 @@ try {
   const [joined] = await rows('select status, seller_user_id from external_deals where id=$1', [deal.id]);
   assert.equal(joined.status, 'SELLER_JOINED');
   assert(joined.seller_user_id);
+  console.log('PASS Flutter seller join: API 200 and SELLER_JOINED');
   await page.getByRole('button', { name: 'إرسال عرض' }).waitFor({ state: 'visible' });
   await tap('إرسال عرض');
   await type(page.getByRole('textbox', { name: 'الاسم بالكامل' }), 'Test Seller');
@@ -139,6 +142,7 @@ try {
   const offer = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('إرسال العرض'); assert.equal((await offer).status(), 200);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'OFFER_PENDING_BUYER');
+  console.log('PASS Flutter seller offer: API 200 and OFFER_PENDING_BUYER');
   page = buyerPage;
   await go(`/deals/${deal.id}`); await toActions();
   await tap('طلب تعديل');
@@ -146,11 +150,13 @@ try {
   const change = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer-response` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تأكيد'); assert.equal((await change).status(), 200);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'CHANGE_REQUESTED');
+  console.log('PASS Flutter change request: API 200 and CHANGE_REQUESTED');
   page = sellerContext.pages()[0];
   await go(`/deals/${deal.id}`); await toActions();
   const accept = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/change-response` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('قبول التعديل'); assert.equal((await accept).status(), 200);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_PENDING');
+  console.log('PASS Flutter seller acceptance: API 200 and PAYMENT_PENDING');
   page = buyerPage;
   await go(`/deals/${deal.id}`); await toActions();
   const payment = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/payment` && r.request().method() === 'POST', { timeout: 60000 });
@@ -169,6 +175,7 @@ try {
   await page.getByText('الإيصال وصل وتحت المراجعة. الدفع مش هيتأكد غير بعد مراجعة فريق أضمن.').waitFor({ state: 'visible' });
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_UNDER_REVIEW');
   assert.equal((await rows('select count(*)::int n from payment_submissions where payment_id=$1', [pay.paymentId]))[0].n, 1);
+  console.log('PASS Flutter test payment proof: API 201 and PAYMENT_UNDER_REVIEW');
   // Existing staff UI performs the real review, with the seeded demo staff's TOTP.
   // No secret, code, receipt or invitation is logged or screenshotted.
   const adminBrowser = { newContext: (options) => browser.newContext({ ...options, baseURL: 'http://127.0.0.1:3000' }) };
@@ -184,6 +191,7 @@ try {
   await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
   assert((await reviewResponse).ok());
   await pollStatus('ACTIVE');
+  console.log('PASS authorized test staff review: ACTIVE');
   page = sellerContext.pages()[0];
   await go(`/deals/${deal.id}`); await toActions();
   await tap('تم الشحن');
@@ -191,6 +199,7 @@ try {
   const ship = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/shipped` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تم الشحن'); assert.equal((await ship).status(), 200);
   await pollStatus('DELIVERED');
+  console.log('PASS Flutter shipment: API 200 and DELIVERED');
   page = buyerPage;
   await go(`/deals/${deal.id}`); await toActions();
   const codeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code` && r.request().method() === 'GET', { timeout: 60000 });
@@ -215,12 +224,14 @@ try {
   const verify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تحقق'); assert.equal((await verify).status(), 200);
   await pollStatus('DELIVERY_HANDOVER_VERIFIED');
+  console.log('PASS Flutter OTP verification: API 200 and DELIVERY_HANDOVER_VERIFIED');
   page = buyerPage;
   await go(`/deals/${deal.id}`); await toActions();
   await tap('تأكيد الاستلام');
   const confirmed = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/confirm-receipt` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تأكيد الاستلام'); assert.equal((await confirmed).status(), 200);
   await pollStatus('BUYER_CONFIRMED_RECEIPT');
+  console.log('PASS Flutter receipt confirmation: BUYER_CONFIRMED_RECEIPT');
   assert.equal((await rows("select count(*)::int n from journal_entries where source_id=$1 and entry_type='DEAL_SETTLEMENT'", [deal.id]))[0].n, 0);
   // Two-person release stays in the authorized web console; the app has no release action.
   const operator = await staffLogin('finance@edmn.local');
