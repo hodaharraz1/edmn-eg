@@ -79,14 +79,20 @@ describe('deal photo uploads', () => {
     expect((await upload(bt, form(new Uint8Array(pdf()), 'document.pdf'))).status).toBe(422);
     expect((await upload(bt, form(new Uint8Array(Buffer.from('not an image')), 'photo.png'))).status).toBe(422);
     expect((await upload(bt, form(image, 'photo.png', 7))).status).toBe(422);
+    const oversizedImage = new Uint8Array(8 * 1024 * 1024 + 1);
+    oversizedImage.set(image);
+    expect((await upload(bt, form(oversizedImage, 'large.png'))).status).toBe(422);
     expect((await upload(bt, form(new Uint8Array(12 * 1024 * 1024 + 1), 'large.png'))).status).toBe(422);
     const idem = key();
     expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
     expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
-    expect((await upload(bt, form(new Uint8Array(await png('different')), 'other.png'), idem)).status).toBe(409);
+    expect((await upload(bt, form(new Uint8Array(await png('different')), 'other.png'), idem)).status).toBe(422);
     const rows = await db.select({ visibility: files.visibility, scan: files.scanStatus, owner: files.ownerUserId })
       .from(dealEvidence).innerJoin(files, eq(dealEvidence.fileId, files.id)).where(eq(dealEvidence.dealId, id));
     expect(rows).toEqual([{ visibility: 'PRIVATE', scan: 'UNSCANNED', owner: buyer.id }]);
+    // Six is the per-request ceiling; it is not an overall per-deal count.
+    expect((await upload(bt, form(image, 'photo.png', 6))).status).toBe(200);
+    expect(await db.select().from(dealEvidence).where(eq(dealEvidence.dealId, id))).toHaveLength(7);
   });
 });
 
