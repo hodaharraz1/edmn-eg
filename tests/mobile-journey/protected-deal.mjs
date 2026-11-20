@@ -30,7 +30,16 @@ const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, {
 const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
 const toActions = async () => { await page.mouse.move(190, 400); await page.mouse.wheel(0, 8000); await page.waitForTimeout(1000); await sem(); };
 // Navigating to the same hash does not reload Flutter: another party may have changed the deal.
-const freshDeal = async (id) => { await go(`/deals/${id}`); await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); await toActions(); };
+const freshDeal = async (id) => {
+  await go(`/deals/${id}`);
+  const read = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${id}` && r.request().method() === 'GET', { timeout: 60000 });
+  await page.reload({ waitUntil: 'networkidle' });
+  const response = await read;
+  assert.equal(response.status(), 200, 'Deal details API');
+  const projection = await response.json();
+  console.log(`Deal view: role=${projection.role}, status=${projection.status}, actions=${(projection.allowedActions ?? []).join(',')}`);
+  await page.waitForTimeout(3000); await sem(); await toActions();
+};
 const tap = async (label) => {
   const target = page.getByRole('button', { name: label }).last();
   if (!(await target.count())) {
@@ -147,6 +156,7 @@ try {
   console.log('PASS Flutter seller offer: API 200 and OFFER_PENDING_BUYER');
   page = buyerPage;
   await freshDeal(deal.id);
+  await page.screenshot({ path: 'test-results/mobile-journey/buyer-offer.png' });
   await tap('طلب تعديل');
   await type(page.getByRole('textbox', { name: 'اكتب التعديل المطلوب بوضوح' }), 'Please confirm the delivery date');
   const change = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer-response` && r.request().method() === 'POST', { timeout: 60000 });
