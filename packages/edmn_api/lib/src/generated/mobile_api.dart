@@ -4983,9 +4983,9 @@ class SellerApplicationSellerPayout {
 }
 
 class SellerApplicationSellerStore {
-  const SellerApplicationSellerStore({required this.name, required this.slug, required this.description, required this.returnAddress, required this.supportPhone});
+  const SellerApplicationSellerStore({required this.name, required this.slug, required this.description, required this.returnAddress, required this.returnGovernorateId, required this.supportPhone});
 
-  factory SellerApplicationSellerStore.fromJson(Map<String, dynamic> json) => SellerApplicationSellerStore(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, supportPhone: json['supportPhone'] as String?);
+  factory SellerApplicationSellerStore.fromJson(Map<String, dynamic> json) => SellerApplicationSellerStore(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, returnGovernorateId: (json['returnGovernorateId'] as num?)?.toInt(), supportPhone: json['supportPhone'] as String?);
 
   final String name;
 
@@ -4995,9 +4995,11 @@ class SellerApplicationSellerStore {
 
   final String? returnAddress;
 
+  final int? returnGovernorateId;
+
   final String? supportPhone;
 
-  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'supportPhone': supportPhone};
+  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'returnGovernorateId': returnGovernorateId, 'supportPhone': supportPhone};
 }
 
 class SellerOrder {

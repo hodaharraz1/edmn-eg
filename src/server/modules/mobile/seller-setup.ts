@@ -99,7 +99,7 @@ export async function sellerApplication(actor: Actor) {
       businessLegalName: s.businessLegalName,
       businessAddress: s.businessAddress,
       authorizedRepresentative: s.authorizedRepresentative,
-      store: store ? { name: store.name, slug: store.slug, description: store.description, returnAddress: store.returnAddress, supportPhone: store.supportPhone } : null,
+      store: store ? { name: store.name, slug: store.slug, description: store.description, returnAddress: store.returnAddress, returnGovernorateId: store.returnGovernorateId, supportPhone: store.supportPhone } : null,
       documents: docs.map((d) => d.kind),
       payout: payout ? { type: payout.type, status: payout.status, masked: payout.masked } : null,
     },
