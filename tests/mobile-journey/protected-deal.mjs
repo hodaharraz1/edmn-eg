@@ -77,6 +77,17 @@ try {
   await type(page.getByRole('textbox', { name: 'وصف المنتج وحالته بالتفصيل' }), 'A camera in good condition for this test');
   const png = await sharp({ create: { width: 80, height: 80, channels: 3, background: '#376899' } }).png().toBuffer();
   const pick = page.getByRole('button', { name: 'اختار صورة' });
+  // A misleading filename must not bypass the server's content validation.
+  const [invalidChooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()]);
+  await invalidChooser.setFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
+  await page.waitForTimeout(500); await sem();
+  await tap('متابعة');
+  api('POST', /\/deals\/[^/]+\/photos$/, 422);
+  const [invalidDraft] = await rows('select id, status from external_deals where buyer_id=$1 and title=$2', [user.id, 'Test camera']);
+  assert.equal(invalidDraft.status, 'DRAFT');
+  assert.equal((await rows('select count(*)::int n from deal_evidence where deal_id=$1', [invalidDraft.id]))[0].n, 0);
+  await page.getByRole('button', { name: 'حذف' }).last().click(); await page.waitForTimeout(500); await sem();
+  console.log('PASS Flutter rejects invalid image bytes and allows correction');
   let [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()]);
   await chooser.setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
   await page.getByRole('button', { name: 'حذف' }).last().click(); await page.waitForTimeout(500); await sem();
@@ -86,6 +97,7 @@ try {
   await tap('متابعة');
   api('POST', /\/deals$/, 201); api('POST', /\/deals\/[^/]+\/photos$/, 200);
   const [deal] = await rows('select id, status from external_deals where buyer_id = $1 and title = $2', [user.id, 'Test camera']);
+  assert.equal(deal.id, invalidDraft.id, 'Correcting a rejected upload must reuse the draft');
   assert.equal(deal.status, 'DRAFT');
   dealIdForPoll = deal.id;
   const evidence = await rows('select f.visibility, f.scan_status from deal_evidence e join files f on f.id=e.file_id where e.deal_id=$1 and e.kind=$2', [deal.id, 'PRODUCT_PHOTO']);
