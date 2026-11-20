@@ -226,11 +226,13 @@ describe('admin app safe dispute actions', () => {
     expect(detail.messages.filter((m: { body: string }) => m.body === text)).toHaveLength(1);
   });
 
-  it('notes are rate limited per installation (429 with a stable code)', async () => {
+  // Authenticated calls count against the user's write bucket (60 per fixed minute). Up to 200 calls: even if the
+  // minute rolls over mid-loop, one window still sees more than 60, so the test cannot pass or fail on timing.
+  it('notes are rate limited per user (429 with a stable code)', async () => {
     const officer = await staff(['DISPUTE_OFFICER']);
     const installation = inst();
     let limited = 0;
-    for (let i = 0; i < 70 && !limited; i++) {
+    for (let i = 0; i < 200 && !limited; i++) {
       const r = await call(noteRoute as Handler, `/admin/disputes/${ids.dispute}/notes`, { token: officer.token, params: { disputeId: ids.dispute }, body: { body: `حد ${i}` }, idem: randomUUID(), installation });
       if (r.status === 429) {
         expect(r.body.code).toBe('rate_limited');
