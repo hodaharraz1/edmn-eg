@@ -85,7 +85,7 @@ class FakeAdminApi extends AdminApi {
 
   @override
   Future<AdminListOrdersResponse> orders({String tab = 'all', String? q, int page = 1}) async {
-    _gate('orders:$tab:$page');
+    _gate('orders:$tab:$page${q == null || q.isEmpty ? '' : ':$q'}');
     return AdminListOrdersResponse(
       items: [AdminListOrdersResponseItemsItem(id: 'o$page', orderId: 'o$page', number: '10000$page', customer: 'عمر ا.', store: null, status: 'PENDING_PAYMENT', total: 1937898, at: '2026-11-19T10:00:00Z', sellerOrders: 1)],
       page: page,
@@ -108,12 +108,69 @@ class FakeAdminApi extends AdminApi {
   }
 
   @override
-  Future<AdminListAuditLogResponse> auditLog({int? before}) async {
-    _gate('audit:${before ?? '-'}');
+  Future<AdminListAuditLogResponse> auditLog({int? before, String? action, String? actorType}) async {
+    _gate('audit:${before ?? '-'}${actorType == null ? '' : ':$actorType'}${action == null || action.isEmpty ? '' : ':$action'}');
     return AdminListAuditLogResponse(
       items: [AdminListAuditLogResponseItemsItem(id: before == null ? 900 : 800, at: '2026-11-19T10:00:00Z', actorType: 'ADMIN', actor: 'مسؤول ا.', action: before == null ? 'seller.approved' : 'payment.confirmed', entityType: 'seller', entityId: 'e1', channel: 'WEB', hasReason: false)],
       nextBefore: before == null ? 900 : null,
     );
+  }
+
+  // ── Batch 3: details and the two safe dispute actions ──
+  String? assignedTo;
+  final notes = <String>[];
+  final actionKeys = <String>[];
+  bool assignRefused = false;
+
+  @override
+  Future<AdminGetSellerResponse> seller(String id) async {
+    _gate('seller:$id');
+    return AdminGetSellerResponse(id: id, applicant: 'سلمى ع.', type: 'INDIVIDUAL', status: 'PENDING_REVIEW', riskLevel: 'LOW', governorate: 'القاهرة', storeName: 'متجر سلمى', submittedAt: '2026-11-18T10:00:00Z',
+        checklist: const [AdminGetSellerResponseChecklistItem(key: 'id_front', label: 'صورة البطاقة (الوجه)', ok: true), AdminGetSellerResponseChecklistItem(key: 'payout', label: 'بيانات استلام الأموال', ok: false)],
+        documents: null, history: const []);
+  }
+
+  @override
+  Future<AdminGetOrderResponse> order(String id) async {
+    _gate('order:$id');
+    return AdminGetOrderResponse(id: id, number: '100001', status: 'PAID', customer: 'عمر ا.', placedAt: '2026-11-19T10:00:00Z', paidAt: '2026-11-19T11:00:00Z',
+        totals: const AdminGetOrderResponseTotals(merchandise: 1900000, shipping: 0, grand: 1937898), payment: const AdminGetOrderResponsePayment(method: 'INSTAPAY', status: 'CONFIRMED', amount: 1937898),
+        sellerOrders: const [
+          AdminGetOrderResponseSellerOrdersItem(id: 'so1', number: '100001-1', store: 'تك زون', status: 'SHIPPED', total: 1937898, items: [AdminGetOrderResponseSellerOrdersItemItemsItem(title: 'سامسونج A55', quantity: 1, lineTotal: 1899900)],
+              shipment: AdminGetOrderResponseSellerOrdersItemShipment(status: 'SHIPPED', carrier: 'بوسطة', trackingNumber: 'BST123', shippedAt: '2026-11-19T12:00:00Z', expectedAt: null, exception: null,
+                  events: [AdminGetOrderResponseSellerOrdersItemShipmentEventsItem(status: 'SHIPPED', description: 'خرجت من المخزن', at: '2026-11-19T12:00:00Z')]),
+              followUpFlaggedAt: null),
+        ],
+        history: const [AdminGetOrderResponseHistoryItem(entityType: 'order', from: 'PENDING_PAYMENT', to: 'PAID', actorType: 'ADMIN', actor: 'مسؤول ا.', note: null, at: '2026-11-19T11:00:00Z')]);
+  }
+
+  @override
+  Future<AdminGetDisputeResponse> dispute(String id) async {
+    _gate('dispute:$id');
+    return AdminGetDisputeResponse(id: id, number: '7001', status: 'OPEN', reasonCode: 'NOT_AS_DESCRIBED', description: 'المنتج مختلف عن الوصف', claimedAmount: 40000, claimant: 'أحمد م.', respondent: 'تك ز.',
+        assignee: assignedTo == null ? null : AdminGetDisputeResponseAssignee(id: assignedTo!, name: 'منى ع.', isMe: false),
+        subject: const AdminGetDisputeResponseSubject(kind: 'ORDER', number: '100001-1', id: 'o1'), createdAt: '2026-11-19T10:00:00Z',
+        messages: [for (var i = 0; i < notes.length; i++) AdminGetDisputeResponseMessagesItem(id: 'm$i', authorRole: 'ADMIN', author: 'مسؤول ا.', internal: true, body: notes[i], at: '2026-11-19T13:00:00Z')],
+        evidence: const [AdminGetDisputeResponseEvidenceItem(uploadedBy: 'أحمد م.', note: 'صورة المنتج', at: '2026-11-19T10:05:00Z')], history: const []);
+  }
+
+  @override
+  Future<AdminListDisputeAssigneesResponse> disputeAssignees() async => const AdminListDisputeAssigneesResponse(items: [
+        AdminListDisputeAssigneesResponseItemsItem(id: 'u-me', name: 'مسؤول ا.', isMe: true),
+        AdminListDisputeAssigneesResponseItemsItem(id: 'u-mona', name: 'منى ع.', isMe: false),
+      ]);
+
+  @override
+  Future<void> assignDispute(String disputeId, String assigneeId, {required String idempotencyKey}) async {
+    actionKeys.add(idempotencyKey);
+    if (assignRefused) throw const ApiFailure(code: ApiErrorCode.validationFailed, status: 422);
+    assignedTo = assigneeId;
+  }
+
+  @override
+  Future<void> addDisputeNote(String disputeId, String body, {required String idempotencyKey}) async {
+    actionKeys.add(idempotencyKey);
+    notes.add(body);
   }
 
   @override
@@ -371,5 +428,127 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(ErrorView), findsOneWidget);
     expect(find.byKey(const Key('row-d1')), findsNothing);
+  });
+
+  Future<void> openFrom(WidgetTester t, String spec, String rowId) async {
+    await t.tap(find.byKey(Key('open-$spec')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(Key('row-$rowId')));
+    await t.pumpAndSettle();
+  }
+
+  testWidgets('details: a row opens its detail with server figures, tracking timeline and the read-only notice', (t) async {
+    final api = FakeAdminApi(permissions: const ['orders.view', 'sellers.review', 'sellers.view']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await openFrom(t, '/monitor/orders', 'o1');
+    expect(api.calls, contains('order:o1'));
+    expect(find.text('#100001'), findsOneWidget);
+    expect(find.text('19,378.98 ج.م'), findsWidgets);
+    expect(find.text('BST123'), findsOneWidget);
+    await t.scrollUntilVisible(find.text('خرجت من المخزن'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('خرجت من المخزن'), findsOneWidget);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await openFrom(t, '/monitor/sellers', 's-pending');
+    expect(find.text('متجر سلمى'), findsWidgets);
+    expect(find.byKey(const Key('docs-hidden')), findsOneWidget); // no documents permission → metadata hidden
+    // Each checklist row is one accessible sentence: «label: yes/no».
+    expect(find.bySemanticsLabel(RegExp(r'بيانات استلام الأموال: لا')), findsOneWidget);
+  });
+
+  testWidgets('dispute: assign to a colleague and add an internal note, each with its own idempotency key', (t) async {
+    final api = FakeAdminApi(permissions: const ['disputes.manage']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await openFrom(t, '/monitor/disputes', 'x1');
+    expect(find.text('غير مسند'), findsOneWidget);
+    await t.tap(find.byKey(const Key('assign')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('assignee-u-mona')));
+    await t.pumpAndSettle();
+    expect(api.assignedTo, 'u-mona');
+    expect(find.text('تم إسناد النزاع'), findsOneWidget);
+    expect(find.textContaining('منى ع.'), findsWidgets);
+
+    await t.tap(find.byKey(const Key('add-note')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('note-text')), 'راجعت الصور، محتاجين رد البائع');
+    await t.tap(find.byKey(const Key('note-save')));
+    await t.pumpAndSettle();
+    expect(api.notes, ['راجعت الصور، محتاجين رد البائع']);
+    expect(find.text('راجعت الصور، محتاجين رد البائع'), findsOneWidget);
+    expect(find.textContaining('ملاحظة داخلية'), findsWidgets);
+    expect(api.actionKeys.toSet().length, 2);
+  });
+
+  testWidgets('dispute: a refused assignment shows the server error and changes nothing', (t) async {
+    final api = FakeAdminApi(permissions: const ['disputes.manage'])..assignRefused = true;
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await openFrom(t, '/monitor/disputes', 'x1');
+    await t.tap(find.byKey(const Key('assign')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('assignee-u-mona')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('action-error')), findsOneWidget);
+    expect(find.text('غير مسند'), findsOneWidget);
+  });
+
+  testWidgets('search and filters go to the server: order search, audit actor tab + action filter', (t) async {
+    final api = FakeAdminApi(permissions: const ['orders.view', 'audit.view']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-/monitor/orders')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('search')), '100001');
+    await t.testTextInput.receiveAction(TextInputAction.search);
+    await t.pumpAndSettle();
+    expect(api.calls.last, 'orders:all:1:100001');
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('open-/monitor/audit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('tab-SELLER')));
+    await t.pumpAndSettle();
+    expect(api.calls.last, 'audit:-:SELLER');
+    await t.enterText(find.byKey(const Key('search')), 'dispute');
+    await t.testTextInput.receiveAction(TextInputAction.search);
+    await t.pumpAndSettle();
+    expect(api.calls.last, 'audit:-:SELLER:dispute');
+    expect(find.byKey(const Key('row-900')), findsOneWidget);
+  });
+
+  testWidgets('a detail the server refuses shows the error with retry, not stale data', (t) async {
+    final api = FakeAdminApi(permissions: const ['orders.view']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-/monitor/orders')));
+    await t.pumpAndSettle();
+    api.monitorForbidden = true;
+    await t.tap(find.byKey(const Key('row-o1')));
+    await t.pumpAndSettle();
+    expect(find.byType(ErrorView), findsOneWidget);
+    expect(find.text('BST123'), findsNothing);
+  });
+
+  testWidgets('English is left-to-right with English labels', (t) async {
+    final api = FakeAdminApi(permissions: const ['disputes.manage']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byTooltip('اللغة'));
+    await t.pumpAndSettle();
+    await openFrom(t, '/monitor/disputes', 'x1');
+    expect(find.text('Unassigned'), findsOneWidget);
+    expect(find.text('Assign'), findsOneWidget);
+    expect(Directionality.of(t.element(find.text('Unassigned'))), TextDirection.ltr);
   });
 }

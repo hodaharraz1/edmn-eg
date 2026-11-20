@@ -3,10 +3,18 @@
 
 /// Operation paths of the Admin App API (method + OpenAPI path template).
 abstract final class AdminApiPaths {
+  static const adminAddDisputeNote = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/notes');
+  static const adminAssignDispute = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/assign');
   static const adminGetDashboard = (method: 'GET', path: '/api/v1/admin/dashboard');
+  static const adminGetDeal = (method: 'GET', path: '/api/v1/admin/deals/{dealId}');
+  static const adminGetDispute = (method: 'GET', path: '/api/v1/admin/disputes/{disputeId}');
+  static const adminGetIdentityReview = (method: 'GET', path: '/api/v1/admin/identity/reviews/{verificationId}');
   static const adminGetMe = (method: 'GET', path: '/api/v1/admin/me');
+  static const adminGetOrder = (method: 'GET', path: '/api/v1/admin/orders/{orderId}');
+  static const adminGetSeller = (method: 'GET', path: '/api/v1/admin/sellers/{sellerId}');
   static const adminListAuditLog = (method: 'GET', path: '/api/v1/admin/audit');
   static const adminListDeals = (method: 'GET', path: '/api/v1/admin/deals');
+  static const adminListDisputeAssignees = (method: 'GET', path: '/api/v1/admin/disputes/assignees');
   static const adminListDisputes = (method: 'GET', path: '/api/v1/admin/disputes');
   static const adminListIdentityReviews = (method: 'GET', path: '/api/v1/admin/identity/reviews');
   static const adminListMySessions = (method: 'GET', path: '/api/v1/admin/me/sessions');
@@ -21,6 +29,26 @@ abstract final class AdminApiPaths {
   static const adminRevokeMySession = (method: 'DELETE', path: '/api/v1/admin/me/sessions/{sessionId}');
   static const adminRevokeUserSessions = (method: 'POST', path: '/api/v1/admin/users/{userId}/sessions/revoke');
   static const adminStepUp = (method: 'POST', path: '/api/v1/admin/auth/step-up');
+}
+
+class AdminAddDisputeNoteRequest {
+  const AdminAddDisputeNoteRequest({required this.body});
+
+  factory AdminAddDisputeNoteRequest.fromJson(Map<String, dynamic> json) => AdminAddDisputeNoteRequest(body: json['body'] as String);
+
+  final String body;
+
+  Map<String, dynamic> toJson() => {'body': body};
+}
+
+class AdminAssignDisputeRequest {
+  const AdminAssignDisputeRequest({required this.assigneeId});
+
+  factory AdminAssignDisputeRequest.fromJson(Map<String, dynamic> json) => AdminAssignDisputeRequest(assigneeId: json['assigneeId'] as String);
+
+  final String assigneeId;
+
+  Map<String, dynamic> toJson() => {'assigneeId': assigneeId};
 }
 
 class AdminGetDashboardResponse {
@@ -140,6 +168,521 @@ class AdminGetDashboardResponseTopSellersItem {
   Map<String, dynamic> toJson() => {'name': name, 'gmv': gmv};
 }
 
+class AdminGetDealResponse {
+  const AdminGetDealResponse({required this.id, required this.number, required this.ref, required this.title, required this.condition, required this.status, required this.buyer, required this.seller, required this.sellerConfirmed, required this.financialHold, required this.money, required this.payment, required this.payout, required this.evidenceCount, required this.disputes, required this.createdAt, required this.updatedAt, required this.history});
+
+  factory AdminGetDealResponse.fromJson(Map<String, dynamic> json) => AdminGetDealResponse(id: json['id'] as String, number: json['number'] as String, ref: json['ref'] as String, title: json['title'] as String, condition: json['condition'] as String, status: json['status'] as String, buyer: json['buyer'] as String?, seller: json['seller'] as String?, sellerConfirmed: json['sellerConfirmed'] as bool, financialHold: json['financialHold'] as bool, money: AdminGetDealResponseMoney.fromJson(json['money'] as Map<String, dynamic>), payment: json['payment'] == null ? null : AdminGetDealResponsePayment.fromJson(json['payment'] as Map<String, dynamic>), payout: json['payout'] == null ? null : AdminGetDealResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), evidenceCount: (json['evidenceCount'] as num).toInt(), disputes: (json['disputes'] as List).map((e) => AdminGetDealResponseDisputesItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String?, updatedAt: json['updatedAt'] as String?, history: (json['history'] as List).map((e) => AdminGetDealResponseHistoryItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String ref;
+
+  final String title;
+
+  final String condition;
+
+  final String status;
+
+  final String? buyer;
+
+  final String? seller;
+
+  final bool sellerConfirmed;
+
+  final bool financialHold;
+
+  final AdminGetDealResponseMoney money;
+
+  final AdminGetDealResponsePayment? payment;
+
+  final AdminGetDealResponsePayout? payout;
+
+  final int evidenceCount;
+
+  final List<AdminGetDealResponseDisputesItem> disputes;
+
+  final String? createdAt;
+
+  final String? updatedAt;
+
+  final List<AdminGetDealResponseHistoryItem> history;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'ref': ref, 'title': title, 'condition': condition, 'status': status, 'buyer': buyer, 'seller': seller, 'sellerConfirmed': sellerConfirmed, 'financialHold': financialHold, 'money': money.toJson(), 'payment': payment?.toJson(), 'payout': payout?.toJson(), 'evidenceCount': evidenceCount, 'disputes': disputes.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'updatedAt': updatedAt, 'history': history.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetDealResponseDisputesItem {
+  const AdminGetDealResponseDisputesItem({required this.id, required this.number, required this.status});
+
+  factory AdminGetDealResponseDisputesItem.fromJson(Map<String, dynamic> json) => AdminGetDealResponseDisputesItem(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String);
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status};
+}
+
+class AdminGetDealResponseHistoryItem {
+  const AdminGetDealResponseHistoryItem({required this.entityType, required this.from, required this.to, required this.actorType, required this.actor, required this.note, required this.at});
+
+  factory AdminGetDealResponseHistoryItem.fromJson(Map<String, dynamic> json) => AdminGetDealResponseHistoryItem(entityType: json['entityType'] as String, from: json['from'] as String?, to: json['to'] as String, actorType: json['actorType'] as String?, actor: json['actor'] as String?, note: json['note'] as String?, at: json['at'] as String);
+
+  final String entityType;
+
+  final String? from;
+
+  final String to;
+
+  final String? actorType;
+
+  final String? actor;
+
+  final String? note;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'entityType': entityType, 'from': from, 'to': to, 'actorType': actorType, 'actor': actor, 'note': note, 'at': at};
+}
+
+class AdminGetDealResponseMoney {
+  const AdminGetDealResponseMoney({required this.total, required this.buyerPays, required this.sellerReceives});
+
+  factory AdminGetDealResponseMoney.fromJson(Map<String, dynamic> json) => AdminGetDealResponseMoney(total: (json['total'] as num?)?.toInt(), buyerPays: (json['buyerPays'] as num?)?.toInt(), sellerReceives: (json['sellerReceives'] as num?)?.toInt());
+
+  final int? total;
+
+  final int? buyerPays;
+
+  final int? sellerReceives;
+
+  Map<String, dynamic> toJson() => {'total': total, 'buyerPays': buyerPays, 'sellerReceives': sellerReceives};
+}
+
+class AdminGetDealResponsePayment {
+  const AdminGetDealResponsePayment({required this.status, required this.method});
+
+  factory AdminGetDealResponsePayment.fromJson(Map<String, dynamic> json) => AdminGetDealResponsePayment(status: json['status'] as String, method: json['method'] as String);
+
+  final String status;
+
+  final String method;
+
+  Map<String, dynamic> toJson() => {'status': status, 'method': method};
+}
+
+class AdminGetDealResponsePayout {
+  const AdminGetDealResponsePayout({required this.status});
+
+  factory AdminGetDealResponsePayout.fromJson(Map<String, dynamic> json) => AdminGetDealResponsePayout(status: json['status'] as String);
+
+  final String status;
+
+  Map<String, dynamic> toJson() => {'status': status};
+}
+
+class AdminGetDisputeResponse {
+  const AdminGetDisputeResponse({required this.id, required this.number, required this.status, required this.reasonCode, required this.description, required this.claimedAmount, required this.claimant, required this.respondent, required this.assignee, required this.subject, required this.createdAt, required this.messages, required this.evidence, required this.history});
+
+  factory AdminGetDisputeResponse.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponse(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, reasonCode: json['reasonCode'] as String, description: json['description'] as String, claimedAmount: (json['claimedAmount'] as num?)?.toInt(), claimant: json['claimant'] as String?, respondent: json['respondent'] as String?, assignee: json['assignee'] == null ? null : AdminGetDisputeResponseAssignee.fromJson(json['assignee'] as Map<String, dynamic>), subject: AdminGetDisputeResponseSubject.fromJson(json['subject'] as Map<String, dynamic>), createdAt: json['createdAt'] as String?, messages: (json['messages'] as List).map((e) => AdminGetDisputeResponseMessagesItem.fromJson(e as Map<String, dynamic>)).toList(), evidence: (json['evidence'] as List).map((e) => AdminGetDisputeResponseEvidenceItem.fromJson(e as Map<String, dynamic>)).toList(), history: (json['history'] as List).map((e) => AdminGetDisputeResponseHistoryItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  final String reasonCode;
+
+  final String description;
+
+  final int? claimedAmount;
+
+  final String? claimant;
+
+  final String? respondent;
+
+  final AdminGetDisputeResponseAssignee? assignee;
+
+  final AdminGetDisputeResponseSubject subject;
+
+  final String? createdAt;
+
+  final List<AdminGetDisputeResponseMessagesItem> messages;
+
+  final List<AdminGetDisputeResponseEvidenceItem> evidence;
+
+  final List<AdminGetDisputeResponseHistoryItem> history;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'reasonCode': reasonCode, 'description': description, 'claimedAmount': claimedAmount, 'claimant': claimant, 'respondent': respondent, 'assignee': assignee?.toJson(), 'subject': subject.toJson(), 'createdAt': createdAt, 'messages': messages.map((e) => e.toJson()).toList(), 'evidence': evidence.map((e) => e.toJson()).toList(), 'history': history.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetDisputeResponseAssignee {
+  const AdminGetDisputeResponseAssignee({required this.id, required this.name, required this.isMe});
+
+  factory AdminGetDisputeResponseAssignee.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponseAssignee(id: json['id'] as String, name: json['name'] as String?, isMe: json['isMe'] as bool);
+
+  final String id;
+
+  final String? name;
+
+  final bool isMe;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'isMe': isMe};
+}
+
+class AdminGetDisputeResponseEvidenceItem {
+  const AdminGetDisputeResponseEvidenceItem({required this.uploadedBy, required this.note, required this.at});
+
+  factory AdminGetDisputeResponseEvidenceItem.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponseEvidenceItem(uploadedBy: json['uploadedBy'] as String?, note: json['note'] as String?, at: json['at'] as String);
+
+  final String? uploadedBy;
+
+  final String? note;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'uploadedBy': uploadedBy, 'note': note, 'at': at};
+}
+
+class AdminGetDisputeResponseHistoryItem {
+  const AdminGetDisputeResponseHistoryItem({required this.entityType, required this.from, required this.to, required this.actorType, required this.actor, required this.note, required this.at});
+
+  factory AdminGetDisputeResponseHistoryItem.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponseHistoryItem(entityType: json['entityType'] as String, from: json['from'] as String?, to: json['to'] as String, actorType: json['actorType'] as String?, actor: json['actor'] as String?, note: json['note'] as String?, at: json['at'] as String);
+
+  final String entityType;
+
+  final String? from;
+
+  final String to;
+
+  final String? actorType;
+
+  final String? actor;
+
+  final String? note;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'entityType': entityType, 'from': from, 'to': to, 'actorType': actorType, 'actor': actor, 'note': note, 'at': at};
+}
+
+class AdminGetDisputeResponseMessagesItem {
+  const AdminGetDisputeResponseMessagesItem({required this.id, required this.authorRole, required this.author, required this.internal, required this.body, required this.at});
+
+  factory AdminGetDisputeResponseMessagesItem.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponseMessagesItem(id: json['id'] as String, authorRole: json['authorRole'] as String, author: json['author'] as String?, internal: json['internal'] as bool, body: json['body'] as String, at: json['at'] as String);
+
+  final String id;
+
+  final String authorRole;
+
+  final String? author;
+
+  final bool internal;
+
+  final String body;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'id': id, 'authorRole': authorRole, 'author': author, 'internal': internal, 'body': body, 'at': at};
+}
+
+class AdminGetDisputeResponseSubject {
+  const AdminGetDisputeResponseSubject({required this.kind, required this.number, required this.id});
+
+  factory AdminGetDisputeResponseSubject.fromJson(Map<String, dynamic> json) => AdminGetDisputeResponseSubject(kind: json['kind'] as String, number: json['number'] as String?, id: json['id'] as String?);
+
+  /// One of: ORDER, DEAL, RETURN (kept as String for forward compatibility).
+  final String kind;
+
+  final String? number;
+
+  final String? id;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'number': number, 'id': id};
+}
+
+class AdminGetIdentityReviewResponse {
+  const AdminGetIdentityReviewResponse({required this.id, required this.name, required this.status, required this.documentsComplete, required this.rejectionReason, required this.submittedAt, required this.reviewedAt, required this.reviewedBy, required this.events});
+
+  factory AdminGetIdentityReviewResponse.fromJson(Map<String, dynamic> json) => AdminGetIdentityReviewResponse(id: json['id'] as String, name: json['name'] as String?, status: json['status'] as String, documentsComplete: json['documentsComplete'] as bool, rejectionReason: json['rejectionReason'] as String?, submittedAt: json['submittedAt'] as String?, reviewedAt: json['reviewedAt'] as String?, reviewedBy: json['reviewedBy'] as String?, events: (json['events'] as List).map((e) => AdminGetIdentityReviewResponseEventsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String? name;
+
+  final String status;
+
+  final bool documentsComplete;
+
+  final String? rejectionReason;
+
+  final String? submittedAt;
+
+  final String? reviewedAt;
+
+  final String? reviewedBy;
+
+  final List<AdminGetIdentityReviewResponseEventsItem> events;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'status': status, 'documentsComplete': documentsComplete, 'rejectionReason': rejectionReason, 'submittedAt': submittedAt, 'reviewedAt': reviewedAt, 'reviewedBy': reviewedBy, 'events': events.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetIdentityReviewResponseEventsItem {
+  const AdminGetIdentityReviewResponseEventsItem({required this.action, required this.from, required this.to, required this.by, required this.reason, required this.at});
+
+  factory AdminGetIdentityReviewResponseEventsItem.fromJson(Map<String, dynamic> json) => AdminGetIdentityReviewResponseEventsItem(action: json['action'] as String, from: json['from'] as String?, to: json['to'] as String?, by: json['by'] as String?, reason: json['reason'] as String?, at: json['at'] as String);
+
+  final String action;
+
+  final String? from;
+
+  final String? to;
+
+  final String? by;
+
+  final String? reason;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'action': action, 'from': from, 'to': to, 'by': by, 'reason': reason, 'at': at};
+}
+
+class AdminGetOrderResponse {
+  const AdminGetOrderResponse({required this.id, required this.number, required this.status, required this.customer, required this.placedAt, required this.paidAt, required this.totals, required this.payment, required this.sellerOrders, required this.history});
+
+  factory AdminGetOrderResponse.fromJson(Map<String, dynamic> json) => AdminGetOrderResponse(id: json['id'] as String, number: json['number'] as String, status: json['status'] as String, customer: json['customer'] as String?, placedAt: json['placedAt'] as String?, paidAt: json['paidAt'] as String?, totals: AdminGetOrderResponseTotals.fromJson(json['totals'] as Map<String, dynamic>), payment: json['payment'] == null ? null : AdminGetOrderResponsePayment.fromJson(json['payment'] as Map<String, dynamic>), sellerOrders: (json['sellerOrders'] as List).map((e) => AdminGetOrderResponseSellerOrdersItem.fromJson(e as Map<String, dynamic>)).toList(), history: (json['history'] as List).map((e) => AdminGetOrderResponseHistoryItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String number;
+
+  final String status;
+
+  final String? customer;
+
+  final String? placedAt;
+
+  final String? paidAt;
+
+  final AdminGetOrderResponseTotals totals;
+
+  final AdminGetOrderResponsePayment? payment;
+
+  final List<AdminGetOrderResponseSellerOrdersItem> sellerOrders;
+
+  final List<AdminGetOrderResponseHistoryItem> history;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'customer': customer, 'placedAt': placedAt, 'paidAt': paidAt, 'totals': totals.toJson(), 'payment': payment?.toJson(), 'sellerOrders': sellerOrders.map((e) => e.toJson()).toList(), 'history': history.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetOrderResponseHistoryItem {
+  const AdminGetOrderResponseHistoryItem({required this.entityType, required this.from, required this.to, required this.actorType, required this.actor, required this.note, required this.at});
+
+  factory AdminGetOrderResponseHistoryItem.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseHistoryItem(entityType: json['entityType'] as String, from: json['from'] as String?, to: json['to'] as String, actorType: json['actorType'] as String?, actor: json['actor'] as String?, note: json['note'] as String?, at: json['at'] as String);
+
+  final String entityType;
+
+  final String? from;
+
+  final String to;
+
+  final String? actorType;
+
+  final String? actor;
+
+  final String? note;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'entityType': entityType, 'from': from, 'to': to, 'actorType': actorType, 'actor': actor, 'note': note, 'at': at};
+}
+
+class AdminGetOrderResponsePayment {
+  const AdminGetOrderResponsePayment({required this.method, required this.status, required this.amount});
+
+  factory AdminGetOrderResponsePayment.fromJson(Map<String, dynamic> json) => AdminGetOrderResponsePayment(method: json['method'] as String, status: json['status'] as String, amount: (json['amount'] as num).toInt());
+
+  final String method;
+
+  final String status;
+
+  final int amount;
+
+  Map<String, dynamic> toJson() => {'method': method, 'status': status, 'amount': amount};
+}
+
+class AdminGetOrderResponseSellerOrdersItem {
+  const AdminGetOrderResponseSellerOrdersItem({required this.id, required this.number, required this.store, required this.status, required this.total, required this.items, required this.shipment, required this.followUpFlaggedAt});
+
+  factory AdminGetOrderResponseSellerOrdersItem.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseSellerOrdersItem(id: json['id'] as String, number: json['number'] as String, store: json['store'] as String?, status: json['status'] as String, total: (json['total'] as num).toInt(), items: (json['items'] as List).map((e) => AdminGetOrderResponseSellerOrdersItemItemsItem.fromJson(e as Map<String, dynamic>)).toList(), shipment: json['shipment'] == null ? null : AdminGetOrderResponseSellerOrdersItemShipment.fromJson(json['shipment'] as Map<String, dynamic>), followUpFlaggedAt: json['followUpFlaggedAt'] as String?);
+
+  final String id;
+
+  final String number;
+
+  final String? store;
+
+  final String status;
+
+  final int total;
+
+  final List<AdminGetOrderResponseSellerOrdersItemItemsItem> items;
+
+  final AdminGetOrderResponseSellerOrdersItemShipment? shipment;
+
+  final String? followUpFlaggedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'number': number, 'store': store, 'status': status, 'total': total, 'items': items.map((e) => e.toJson()).toList(), 'shipment': shipment?.toJson(), 'followUpFlaggedAt': followUpFlaggedAt};
+}
+
+class AdminGetOrderResponseSellerOrdersItemItemsItem {
+  const AdminGetOrderResponseSellerOrdersItemItemsItem({required this.title, required this.quantity, required this.lineTotal});
+
+  factory AdminGetOrderResponseSellerOrdersItemItemsItem.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseSellerOrdersItemItemsItem(title: json['title'] as String, quantity: (json['quantity'] as num).toInt(), lineTotal: (json['lineTotal'] as num).toInt());
+
+  final String title;
+
+  final int quantity;
+
+  final int lineTotal;
+
+  Map<String, dynamic> toJson() => {'title': title, 'quantity': quantity, 'lineTotal': lineTotal};
+}
+
+class AdminGetOrderResponseSellerOrdersItemShipment {
+  const AdminGetOrderResponseSellerOrdersItemShipment({required this.status, required this.carrier, required this.trackingNumber, required this.shippedAt, required this.expectedAt, required this.exception, required this.events});
+
+  factory AdminGetOrderResponseSellerOrdersItemShipment.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseSellerOrdersItemShipment(status: json['status'] as String, carrier: json['carrier'] as String?, trackingNumber: json['trackingNumber'] as String?, shippedAt: json['shippedAt'] as String?, expectedAt: json['expectedAt'] as String?, exception: json['exception'] as String?, events: (json['events'] as List).map((e) => AdminGetOrderResponseSellerOrdersItemShipmentEventsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String status;
+
+  final String? carrier;
+
+  final String? trackingNumber;
+
+  final String? shippedAt;
+
+  final String? expectedAt;
+
+  final String? exception;
+
+  final List<AdminGetOrderResponseSellerOrdersItemShipmentEventsItem> events;
+
+  Map<String, dynamic> toJson() => {'status': status, 'carrier': carrier, 'trackingNumber': trackingNumber, 'shippedAt': shippedAt, 'expectedAt': expectedAt, 'exception': exception, 'events': events.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetOrderResponseSellerOrdersItemShipmentEventsItem {
+  const AdminGetOrderResponseSellerOrdersItemShipmentEventsItem({required this.status, required this.description, required this.at});
+
+  factory AdminGetOrderResponseSellerOrdersItemShipmentEventsItem.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseSellerOrdersItemShipmentEventsItem(status: json['status'] as String, description: json['description'] as String?, at: json['at'] as String);
+
+  final String status;
+
+  final String? description;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'status': status, 'description': description, 'at': at};
+}
+
+class AdminGetOrderResponseTotals {
+  const AdminGetOrderResponseTotals({required this.merchandise, required this.shipping, required this.grand});
+
+  factory AdminGetOrderResponseTotals.fromJson(Map<String, dynamic> json) => AdminGetOrderResponseTotals(merchandise: (json['merchandise'] as num).toInt(), shipping: (json['shipping'] as num).toInt(), grand: (json['grand'] as num).toInt());
+
+  final int merchandise;
+
+  final int shipping;
+
+  final int grand;
+
+  Map<String, dynamic> toJson() => {'merchandise': merchandise, 'shipping': shipping, 'grand': grand};
+}
+
+class AdminGetSellerResponse {
+  const AdminGetSellerResponse({required this.id, required this.applicant, required this.type, required this.status, required this.riskLevel, required this.governorate, required this.storeName, required this.submittedAt, required this.checklist, required this.documents, required this.history});
+
+  factory AdminGetSellerResponse.fromJson(Map<String, dynamic> json) => AdminGetSellerResponse(id: json['id'] as String, applicant: json['applicant'] as String?, type: json['type'] as String, status: json['status'] as String, riskLevel: json['riskLevel'] as String?, governorate: json['governorate'] as String?, storeName: json['storeName'] as String?, submittedAt: json['submittedAt'] as String?, checklist: (json['checklist'] as List).map((e) => AdminGetSellerResponseChecklistItem.fromJson(e as Map<String, dynamic>)).toList(), documents: json['documents'] == null ? null : (json['documents'] as List).map((e) => AdminGetSellerResponseDocumentsItem.fromJson(e as Map<String, dynamic>)).toList(), history: (json['history'] as List).map((e) => AdminGetSellerResponseHistoryItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final String id;
+
+  final String? applicant;
+
+  final String type;
+
+  final String status;
+
+  final String? riskLevel;
+
+  final String? governorate;
+
+  final String? storeName;
+
+  final String? submittedAt;
+
+  final List<AdminGetSellerResponseChecklistItem> checklist;
+
+  final List<AdminGetSellerResponseDocumentsItem>? documents;
+
+  final List<AdminGetSellerResponseHistoryItem> history;
+
+  Map<String, dynamic> toJson() => {'id': id, 'applicant': applicant, 'type': type, 'status': status, 'riskLevel': riskLevel, 'governorate': governorate, 'storeName': storeName, 'submittedAt': submittedAt, 'checklist': checklist.map((e) => e.toJson()).toList(), 'documents': documents?.map((e) => e.toJson()).toList(), 'history': history.map((e) => e.toJson()).toList()};
+}
+
+class AdminGetSellerResponseChecklistItem {
+  const AdminGetSellerResponseChecklistItem({required this.key, required this.label, required this.ok});
+
+  factory AdminGetSellerResponseChecklistItem.fromJson(Map<String, dynamic> json) => AdminGetSellerResponseChecklistItem(key: json['key'] as String, label: json['label'] as String, ok: json['ok'] as bool);
+
+  final String key;
+
+  final String label;
+
+  final bool ok;
+
+  Map<String, dynamic> toJson() => {'key': key, 'label': label, 'ok': ok};
+}
+
+class AdminGetSellerResponseDocumentsItem {
+  const AdminGetSellerResponseDocumentsItem({required this.kind, required this.status, required this.uploadedAt});
+
+  factory AdminGetSellerResponseDocumentsItem.fromJson(Map<String, dynamic> json) => AdminGetSellerResponseDocumentsItem(kind: json['kind'] as String, status: json['status'] as String, uploadedAt: json['uploadedAt'] as String?);
+
+  final String kind;
+
+  final String status;
+
+  final String? uploadedAt;
+
+  Map<String, dynamic> toJson() => {'kind': kind, 'status': status, 'uploadedAt': uploadedAt};
+}
+
+class AdminGetSellerResponseHistoryItem {
+  const AdminGetSellerResponseHistoryItem({required this.entityType, required this.from, required this.to, required this.actorType, required this.actor, required this.note, required this.at});
+
+  factory AdminGetSellerResponseHistoryItem.fromJson(Map<String, dynamic> json) => AdminGetSellerResponseHistoryItem(entityType: json['entityType'] as String, from: json['from'] as String?, to: json['to'] as String, actorType: json['actorType'] as String?, actor: json['actor'] as String?, note: json['note'] as String?, at: json['at'] as String);
+
+  final String entityType;
+
+  final String? from;
+
+  final String to;
+
+  final String? actorType;
+
+  final String? actor;
+
+  final String? note;
+
+  final String at;
+
+  Map<String, dynamic> toJson() => {'entityType': entityType, 'from': from, 'to': to, 'actorType': actorType, 'actor': actor, 'note': note, 'at': at};
+}
+
 class AdminListAuditLogResponse {
   const AdminListAuditLogResponse({required this.items, required this.nextBefore});
 
@@ -212,6 +755,30 @@ class AdminListDealsResponseItemsItem {
   final String? updatedAt;
 
   Map<String, dynamic> toJson() => {'id': id, 'number': number, 'title': title, 'buyer': buyer, 'seller': seller, 'sellerConfirmed': sellerConfirmed, 'status': status, 'buyerPays': buyerPays, 'updatedAt': updatedAt};
+}
+
+class AdminListDisputeAssigneesResponse {
+  const AdminListDisputeAssigneesResponse({required this.items});
+
+  factory AdminListDisputeAssigneesResponse.fromJson(Map<String, dynamic> json) => AdminListDisputeAssigneesResponse(items: (json['items'] as List).map((e) => AdminListDisputeAssigneesResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<AdminListDisputeAssigneesResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class AdminListDisputeAssigneesResponseItemsItem {
+  const AdminListDisputeAssigneesResponseItemsItem({required this.id, required this.name, required this.isMe});
+
+  factory AdminListDisputeAssigneesResponseItemsItem.fromJson(Map<String, dynamic> json) => AdminListDisputeAssigneesResponseItemsItem(id: json['id'] as String, name: json['name'] as String?, isMe: json['isMe'] as bool);
+
+  final String id;
+
+  final String? name;
+
+  final bool isMe;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'isMe': isMe};
 }
 
 class AdminListDisputesResponse {

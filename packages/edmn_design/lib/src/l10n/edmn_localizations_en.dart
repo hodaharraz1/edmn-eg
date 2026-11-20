@@ -3156,4 +3156,189 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get adminStatusShipped => 'On the way';
+
+  @override
+  String get adminSectionSummary => 'Summary';
+
+  @override
+  String get adminSectionTimeline => 'Status history';
+
+  @override
+  String get adminSectionChecklist => 'Requirements';
+
+  @override
+  String get adminSectionDocuments => 'Documents (metadata only)';
+
+  @override
+  String get adminSectionReviewTrail => 'Review trail';
+
+  @override
+  String get adminSectionItems => 'Items';
+
+  @override
+  String get adminSectionShipment => 'Shipment';
+
+  @override
+  String get adminSectionTracking => 'Tracking';
+
+  @override
+  String get adminSectionMessages => 'Messages and notes';
+
+  @override
+  String get adminSectionEvidence => 'Evidence (metadata only)';
+
+  @override
+  String get adminSectionDisputes => 'Linked disputes';
+
+  @override
+  String get adminFieldStatus => 'Status';
+
+  @override
+  String get adminFieldType => 'Type';
+
+  @override
+  String get adminFieldRisk => 'Risk';
+
+  @override
+  String get adminFieldGovernorate => 'Governorate';
+
+  @override
+  String get adminFieldStore => 'Store';
+
+  @override
+  String get adminFieldSubmitted => 'Submitted';
+
+  @override
+  String get adminFieldReviewed => 'Reviewed';
+
+  @override
+  String get adminFieldReviewer => 'Reviewer';
+
+  @override
+  String get adminFieldReason => 'Reason';
+
+  @override
+  String get adminFieldCustomer => 'Customer';
+
+  @override
+  String get adminFieldPlaced => 'Placed';
+
+  @override
+  String get adminFieldPaid => 'Paid';
+
+  @override
+  String get adminFieldMerchandise => 'Items';
+
+  @override
+  String get adminFieldShipping => 'Shipping';
+
+  @override
+  String get adminFieldGrand => 'Total';
+
+  @override
+  String get adminFieldPayment => 'Payment';
+
+  @override
+  String get adminFieldCarrier => 'Carrier';
+
+  @override
+  String get adminFieldTracking => 'Tracking number';
+
+  @override
+  String get adminFieldExpected => 'Expected';
+
+  @override
+  String get adminFieldBuyer => 'Buyer';
+
+  @override
+  String get adminFieldSeller => 'Seller';
+
+  @override
+  String get adminFieldBuyerPays => 'Buyer pays';
+
+  @override
+  String get adminFieldSellerGets => 'Seller receives';
+
+  @override
+  String get adminFieldDealTotal => 'Deal value';
+
+  @override
+  String get adminFieldHold => 'Financial hold';
+
+  @override
+  String get adminFieldEvidence => 'Evidence photos';
+
+  @override
+  String get adminFieldClaimant => 'Claimant';
+
+  @override
+  String get adminFieldRespondent => 'Respondent';
+
+  @override
+  String get adminFieldAssignee => 'Assignee';
+
+  @override
+  String get adminFieldClaimed => 'Amount claimed';
+
+  @override
+  String get adminFieldSubject => 'About';
+
+  @override
+  String get adminFieldReasonCode => 'Reason';
+
+  @override
+  String get adminYes => 'Yes';
+
+  @override
+  String get adminNo => 'No';
+
+  @override
+  String get adminUnassigned => 'Unassigned';
+
+  @override
+  String get adminInternalNote => 'Internal note';
+
+  @override
+  String get adminAssign => 'Assign';
+
+  @override
+  String get adminAssignTo => 'Assign dispute to';
+
+  @override
+  String get adminAddNote => 'Add internal note';
+
+  @override
+  String get adminNoteHint =>
+      'Visible to the EDMN team only; never sent to the parties';
+
+  @override
+  String get adminSave => 'Save';
+
+  @override
+  String get adminCancel => 'Cancel';
+
+  @override
+  String get adminAssigned => 'Dispute assigned';
+
+  @override
+  String get adminNoteAdded => 'Note added';
+
+  @override
+  String get adminMe => 'Me';
+
+  @override
+  String get adminDocsNoPermission =>
+      'Viewing documents needs the documents permission';
+
+  @override
+  String get adminSearch => 'Search';
+
+  @override
+  String get adminActorAll => 'All';
+
+  @override
+  String get adminFilterAction => 'Action name (e.g. dispute)';
+
+  @override
+  String get adminNoTimeline => 'No events yet';
 }

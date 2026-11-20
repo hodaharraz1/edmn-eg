@@ -71,7 +71,10 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | **Disputes and complaints monitor** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/disputes` (`disputes.manage`): open / assigned to me / closed. Resolution stays on the web (ledger workflows) |
 | Financial approvals, reconciliation | BLOCKED by design | No financial mutation in the Admin App: approvals stay in the web console (two-person rule). Visibility via dashboard queues |
 | **Audit log** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/audit` (`audit.view`): newest first, keyset paging, actor/action/entity filters; no before/after values, IP or user agent |
-| Decisions from the Admin App (approve seller/KYC, resolve dispute) | NOT STARTED (deliberate) | Needs an owner decision: document images on a phone and step-up per decision. The web console remains the decision point |
+| **Detail views** (batch 3) | **COMPLETE** (read-only) | `GET /admin/sellers/{id}` (checklist, document metadata only with `sellers.documents.view`, history) · `identity/reviews/{id}` (status, review trail; no number/images) · `orders/{id}` (seller orders, items, shipment, tracking events, status history) · `deals/{id}` (money, payment/payout status, linked disputes, timeline; no locations/OTP) · `disputes/{id}` (messages incl. internal notes, evidence metadata, assignee, history) |
+| **Dispute: assign + internal note** (batch 3) | **COMPLETE** | `POST /admin/disputes/{id}/assign` (assignee must be active staff with `disputes.manage`; open disputes only; audited old→new) · `POST /admin/disputes/{id}/notes` (always internal, no notification) · `GET /admin/disputes/assignees`. Idempotent, rate-limited. UI journey: assignment and note verified in the DB, audit on channel `ADMIN_MOBILE` |
+| **Search and filters** (batch 3) | **COMPLETE** | Orders: number / customer-name search (server). Audit: actor-type filter + action search, keyset paging |
+| Decisions from the Admin App (approve seller/KYC, resolve dispute, confirm payment, refunds, payouts, releases) | EXCLUDED (deliberate) | Kept in the web console (documents, Maker/Checker, step-up, ledger workflows). Enforced by the contract guard: the only admin writes on mobile are `ADMIN_SAFE_WRITES` |
 
 ## Native builds and runtime
 
@@ -83,4 +86,4 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | Android debug manifest | Verified | Customer: cleartext only in debug (for the local server), debuggable |
 | Android emulator / device runtime | **Not run** | No KVM or emulator in this environment, and no device attached |
 | iOS simulator / device build | **Not run: BLOCKED** | No Mac attached to this session (`list_computer_folders`: none). The Flutter.framework codesign issue can only be investigated on a Mac |
-| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 56/56 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 25/25 (batch 2) |
+| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 70/70 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 39/39 (batches 2–3) |
