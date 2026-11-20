@@ -29,7 +29,16 @@ const sem = async () => { await page.evaluate(() => document.querySelector('flt-
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
 const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
 const toActions = async () => { await page.mouse.move(190, 400); await page.mouse.wheel(0, 8000); await page.waitForTimeout(1000); await sem(); };
-const tap = async (label) => { await page.getByRole('button', { name: label }).last().click(); await page.waitForTimeout(1500); await sem(); };
+const tap = async (label) => {
+  const target = page.getByRole('button', { name: label }).last();
+  if (!(await target.count())) {
+    await page.mouse.move(190, 400); await page.mouse.wheel(0, -10000); await page.waitForTimeout(500); await sem();
+    for (let i = 0; i < 24 && !(await target.count()); i++) {
+      await page.mouse.wheel(0, 350); await page.waitForTimeout(250); await sem();
+    }
+  }
+  await target.click(); await page.waitForTimeout(1500); await sem();
+};
 const api = (method, regex, status) => assert(calls.some(([m, p, s]) => m === method && regex.test(p) && s === status), `Missing ${method} ${regex} ${status}; observed: ${JSON.stringify(calls)}`);
 try {
   await mkdir('test-results/mobile-journey', { recursive: true });
