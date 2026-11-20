@@ -134,6 +134,14 @@ try {
   await page.getByRole('button', { name: 'نسخ الرابط' }).waitFor({ state: 'visible' });
   // The link is used only in memory; never print it or capture a screenshot while it is displayed.
   const buyerPage = page;
+  await go('/deals/join');
+  try { await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink); }
+  catch { throw new Error('Could not enter the buyer invitation'); }
+  const buyerClaim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('الانضمام للصفقة');
+  assert.equal((await buyerClaim).status(), 403);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  console.log('PASS Flutter refuses buyer participation as seller');
   const sellerContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
   page = await sellerContext.newPage();
   observe(page);
@@ -157,6 +165,20 @@ try {
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
   console.log('PASS Flutter rejects an invalid invitation and preserves the deal');
+  // Move only this disposable invitation's expiry into the past; no waiting or clock changes in the app.
+  await rows("update deal_invitations set expires_at=now()-interval '1 minute' where deal_id=$1 and status='PENDING'", [deal.id]);
+  try { await type(page.getByRole('textbox').first(), invitationLink); }
+  catch { throw new Error('Could not enter the expired invitation'); }
+  const expiredClaim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('الانضمام للصفقة');
+  assert((await expiredClaim).status() >= 400);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  console.log('PASS Flutter rejects expired invitation without joining');
+  // Restore only the synthetic fixture so the existing happy path can continue.
+  await rows("update deal_invitations set expires_at=now()+interval '1 hour' where deal_id=$1 and status='PENDING'", [deal.id]);
+  await page.getByRole('textbox').first().click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
   try { await type(page.getByRole('textbox').first(), invitationLink); }
   catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
