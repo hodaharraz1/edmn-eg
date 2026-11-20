@@ -230,8 +230,13 @@ try {
   const wrongVerify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تحقق'); assert((await wrongVerify).status() >= 400);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'DELIVERED');
+  console.log('PASS Flutter rejects an incorrect delivery code without advancing the deal');
   await page.waitForTimeout(5000);
-  try { await codeInput.click(); await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(code); }
+  // Refreshing the deal after a rejected attempt can remove the bottom sheet.
+  // Open it again just as the seller would before trying another code.
+  await freshDeal(deal.id);
+  await tap('إدخال كود التسليم');
+  try { await type(page.getByRole('textbox', { name: 'الكود (6 أرقام)' }), code); }
   catch { throw new Error('Could not enter the delivery code'); }
   const verify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تحقق'); assert.equal((await verify).status(), 200);
