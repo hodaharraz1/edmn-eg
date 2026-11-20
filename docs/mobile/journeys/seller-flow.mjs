@@ -148,7 +148,7 @@ const state = {};
   }
 
   if (ONLY.includes('E')) {
-    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, sem, calls, dump }) => {
+    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, sem, calls }) => {
       const sellerId = sql(`select s.id from sellers s join users u on u.id = s.owner_user_id where u.email='${SELLER}'`);
       const acct = (code) => Number(sql(`select balance from ledger_accounts where seller_id='${sellerId}' and code='${code}'`));
       const journal = (code) => Number(sql(`select coalesce(sum(l.credit - l.debit), 0) from journal_lines l join ledger_accounts a on a.id = l.account_id where a.seller_id='${sellerId}' and a.code='${code}'`));
@@ -192,7 +192,7 @@ const state = {};
     // A delivered TechZone order of the buyer (journey C leaves one).
     const so = sql(`select so.id || '|' || o.number || '-' || so.suffix from seller_orders so join orders o on o.id = so.order_id join users u on u.id = o.customer_id join sellers s on s.id = so.seller_id join users su on su.id = s.owner_user_id where u.email='${BUYER}' and su.email='${SELLER}' and so.status = 'DELIVERED' and not exists (select 1 from returns r where r.seller_order_id = so.id) order by so.updated_at desc limit 1`).split('|');
     state.ret = { so: so[0], number: so[1] };
-    await session(b, BUYER, PW, async ({ p, go, shot, type, tap, tapFresh, sem, calls, dump }) => {
+    await session(b, BUYER, PW, async ({ p, go, shot, type, tapFresh, sem, calls }) => {
       await go(`/returns/new?so=${state.ret.so}`);
       await shot('d1-return-form');
       await tapFresh(p.getByRole('button', { name: 'زيادة الكمية' }).first());
@@ -217,7 +217,7 @@ const state = {};
     });
     const sellerUid = sql(`select id from users where email='${SELLER}'`);
     check('D2 seller: notified of the return request', Number(sql(`select count(*) from notifications where user_id='${sellerUid}' and event='RETURN_REQUESTED' and created_at > now() - interval '15 minutes'`)) >= 1, 'RETURN_REQUESTED');
-    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, tapFresh, sem, calls, dump }) => {
+    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, tapFresh, sem, calls }) => {
       await go('/seller/returns'); await shot('d2-seller-returns');
       await go(`/seller/returns/${state.ret.id}`); await shot('d2-seller-return');
       check('D2 seller: sees the return for the order', (await p.locator('[aria-label*="100"], flt-semantics:has-text("' + state.ret.number + '")').count()) > 0, `#${state.ret.number}`);
@@ -258,7 +258,7 @@ const state = {};
   }
 
   if (ONLY.includes('B')) {
-    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, tapFresh, sem, calls, dump }) => {
+    await session(b, SELLER, PW, async ({ p, go, shot, type, tap, tapFresh, sem, calls }) => {
       await go('/seller/products/new'); await shot('b1-new-product');
       state.newTitle = `سماعة بلوتوث اختبار ${Date.now() % 100000}`;
       await type(p.getByRole('textbox').first(), state.newTitle);
@@ -308,7 +308,7 @@ const state = {};
     check('B4 staff: approved → product LIVE', live[0] === 'LIVE', `status=${live[0]}`);
     const pub = execSync(`curl -s -o /dev/null -w '%{http_code}' 'http://localhost:8099/api/v1/catalog/products/${encodeURIComponent(live[1])}'`).toString();
     check('B4 buyers: the product page is public', pub === '200', `GET catalog/products → ${pub}`);
-    await session(b, SELLER, PW, async ({ p, go, shot, tap, tapFresh, sem, calls }) => {
+    await session(b, SELLER, PW, async ({ p, go, shot, tapFresh, sem, calls }) => {
       await go(`/seller/products/${state.newProduct}/edit`); await shot('b5-live');
       await tapFresh(p.getByRole('button', { name: /وقف البيع/ }).first());
       await p.getByRole('alertdialog').getByRole('button', { name: 'تأكيد' }).click(); await p.waitForTimeout(3500); await sem();
@@ -322,6 +322,143 @@ const state = {};
     });
     const gone = execSync(`curl -s -o /dev/null -w '%{http_code}' 'http://localhost:8099/api/v1/catalog/products/${encodeURIComponent(live[1])}'`).toString();
     check('B6 buyers: an archived product is no longer public', gone === '404', `GET catalog/products → ${gone}`);
+  }
+
+  if (ONLY.includes('A')) {
+    // A. A brand-new account becomes a seller. Codes sent by SMS are read from the local outbox (the "phone"): in local
+    // mode no dispatcher runs and bodies are not sealed; production seals and redacts them.
+    const n = Date.now() % 100000000;
+    const A = { name: 'سارة محمود حسن', phone: `011${String(n).padStart(8, '0')}`, email: `journey.seller.${n}@test.local`, pw: 'Journey#2026x' };
+    const smsCode = (phoneLike) => (sql(`select body from outbound_messages where channel='SMS' and recipient like '%${phoneLike.slice(-9)}' order by created_at desc limit 1`).match(/\b(\d{6})\b/) ?? [])[1];
+    const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'ar-EG' });
+    const p = await ctx.newPage();
+    const calls = [];
+    p.on('response', (r) => { if (r.url().includes('/api/v1/') && r.request().method() !== 'GET') calls.push(`${r.request().method()} ${new URL(r.url()).pathname} ${r.status()}`); });
+    const sem = async () => { await p.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click()); await p.waitForTimeout(600); };
+    const go = async (hash) => { await p.goto(BASE + '#' + hash, { waitUntil: 'networkidle' }); await p.waitForTimeout(3500); await sem(); };
+    const shot = async (nm) => { await p.waitForTimeout(700); await p.screenshot({ path: `${OUT}/${nm}.png` }); };
+    const type = async (loc, text) => { await loc.click(); await p.waitForTimeout(600); await p.keyboard.type(text, { delay: 25 }); };
+    const dump = async (tag) => console.log(`--- ${tag}\n` + (await p.locator('flt-semantics [role]').evaluateAll((els) => els.map((e) => `${e.getAttribute('role')}: ${(e.getAttribute('aria-label') || e.textContent || '').replace(/\s+/g, ' ').slice(0, 80)}`))).join('\n'));
+    const tapFresh = async (loc) => { await loc.scrollIntoViewIfNeeded(); await p.waitForTimeout(800); await sem(); await loc.click(); await p.waitForTimeout(2500); await sem(); };
+    try {
+      await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForTimeout(3000); await sem();
+      try { await p.getByRole('button', { name: 'تخطي' }).first().click(); await p.waitForTimeout(1500); } catch {}
+      await go('/register');
+      await p.getByRole('textbox').first().waitFor({ timeout: 20000 });
+      const boxes = p.getByRole('textbox');
+      await type(boxes.nth(0), A.name);
+      await type(boxes.nth(1), A.phone);
+      await type(boxes.nth(2), A.email);
+      await type(boxes.nth(3), A.pw);
+      await shot('a1-register');
+      await tapFresh(p.getByRole('button', { name: 'إنشاء حساب جديد' }).last());
+      await p.waitForTimeout(2000); await sem();
+      const uid = sql(`select id from users where email='${A.email}'`);
+      check('A1 new account registered through the UI', calls.some((c) => /POST \/api\/v1\/auth\/register 20\d/.test(c)) && uid.length === 36, `user=${uid ? 'created' : 'missing'}`);
+      await shot('a2-verify');
+      let code = smsCode(A.phone);
+      if (!code) { await tapFresh(p.getByRole('button', { name: 'إرسال الكود' }).first()); code = smsCode(A.phone); }
+      check('A2 an OTP was sent by SMS to the new number', !!code, code ? 'code received' : 'no SMS');
+      await type(p.getByRole('textbox').first(), code ?? '');
+      await tapFresh(p.getByRole('button', { name: 'تحقق' }).first());
+      await p.waitForTimeout(1500);
+      check('A2 phone verified through the UI', sql(`select phone_verified_at is not null from users where id='${uid}'`) === 't', 'phone_verified_at set');
+      await shot('a2-verified');
+      // A3. National ID (KYC): legal name, ID number (test), both sides as images → pending review.
+      await go('/account/identity'); await shot('a3-identity');
+      await sem();
+      await type(p.getByRole('textbox').nth(0), A.name);
+      A.nid = `290010${String(n).slice(-8).padStart(8, '1')}`;
+      await type(p.getByRole('textbox').nth(1), A.nid);
+      for (const side of ['الوجه', 'الظهر']) {
+        const btn = p.getByRole('button', { name: new RegExp(`\\(${side}\\)`) }).first();
+        await btn.scrollIntoViewIfNeeded(); await p.waitForTimeout(600); await sem();
+        const [ch] = await Promise.all([p.waitForEvent('filechooser', { timeout: 15000 }), btn.click()]);
+        await ch.setFiles(img); await p.waitForTimeout(1200); await sem();
+      }
+      await shot('a3-identity-filled');
+      await tapFresh(p.getByRole('button', { name: 'إرسال للمراجعة' }).last());
+      const kyc = sql(`select status || '|' || (front_file_id is not null and back_file_id is not null) from user_identity_verifications where user_id='${uid}' order by created_at desc limit 1`).split('|');
+      if (process.env.JOURNEY_DEBUG) console.log('identity calls:', calls.filter((c) => c.includes('identity')));
+      check('A3 identity submitted through the UI (both sides), pending review', calls.some((c) => /POST \/api\/v1\/me\/identity 20\d/.test(c)) && kyc[0] === 'PENDING_REVIEW' && kyc[1] === 'true', `status=${kyc[0]}`);
+      const idFiles = sql(`select string_agg(distinct f.visibility || ':' || f.purpose, ',') from files f where f.id in (select front_file_id from user_identity_verifications where user_id='${uid}' union select back_file_id from user_identity_verifications where user_id='${uid}')`);
+      check('A3 security: ID images are PRIVATE identity documents; the number is stored encrypted', idFiles === 'PRIVATE:IDENTITY_DOCUMENT' && !sql(`select national_id_enc from user_identity_verifications where user_id='${uid}' limit 1`).includes(String(n).slice(-6)), idFiles);
+      // EDMN reviews the ID (console service; step-up).
+      staff('approve-identity', A.email);
+      check('A4 staff: identity approved', sql(`select status from user_identity_verifications where user_id='${uid}' order by created_at desc limit 1`) === 'APPROVED', 'APPROVED');
+      await go('/seller/apply'); await shot('a5-apply');
+      await tapFresh(p.getByRole('radio', { name: 'فرد' }).first());
+      await tapFresh(p.getByRole('button', { name: 'ابدأ الطلب' }).first());
+      check('A5 application started through the UI (individual)', calls.some((c) => /POST \/api\/v1\/seller\/application 20\d/.test(c)) && sql(`select status from sellers where owner_user_id='${uid}'`) === 'DRAFT', sql(`select status from sellers where owner_user_id='${uid}'`));
+      await shot('a5-wizard');
+      await tapFresh(p.getByRole('button', { name: 'بيانات الهوية والعنوان' }).first());
+      await sem();
+      await type(p.getByRole('textbox').nth(1), A.nid);
+      await type(p.getByRole('textbox').nth(4), 'شارع ٩، المعادي');
+      await type(p.getByRole('textbox').nth(5), 'القاهرة');
+      await shot('a6-owner-sheet');
+      await tapFresh(p.getByRole('button', { name: 'حفظ' }).last());
+      await p.waitForTimeout(1500);
+      check('A6 owner identity and address saved', calls.some((c) => /PUT \/api\/v1\/seller\/application\/identity 200/.test(c)), calls.filter((c) => c.includes('application/identity')).join(' | '));
+      await shot('a6-after-owner');
+      // The application's mobile equals the account's verified phone, so the server carries the verification over.
+      check('A7 application mobile verified (same as the verified account phone)', sql(`select mobile_verified_at is not null from sellers where owner_user_id='${uid}'`) === 't', 'mobile_verified_at');
+      await tapFresh(p.getByRole('button', { name: 'بيانات المتجر وعنوان الإرجاع' }).first());
+      await sem();
+      A.store = `متجر سارة ${n % 100000}`;
+      await type(p.getByRole('textbox').nth(0), A.store);
+      await type(p.getByRole('textbox').nth(1), 'إكسسوارات موبايل أصلية بضمان');
+      await type(p.getByRole('textbox').nth(2), 'شارع ٩، المعادي، القاهرة');
+      const logoBtn = p.getByRole('button', { name: /شعار المتجر/ }).first();
+      const [lc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 15000 }), logoBtn.click()]);
+      await lc.setFiles(img); await p.waitForTimeout(1200); await sem();
+      await shot('a8-store-sheet');
+      await tapFresh(p.getByRole('button', { name: 'حفظ' }).last());
+      await p.waitForTimeout(1500);
+      const st = sql(`select st.name || '|' || (st.logo_file_id is not null) from stores st join sellers s on s.id = st.seller_id where s.owner_user_id='${uid}'`).split('|');
+      check('A8 store created with name, return address and logo', calls.some((c) => /POST \/api\/v1\/seller\/application\/store 20\d/.test(c)) && st[0] === A.store && st[1] === 'true', `store=${st[0]} logo=${st[1]}`);
+      if (process.env.JOURNEY_DEBUG) await dump('after store');
+      // A9. Seller documents: ID front and back (private seller documents).
+      for (const side of ['الوجه', 'الظهر']) {
+        const row = p.getByRole('button', { name: `صورة البطاقة (${side})` }).first();
+        await p.mouse.move(195, 500);
+        for (let i = 0; i < 8 && !(await row.isVisible()); i++) { await p.mouse.wheel(0, 300); await p.waitForTimeout(500); await sem(); }
+        await row.click(); await p.waitForTimeout(1500); await sem();
+        if (process.env.JOURNEY_DEBUG) await dump(`doc ${side}`);
+        const pick = p.getByRole('button', { name: /^المستندات:/ }).last();
+        await pick.waitFor({ state: 'visible', timeout: 15000 });
+        const [dc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 15000 }), pick.click()]);
+        await dc.setFiles(img); await p.waitForTimeout(1500); await sem();
+        await p.getByRole('button', { name: 'رفع' }).last().click(); await p.waitForTimeout(3500); await sem();
+      }
+      const docs = sql(`select string_agg(d.kind || ':' || f.visibility, ',' order by d.kind) from seller_documents d join files f on f.id = d.file_id join sellers s on s.id = d.seller_id where s.owner_user_id='${uid}' and d.superseded_at is null`);
+      check('A9 seller documents uploaded through the UI, PRIVATE', docs === 'NATIONAL_ID_BACK:PRIVATE,NATIONAL_ID_FRONT:PRIVATE', docs);
+      await shot('a9-docs');
+      await tapFresh(p.getByRole('button', { name: 'بيانات استلام الأموال' }).first());
+      await p.getByRole('radio', { name: 'InstaPay' }).first().click(); await p.waitForTimeout(1000); await sem();
+      await type(p.getByRole('textbox').nth(0), A.name);
+      await type(p.getByRole('textbox').nth(1), `sara${n % 100000}@instapay`);
+      await shot('a10-payout-sheet');
+      await tapFresh(p.getByRole('button', { name: 'حفظ' }).last());
+      await p.waitForTimeout(1500);
+      const pm = sql(`select pm.status || '|' || pm.type from seller_payout_methods pm join sellers s on s.id = pm.seller_id where s.owner_user_id='${uid}' order by pm.created_at desc limit 1`).split('|');
+      check('A10 payout account added (pending EDMN verification)', calls.some((c) => /POST \/api\/v1\/seller\/application\/payout-account 20\d/.test(c)) && pm[0] === 'PENDING_VERIFICATION' && pm[1] === 'INSTAPAY', `status=${pm[0]} type=${pm[1]}`);
+      // A11. Accept the agreement and submit.
+      const agree = p.getByRole('checkbox', { name: /اتفاقية البائع/ }).first();
+      await p.mouse.move(195, 500);
+      for (let i = 0; i < 8 && !(await agree.isVisible()); i++) { await p.mouse.wheel(0, 300); await p.waitForTimeout(500); await sem(); }
+      await agree.click(); await p.waitForTimeout(800); await sem();
+      await p.getByRole('button', { name: 'إرسال للمراجعة' }).last().click(); await p.waitForTimeout(4000); await sem();
+      await shot('a11-submitted');
+      check('A11 application submitted through the UI', calls.some((c) => /POST \/api\/v1\/seller\/application\/submit 20\d/.test(c)) && sql(`select status from sellers where owner_user_id='${uid}'`) === 'PENDING_REVIEW', sql(`select status from sellers where owner_user_id='${uid}'`));
+      // A12. EDMN approves the seller and verifies the payout account (console services, step-up).
+      staff('approve-seller', A.email);
+      check('A12 staff: seller approved, payout account verified', sql(`select s.status || '|' || (select status from seller_payout_methods where seller_id = s.id order by created_at desc limit 1) from sellers s where s.owner_user_id='${uid}'`) === 'APPROVED|ACTIVE', sql(`select status from sellers where owner_user_id='${uid}'`));
+      check('A12 the new seller is notified', Number(sql(`select count(*) from notifications where user_id='${uid}' and event='SELLER_APPROVED'`)) >= 1, 'SELLER_APPROVED');
+      await go('/seller'); await shot('a13-seller-center');
+      check('A13 the new seller sees the Seller Center (store + menu)', (await p.getByRole('button', { name: 'إدارة المنتجات' }).count()) > 0 && (await p.locator(`flt-semantics:has-text("${A.store}")`).count()) > 0, A.store);
+    } catch (e) { check('A journey error', false, String(e).split('\n')[0]); await shot(`error-a-${Date.now() % 10000}`); }
+    await ctx.close();
   }
 
   await b.close();

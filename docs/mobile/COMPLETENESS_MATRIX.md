@@ -45,16 +45,18 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 
 | Feature | Grade | Evidence / gap |
 |---|---|---|
-| Registration, KYC, store, documents, submit, status | COMPLETE | `seller-setup` flow tests |
-| Dashboard (`/seller/home`) | COMPLETE | Rendered in the UI (`e2e-flow.mjs`); data assertions not automated in the UI |
-| Products: create, images, details, variants, pricing, stock, visibility, submit | COMPLETE | Backend flow tests |
-| Shipping governorates and rates, return policy | COMPLETE | `seller/shipping-rates` |
-| Order management, shipment + waybill | COMPLETE | `seller/orders/*` |
-| Delivery confirmation | COMPLETE | Buyer confirms; staff confirm-on-behalf is web-only |
-| Returns and disputes (seller side) | COMPLETE | `seller/returns/*`, `seller/disputes/*` |
-| Earnings, statement, payout requests | COMPLETE | Request only. Approval is two-person in the web admin console |
-| Customer messages | COMPLETE | `seller/conversations/*` |
-| Store banner | PARTIAL | Logo on mobile; banner upload is web-only |
+| Registration → phone OTP → KYC → application (owner, store + logo, ID documents, payout account) → submit → approval → Seller Center | **COMPLETE ✓UI** (batch 4) | Journey **A 16/16** (`seller-flow.mjs`): a brand-new account; ID images and seller documents stored PRIVATE, national ID encrypted; staff approvals through the console services (`staff-step.ts`); `SELLER_APPROVED` notification |
+| Application form: governorate input | PARTIAL | The owner and store sheets take the governorate as a raw number. Should be a picker of Egyptian governorates from the database (CLAUDE.md rule). Not changed in this batch |
+| Dashboard (`/seller/home`) | COMPLETE | Rendered in journeys A and C |
+| Products: create, photo, description, price/variants, stock, return policy, submit, approval, live | **COMPLETE ✓UI** (batch 4) | Journey **B 13/13**: draft, photo (PUBLIC `PRODUCT_IMAGE`), price 79,900 piastres, stock 10, policy confirmed, submitted, staff approval → LIVE and public |
+| Stop sales (out of stock) and archive | **COMPLETE ✓UI** (batch 4, new) | `POST /seller/products/{id}/out-of-stock` and `/archive` (console rules reused). Journey B: stock = reserved units; archived product returns 404 to buyers. Backend: cross-seller and buyer refusals; archive refused while unpaid orders reserve stock |
+| Shipping governorates and rates, return policy | COMPLETE | `seller/shipping-rates` backend tests; store return policy used in journey B. Rates screen not driven in a UI journey |
+| Order management: view (product, quantity, address), confirm, prepare, ready, shipment (carrier, waybill number, waybill file), shipped | **COMPLETE ✓UI** (batch 4) | Journey **C 20/20**: every step persisted; waybill PRIVATE `SHIPPING_WAYBILL`; `ORDER_SHIPPED` sent to the buyer. Backend: unpaid orders cannot be advanced; another seller is refused |
+| Delivery confirmation | **COMPLETE ✓UI** | Buyer confirms in the app (`receipt_confirmed_by` = buyer); seller gets `BUYER_RECEIPT_CONFIRMED`; no `SELLER_RELEASE` without Maker/Checker; ledger balanced |
+| Returns and disputes (seller side) | **COMPLETE ✓UI** (batch 4) | Journey **D**: return «arrived damaged» with PRIVATE `RETURN_EVIDENCE`, seller notified, rejects with a reason, buyer escalates → one OPEN dispute linked to the return, seller notified and sees it, no refund record (financial decision stays with EDMN) |
+| Earnings, statement, payout requests | **COMPLETE ✓UI** (batch 4) | Journey **E 7/7**: funds on screen = ledger account = journal sum; delivered order in the statement; double-tapped payout request → one `REQUESTED` row, no journal entry, balance unchanged |
+| Customer messages | COMPLETE | `seller/conversations/*`; buyer side driven in `e2e-flow.mjs`. Seller inbox not driven in a UI journey |
+| Store logo and banner | **COMPLETE** (batch 4, was PARTIAL) | `POST /seller/store/media` reuses the secure upload path (`STORE_LOGO`/`STORE_BANNER`); widget test; backend: type, size, buyer and idempotency checks. Logo driven in journey A |
 
 ## Admin App
 
@@ -86,4 +88,4 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | Android debug manifest | Verified | Customer: cleartext only in debug (for the local server), debuggable |
 | Android emulator / device runtime | **Not run** | No KVM or emulator in this environment, and no device attached |
 | iOS simulator / device build | **Not run: BLOCKED** | No Mac attached to this session (`list_computer_folders`: none). The Flutter.framework codesign issue can only be investigated on a Mac |
-| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 70/70 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 39/39 (batches 2–3) |
+| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 142/142 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 39/39 (batches 2–3), **seller 72/72 (batch 4: A onboarding, B products, C fulfilment, D returns → dispute, E earnings + payout request)** |
