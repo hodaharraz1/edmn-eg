@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers.dart';
+import '../monitoring/monitoring_screens.dart';
 
 final adminProfileProvider = FutureProvider<Profile>((ref) => ref.watch(adminApiProvider).me());
 
@@ -50,6 +51,16 @@ class AdminHomeScreen extends ConsumerWidget {
                 onTap: () => context.push('/dashboard'),
               ),
             ListTile(leading: const Icon(Icons.verified_user), title: Text(t.permissions), trailing: Text('${p.permissions.length}', key: const Key('permission-count'))),
+            // Monitoring: an entry appears only when the server-issued profile carries that screen's permission.
+            for (final spec in monitorSpecs)
+              if (p.permissions.contains(spec.permission))
+                ListTile(
+                  key: Key('open-${spec.path}'),
+                  leading: Icon(spec.icon),
+                  title: Text(spec.title(t)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push(spec.path),
+                ),
             if (canRevoke)
               ListTile(
                 key: const Key('revoke-user-sessions'),

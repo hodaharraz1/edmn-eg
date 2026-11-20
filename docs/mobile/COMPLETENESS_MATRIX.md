@@ -64,10 +64,14 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | Privacy shield (app switcher), `FLAG_SECURE` | COMPLETE (code) | Lifecycle test; device check pending |
 | Server-driven permissions (UI hides what the server refuses) | COMPLETE | Entries gated by `Profile.permissions`; the server still enforces every call |
 | **Operational dashboard (KPIs and queues)** | **COMPLETE** (batch 1) | `GET /api/v1/admin/dashboard`: the same service and permission (`dashboard.view`) as the web `/admin` page; read-only. Tests: 5 route + 4 widget |
-| User / KYC review queue | MISSING | Next batch (read-only list first) |
-| Order, deal and dispute monitoring lists | MISSING | Next batch |
+| **Seller applications queue** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/sellers/applications` (`sellers.review`); masked applicant |
+| **KYC (national ID) review queue** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/identity/reviews` (`identity.view`). Shows the masked name and whether both document sides exist; no number, no images. **Approve/reject stays on the web** (documents, reviewer separation, fresh 2FA) |
+| **Orders and shipping monitor** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/orders` (`orders.view`): all orders (status filter, number/name search, paging) + shipped-without-receipt follow-up tab |
+| **Protected deals monitor** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/deals` (`deals.view`): active / disputed / finished |
+| **Disputes and complaints monitor** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/disputes` (`disputes.manage`): open / assigned to me / closed. Resolution stays on the web (ledger workflows) |
 | Financial approvals, reconciliation | BLOCKED by design | No financial mutation in the Admin App: approvals stay in the web console (two-person rule). Visibility via dashboard queues |
-| Audit trail viewer | MISSING | `audit.view` exists on the web; not on mobile yet |
+| **Audit log** | **COMPLETE** (batch 2, read-only) | `GET /api/v1/admin/audit` (`audit.view`): newest first, keyset paging, actor/action/entity filters; no before/after values, IP or user agent |
+| Decisions from the Admin App (approve seller/KYC, resolve dispute) | NOT STARTED (deliberate) | Needs an owner decision: document images on a phone and step-up per decision. The web console remains the decision point |
 
 ## Native builds and runtime
 
@@ -79,4 +83,4 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | Android debug manifest | Verified | Customer: cleartext only in debug (for the local server), debuggable |
 | Android emulator / device runtime | **Not run** | No KVM or emulator in this environment, and no device attached |
 | iOS simulator / device build | **Not run: BLOCKED** | No Mac attached to this session (`list_computer_folders`: none). The Flutter.framework codesign issue can only be investigated on a Mac |
-| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 31/31 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9 |
+| UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 56/56 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 25/25 (batch 2) |

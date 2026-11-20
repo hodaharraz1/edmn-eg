@@ -3020,4 +3020,140 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get adminAccount => 'Account and security';
+
+  @override
+  String get adminMonitoring => 'Monitoring';
+
+  @override
+  String get adminSellerApplications => 'Seller applications';
+
+  @override
+  String get adminIdentityReviews => 'Identity checks (KYC)';
+
+  @override
+  String get adminOrders => 'Orders and shipping';
+
+  @override
+  String get adminDeals => 'Protected deals';
+
+  @override
+  String get adminDisputes => 'Disputes and complaints';
+
+  @override
+  String get adminAuditLog => 'Audit log';
+
+  @override
+  String get adminTabPending => 'Under review';
+
+  @override
+  String get adminTabNeedsInfo => 'Awaiting info';
+
+  @override
+  String get adminTabWaitingCustomer => 'Waiting on customer';
+
+  @override
+  String get adminTabApproved => 'Verified';
+
+  @override
+  String get adminTabRejected => 'Rejected';
+
+  @override
+  String get adminTabAllOrders => 'All orders';
+
+  @override
+  String get adminTabFollowUp => 'Shipped, no receipt';
+
+  @override
+  String get adminTabActive => 'In progress';
+
+  @override
+  String get adminTabDisputed => 'Disputed';
+
+  @override
+  String get adminTabDone => 'Finished';
+
+  @override
+  String get adminTabOpen => 'Open';
+
+  @override
+  String get adminTabMine => 'Assigned to me';
+
+  @override
+  String get adminTabClosed => 'Closed';
+
+  @override
+  String get adminEmptyList => 'Nothing here right now';
+
+  @override
+  String get adminLoadMore => 'Load more';
+
+  @override
+  String get adminDocsComplete => 'Documents complete';
+
+  @override
+  String get adminDocsMissing => 'Documents missing';
+
+  @override
+  String get adminSellerUnconfirmed => 'Seller has not joined yet';
+
+  @override
+  String get adminKindDeal => 'Protected deal';
+
+  @override
+  String get adminKindReturn => 'Return';
+
+  @override
+  String get adminKindOrder => 'Order';
+
+  @override
+  String get adminAssignedToMe => 'Assigned to you';
+
+  @override
+  String get adminSearchOrders => 'Order number or customer name';
+
+  @override
+  String get adminDecisionsOnWeb =>
+      'View only. Decisions (approve/reject, resolve a dispute, release funds) are made in the web admin console; names are shortened to protect personal data.';
+
+  @override
+  String get adminStatusPendingReview => 'Under review';
+
+  @override
+  String get adminStatusMoreInfo => 'Info requested';
+
+  @override
+  String get adminStatusApproved => 'Approved';
+
+  @override
+  String get adminStatusRejected => 'Rejected';
+
+  @override
+  String get adminStatusReverify => 'Re-verify';
+
+  @override
+  String get adminStatusOpen => 'Open';
+
+  @override
+  String get adminStatusUnderReview => 'Under review';
+
+  @override
+  String get adminStatusAwaitingInfo => 'Awaiting info';
+
+  @override
+  String get adminStatusResolved => 'Resolved';
+
+  @override
+  String get adminStatusClosed => 'Closed';
+
+  @override
+  String get adminStatusActive => 'Active';
+
+  @override
+  String get adminStatusDisputed => 'Disputed';
+
+  @override
+  String get adminStatusRefunded => 'Refunded';
+
+  @override
+  String get adminStatusShipped => 'On the way';
 }
