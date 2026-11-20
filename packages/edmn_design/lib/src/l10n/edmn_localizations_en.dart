@@ -3341,4 +3341,58 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get adminNoTimeline => 'No events yet';
+
+  @override
+  String get storeMedia => 'Store images';
+
+  @override
+  String get storeBannerLabel => 'Banner';
+
+  @override
+  String get storeLogoLabel => 'Logo';
+
+  @override
+  String get changeBanner => 'Change banner';
+
+  @override
+  String get changeLogo => 'Change logo';
+
+  @override
+  String get storeMediaHint =>
+      'JPG, PNG or WebP only. The server checks the file before buyers see it.';
+
+  @override
+  String get storeMediaSaved => 'Store image saved';
+
+  @override
+  String get markOutOfStock => 'Stop sales (out of stock)';
+
+  @override
+  String get markOutOfStockConfirm =>
+      'Stock drops to the units already reserved by open orders. You can add stock again later.';
+
+  @override
+  String get markedOutOfStock => 'Sales stopped for this product';
+
+  @override
+  String get archiveProduct => 'Archive product';
+
+  @override
+  String get archiveProductConfirm =>
+      'The product disappears from your store; past orders stay as they are. This cannot be undone from the app.';
+
+  @override
+  String get productArchivedDone => 'Product archived';
+
+  @override
+  String get confirmAction => 'Confirm';
+
+  @override
+  String get qtyIncrease => 'Increase quantity';
+
+  @override
+  String get qtyDecrease => 'Decrease quantity';
+
+  @override
+  String get addProductPhoto => 'Add a product photo';
 }

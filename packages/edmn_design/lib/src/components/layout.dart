@@ -171,10 +171,10 @@ class EdmnBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
     color: EdmnColors.onPrimary,
-    // Directional: points right in Arabic, left in English.
-    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: EdmnSizes.icon),
+    // Directional: points right in Arabic, left in English. Named through the icon's semantic label: a tooltip alone
+    // reaches the web as a description, so the back button was announced as an unnamed button on every screen.
+    icon: Icon(Icons.arrow_back_ios_new_rounded, size: EdmnSizes.icon, semanticLabel: MaterialLocalizations.of(context).backButtonTooltip),
     onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
   );
 }

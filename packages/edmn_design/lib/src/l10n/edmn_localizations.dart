@@ -6343,6 +6343,108 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'لا توجد أحداث بعد'**
   String get adminNoTimeline;
+
+  /// No description provided for @storeMedia.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور المتجر'**
+  String get storeMedia;
+
+  /// No description provided for @storeBannerLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة الغلاف'**
+  String get storeBannerLabel;
+
+  /// No description provided for @storeLogoLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشعار'**
+  String get storeLogoLabel;
+
+  /// No description provided for @changeBanner.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير الغلاف'**
+  String get changeBanner;
+
+  /// No description provided for @changeLogo.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير الشعار'**
+  String get changeLogo;
+
+  /// No description provided for @storeMediaHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور JPG أو PNG أو WebP فقط. السيرفر بيراجع الملف قبل ما يظهر للعملاء.'**
+  String get storeMediaHint;
+
+  /// No description provided for @storeMediaSaved.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتحفظت صورة المتجر'**
+  String get storeMediaSaved;
+
+  /// No description provided for @markOutOfStock.
+  ///
+  /// In ar, this message translates to:
+  /// **'وقف البيع (نفد المخزون)'**
+  String get markOutOfStock;
+
+  /// No description provided for @markOutOfStockConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'المخزون هيتصفّر ما عدا الكميات المحجوزة لطلبات قائمة. تقدر تزوده تاني من المخزون.'**
+  String get markOutOfStockConfirm;
+
+  /// No description provided for @markedOutOfStock.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتوقف البيع على المنتج'**
+  String get markedOutOfStock;
+
+  /// No description provided for @archiveProduct.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرشفة المنتج'**
+  String get archiveProduct;
+
+  /// No description provided for @archiveProductConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتج هيختفي من المتجر، وسجل الطلبات القديمة هيفضل زي ما هو. مش هتقدر ترجعه من التطبيق.'**
+  String get archiveProductConfirm;
+
+  /// No description provided for @productArchivedDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتأرشف المنتج'**
+  String get productArchivedDone;
+
+  /// No description provided for @confirmAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد'**
+  String get confirmAction;
+
+  /// No description provided for @qtyIncrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'زيادة الكمية'**
+  String get qtyIncrease;
+
+  /// No description provided for @qtyDecrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقليل الكمية'**
+  String get qtyDecrease;
+
+  /// No description provided for @addProductPhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة صورة للمنتج'**
+  String get addProductPhoto;
 }
 
 class _EdmnLocalizationsDelegate

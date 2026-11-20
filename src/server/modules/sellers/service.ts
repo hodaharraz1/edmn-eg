@@ -560,6 +560,33 @@ export async function updateStoreSettings(
   });
 }
 
+/**
+ * Replace the store logo and/or banner only (Seller Center media; the Customer App's store screen). Same storage path as
+ * updateStoreSettings: storeUpload with STORE_LOGO / STORE_BANNER (content sniffing, size caps, re-encoding, public
+ * visibility only after the malware gate in production). store.manage; the seller is the session's, never a client id.
+ */
+export async function updateStoreMedia(actor: Actor, uploads: { logo?: { data: Buffer; name: string } | null; banner?: { data: Buffer; name: string } | null }) {
+  const sellerId = requireSeller(actor, 'store.manage');
+  if (!uploads.logo && !uploads.banner) throw validation('اختار صورة الشعار أو الغلاف');
+  await db.transaction(async (tx) => {
+    const [store] = await tx.select().from(stores).where(eq(stores.sellerId, sellerId)).for('update');
+    if (!store) throw notFound('المتجر');
+    const logo = uploads.logo ? await storeUpload(tx, actor, { purpose: 'STORE_LOGO', data: uploads.logo.data, originalName: uploads.logo.name }) : null;
+    const banner = uploads.banner ? await storeUpload(tx, actor, { purpose: 'STORE_BANNER', data: uploads.banner.data, originalName: uploads.banner.name }) : null;
+    await tx
+      .update(stores)
+      .set({ ...(logo ? { logoFileId: logo.id } : {}), ...(banner ? { bannerFileId: banner.id } : {}) })
+      .where(eq(stores.id, store.id));
+    await audit(tx, actor, {
+      action: 'seller.store_media_updated',
+      entityType: 'store',
+      entityId: store.id,
+      oldValues: { logoFileId: store.logoFileId, bannerFileId: store.bannerFileId },
+      newValues: { logoFileId: logo?.id ?? store.logoFileId, bannerFileId: banner?.id ?? store.bannerFileId },
+    });
+  });
+}
+
 /* ─────────────────────────── Seller staff ─────────────────────────── */
 
 /* ─────────────────────────── Store team invitations (F-6) ───────────────────────────

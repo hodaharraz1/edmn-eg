@@ -3308,4 +3308,58 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get adminNoTimeline => 'لا توجد أحداث بعد';
+
+  @override
+  String get storeMedia => 'صور المتجر';
+
+  @override
+  String get storeBannerLabel => 'صورة الغلاف';
+
+  @override
+  String get storeLogoLabel => 'الشعار';
+
+  @override
+  String get changeBanner => 'تغيير الغلاف';
+
+  @override
+  String get changeLogo => 'تغيير الشعار';
+
+  @override
+  String get storeMediaHint =>
+      'صور JPG أو PNG أو WebP فقط. السيرفر بيراجع الملف قبل ما يظهر للعملاء.';
+
+  @override
+  String get storeMediaSaved => 'اتحفظت صورة المتجر';
+
+  @override
+  String get markOutOfStock => 'وقف البيع (نفد المخزون)';
+
+  @override
+  String get markOutOfStockConfirm =>
+      'المخزون هيتصفّر ما عدا الكميات المحجوزة لطلبات قائمة. تقدر تزوده تاني من المخزون.';
+
+  @override
+  String get markedOutOfStock => 'اتوقف البيع على المنتج';
+
+  @override
+  String get archiveProduct => 'أرشفة المنتج';
+
+  @override
+  String get archiveProductConfirm =>
+      'المنتج هيختفي من المتجر، وسجل الطلبات القديمة هيفضل زي ما هو. مش هتقدر ترجعه من التطبيق.';
+
+  @override
+  String get productArchivedDone => 'اتأرشف المنتج';
+
+  @override
+  String get confirmAction => 'تأكيد';
+
+  @override
+  String get qtyIncrease => 'زيادة الكمية';
+
+  @override
+  String get qtyDecrease => 'تقليل الكمية';
+
+  @override
+  String get addProductPhoto => 'إضافة صورة للمنتج';
 }

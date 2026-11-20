@@ -1339,5 +1339,22 @@
   "adminSearch": "بحث",
   "adminActorAll": "الكل",
   "adminFilterAction": "اسم الإجراء (مثال: dispute)",
-  "adminNoTimeline": "لا توجد أحداث بعد"
+  "adminNoTimeline": "لا توجد أحداث بعد",
+  "storeMedia": "صور المتجر",
+  "storeBannerLabel": "صورة الغلاف",
+  "storeLogoLabel": "الشعار",
+  "changeBanner": "تغيير الغلاف",
+  "changeLogo": "تغيير الشعار",
+  "storeMediaHint": "صور JPG أو PNG أو WebP فقط. السيرفر بيراجع الملف قبل ما يظهر للعملاء.",
+  "storeMediaSaved": "اتحفظت صورة المتجر",
+  "markOutOfStock": "وقف البيع (نفد المخزون)",
+  "markOutOfStockConfirm": "المخزون هيتصفّر ما عدا الكميات المحجوزة لطلبات قائمة. تقدر تزوده تاني من المخزون.",
+  "markedOutOfStock": "اتوقف البيع على المنتج",
+  "archiveProduct": "أرشفة المنتج",
+  "archiveProductConfirm": "المنتج هيختفي من المتجر، وسجل الطلبات القديمة هيفضل زي ما هو. مش هتقدر ترجعه من التطبيق.",
+  "productArchivedDone": "اتأرشف المنتج",
+  "confirmAction": "تأكيد",
+  "qtyIncrease": "زيادة الكمية",
+  "qtyDecrease": "تقليل الكمية",
+  "addProductPhoto": "إضافة صورة للمنتج"
 }

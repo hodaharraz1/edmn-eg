@@ -330,6 +330,10 @@ class _SheetForm extends ConsumerStatefulWidget {
 }
 
 class _SheetFormState extends ConsumerState<_SheetForm> {
+  /// Phone numbers, e-mails, IDs and numbers are typed and shown left-to-right even in Arabic (+2011… not …2011+).
+  TextDirection? _ltr(String key, TextInputType? type) =>
+      type == TextInputType.phone || type == TextInputType.emailAddress || type == TextInputType.number || const {'mobile', 'email', 'nationalId', 'supportPhone'}.contains(key) ? TextDirection.ltr : null;
+
   final _form = GlobalKey<FormState>();
   late final _c = {for (final f in widget.fields) f.$1: TextEditingController(text: f.$3)};
   bool _busy = false;
@@ -349,7 +353,7 @@ class _SheetFormState extends ConsumerState<_SheetForm> {
       key: _form,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final f in widget.fields) ...[
-          EdmnTextField(key: Key('f-${f.$1}'), controller: _c[f.$1], hint: f.$2, keyboardType: f.$5, validator: f.$4 ? (v) => (v ?? '').trim().isEmpty ? t.fieldRequired : null : null),
+          EdmnTextField(key: Key('f-${f.$1}'), controller: _c[f.$1], hint: f.$2, keyboardType: f.$5, textDirection: _ltr(f.$1, f.$5), validator: f.$4 ? (v) => (v ?? '').trim().isEmpty ? t.fieldRequired : null : null),
           _gap(),
         ],
         ...widget.extra,
@@ -619,6 +623,22 @@ class _ProductEditorScreenState extends ConsumerState<ProductEditorScreen> {
   final _submitIntent = IntentKey();
   bool _busy = false;
 
+  Future<bool> _confirm(String title, String body) async {
+    final t = EdmnLocalizations.of(context);
+    return await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text(title),
+            content: Text(body),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(t.adminCancel)),
+              FilledButton(key: const Key('confirm'), onPressed: () => Navigator.of(c).pop(true), child: Text(t.confirmAction)),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   Future<void> _run(Future<Object?> Function() f, {String? success}) async {
     setState(() => _busy = true);
     await runAction(context, () async => f(), success: success);
@@ -687,7 +707,8 @@ class _ProductEditorScreenState extends ConsumerState<ProductEditorScreen> {
                       width: 88,
                       height: 88,
                       decoration: BoxDecoration(color: EdmnColors.subtle, borderRadius: BorderRadius.circular(EdmnRadii.small), border: Border.all(color: EdmnColors.border)),
-                      child: const Icon(Icons.add_a_photo_outlined, color: EdmnColors.primary),
+                      // Named for screen readers (it was an unnamed button).
+                      child: Icon(Icons.add_a_photo_outlined, color: EdmnColors.primary, semanticLabel: t.addProductPhoto),
                     ),
                   ),
               ]),
@@ -737,6 +758,32 @@ class _ProductEditorScreenState extends ConsumerState<ProductEditorScreen> {
                 onPressed: () => _run(() => api.setProductListed(e.id, !e.isListed, idempotencyKey: newKey())),
               ),
             if (e.status == 'LIVE') ...[_gap(), EdmnSecondaryButton(label: t.viewAsBuyer, onPressed: () => context.push('/products/${Uri.encodeComponent(e.slug)}'))],
+            // S18/S22: stop sales now, or archive (server rules: not under review, not while unpaid orders reserve stock).
+            if (e.status == 'LIVE' || e.status == 'APPROVED') ...[
+              _gap(),
+              EdmnSecondaryButton(
+                key: const Key('out-of-stock'),
+                label: t.markOutOfStock,
+                loading: _busy,
+                onPressed: () async {
+                  if (await _confirm(t.markOutOfStock, t.markOutOfStockConfirm)) await _run(() => api.markProductOutOfStock(e.id, idempotencyKey: newKey()), success: t.markedOutOfStock);
+                },
+              ),
+            ],
+            if (!const {'SUBMITTED', 'UNDER_REVIEW', 'ARCHIVED'}.contains(e.status)) ...[
+              _gap(),
+              TextButton.icon(
+                key: const Key('archive-product'),
+                style: TextButton.styleFrom(foregroundColor: EdmnColors.error),
+                icon: const Icon(Icons.archive_outlined),
+                label: Text(t.archiveProduct),
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        if (await _confirm(t.archiveProduct, t.archiveProductConfirm)) await _run(() => api.archiveProduct(e.id, idempotencyKey: newKey()), success: t.productArchivedDone);
+                      },
+              ),
+            ],
             if (e.status == 'DRAFT' || e.status == 'REJECTED') ...[
               _gap(),
               EdmnPrimaryButton(
@@ -1008,9 +1055,72 @@ class StoreSettingsScreen extends ConsumerWidget {
         data: (st) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
           EdmnCard(child: EdmnSellerSummary(name: st.name, subtitle: st.description)),
           _gap(),
+          _StoreMediaCard(s: st),
+          _gap(),
           _StoreSettingsForm(s: st),
         ]),
       ),
+    );
+  }
+}
+
+/// Logo and banner (S05). Uploaded through the secure store-media route; the screen shows the server's public URLs.
+class _StoreMediaCard extends ConsumerStatefulWidget {
+  const _StoreMediaCard({required this.s});
+  final SellerStoreSettings s;
+  @override
+  ConsumerState<_StoreMediaCard> createState() => _StoreMediaCardState();
+}
+
+class _StoreMediaCardState extends ConsumerState<_StoreMediaCard> {
+  String? _busy;
+
+  Future<void> _change(String field) async {
+    final t = EdmnLocalizations.of(context);
+    final f = await ref.read(filePickerProvider).pick(allowPdf: false);
+    if (f == null || !mounted) return;
+    setState(() => _busy = field);
+    final file = (f.bytes, f.name);
+    await runAction(
+      context,
+      () => ref.read(mobileApiProvider).saveStoreMedia(logo: field == 'logo' ? file : null, banner: field == 'banner' ? file : null, idempotencyKey: newKey()),
+      success: t.storeMediaSaved,
+    );
+    ref.invalidate(storeSettingsProvider);
+    if (mounted) setState(() => _busy = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    final s = widget.s;
+    Widget preview(String? url, double height, String label) => ClipRRect(
+          borderRadius: BorderRadius.circular(EdmnRadii.small),
+          child: Container(
+            height: height,
+            color: EdmnColors.subtle,
+            alignment: Alignment.center,
+            child: url == null
+                ? Icon(Icons.image_outlined, color: EdmnColors.textSecondary, semanticLabel: label)
+                : Image.network(url, fit: BoxFit.cover, width: double.infinity, height: height, semanticLabel: label, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined)),
+          ),
+        );
+    return EdmnCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(t.storeMedia, style: EdmnType.cardTitle),
+        const SizedBox(height: EdmnSpacing.xs),
+        preview(s.bannerUrl, 110, t.storeBannerLabel),
+        const SizedBox(height: EdmnSpacing.xs),
+        EdmnSecondaryButton(key: const Key('change-banner'), label: t.changeBanner, loading: _busy == 'banner', onPressed: _busy == null ? () => _change('banner') : null),
+        const SizedBox(height: EdmnSpacing.sm),
+        Row(children: [
+          SizedBox(width: 72, child: preview(s.logoUrl, 72, t.storeLogoLabel)),
+          const SizedBox(width: EdmnSpacing.sm),
+          Expanded(child: EdmnSecondaryButton(key: const Key('change-logo'), label: t.changeLogo, loading: _busy == 'logo', onPressed: _busy == null ? () => _change('logo') : null)),
+        ]),
+        const SizedBox(height: EdmnSpacing.xs),
+        Text(t.storeMediaHint, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+      ]),
     );
   }
 }
@@ -1030,7 +1140,8 @@ class _StoreSettingsFormState extends ConsumerState<_StoreSettingsForm> {
     final t = EdmnLocalizations.of(context);
     final s = widget.s;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SwitchListTile(key: const Key('store-accepts-returns'), contentPadding: EdgeInsets.zero, value: _accepts, onChanged: (v) => setState(() => _accepts = v), title: Text(t.acceptsReturns)),
+      // Own Material so the tile's ink and background show on the rounded page surface.
+      Material(type: MaterialType.transparency, child: SwitchListTile(key: const Key('store-accepts-returns'), contentPadding: EdgeInsets.zero, value: _accepts, onChanged: (v) => setState(() => _accepts = v), title: Text(t.acceptsReturns))),
       _SheetForm(
         key: ValueKey(_accepts),
         fields: [

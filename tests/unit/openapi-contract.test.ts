@@ -11,7 +11,7 @@ import { ADMIN_API_ROUTES, ALL_API_ROUTES, MOBILE_API_ROUTES } from '@/server/ap
 const SELLER_WRITES = new Set([
   'runSellerOrderStep', 'saveSellerShipment', 'setSellerVariantStock',
   'createSellerProduct', 'saveSellerProductDetails', 'saveSellerProductLogistics', 'addSellerProductImages', 'deleteSellerProductImage',
-  'saveSellerProductVariants', 'submitSellerProduct', 'setSellerProductVisibility', 'saveSellerShippingRates', 'saveSellerStoreSettings',
+  'saveSellerProductVariants', 'submitSellerProduct', 'setSellerProductVisibility', 'saveSellerShippingRates', 'saveSellerStoreSettings', 'saveSellerStoreMedia', 'archiveSellerProduct', 'markSellerProductOutOfStock',
   // Payout REQUESTS only (owner-approved). The request is a claim reviewed by EDMN Maker/Checker; nothing is transferred.
   'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest',
 ]);

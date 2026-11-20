@@ -110,4 +110,34 @@ void main() {
     expect(flags('INSTAPAY'), isNot(contains('isChecked')));
     handle.dispose();
   });
+
+  testWidgets('quantity stepper: both buttons have an accessible name', (t) async {
+    final handle = t.ensureSemantics();
+    var v = 1;
+    await t.pumpWidget(_app(StatefulBuilder(builder: (context, set) => EdmnQuantityStepper(value: v, onChanged: (n) => set(() => v = n)))));
+    expect(find.bySemanticsLabel('زيادة الكمية'), findsOneWidget);
+    expect(find.bySemanticsLabel('تقليل الكمية'), findsOneWidget);
+    await t.tap(find.byKey(const Key('qty-inc')));
+    await t.pump();
+    expect(v, 2);
+    handle.dispose();
+  });
+
+  testWidgets('the app-bar back button has an accessible name', (t) async {
+    final handle = t.ensureSemantics();
+    await t.pumpWidget(_app(const EdmnBackButton()));
+    expect(find.bySemanticsLabel(RegExp('رجوع|Back')), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('upload fields are named by their own label (front and back are distinguishable)', (t) async {
+    final handle = t.ensureSemantics();
+    await t.pumpWidget(_app(Column(children: [
+      EdmnUploadField(label: 'صورة البطاقة (الوجه)', hint: 'اختار صورة', onPick: () {}),
+      EdmnUploadField(label: 'صورة البطاقة (الظهر)', hint: 'اختار صورة', onPick: () {}),
+    ])));
+    expect(find.bySemanticsLabel('صورة البطاقة (الوجه): اختار صورة'), findsOneWidget);
+    expect(find.bySemanticsLabel('صورة البطاقة (الظهر): اختار صورة'), findsOneWidget);
+    handle.dispose();
+  });
 }
