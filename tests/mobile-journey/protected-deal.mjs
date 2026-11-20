@@ -40,6 +40,7 @@ try {
   const before = (await rows('select count(*)::int n from external_deals where buyer_id = $1', [user.id]))[0].n;
   await go('/deals/new');
   await tap('متابعة'); // Invalid draft must be refused and no row created.
+  api('POST', /\/deals$/, 422);
   assert.equal((await rows('select count(*)::int n from external_deals where buyer_id = $1', [user.id]))[0].n, before);
   await type(page.getByRole('textbox', { name: 'اسم المنتج' }), 'Test camera');
   await type(page.getByRole('textbox', { name: 'وصف المنتج وحالته بالتفصيل' }), 'A camera in good condition for this test');
@@ -68,9 +69,12 @@ try {
   await tap('متابعة'); api('PUT', new RegExp(`/deals/${deal.id}/steps/5$`), 200);
   await tap('مراجعة الصفقة');
   await page.getByText('Test camera').first().waitFor({ state: 'visible' });
-  const [saved] = await rows('select status, wizard_step from external_deals where id=$1', [deal.id]);
+  const [saved] = await rows('select status, wizard_step, unit_price, delivery_method, buyer_location_enc from external_deals where id=$1', [deal.id]);
   assert.equal(saved.status, 'DRAFT');
   assert(saved.wizard_step >= 6);
+  assert.equal(Number(saved.unit_price), 300000);
+  assert.equal(saved.delivery_method, 'Delivery service');
+  assert(saved.buyer_location_enc);
   await page.screenshot({ path: 'test-results/mobile-journey/details.png' });
   await tap('دعوة البائع');
   const invitationResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/invitation` && r.request().method() === 'POST', { timeout: 60000 });
@@ -80,8 +84,8 @@ try {
   const invitationLink = (await invitation.json()).link;
   assert(invitationLink && invitationLink.includes('/deal/invite/'));
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
-  await page.mouse.wheel(0, -5000); await page.waitForTimeout(1000); await sem();
-  await page.getByText('رابط الدعوة جاهز — أرسله للبائع فقط').waitFor({ state: 'visible' });
+  await page.mouse.move(190, 350); await page.mouse.wheel(0, -8000); await page.waitForTimeout(1000); await sem();
+  await page.getByRole('button', { name: 'نسخ الرابط' }).waitFor({ state: 'visible' });
   // The link is used only in memory; never print it or capture a screenshot while it is displayed.
   const buyerPage = page;
   const sellerContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
@@ -125,5 +129,23 @@ try {
   const accept = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/change-response` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('قبول التعديل'); assert.equal((await accept).status(), 200);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_PENDING');
-  console.log('PASS Flutter creation, photo, invitation, seller join, offer and negotiation with database checks');
+  page = buyerPage;
+  await go(`/deals/${deal.id}`);
+  const payment = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/payment` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('ادفع وارفع الإيصال');
+  const paymentResponse = await payment;
+  assert.equal(paymentResponse.status(), 200);
+  const pay = await paymentResponse.json();
+  assert.equal(pay.deal.payment.isTest, true);
+  assert(Number.isInteger(pay.deal.payment.amountDuePiastres));
+  await page.getByText('دفعة تجريبية: الأموال الحقيقية مقفولة. متحوّلش أي فلوس حقيقية.').first().waitFor({ state: 'visible' });
+  const [receiptChooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: /للإيصال/ }).first().click()]);
+  await receiptChooser.setFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
+  await type(page.getByRole('textbox', { name: 'المبلغ اللي حوّلته (ج.م)' }), String(pay.deal.payment.amountDuePiastres / 100));
+  const proof = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/payments/${pay.paymentId}/proof` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('إرسال الإيصال للمراجعة'); assert.equal((await proof).status(), 201);
+  await page.getByText('الإيصال وصل وتحت المراجعة. الدفع مش هيتأكد غير بعد مراجعة فريق أضمن.').waitFor({ state: 'visible' });
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_UNDER_REVIEW');
+  assert.equal((await rows('select count(*)::int n from payment_submissions where payment_id=$1', [pay.paymentId]))[0].n, 1);
+  console.log('PASS Flutter deal creation, photo, invitation, negotiation and test payment proof with database checks');
 } finally { await browser.close(); await db.end(); }
