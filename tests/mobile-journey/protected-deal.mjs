@@ -94,7 +94,30 @@ try {
   [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()]);
   await chooser.setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
   await page.screenshot({ path: 'test-results/mobile-journey/creation.png' });
+  // Let the server commit once, then simulate the response being lost in transit.
+  // The UI must retry the same operation/key without creating a second photo.
+  const photoKeys = [];
+  let upstreamStatus;
+  const photoRoute = '**/api/v1/deals/*/photos';
+  const loseFirstResponse = async (route) => {
+    photoKeys.push(route.request().headers()['idempotency-key']);
+    if (photoKeys.length === 1) {
+      upstreamStatus = (await route.fetch()).status();
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  };
+  await page.route(photoRoute, loseFirstResponse);
   await tap('متابعة');
+  assert.equal(upstreamStatus, 200);
+  assert.equal((await rows('select count(*)::int n from deal_evidence where deal_id=$1', [invalidDraft.id]))[0].n, 1);
+  await page.getByText('أعد المحاولة لإكمال رفع الصور المحددة.').waitFor({ state: 'visible' });
+  await tap('متابعة');
+  await page.unroute(photoRoute, loseFirstResponse);
+  assert.equal(photoKeys.length, 2);
+  assert(photoKeys[0] && photoKeys[0] === photoKeys[1], 'Retry must reuse its idempotency key');
+  console.log('PASS Flutter retries a lost upload response without duplication');
   api('POST', /\/deals$/, 201); api('POST', /\/deals\/[^/]+\/photos$/, 200);
   const [deal] = await rows('select id, status from external_deals where buyer_id = $1 and title = $2', [user.id, 'Test camera']);
   assert.equal(deal.id, invalidDraft.id, 'Correcting a rejected upload must reuse the draft');
