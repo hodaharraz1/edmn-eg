@@ -62,6 +62,60 @@ class FakeAdminApi extends AdminApi {
     );
   }
 
+  final calls = <String>[];
+  bool monitorForbidden = false;
+  void _gate(String c) {
+    calls.add(c);
+    if (monitorForbidden) throw const ApiFailure(code: ApiErrorCode.forbidden, status: 403);
+  }
+
+  @override
+  Future<AdminListSellerApplicationsResponse> sellerApplications({String tab = 'pending'}) async {
+    _gate('sellers:$tab');
+    return AdminListSellerApplicationsResponse(items: [
+      AdminListSellerApplicationsResponseItemsItem(id: 's-$tab', applicant: 'سلمى ع.', storeName: 'متجر سلمى', type: 'INDIVIDUAL', status: tab == 'info' ? 'MORE_INFO_REQUIRED' : 'PENDING_REVIEW', riskLevel: 'LOW', submittedAt: '2026-11-18T10:00:00Z'),
+    ]);
+  }
+
+  @override
+  Future<AdminListIdentityReviewsResponse> identityReviews({String tab = 'pending'}) async {
+    _gate('identity:$tab');
+    return const AdminListIdentityReviewsResponse(items: [AdminListIdentityReviewsResponseItemsItem(id: 'k1', name: 'كريم م.', status: 'PENDING_REVIEW', documentsComplete: true, submittedAt: '2026-11-18T10:00:00Z', reviewedAt: null)]);
+  }
+
+  @override
+  Future<AdminListOrdersResponse> orders({String tab = 'all', String? q, int page = 1}) async {
+    _gate('orders:$tab:$page');
+    return AdminListOrdersResponse(
+      items: [AdminListOrdersResponseItemsItem(id: 'o$page', orderId: 'o$page', number: '10000$page', customer: 'عمر ا.', store: null, status: 'PENDING_PAYMENT', total: 1937898, at: '2026-11-19T10:00:00Z', sellerOrders: 1)],
+      page: page,
+      hasMore: page == 1,
+    );
+  }
+
+  @override
+  Future<AdminListDealsResponse> deals({String tab = 'active'}) async {
+    _gate('deals:$tab');
+    return const AdminListDealsResponse(items: [AdminListDealsResponseItemsItem(id: 'd1', number: '5001', title: 'لابتوب مستعمل', buyer: 'منى أ.', seller: null, sellerConfirmed: false, status: 'ACTIVE', buyerPays: 1500000, updatedAt: '2026-11-19T10:00:00Z')]);
+  }
+
+  @override
+  Future<AdminListDisputesResponse> disputes({String tab = 'open'}) async {
+    _gate('disputes:$tab');
+    return AdminListDisputesResponse(items: [
+      if (tab != 'closed') AdminListDisputesResponseItemsItem(id: 'x1', number: '7001', kind: 'ORDER', claimant: 'أحمد م.', reasonCode: 'NOT_AS_DESCRIBED', claimedAmount: 40000, status: 'OPEN', assignedToMe: tab == 'mine', createdAt: '2026-11-19T10:00:00Z'),
+    ]);
+  }
+
+  @override
+  Future<AdminListAuditLogResponse> auditLog({int? before}) async {
+    _gate('audit:${before ?? '-'}');
+    return AdminListAuditLogResponse(
+      items: [AdminListAuditLogResponseItemsItem(id: before == null ? 900 : 800, at: '2026-11-19T10:00:00Z', actorType: 'ADMIN', actor: 'مسؤول ا.', action: before == null ? 'seller.approved' : 'payment.confirmed', entityType: 'seller', entityId: 'e1', channel: 'WEB', hasReason: false)],
+      nextBefore: before == null ? 900 : null,
+    );
+  }
+
   @override
   Future<int> revokeUserSessions(String userId, {required String reason, required String idempotencyKey}) async {
     revokeAttempts++;
@@ -221,5 +275,101 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const Key('kpi-gmv')), findsOneWidget);
     expect(find.byKey(const Key('test-money-notice')), findsNothing);
+  });
+
+  testWidgets('monitoring: the home menu shows exactly the screens the server permissions allow', (t) async {
+    final api = FakeAdminApi(permissions: const ['orders.view', 'disputes.manage']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    expect(find.byKey(const Key('open-/monitor/orders')), findsOneWidget);
+    expect(find.byKey(const Key('open-/monitor/disputes')), findsOneWidget);
+    for (final hidden in ['sellers', 'identity', 'deals', 'audit']) {
+      expect(find.byKey(Key('open-/monitor/$hidden')), findsNothing, reason: hidden);
+    }
+  });
+
+  testWidgets('monitoring: every screen renders server rows with labelled status, EGP and the read-only notice', (t) async {
+    final api = FakeAdminApi(permissions: const ['sellers.review', 'identity.view', 'orders.view', 'deals.view', 'disputes.manage', 'audit.view']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    final expectations = {
+      '/monitor/sellers': ('متجر سلمى', 'قيد المراجعة'),
+      '/monitor/identity': ('كريم م.', 'قيد المراجعة'),
+      '/monitor/orders': ('#100001', 'في انتظار الدفع'),
+      '/monitor/deals': ('#5001 · لابتوب مستعمل', 'نشطة'),
+      '/monitor/disputes': ('#7001', 'مفتوح'),
+      '/monitor/audit': ('seller.approved', 'ADMIN'),
+    };
+    for (final e in expectations.entries) {
+      await t.tap(find.byKey(Key('open-${e.key}')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const Key('read-only-notice')), findsOneWidget, reason: e.key);
+      expect(find.text(e.value.$1), findsOneWidget, reason: e.key);
+      expect(find.text(e.value.$2), findsWidgets, reason: e.key);
+      await t.tap(find.byType(BackButton));
+      await t.pumpAndSettle();
+    }
+    // Money is the server's piastres, formatted like the web formatEGP.
+    await t.tap(find.byKey(const Key('open-/monitor/deals')));
+    await t.pumpAndSettle();
+    expect(find.text('15,000 ج.م'), findsOneWidget);
+    expect(find.text('البائع لم ينضم بعد'), findsOneWidget);
+  });
+
+  testWidgets('monitoring: tabs reload from the server; pages load more; audit pages by keyset', (t) async {
+    final api = FakeAdminApi(permissions: const ['sellers.review', 'orders.view', 'disputes.manage', 'audit.view']);
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-/monitor/sellers')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('tab-info')));
+    await t.pumpAndSettle();
+    expect(api.calls, containsAllInOrder(['sellers:pending', 'sellers:info']));
+    expect(find.text('مطلوب معلومات'), findsOneWidget);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+
+    await t.tap(find.byKey(const Key('open-/monitor/orders')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('load-more')));
+    await t.pumpAndSettle();
+    expect(api.calls, containsAllInOrder(['orders:all:1', 'orders:all:2']));
+    expect(find.text('#100001'), findsOneWidget);
+    expect(find.text('#100002'), findsOneWidget);
+    expect(find.byKey(const Key('load-more')), findsNothing);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+
+    await t.tap(find.byKey(const Key('open-/monitor/disputes')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('tab-closed')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('empty')), findsOneWidget);
+    await t.tap(find.byKey(const Key('tab-mine')));
+    await t.pumpAndSettle();
+    expect(find.text('مسند إليك'), findsOneWidget);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+
+    await t.tap(find.byKey(const Key('open-/monitor/audit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('load-more')));
+    await t.pumpAndSettle();
+    expect(api.calls, containsAllInOrder(['audit:-', 'audit:900']));
+    expect(find.text('payment.confirmed'), findsOneWidget);
+  });
+
+  testWidgets('monitoring: a server refusal shows the error state, never rows', (t) async {
+    final api = FakeAdminApi(permissions: const ['deals.view'])..monitorForbidden = true;
+    await t.pumpWidget(_app(api));
+    await t.pumpAndSettle();
+    await _ready(t);
+    await t.tap(find.byKey(const Key('open-/monitor/deals')));
+    await t.pumpAndSettle();
+    expect(find.byType(ErrorView), findsOneWidget);
+    expect(find.byKey(const Key('row-d1')), findsNothing);
   });
 }

@@ -2989,4 +2989,140 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get adminAccount => 'الحساب والأمان';
+
+  @override
+  String get adminMonitoring => 'المتابعة';
+
+  @override
+  String get adminSellerApplications => 'طلبات البائعين';
+
+  @override
+  String get adminIdentityReviews => 'التحقق من الهوية (KYC)';
+
+  @override
+  String get adminOrders => 'الطلبات والشحن';
+
+  @override
+  String get adminDeals => 'الصفقات المضمونة';
+
+  @override
+  String get adminDisputes => 'النزاعات والشكاوى';
+
+  @override
+  String get adminAuditLog => 'سجل العمليات';
+
+  @override
+  String get adminTabPending => 'قيد المراجعة';
+
+  @override
+  String get adminTabNeedsInfo => 'بانتظار معلومات';
+
+  @override
+  String get adminTabWaitingCustomer => 'بانتظار العميل';
+
+  @override
+  String get adminTabApproved => 'تم التحقق';
+
+  @override
+  String get adminTabRejected => 'مرفوض';
+
+  @override
+  String get adminTabAllOrders => 'كل الطلبات';
+
+  @override
+  String get adminTabFollowUp => 'شحنات بلا تأكيد استلام';
+
+  @override
+  String get adminTabActive => 'جارية';
+
+  @override
+  String get adminTabDisputed => 'متنازع عليها';
+
+  @override
+  String get adminTabDone => 'منتهية';
+
+  @override
+  String get adminTabOpen => 'مفتوحة';
+
+  @override
+  String get adminTabMine => 'مسندة إليّ';
+
+  @override
+  String get adminTabClosed => 'منتهية';
+
+  @override
+  String get adminEmptyList => 'مفيش عناصر هنا دلوقتي';
+
+  @override
+  String get adminLoadMore => 'عرض المزيد';
+
+  @override
+  String get adminDocsComplete => 'المستندات كاملة';
+
+  @override
+  String get adminDocsMissing => 'مستندات ناقصة';
+
+  @override
+  String get adminSellerUnconfirmed => 'البائع لم ينضم بعد';
+
+  @override
+  String get adminKindDeal => 'صفقة مضمونة';
+
+  @override
+  String get adminKindReturn => 'مرتجع';
+
+  @override
+  String get adminKindOrder => 'طلب';
+
+  @override
+  String get adminAssignedToMe => 'مسند إليك';
+
+  @override
+  String get adminSearchOrders => 'رقم الطلب أو اسم العميل';
+
+  @override
+  String get adminDecisionsOnWeb =>
+      'عرض فقط. القرارات (موافقة/رفض، حسم النزاع، إتاحة الأموال) من لوحة الإدارة على الويب، والأسماء مختصرة لحماية البيانات.';
+
+  @override
+  String get adminStatusPendingReview => 'قيد المراجعة';
+
+  @override
+  String get adminStatusMoreInfo => 'مطلوب معلومات';
+
+  @override
+  String get adminStatusApproved => 'مقبول';
+
+  @override
+  String get adminStatusRejected => 'مرفوض';
+
+  @override
+  String get adminStatusReverify => 'إعادة تحقق';
+
+  @override
+  String get adminStatusOpen => 'مفتوح';
+
+  @override
+  String get adminStatusUnderReview => 'تحت المراجعة';
+
+  @override
+  String get adminStatusAwaitingInfo => 'بانتظار معلومات';
+
+  @override
+  String get adminStatusResolved => 'تم الحسم';
+
+  @override
+  String get adminStatusClosed => 'مغلق';
+
+  @override
+  String get adminStatusActive => 'نشطة';
+
+  @override
+  String get adminStatusDisputed => 'عليها نزاع';
+
+  @override
+  String get adminStatusRefunded => 'مستردة';
+
+  @override
+  String get adminStatusShipped => 'في الطريق';
 }

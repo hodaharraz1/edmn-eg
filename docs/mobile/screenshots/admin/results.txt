@@ -1,0 +1,25 @@
+PASS admin@edmn.local: sign-in + TOTP — POST /api/v1/admin/auth/login 200 | POST /api/v1/admin/auth/mfa/verify 200
+PASS dashboard: GET 200 — GET /api/v1/admin/dashboard 200
+PASS sellers/applications: GET 200 — GET /api/v1/admin/sellers/applications 200
+PASS sellers/applications: shows the DB item «ركن الكتب» — matches=1
+PASS sellers/applications: read-only notice — matches=1
+PASS identity/reviews: GET 200 — GET /api/v1/admin/identity/reviews 200
+PASS identity/reviews: read-only notice — matches=1
+PASS orders: GET 200 — GET /api/v1/admin/orders 200
+PASS orders: shows the DB item «#100010» — matches=1
+PASS orders: read-only notice — matches=1
+PASS deals: GET 200 — GET /api/v1/admin/deals 200
+PASS deals: read-only notice — matches=1
+PASS disputes: GET 200 — GET /api/v1/admin/disputes 200
+PASS disputes: read-only notice — matches=1
+PASS audit: GET 200 — GET /api/v1/admin/audit 200
+PASS audit: shows the DB item «auth.totp_verified» — matches=3
+PASS audit: read-only notice — matches=1
+PASS catalog@edmn.local: sign-in + TOTP — POST /api/v1/admin/auth/login 200 | POST /api/v1/admin/auth/mfa/verify 200
+PASS catalog@: «طلبات البائعين» shown (sellers.review granted) — shown=true
+PASS catalog@: «التحقق من الهوية (KYC)» shown (identity.view granted) — shown=true
+PASS catalog@: «الطلبات والشحن» hidden (orders.view not granted) — shown=false
+PASS catalog@: «الصفقات المضمونة» hidden (deals.view not granted) — shown=false
+PASS catalog@: «النزاعات والشكاوى» hidden (disputes.manage not granted) — shown=false
+PASS catalog@: «سجل العمليات» hidden (audit.view not granted) — shown=false
+PASS direct call without a token is refused — status=401

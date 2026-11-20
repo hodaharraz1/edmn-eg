@@ -32,6 +32,19 @@ class AdminApi {
   Future<AdminGetDashboardResponse> dashboard({String range = '30d'}) async =>
       AdminGetDashboardResponse.fromJson(await client.getJson(AdminApiPaths.adminGetDashboard.path, query: {'range': range}));
 
+  // Monitoring (read-only; each enforced server-side with the web console's permission for the same page).
+  Future<AdminListSellerApplicationsResponse> sellerApplications({String tab = 'pending'}) async =>
+      AdminListSellerApplicationsResponse.fromJson(await client.getJson(AdminApiPaths.adminListSellerApplications.path, query: {'tab': tab}));
+  Future<AdminListIdentityReviewsResponse> identityReviews({String tab = 'pending'}) async =>
+      AdminListIdentityReviewsResponse.fromJson(await client.getJson(AdminApiPaths.adminListIdentityReviews.path, query: {'tab': tab}));
+  Future<AdminListOrdersResponse> orders({String tab = 'all', String? q, int page = 1}) async => AdminListOrdersResponse.fromJson(
+      await client.getJson(AdminApiPaths.adminListOrders.path, query: {'tab': tab, if (q != null && q.trim().isNotEmpty) 'q': q.trim(), 'page': '$page'}));
+  Future<AdminListDealsResponse> deals({String tab = 'active'}) async => AdminListDealsResponse.fromJson(await client.getJson(AdminApiPaths.adminListDeals.path, query: {'tab': tab}));
+  Future<AdminListDisputesResponse> disputes({String tab = 'open'}) async =>
+      AdminListDisputesResponse.fromJson(await client.getJson(AdminApiPaths.adminListDisputes.path, query: {'tab': tab}));
+  Future<AdminListAuditLogResponse> auditLog({int? before}) async =>
+      AdminListAuditLogResponse.fromJson(await client.getJson(AdminApiPaths.adminListAuditLog.path, query: {if (before != null) 'before': '$before'}));
+
   Future<Profile> me() async => Profile.fromJson(await client.getJson(AdminApiPaths.adminGetMe.path));
   Future<AdminListMySessionsResponse> mySessions() async => AdminListMySessionsResponse.fromJson(await client.getJson(AdminApiPaths.adminListMySessions.path));
   Future<void> revokeSession(String sessionId, {required String idempotencyKey}) =>

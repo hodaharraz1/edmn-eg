@@ -7,6 +7,7 @@ import 'features/auth/mfa_screen.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/monitoring/monitoring_screens.dart';
 import 'features/security/revoke_user_sessions_screen.dart';
 import 'providers.dart';
 
@@ -31,6 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/mfa', builder: (c, s) => const MfaScreen()),
       GoRoute(path: '/', builder: (c, s) => const AdminHomeScreen()),
       GoRoute(path: '/dashboard', builder: (c, s) => const AdminDashboardScreen()),
+      for (final spec in monitorSpecs) GoRoute(path: spec.path, builder: (c, s) => MonitorListScreen(spec: spec)),
       GoRoute(path: '/security/revoke-sessions', builder: (c, s) => const RevokeUserSessionsScreen()),
     ],
   );
