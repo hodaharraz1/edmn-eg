@@ -157,7 +157,7 @@ try {
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
   console.log('PASS Flutter rejects an invalid invitation and preserves the deal');
-  try { await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink); }
+  try { await type(page.getByRole('textbox').first(), invitationLink); }
   catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
   await tap('الانضمام للصفقة'); assert.equal((await claim).status(), 200);
