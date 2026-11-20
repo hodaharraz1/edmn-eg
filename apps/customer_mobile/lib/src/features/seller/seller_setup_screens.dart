@@ -330,6 +330,10 @@ class _SheetForm extends ConsumerStatefulWidget {
 }
 
 class _SheetFormState extends ConsumerState<_SheetForm> {
+  /// Phone numbers, e-mails, IDs and numbers are typed and shown left-to-right even in Arabic (+2011… not …2011+).
+  TextDirection? _ltr(String key, TextInputType? type) =>
+      type == TextInputType.phone || type == TextInputType.emailAddress || type == TextInputType.number || const {'mobile', 'email', 'nationalId', 'supportPhone'}.contains(key) ? TextDirection.ltr : null;
+
   final _form = GlobalKey<FormState>();
   late final _c = {for (final f in widget.fields) f.$1: TextEditingController(text: f.$3)};
   bool _busy = false;
@@ -349,7 +353,7 @@ class _SheetFormState extends ConsumerState<_SheetForm> {
       key: _form,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final f in widget.fields) ...[
-          EdmnTextField(key: Key('f-${f.$1}'), controller: _c[f.$1], hint: f.$2, keyboardType: f.$5, validator: f.$4 ? (v) => (v ?? '').trim().isEmpty ? t.fieldRequired : null : null),
+          EdmnTextField(key: Key('f-${f.$1}'), controller: _c[f.$1], hint: f.$2, keyboardType: f.$5, textDirection: _ltr(f.$1, f.$5), validator: f.$4 ? (v) => (v ?? '').trim().isEmpty ? t.fieldRequired : null : null),
           _gap(),
         ],
         ...widget.extra,

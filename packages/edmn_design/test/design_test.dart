@@ -129,4 +129,15 @@ void main() {
     expect(find.bySemanticsLabel(RegExp('رجوع|Back')), findsOneWidget);
     handle.dispose();
   });
+
+  testWidgets('upload fields are named by their own label (front and back are distinguishable)', (t) async {
+    final handle = t.ensureSemantics();
+    await t.pumpWidget(_app(Column(children: [
+      EdmnUploadField(label: 'صورة البطاقة (الوجه)', hint: 'اختار صورة', onPick: () {}),
+      EdmnUploadField(label: 'صورة البطاقة (الظهر)', hint: 'اختار صورة', onPick: () {}),
+    ])));
+    expect(find.bySemanticsLabel('صورة البطاقة (الوجه): اختار صورة'), findsOneWidget);
+    expect(find.bySemanticsLabel('صورة البطاقة (الظهر): اختار صورة'), findsOneWidget);
+    handle.dispose();
+  });
 }

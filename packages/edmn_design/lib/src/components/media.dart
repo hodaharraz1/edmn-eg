@@ -184,9 +184,10 @@ class EdmnUploadField extends StatelessWidget {
           style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary),
         ),
         const SizedBox(height: EdmnSpacing.xs),
+        // The field's own label is part of the name: two pickers both read «اختار صورة» (ID front / back) before.
         Semantics(
           button: true,
-          label: fileName ?? hint,
+          label: '$label: ${fileName ?? hint}',
           excludeSemantics: true,
           child: InkWell(
             key: const Key('upload-field'),
@@ -229,9 +230,10 @@ class EdmnUploadField extends StatelessWidget {
                   else if (hasFile && onClear != null)
                     IconButton(
                       onPressed: onClear,
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close_rounded,
                         color: EdmnColors.textSecondary,
+                        semanticLabel: MaterialLocalizations.of(context).deleteButtonTooltip,
                       ),
                     ),
                 ],
