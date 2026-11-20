@@ -396,10 +396,22 @@ const state = {};
       await type(p.getByRole('textbox').nth(1), A.nid);
       await type(p.getByRole('textbox').nth(4), 'شارع ٩، المعادي');
       await type(p.getByRole('textbox').nth(5), 'القاهرة');
+      // Batch 5: the governorate comes from the database list (searchable picker), not a typed number.
+      const pickGov = async (search, name) => {
+        await tapFresh(p.getByRole('button', { name: /^المحافظة:/ }).last());
+        await p.getByRole('textbox', { name: /ابحث عن المحافظة/ }).last().waitFor({ timeout: 10000 });
+        await type(p.getByRole('textbox', { name: /ابحث عن المحافظة/ }).last(), search);
+        await p.waitForTimeout(800); await sem();
+        if (process.env.JOURNEY_DEBUG) await dump(`governorate ${search}`);
+        await p.locator(`flt-semantics:has-text("${name}")`).last().click(); await p.waitForTimeout(1200); await sem();
+      };
+      await pickGov('اسكندر', 'الإسكندرية');
+      check('A6 governorate picker: search without hamza finds «الإسكندرية» and shows it', (await p.getByRole('button', { name: 'المحافظة: الإسكندرية' }).count()) > 0, 'picker value');
       await shot('a6-owner-sheet');
       await tapFresh(p.getByRole('button', { name: 'حفظ' }).last());
       await p.waitForTimeout(1500);
-      check('A6 owner identity and address saved', calls.some((c) => /PUT \/api\/v1\/seller\/application\/identity 200/.test(c)), calls.filter((c) => c.includes('application/identity')).join(' | '));
+      const alexId = sql(`select id from governorates where name_en='Alexandria'`);
+      check('A6 owner identity and address saved with the governorate id', calls.some((c) => /PUT \/api\/v1\/seller\/application\/identity 200/.test(c)) && sql(`select governorate_id from sellers where owner_user_id='${uid}'`) === alexId, `governorate_id=${sql(`select governorate_id from sellers where owner_user_id='${uid}'`)} (Alexandria=${alexId})`);
       await shot('a6-after-owner');
       // The application's mobile equals the account's verified phone, so the server carries the verification over.
       check('A7 application mobile verified (same as the verified account phone)', sql(`select mobile_verified_at is not null from sellers where owner_user_id='${uid}'`) === 't', 'mobile_verified_at');
@@ -409,14 +421,15 @@ const state = {};
       await type(p.getByRole('textbox').nth(0), A.store);
       await type(p.getByRole('textbox').nth(1), 'إكسسوارات موبايل أصلية بضمان');
       await type(p.getByRole('textbox').nth(2), 'شارع ٩، المعادي، القاهرة');
+      await pickGov('القاه', 'القاهرة');
       const logoBtn = p.getByRole('button', { name: /شعار المتجر/ }).first();
       const [lc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 15000 }), logoBtn.click()]);
       await lc.setFiles(img); await p.waitForTimeout(1200); await sem();
       await shot('a8-store-sheet');
       await tapFresh(p.getByRole('button', { name: 'حفظ' }).last());
       await p.waitForTimeout(1500);
-      const st = sql(`select st.name || '|' || (st.logo_file_id is not null) from stores st join sellers s on s.id = st.seller_id where s.owner_user_id='${uid}'`).split('|');
-      check('A8 store created with name, return address and logo', calls.some((c) => /POST \/api\/v1\/seller\/application\/store 20\d/.test(c)) && st[0] === A.store && st[1] === 'true', `store=${st[0]} logo=${st[1]}`);
+      const st = sql(`select st.name || '|' || (st.logo_file_id is not null) || '|' || st.return_governorate_id from stores st join sellers s on s.id = st.seller_id where s.owner_user_id='${uid}'`).split('|');
+      check('A8 store created with name, return address (Cairo id from the picker) and logo', calls.some((c) => /POST \/api\/v1\/seller\/application\/store 20\d/.test(c)) && st[0] === A.store && st[1] === 'true' && st[2] === sql(`select id from governorates where name_en='Cairo'`), `store=${st[0]} logo=${st[1]} returnGovernorate=${st[2]}`);
       if (process.env.JOURNEY_DEBUG) await dump('after store');
       // A9. Seller documents: ID front and back (private seller documents).
       for (const side of ['الوجه', 'الظهر']) {
