@@ -95,7 +95,7 @@ After the unified integration (Wishlist B22): Blocked by Business Decision 5, Im
 | D04 | Transaction type | /deals/new step 1 (condition NEW/USED) | Merged | PUT /deals/{id}/steps/1 | backend | yes |
 | D05 | Counterparty | /deals/new step 4 (seller name/phone) | Merged | PUT /deals/{id}/steps/5 | backend (seeded via HTTP) | — |
 | D06 | Invitation | /deals/:id invite + /deals/join | Implemented | POST invitation / refresh / revoke; POST /deal-invitations/claim | widget+backend | yes |
-| D07 | Deal details | /deals/new step 1 | Implemented | PUT steps/1; photos: POST /deals/{id}/photos (API only — picker not in wizard yet) | backend | yes |
+| D07 | Deal details | /deals/new step 1 | Implemented | PUT steps/1; photos: wizard picker + POST /deals/{id}/photos (up to six per request) | backend | yes |
 | D08 | Delivery terms | /deals/new step 3 | Merged | PUT steps/3, steps/4 | backend | yes |
 | D09 | Fees | /deals/:id money card | Merged | money.basis INDICATIVE/OFFER/AGREED (server) | widget+backend | yes |
 | D10 | Review | /deals/new step 5 → /deals/:id | Merged | GET /deals/{id} | — | — |

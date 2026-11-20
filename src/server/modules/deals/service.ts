@@ -23,7 +23,7 @@ import { protectOutboxRow } from '@/server/modules/notifications/outbox';
 import { decryptLocation, encryptLocation, locationFromValues, locationSchema, toStoredLocation } from '@/server/modules/locations';
 import { payoutMask, payoutSchema, currentLegalVersion, type PayoutInput } from '@/server/modules/sellers/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
-import { storeUpload } from '@/server/storage/uploads';
+import { sniff, storeUpload } from '@/server/storage/uploads';
 import { parse, requireReason, transition } from '../_shared';
 import { returnPolicySchema, type ReturnPolicy, type ReturnPolicySnapshot } from '@/domain/return-policy';
 import { offeredDestinations } from '@/server/modules/payments/service';
@@ -185,7 +185,11 @@ export async function addDealPhotos(actor: Actor, dealId: string, photos: { data
   await db.transaction(async (tx) => {
     const deal = await lockBuyerDeal(tx, actor, dealId);
     if (!['DRAFT', 'INVITED'].includes(deal.status)) throw invalidState('مينفعش تضيف صور دلوقتي');
-    for (const p of photos.slice(0, 6)) {
+    // The web action also calls this service directly. Reject excess or non-image files instead of
+    // silently discarding files or accepting a PDF as a product photo.
+    if (photos.length < 1 || photos.length > 6) throw validation('يمكن رفع حتى 6 صور في الطلب الواحد');
+    if (photos.some((p) => !['jpeg', 'png', 'webp'].includes(sniff(p.data) ?? ''))) throw validation('يجب رفع صورة (JPG / PNG / WEBP)');
+    for (const p of photos) {
       const f = await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data: p.data, originalName: p.name });
       await tx.insert(dealEvidence).values({ dealId: deal.id, fileId: f.id, kind: 'PRODUCT_PHOTO', uploadedBy: actor.userId! });
     }

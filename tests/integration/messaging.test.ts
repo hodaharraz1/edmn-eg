@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, count, eq, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import { customerActor, sellerActor } from '@/server/auth/actors';
@@ -359,7 +359,14 @@ describe('security', () => {
     const { c, so } = await paidOrder();
     const conv = await openSellerOrderConversation(c.actor, so.id);
     const results: string[] = [];
-    for (let i = 0; i < 22; i++) results.push(await code(send(c.actor, conv.id, `رسالة ${i}`)));
+    // The limiter intentionally uses fixed clock windows. Keep this test in one
+    // window even if a slow CI worker crosses a minute boundary during the loop.
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+    try {
+      for (let i = 0; i < 22; i++) results.push(await code(send(c.actor, conv.id, `رسالة ${i}`)));
+    } finally {
+      clock.mockRestore();
+    }
     expect(results.filter((r) => r === 'OK').length).toBeLessThanOrEqual(20);
     expect(results).toContain('RATE_LIMITED');
   });

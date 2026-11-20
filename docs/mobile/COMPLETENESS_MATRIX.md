@@ -16,7 +16,7 @@ A screen existing is not enough.
 | **MISSING** | No implementation |
 | **BLOCKED** | Waiting on an owner decision or on external setup |
 
-No row is graded on a physical device: none was attached. Native iOS is not built: no Mac was attached (see the end of this file).
+No row is graded on a physical device. Native iOS simulator evidence is limited to the partial journey described below.
 
 ## Buyer (Customer App)
 
@@ -32,7 +32,7 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | **Checkout → order** | **COMPLETE ✓UI** | `checkout-flow.mjs`: 4 steps; `POST /orders` 201; one order row, `PENDING_PAYMENT`; server total in piastres; cart emptied |
 | **Payment instructions + receipt upload** | **COMPLETE ✓UI** | `POST /payments/{id}/proof` 201; one submission; `PAYMENT_SUBMITTED`; file stored PRIVATE. Verification is staff-only (web) |
 | Orders, tracking, delivery confirmation, cancel | COMPLETE | `orders`, `seller-orders/*` + tests. Not driven in the UI yet |
-| Protected Deal (create, offer, pay, ship, delivery code, receipt, cancel) | PARTIAL | API and screens complete with backend tests. **Gaps:** <br>• the photo picker is not in the creation wizard (API exists, `POST /deals/{id}/photos`); <br>• not driven in the UI; <br>• the delivery code fails in `staging` mode without `DELIVERY_OTP_KEY` (owner decision) |
+| Protected Deal (create, offer, pay, ship, delivery code, receipt, cancel) | PARTIAL | The creation wizard selects/removes up to six photos per request. [Flutter web → API → isolated PostgreSQL](https://github.com/hodaharraz1/edmn-eg/actions/runs/44757775978) passed creation, photo upload, invitation and claim, offer/change/acceptance, test payment proof, shipment, wrong and correct delivery codes, buyer receipt, invalid image rejection and correction, invalid invitation rejection, and cancellation of a separate draft. Authorized staff performed payment review and two-person test settlement in the web console; the resulting database states and settlement entry were checked. Remaining: full native simulator journey and other failure paths in Flutter, plus safe reconciliation for local-disk upload orphans. PostgreSQL-backed uploads now participate in the metadata transaction. Local Playwright generates an ephemeral `DELIVERY_OTP_KEY`; staging needs separately provisioned key material. |
 | Wallet, history, payout request, receiving accounts | COMPLETE | Request only; no money movement from mobile |
 | Chat (buyer and seller) and notifications | COMPLETE ✓UI | `e2e-flow.mjs`: the conversation is opened from the order page, a message is sent and persisted; notifications marked read |
 | Returns, refunds, disputes | COMPLETE | Phase 5 integration tests; refunds stay staff-only. Not driven in the UI yet |
@@ -87,5 +87,5 @@ No row is graded on a physical device: none was attached. Native iOS is not buil
 | Android merged manifests (release) | **Verified** (`aapt2`) | `allowBackup=false`, `fullBackupContent=false`, `dataExtractionRules` set, no `usesCleartextTraffic`, not debuggable. Permissions: `INTERNET` plus the AndroidX-internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` |
 | Android debug manifest | Verified | Customer: cleartext only in debug (for the local server), debuggable |
 | Android emulator / device runtime | **Not run** | No KVM or emulator in this environment, and no device attached |
-| iOS simulator / device build | **Not run: BLOCKED** | No Mac attached to this session (`list_computer_folders`: none). The Flutter.framework codesign issue can only be investigated on a Mac |
+| iOS simulator | **Partial native journey verified** | On a Mac, an iPhone 17 Pro simulator connected to an isolated localhost PostgreSQL-backed test server. A native Flutter integration test signed in and created a DRAFT, verified in the test database; the rest of the native journey remains untested. A temporary copy outside Documents was used because the original location triggered a Flutter.framework codesign/provenance issue. No physical device was used. |
 | UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Run: 142/142 PASS** | checkout 9/9, e2e 13/13, wishlist 9/9, admin 39/39 (batches 2–3), **seller 72/72 (batch 4: A onboarding, B products, C fulfilment, D returns → dispute, E earnings + payout request)** |

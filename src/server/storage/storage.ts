@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { env } from '@/server/core/env';
-import { db } from '@/server/db/client';
+import { db, type DbOrTx } from '@/server/db/client';
 import { storedObjects } from '@/server/db/schema/files';
 
 /**
@@ -11,7 +11,7 @@ import { storedObjects } from '@/server/db/schema/files';
  * (see docs/ARCHITECTURE.md → Storage) without touching callers.
  */
 export interface StorageDriver {
-  put(visibility: 'PUBLIC' | 'PRIVATE', key: string, data: Buffer): Promise<void>;
+  put(visibility: 'PUBLIC' | 'PRIVATE', key: string, data: Buffer, conn?: DbOrTx): Promise<void>;
   get(visibility: 'PUBLIC' | 'PRIVATE', key: string): Promise<Buffer | null>;
   remove(visibility: 'PUBLIC' | 'PRIVATE', key: string): Promise<void>;
   exists(visibility: 'PUBLIC' | 'PRIVATE', key: string): Promise<boolean>;
@@ -72,10 +72,10 @@ class DatabaseStorage implements StorageDriver {
     if (!isSafeKey(key)) throw new Error('unsafe storage key');
   }
 
-  async put(visibility: 'PUBLIC' | 'PRIVATE', key: string, data: Buffer) {
+  async put(visibility: 'PUBLIC' | 'PRIVATE', key: string, data: Buffer, conn: DbOrTx = db) {
     this.check(key);
     // Plain insert: like the disk driver's exclusive create, an existing key is an error, never an overwrite.
-    await db.insert(storedObjects).values({ visibility, key, data, size: data.length });
+    await conn.insert(storedObjects).values({ visibility, key, data, size: data.length });
   }
 
   async get(visibility: 'PUBLIC' | 'PRIVATE', key: string) {

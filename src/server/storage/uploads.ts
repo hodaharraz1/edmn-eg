@@ -119,7 +119,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
   }
 
   const storageKey = `${prefix}/${id}.${ext}`;
-  await storage().put(visibility, storageKey, body);
+  await storage().put(visibility, storageKey, body, tx);
 
   if (visibility === 'PUBLIC' && kind !== 'pdf') {
     for (const [suffix, size] of [
@@ -128,7 +128,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
     ] as const) {
       const v = await sharp(body).resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       const k = `${prefix}/${id}_${suffix}.webp`;
-      await storage().put(visibility, k, v);
+      await storage().put(visibility, k, v, tx);
       variantKeys.push(k);
     }
   }
