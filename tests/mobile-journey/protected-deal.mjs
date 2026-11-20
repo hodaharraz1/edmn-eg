@@ -290,4 +290,21 @@ try {
   await pollStatus('COMPLETED');
   assert.equal((await rows("select count(*)::int n from journal_entries where source_id=$1 and entry_type='DEAL_SETTLEMENT'", [deal.id]))[0].n, 1);
   console.log('PASS Flutter Protected Deal with authorized staff review and two-person test settlement');
+
+  // A separate draft exercises cancellation without mutating the completed deal.
+  page = buyerPage;
+  await go('/deals/new');
+  await type(page.getByRole('textbox', { name: 'اسم المنتج' }), 'Test cancellation camera');
+  await type(page.getByRole('textbox', { name: 'وصف المنتج وحالته بالتفصيل' }), 'A separate draft for cancellation testing');
+  const createCancel = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deals' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('متابعة'); assert.equal((await createCancel).status(), 201);
+  const [cancelDraft] = await rows('select id, status from external_deals where buyer_id=$1 and title=$2', [user.id, 'Test cancellation camera']);
+  assert.equal(cancelDraft.status, 'DRAFT');
+  await freshDeal(cancelDraft.id);
+  await tap('إلغاء الصفقة');
+  await type(page.getByRole('textbox', { name: 'سبب الإلغاء' }), 'Cancel this isolated test draft');
+  const cancelled = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${cancelDraft.id}/cancel` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تأكيد'); assert.equal((await cancelled).status(), 200);
+  assert.equal((await rows('select status from external_deals where id=$1', [cancelDraft.id]))[0].status, 'CANCELLED');
+  console.log('PASS Flutter cancellation: API 200 and CANCELLED');
 } finally { await browser.close(); await db.end(); }
