@@ -6439,6 +6439,12 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'تقليل الكمية'**
   String get qtyDecrease;
+
+  /// No description provided for @addProductPhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة صورة للمنتج'**
+  String get addProductPhoto;
 }
 
 class _EdmnLocalizationsDelegate

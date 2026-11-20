@@ -1190,5 +1190,6 @@
   "productArchivedDone": "Product archived",
   "confirmAction": "Confirm",
   "qtyIncrease": "Increase quantity",
-  "qtyDecrease": "Decrease quantity"
+  "qtyDecrease": "Decrease quantity",
+  "addProductPhoto": "Add a product photo"
 }

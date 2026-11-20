@@ -703,7 +703,8 @@ class _ProductEditorScreenState extends ConsumerState<ProductEditorScreen> {
                       width: 88,
                       height: 88,
                       decoration: BoxDecoration(color: EdmnColors.subtle, borderRadius: BorderRadius.circular(EdmnRadii.small), border: Border.all(color: EdmnColors.border)),
-                      child: const Icon(Icons.add_a_photo_outlined, color: EdmnColors.primary),
+                      // Named for screen readers (it was an unnamed button).
+                      child: Icon(Icons.add_a_photo_outlined, color: EdmnColors.primary, semanticLabel: t.addProductPhoto),
                     ),
                   ),
               ]),

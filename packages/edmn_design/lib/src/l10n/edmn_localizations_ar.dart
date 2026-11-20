@@ -3359,4 +3359,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get qtyDecrease => 'تقليل الكمية';
+
+  @override
+  String get addProductPhoto => 'إضافة صورة للمنتج';
 }

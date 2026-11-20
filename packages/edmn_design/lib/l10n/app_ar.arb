@@ -1355,5 +1355,6 @@
   "productArchivedDone": "اتأرشف المنتج",
   "confirmAction": "تأكيد",
   "qtyIncrease": "زيادة الكمية",
-  "qtyDecrease": "تقليل الكمية"
+  "qtyDecrease": "تقليل الكمية",
+  "addProductPhoto": "إضافة صورة للمنتج"
 }
