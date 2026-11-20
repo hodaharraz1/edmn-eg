@@ -7586,7 +7586,7 @@
     "/api/v1/deals/{dealId}/photos": {
       "post": {
         "operationId": "addDealPhotos",
-        "summary": "Add item photos (buyer, before the seller joins)",
+        "summary": "Add up to six item photos per request (buyer, before the seller joins)",
         "tags": [
           "Protected Deal"
         ],
@@ -7626,7 +7626,7 @@
                 "properties": {
                   "photos": {
                     "type": "array",
-                    "maxItems": 8,
+                    "maxItems": 6,
                     "items": {
                       "type": "string",
                       "format": "binary"

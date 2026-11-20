@@ -1,0 +1,56 @@
+// Real Flutter web UI → local API → isolated PostgreSQL. No tokens, invitation links or OTPs are logged.
+import { chromium } from 'playwright';
+import pg from 'pg';
+import sharp from 'sharp';
+import { mkdir } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const url = new URL(process.env.JOURNEY_DATABASE_URL ?? '');
+if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname) || url.pathname !== '/edmn_journey_test') throw new Error('Journey requires the isolated local edmn_journey_test database');
+const db = new pg.Client({ connectionString: url.toString() });
+await db.connect();
+const rows = async (query, args = []) => (await db.query(query, args)).rows;
+const browser = await chromium.launch({ headless: true });
+const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
+const page = await context.newPage();
+const calls = [];
+page.on('response', (r) => { const u = new URL(r.url()); if (u.pathname.startsWith('/api/v1/') && r.request().method() !== 'GET') calls.push([r.request().method(), u.pathname, r.status()]); });
+const sem = async () => { await page.evaluate(() => document.querySelector('flt-semantics-placeholder')?.click()); await page.waitForTimeout(600); };
+const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
+const type = async (locator, value) => { await locator.click(); await page.keyboard.insertText(value); };
+const tap = async (label) => { await page.getByRole('button', { name: label }).last().click(); await page.waitForTimeout(1500); await sem(); };
+const api = (method, regex, status) => assert(calls.some(([m, p, s]) => m === method && regex.test(p) && s === status), `Missing ${method} ${regex} ${status}`);
+try {
+  await mkdir('test-results/mobile-journey', { recursive: true });
+  await page.goto('http://127.0.0.1:8099/', { waitUntil: 'networkidle' }); await page.waitForTimeout(2500); await sem();
+  const skip = page.getByRole('button', { name: 'تخطي' }).first();
+  if (await skip.count()) { await skip.click(); await page.waitForTimeout(1000); }
+  await go('/sign-in');
+  await type(page.getByRole('textbox').nth(0), 'ahmed@demo.edmn.local');
+  await type(page.getByRole('textbox').nth(1), 'Demo@12345');
+  await tap('تسجيل الدخول'); api('POST', /\/auth\/login$/, 200);
+  const gate = await rows("select value from system_settings where key = 'payments.realMoneyEnabled'");
+  assert(gate.length === 0 || gate[0].value === false, 'Real Money must be OFF');
+  const [user] = await rows('select id from users where email = $1', ['ahmed@demo.edmn.local']);
+  assert(user);
+  const before = (await rows('select count(*)::int n from external_deals where buyer_id = $1', [user.id]))[0].n;
+  await go('/deals/new');
+  await tap('متابعة'); // Invalid draft must be refused and no row created.
+  assert.equal((await rows('select count(*)::int n from external_deals where buyer_id = $1', [user.id]))[0].n, before);
+  await type(page.getByRole('textbox', { name: 'اسم المنتج' }), 'Test camera');
+  await type(page.getByRole('textbox', { name: 'وصف المنتج وحالته بالتفصيل' }), 'A camera in good condition for this test');
+  const png = await sharp({ create: { width: 80, height: 80, channels: 3, background: '#376899' } }).png().toBuffer();
+  const pick = page.getByRole('button', { name: 'اختار صورة' });
+  let [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()]);
+  await chooser.setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
+  await page.getByRole('button', { name: 'حذف' }).last().click(); await page.waitForTimeout(500); await sem();
+  [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()]);
+  await chooser.setFiles({ name: 'test.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
+  await page.screenshot({ path: 'test-results/mobile-journey/creation.png' });
+  await tap('متابعة');
+  api('POST', /\/deals$/, 201); api('POST', /\/deals\/[^/]+\/photos$/, 200);
+  const [deal] = await rows('select id, status from external_deals where buyer_id = $1 and title = $2', [user.id, 'Test camera']);
+  assert.equal(deal.status, 'DRAFT');
+  const evidence = await rows('select f.visibility, f.scan_status from deal_evidence e join files f on f.id=e.file_id where e.deal_id=$1 and e.kind=$2', [deal.id, 'PRODUCT_PHOTO']);
+  assert.deepEqual(evidence, [{ visibility: 'PRIVATE', scan_status: 'UNSCANNED' }]);
+  console.log('PASS Flutter sign-in, invalid draft, add/remove photo, draft and private photo persistence');
+} finally { await browser.close(); await db.end(); }

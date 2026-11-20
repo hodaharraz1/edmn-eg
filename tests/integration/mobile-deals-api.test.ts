@@ -7,6 +7,7 @@ import { POST as changeRespRoute } from '@/app/api/v1/deals/[dealId]/change-resp
 import { POST as confirmRoute } from '@/app/api/v1/deals/[dealId]/confirm-receipt/route';
 import { GET as codeRoute } from '@/app/api/v1/deals/[dealId]/delivery-code/route';
 import { POST as verifyRoute } from '@/app/api/v1/deals/[dealId]/delivery-code/verify/route';
+import { POST as photosRoute } from '@/app/api/v1/deals/[dealId]/photos/route';
 import { POST as inviteRoute } from '@/app/api/v1/deals/[dealId]/invitation/route';
 import { POST as offerRespRoute } from '@/app/api/v1/deals/[dealId]/offer-response/route';
 import { POST as offerRoute } from '@/app/api/v1/deals/[dealId]/offer/route';
@@ -18,9 +19,9 @@ import { GET as listRoute, POST as createRoute } from '@/app/api/v1/deals/route'
 import { POST as proofRoute } from '@/app/api/v1/payments/[paymentId]/proof/route';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { externalDeals, journalEntries, paymentSubmissions } from '@/server/db/schema';
+import { dealEvidence, files, externalDeals, journalEntries, paymentSubmissions } from '@/server/db/schema';
 import { confirmPayment } from '@/server/modules/payments/service';
-import { ensurePaymentSetup, makeAdmin, makeUser, png } from '../helpers/factory';
+import { ensurePaymentSetup, makeAdmin, makeUser, pdf, png } from '../helpers/factory';
 
 /**
  * Flow C — a Protected Deal between two app users through the REAL mobile routes: create → steps → invite → seller
@@ -53,6 +54,40 @@ let admin: Actor;
 beforeAll(async () => {
   admin = await makeAdmin();
   await ensurePaymentSetup();
+});
+
+describe('deal photo uploads', () => {
+  it('enforces image type, request limits and ownership; stores privately and replays duplicate requests', async () => {
+    const buyer = await makeUser();
+    const stranger = await makeUser();
+    const bt = await login(buyer.email!);
+    const xt = await login(stranger.email!);
+    const created = await call(createRoute, '/deals', { token: bt, idem: key(), body: { title: 'Test camera', description: 'A camera in good condition', condition: 'USED', quantity: 1 } });
+    expect(created.status).toBe(201);
+    const id = created.body.id as string;
+    const path = `/deals/${id}/photos`;
+    const params = { dealId: id };
+    const image = new Uint8Array(await png('photo'));
+    const form = (bytes: Uint8Array, name: string, count = 1) => {
+      const f = new FormData();
+      for (let i = 0; i < count; i++) f.append('photos', new Blob([new Uint8Array(bytes)]), name);
+      return f;
+    };
+    const upload = (token: string | undefined, body: FormData, idem = key()) => call(photosRoute, path, { token, params, form: body, idem });
+    expect((await upload(undefined, form(image, 'photo.png'))).status).toBe(401);
+    expect([403, 404]).toContain((await upload(xt, form(image, 'photo.png'))).status);
+    expect((await upload(bt, form(new Uint8Array(pdf()), 'document.pdf'))).status).toBe(422);
+    expect((await upload(bt, form(new Uint8Array(Buffer.from('not an image')), 'photo.png'))).status).toBe(422);
+    expect((await upload(bt, form(image, 'photo.png', 7))).status).toBe(422);
+    expect((await upload(bt, form(new Uint8Array(12 * 1024 * 1024 + 1), 'large.png'))).status).toBe(422);
+    const idem = key();
+    expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
+    expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
+    expect((await upload(bt, form(new Uint8Array(await png('other')), 'other.png'), idem)).status).toBe(409);
+    const rows = await db.select({ visibility: files.visibility, scan: files.scanStatus, owner: files.ownerUserId })
+      .from(dealEvidence).innerJoin(files, eq(dealEvidence.fileId, files.id)).where(eq(dealEvidence.dealId, id));
+    expect(rows).toEqual([{ visibility: 'PRIVATE', scan: 'UNSCANNED', owner: buyer.id }]);
+  });
 });
 
 describe('Flow C — Protected Deal between two app users', () => {

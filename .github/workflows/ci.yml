@@ -63,3 +63,64 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+  protected-deal-mobile-journey:
+    # Isolated, disposable PostgreSQL; never a deployed environment or a real payment provider.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: edmn_journey_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres@127.0.0.1:5432/edmn_journey_test
+      JOURNEY_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/edmn_journey_test
+      EDMN_ENVIRONMENT: local
+      STORAGE_LOCAL_ROOT: ./.journey-storage
+      MAIL_DRIVER: log
+      SMS_DRIVER: log
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+      - run: npm ci --no-audit --no-fund
+      - name: Generate ephemeral test keys
+        run: |
+          echo "SESSION_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "DATA_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "DELIVERY_OTP_KEY=$(openssl rand -base64 48)" >> "$GITHUB_ENV"
+      - name: Prepare isolated database and browser
+        run: |
+          npm run db:setup
+          npx playwright install --with-deps chromium
+      - name: Build Flutter web test application
+        working-directory: apps/customer_mobile
+        run: |
+          flutter create --platforms=web --project-name edmn_customer .
+          flutter build web --dart-define=EDMN_ENV=local --dart-define=EDMN_API_BASE_URL=http://127.0.0.1:8099
+      - name: Run real Flutter UI against local API and PostgreSQL
+        run: |
+          npm run dev > "$RUNNER_TEMP/edmn-next.log" 2>&1 &
+          node tests/mobile-journey/server.mjs > "$RUNNER_TEMP/edmn-host.log" 2>&1 &
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
+          curl -fsS http://127.0.0.1:3000/api/health >/dev/null
+          node tests/mobile-journey/protected-deal.mjs
+      - name: Save synthetic UI screenshot
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: protected-deal-mobile-journey
+          path: test-results/mobile-journey/
+          if-no-files-found: ignore
+          retention-days: 7
