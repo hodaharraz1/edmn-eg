@@ -83,7 +83,7 @@ describe('deal photo uploads', () => {
     const idem = key();
     expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
     expect((await upload(bt, form(image, 'photo.png'), idem)).status).toBe(200);
-    expect((await upload(bt, form(new Uint8Array(await png('other')), 'other.png'), idem)).status).toBe(409);
+    expect((await upload(bt, form(new Uint8Array(await png('different')), 'other.png'), idem)).status).toBe(409);
     const rows = await db.select({ visibility: files.visibility, scan: files.scanStatus, owner: files.ownerUserId })
       .from(dealEvidence).innerJoin(files, eq(dealEvidence.fileId, files.id)).where(eq(dealEvidence.dealId, id));
     expect(rows).toEqual([{ visibility: 'PRIVATE', scan: 'UNSCANNED', owner: buyer.id }]);

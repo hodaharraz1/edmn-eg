@@ -18,7 +18,7 @@ const sem = async () => { await page.evaluate(() => document.querySelector('flt-
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
 const type = async (locator, value) => { await locator.click(); await page.keyboard.insertText(value); };
 const tap = async (label) => { await page.getByRole('button', { name: label }).last().click(); await page.waitForTimeout(1500); await sem(); };
-const api = (method, regex, status) => assert(calls.some(([m, p, s]) => m === method && regex.test(p) && s === status), `Missing ${method} ${regex} ${status}`);
+const api = (method, regex, status) => assert(calls.some(([m, p, s]) => m === method && regex.test(p) && s === status), `Missing ${method} ${regex} ${status}; observed: ${JSON.stringify(calls)}`);
 try {
   await mkdir('test-results/mobile-journey', { recursive: true });
   await page.goto('http://127.0.0.1:8099/', { waitUntil: 'networkidle' }); await page.waitForTimeout(2500); await sem();
@@ -27,7 +27,10 @@ try {
   await go('/sign-in');
   await type(page.getByRole('textbox').nth(0), 'ahmed@demo.edmn.local');
   await type(page.getByRole('textbox').nth(1), 'Demo@12345');
-  await tap('تسجيل الدخول'); api('POST', /\/auth\/login$/, 200);
+  const login = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/auth/login' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تسجيل الدخول');
+  assert.equal((await login).status(), 200, 'Login response');
+  api('POST', /\/auth\/login$/, 200);
   const gate = await rows("select value from system_settings where key = 'payments.realMoneyEnabled'");
   assert(gate.length === 0 || gate[0].value === false, 'Real Money must be OFF');
   const [user] = await rows('select id from users where email = $1', ['ahmed@demo.edmn.local']);
@@ -52,5 +55,20 @@ try {
   assert.equal(deal.status, 'DRAFT');
   const evidence = await rows('select f.visibility, f.scan_status from deal_evidence e join files f on f.id=e.file_id where e.deal_id=$1 and e.kind=$2', [deal.id, 'PRODUCT_PHOTO']);
   assert.deepEqual(evidence, [{ visibility: 'PRIVATE', scan_status: 'UNSCANNED' }]);
-  console.log('PASS Flutter sign-in, invalid draft, add/remove photo, draft and private photo persistence');
+  await type(page.getByRole('textbox', { name: 'السعر (ج.م)' }), '3000');
+  await tap('متابعة'); api('PUT', new RegExp(`/deals/${deal.id}/steps/2$`), 200);
+  await type(page.getByRole('textbox', { name: 'طريقة التسليم (مندوب، شركة شحن، استلام يدوي)' }), 'Delivery service');
+  await tap('متابعة');
+  api('PUT', new RegExp(`/deals/${deal.id}/steps/3$`), 200);
+  api('PUT', new RegExp(`/deals/${deal.id}/steps/4$`), 200);
+  await type(page.getByRole('textbox', { name: 'المدينة / المنطقة' }), 'Cairo');
+  await type(page.getByRole('textbox', { name: 'الشارع' }), 'Test street');
+  await tap('متابعة'); api('PUT', new RegExp(`/deals/${deal.id}/steps/5$`), 200);
+  await tap('مراجعة الصفقة');
+  await page.getByText('Test camera').first().waitFor({ state: 'visible' });
+  const [saved] = await rows('select status, wizard_step from external_deals where id=$1', [deal.id]);
+  assert.equal(saved.status, 'DRAFT');
+  assert(saved.wizard_step >= 6);
+  await page.screenshot({ path: 'test-results/mobile-journey/details.png' });
+  console.log('PASS Flutter sign-in, input validation, add/remove/upload photo, wizard and deal details with database checks');
 } finally { await browser.close(); await db.end(); }
