@@ -146,6 +146,16 @@ try {
   const sellerLogin = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/auth/login' && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تسجيل الدخول'); assert.equal((await sellerLogin).status(), 200);
   await go('/deals/join');
+  await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), 'A'.repeat(43));
+  const invalidClaim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('الانضمام للصفقة');
+  assert((await invalidClaim).status() >= 400);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  await page.getByRole('button', { name: 'الانضمام للصفقة' }).waitFor({ state: 'visible' });
+  await page.getByRole('textbox', { name: 'الصق رابط الدعوة' }).click();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  console.log('PASS Flutter rejects an invalid invitation and preserves the deal');
   try { await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink); }
   catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
