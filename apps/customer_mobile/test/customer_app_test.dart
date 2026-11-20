@@ -97,6 +97,20 @@ Map<String, dynamic> _deal({String role = 'BUYER', String status = 'OFFER_PENDIN
     };
 
 class FakeMobileApi extends MobileApi {
+  // ── Batch 4: store media ──
+  String? bannerUrl;
+  final mediaCalls = <String>[];
+  @override
+  Future<SellerStoreSettings> storeSettings() async => SellerStoreSettings(name: 'تك زون', slug: 'tech-zone', description: 'إلكترونيات', returnAddress: 'شارع التحرير، القاهرة', supportPhone: null,
+      acceptsVoluntaryReturns: true, voluntaryReturnDays: 14, returnConditions: null, returnConditionKeys: const [], returnShippingPayer: 'BY_REASON', shippingPolicy: null,
+      defaultProcessingDays: 2, freeShippingThresholdPiastres: null, logoUrl: null, bannerUrl: bannerUrl);
+  @override
+  Future<SellerStoreSettings> saveStoreMedia({(Uint8List, String)? logo, (Uint8List, String)? banner, required String idempotencyKey}) async {
+    mediaCalls.add('${logo != null ? 'logo:${logo.$2}' : ''}${banner != null ? 'banner:${banner.$2}' : ''}|$idempotencyKey');
+    if (banner != null) bannerUrl = 'https://example.invalid/banner.webp';
+    return storeSettings();
+  }
+
   FakeMobileApi({this.minVersion = '1.0.0', this.realMoney = false, this.loginError, this.productError})
       : super(ApiClient(config: _config, store: MemorySessionStore(), refreshPath: '/r', telemetry: Telemetry([])));
   final String minVersion;
@@ -1264,5 +1278,18 @@ void main() {
     await t.tap(find.text('الرئيسية').last);
     await t.pumpAndSettle();
     expect(find.byKey(const Key('not-found')), findsNothing);
+  });
+
+  testWidgets('seller store: change the banner through the store-media route (one file, one key); errors are not swallowed', (t) async {
+    final api = FakeMobileApi()..isSeller = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/seller/store');
+    expect(find.text('صور المتجر'), findsOneWidget);
+    await t.tap(find.byKey(const Key('change-banner')));
+    await t.pumpAndSettle();
+    expect(api.mediaCalls, hasLength(1));
+    expect(api.mediaCalls.single, startsWith('banner:'));
+    expect(api.mediaCalls.single.split('|').last, isNotEmpty);
+    expect(find.text('اتحفظت صورة المتجر'), findsOneWidget);
   });
 }
