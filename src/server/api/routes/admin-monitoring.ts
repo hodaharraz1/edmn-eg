@@ -8,9 +8,11 @@ import {
   orderMonitor,
   sellerReviewQueue,
 } from '@/server/modules/admin-mobile/monitoring';
+import { dealDetail, disputeAssignees, disputeDetail, identityDetail, orderDetail, sellerDetail } from '@/server/modules/admin-mobile/details';
+import { addDisputeMessage, assignDispute } from '@/server/modules/postpurchase/disputes';
 import { ORDER_STATUSES } from '@/domain/machines';
 import { defineRoute } from '../http';
-import { isoDateTime } from '../schemas';
+import { isoDateTime, ok } from '../schemas';
 
 /**
  * Admin App monitoring (read-only). Each route is `auth: 'admin'` (staff session with TOTP verified), and the
@@ -135,4 +137,243 @@ export const adminAuditTrail = defineRoute({
   handler: ({ actor, query }) => auditTrail(actor!, query),
 });
 
-export const adminMonitoringRoutes = [adminSellerQueue, adminIdentityQueue, adminOrderMonitor, adminDealMonitor, adminDisputeMonitor, adminAuditTrail];
+/* ───────────── Detail views (read-only) and the two safe dispute actions ───────────── */
+const id = z.uuid();
+const historyItem = z.object({ entityType: z.string(), from: z.string().nullable(), to: z.string(), actorType: z.string().nullable(), actor: z.string().nullable(), note: z.string().nullable(), at: isoDateTime });
+
+export const adminSellerDetail = defineRoute({
+  id: 'adminGetSeller',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/sellers/{sellerId}',
+  summary: 'Seller application: checklist, document metadata, status history (sellers.view). No IDs, contacts or payout data',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden', 'not_found'],
+  params: z.object({ sellerId: id }),
+  response: z.object({
+    id,
+    applicant: z.string().nullable(),
+    type: z.string(),
+    status: z.string(),
+    riskLevel: z.string().nullable(),
+    governorate: z.string().nullable(),
+    storeName: z.string().nullable(),
+    submittedAt: nullableIso,
+    checklist: z.array(z.object({ key: z.string(), label: z.string(), ok: z.boolean() })),
+    documents: z.array(z.object({ kind: z.string(), status: z.string(), uploadedAt: nullableIso })).nullable(),
+    history: z.array(historyItem),
+  }),
+  handler: ({ actor, params }) => sellerDetail(actor!, params.sellerId),
+});
+
+export const adminIdentityDetail = defineRoute({
+  id: 'adminGetIdentityReview',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/identity/reviews/{verificationId}',
+  summary: 'KYC case summary (identity.view): status, review trail. Never the number, its digits or the images',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden', 'not_found'],
+  params: z.object({ verificationId: id }),
+  response: z.object({
+    id,
+    name: z.string().nullable(),
+    status: z.string(),
+    documentsComplete: z.boolean(),
+    rejectionReason: z.string().nullable(),
+    submittedAt: nullableIso,
+    reviewedAt: nullableIso,
+    reviewedBy: z.string().nullable(),
+    events: z.array(z.object({ action: z.string(), from: z.string().nullable(), to: z.string().nullable(), by: z.string().nullable(), reason: z.string().nullable(), at: isoDateTime })),
+  }),
+  handler: ({ actor, params }) => identityDetail(actor!, params.verificationId),
+});
+
+export const adminOrderDetail = defineRoute({
+  id: 'adminGetOrder',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/orders/{orderId}',
+  summary: 'Order with seller orders, shipments, tracking events and status history (orders.view). No address or contacts',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden', 'not_found'],
+  params: z.object({ orderId: id }),
+  response: z.object({
+    id,
+    number: z.string(),
+    status: z.string(),
+    customer: z.string().nullable(),
+    placedAt: nullableIso,
+    paidAt: nullableIso,
+    totals: z.object({ merchandise: piastres, shipping: piastres, grand: piastres }),
+    payment: z.object({ method: z.string(), status: z.string(), amount: piastres }).nullable(),
+    sellerOrders: z.array(
+      z.object({
+        id,
+        number: z.string(),
+        store: z.string().nullable(),
+        status: z.string(),
+        total: piastres,
+        items: z.array(z.object({ title: z.string(), quantity: z.number().int(), lineTotal: piastres })),
+        shipment: z
+          .object({
+            status: z.string(),
+            carrier: z.string().nullable(),
+            trackingNumber: z.string().nullable(),
+            shippedAt: nullableIso,
+            expectedAt: nullableIso,
+            exception: z.string().nullable(),
+            events: z.array(z.object({ status: z.string(), description: z.string().nullable(), at: isoDateTime })),
+          })
+          .nullable(),
+        followUpFlaggedAt: nullableIso,
+      }),
+    ),
+    history: z.array(historyItem),
+  }),
+  handler: ({ actor, params }) => orderDetail(actor!, params.orderId),
+});
+
+export const adminDealDetail = defineRoute({
+  id: 'adminGetDeal',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/deals/{dealId}',
+  summary: 'Protected deal summary and timeline (deals.view). No locations, payout data or delivery codes',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden', 'not_found'],
+  params: z.object({ dealId: id }),
+  response: z.object({
+    id,
+    number: z.string(),
+    ref: z.string(),
+    title: z.string(),
+    condition: z.string(),
+    status: z.string(),
+    buyer: z.string().nullable(),
+    seller: z.string().nullable(),
+    sellerConfirmed: z.boolean(),
+    financialHold: z.boolean(),
+    money: z.object({ total: piastres.nullable(), buyerPays: piastres.nullable(), sellerReceives: piastres.nullable() }),
+    payment: z.object({ status: z.string(), method: z.string() }).nullable(),
+    payout: z.object({ status: z.string() }).nullable(),
+    evidenceCount: z.number().int(),
+    disputes: z.array(z.object({ id, number: z.string(), status: z.string() })),
+    createdAt: nullableIso,
+    updatedAt: nullableIso,
+    history: z.array(historyItem),
+  }),
+  handler: ({ actor, params }) => dealDetail(actor!, params.dealId),
+});
+
+const disputeDetailSchema = z.object({
+  id,
+  number: z.string(),
+  status: z.string(),
+  reasonCode: z.string(),
+  description: z.string(),
+  claimedAmount: piastres.nullable(),
+  claimant: z.string().nullable(),
+  respondent: z.string().nullable(),
+  assignee: z.object({ id, name: z.string().nullable(), isMe: z.boolean() }).nullable(),
+  subject: z.object({ kind: z.enum(['ORDER', 'DEAL', 'RETURN']), number: z.string().nullable(), id: id.nullable() }),
+  createdAt: nullableIso,
+  messages: z.array(z.object({ id, authorRole: z.string(), author: z.string().nullable(), internal: z.boolean(), body: z.string(), at: isoDateTime })),
+  evidence: z.array(z.object({ uploadedBy: z.string().nullable(), note: z.string().nullable(), at: isoDateTime })),
+  history: z.array(historyItem),
+});
+
+export const adminDisputeDetail = defineRoute({
+  id: 'adminGetDispute',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/disputes/{disputeId}',
+  summary: 'Dispute with messages (internal notes included), evidence metadata, assignee and history (disputes.manage)',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden', 'not_found'],
+  params: z.object({ disputeId: id }),
+  response: disputeDetailSchema,
+  handler: ({ actor, params }) => disputeDetail(actor!, params.disputeId),
+});
+
+export const adminDisputeAssignees = defineRoute({
+  id: 'adminListDisputeAssignees',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/disputes/assignees',
+  summary: 'Active staff who may be assigned a dispute (holders of disputes.manage)',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden'],
+  response: z.object({ items: z.array(z.object({ id, name: z.string().nullable(), isMe: z.boolean() })) }),
+  handler: async ({ actor }) => ({ items: await disputeAssignees(actor!) }),
+});
+
+export const adminAssignDispute = defineRoute({
+  id: 'adminAssignDispute',
+  api: 'admin',
+  method: 'POST',
+  path: '/api/v1/admin/disputes/{disputeId}/assign',
+  summary: 'Assign an open dispute to an eligible staff member (disputes.manage). Audited; no financial effect',
+  tags: ['Admin Actions'],
+  auth: 'admin',
+  rate: 'write',
+  idempotency: 'required',
+  errors: ['forbidden', 'not_found', 'validation_failed', 'invalid_state'],
+  params: z.object({ disputeId: id }),
+  body: z.object({ assigneeId: id }),
+  response: ok,
+  handler: async ({ actor, params, body }) => {
+    await assignDispute(actor!, params.disputeId, body.assigneeId);
+    return { ok: true as const };
+  },
+});
+
+export const adminAddDisputeNote = defineRoute({
+  id: 'adminAddDisputeNote',
+  api: 'admin',
+  method: 'POST',
+  path: '/api/v1/admin/disputes/{disputeId}/notes',
+  summary: 'Add an INTERNAL staff note (never shown to the parties, no notification) (disputes.manage)',
+  tags: ['Admin Actions'],
+  auth: 'admin',
+  rate: 'write',
+  idempotency: 'required',
+  errors: ['forbidden', 'not_found', 'validation_failed'],
+  params: z.object({ disputeId: id }),
+  body: z.object({ body: z.string().trim().min(2).max(4000) }),
+  response: ok,
+  handler: async ({ actor, params, body }) => {
+    // Always internal: this route cannot post a message the parties see (that stays in the console).
+    await addDisputeMessage(actor!, params.disputeId, body.body, true);
+    return { ok: true as const };
+  },
+});
+
+export const adminMonitoringRoutes = [
+  adminSellerQueue,
+  adminIdentityQueue,
+  adminOrderMonitor,
+  adminDealMonitor,
+  adminDisputeMonitor,
+  adminAuditTrail,
+  adminSellerDetail,
+  adminIdentityDetail,
+  adminOrderDetail,
+  adminDealDetail,
+  adminDisputeAssignees,
+  adminDisputeDetail,
+  adminAssignDispute,
+  adminAddDisputeNote,
+];
