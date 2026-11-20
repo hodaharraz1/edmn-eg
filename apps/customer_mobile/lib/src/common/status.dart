@@ -30,6 +30,40 @@ import 'ui.dart';
       _ => (status, EdmnTone.neutral),
     };
 
+/// What the SELLER sees for one of its sub-orders: one distinct label per server state (no two states share a label),
+/// plus a plain next-step hint. Delivery, the buyer's confirmation and EDMN's approval of the earnings are separate
+/// states; nothing here implies money was released before COMPLETED.
+(String, EdmnTone) sellerOrderStatusChip(EdmnLocalizations t, String s) => switch (s) {
+      'PENDING_PAYMENT' => (t.soAwaitingPayment, EdmnTone.warning),
+      'PAYMENT_UNDER_REVIEW' => (t.soPaymentReview, EdmnTone.warning),
+      'PAID' => (t.soNew, EdmnTone.warning),
+      'SELLER_CONFIRMED' => (t.soAccepted, EdmnTone.info),
+      'PROCESSING' => (t.soPreparing, EdmnTone.info),
+      'READY_TO_SHIP' => (t.soReady, EdmnTone.info),
+      'SHIPPED' => (t.soShipped, EdmnTone.info),
+      'AWAITING_BUYER_RESPONSE' => (t.soAwaitingBuyer, EdmnTone.success),
+      'DELIVERED' => (t.soReceived, EdmnTone.success),
+      'COMPLETED' => (t.soCompleted, EdmnTone.success),
+      'DELIVERY_FAILED' => (t.soDeliveryFailed, EdmnTone.danger),
+      'CANCELLED' => (t.soCancelled, EdmnTone.danger),
+      _ => (s, EdmnTone.neutral),
+    };
+
+String? sellerOrderStatusHint(EdmnLocalizations t, String s) => switch (s) {
+      'PENDING_PAYMENT' || 'PAYMENT_UNDER_REVIEW' => t.soHintAwaitingPayment,
+      'PAID' => t.soHintPaid,
+      'SELLER_CONFIRMED' => t.soHintConfirmed,
+      'PROCESSING' => t.soHintProcessing,
+      'READY_TO_SHIP' => t.soHintReady,
+      'SHIPPED' => t.soHintShipped,
+      'AWAITING_BUYER_RESPONSE' => t.soHintAwaitingBuyer,
+      'DELIVERED' => t.soHintReceived,
+      'COMPLETED' => t.soHintCompleted,
+      'DELIVERY_FAILED' => t.soHintFailed,
+      'CANCELLED' => t.soHintCancelled,
+      _ => null,
+    };
+
 (String, EdmnTone) paymentStatus(EdmnLocalizations t, String status) => switch (status) {
       'AWAITING_PAYMENT' => (t.statusPendingPayment, EdmnTone.warning),
       'PAYMENT_SUBMITTED' || 'UNDER_REVIEW' => (t.receiptUnderReview, EdmnTone.warning),

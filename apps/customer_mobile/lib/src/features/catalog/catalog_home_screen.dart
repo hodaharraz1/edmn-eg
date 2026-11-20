@@ -173,8 +173,10 @@ class _CircleIcon extends StatelessWidget {
   final int badge;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: badge > 0 ? '$tooltip ($badge)' : tooltip,
+        excludeSemantics: true,
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),

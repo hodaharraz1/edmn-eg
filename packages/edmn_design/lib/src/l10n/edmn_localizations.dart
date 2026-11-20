@@ -6445,6 +6445,156 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'إضافة صورة للمنتج'**
   String get addProductPhoto;
+
+  /// No description provided for @searchGovernorate.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن المحافظة'**
+  String get searchGovernorate;
+
+  /// No description provided for @noGovernorates.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد محافظات متاحة حاليًا'**
+  String get noGovernorates;
+
+  /// No description provided for @noGovernorateMatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد محافظة بهذا الاسم'**
+  String get noGovernorateMatch;
+
+  /// No description provided for @governorateUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذه المحافظة غير متاحة. اختر محافظة من القائمة'**
+  String get governorateUnavailable;
+
+  /// No description provided for @copyPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ رقم الهاتف'**
+  String get copyPhone;
+
+  /// No description provided for @soAwaitingPayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار دفع المشتري'**
+  String get soAwaitingPayment;
+
+  /// No description provided for @soPaymentReview.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع قيد المراجعة'**
+  String get soPaymentReview;
+
+  /// No description provided for @soPreparing.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد التجهيز'**
+  String get soPreparing;
+
+  /// No description provided for @soShipped.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الشحن'**
+  String get soShipped;
+
+  /// No description provided for @soAwaitingBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التوصيل – بانتظار تأكيد المشتري'**
+  String get soAwaitingBuyer;
+
+  /// No description provided for @soReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلمه المشتري – المستحقات قيد المراجعة'**
+  String get soReceived;
+
+  /// No description provided for @soCompleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكتمل'**
+  String get soCompleted;
+
+  /// No description provided for @soDeliveryFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر التوصيل'**
+  String get soDeliveryFailed;
+
+  /// No description provided for @soCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملغي'**
+  String get soCancelled;
+
+  /// No description provided for @soHintAwaitingPayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم تأكيد دفع المشتري بعد. لا تجهّز الطلب حتى يتم تأكيد الدفع.'**
+  String get soHintAwaitingPayment;
+
+  /// No description provided for @soHintPaid.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تأكيد الدفع. راجع الطلب ثم اضغط «تأكيد الطلب».'**
+  String get soHintPaid;
+
+  /// No description provided for @soHintConfirmed.
+  ///
+  /// In ar, this message translates to:
+  /// **'أكدت الطلب. ابدأ تجهيزه أو حدّده جاهزًا للشحن.'**
+  String get soHintConfirmed;
+
+  /// No description provided for @soHintProcessing.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب قيد التجهيز. عند الانتهاء حدّده «جاهز للشحن».'**
+  String get soHintProcessing;
+
+  /// No description provided for @soHintReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب جاهز. سجّل بيانات الشحنة وبوليصة الشحن ثم أكّد الشحن.'**
+  String get soHintReady;
+
+  /// No description provided for @soHintShipped.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلب في الطريق إلى المشتري. لا يلزم أي إجراء منك الآن.'**
+  String get soHintShipped;
+
+  /// No description provided for @soHintAwaitingBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التوصيل. أمام المشتري مهلة لتأكيد الاستلام أو الإبلاغ عن مشكلة.'**
+  String get soHintAwaitingBuyer;
+
+  /// No description provided for @soHintReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلم المشتري الطلب. مستحقاتك معلّقة حتى تراجعها أضمن وتعتمدها.'**
+  String get soHintReceived;
+
+  /// No description provided for @soHintCompleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتمل الطلب واعتمدت أضمن تحويل مستحقاته.'**
+  String get soHintCompleted;
+
+  /// No description provided for @soHintFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر توصيل الطلب. سيتواصل معك فريق أضمن بشأن الخطوات التالية.'**
+  String get soHintFailed;
+
+  /// No description provided for @soHintCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إلغاء الطلب. لا تقم بشحنه.'**
+  String get soHintCancelled;
 }
 
 class _EdmnLocalizationsDelegate
