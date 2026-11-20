@@ -29,11 +29,11 @@ const sem = async () => { await page.evaluate(() => document.querySelector('flt-
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
 const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
 const toActions = async () => { await page.mouse.move(190, 400); await page.mouse.wheel(0, 8000); await page.waitForTimeout(1000); await sem(); };
-// Navigating to the same hash does not reload Flutter: another party may have changed the deal.
+// Re-enter from the hub to dispose the stale detail provider and fetch the other party's changes.
 const freshDeal = async (id) => {
-  await go(`/deals/${id}`);
+  await go('/deals');
   const read = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${id}` && r.request().method() === 'GET', { timeout: 60000 });
-  await page.reload({ waitUntil: 'networkidle' });
+  await go(`/deals/${id}`);
   const response = await read;
   assert.equal(response.status(), 200, 'Deal details API');
   const projection = await response.json();
