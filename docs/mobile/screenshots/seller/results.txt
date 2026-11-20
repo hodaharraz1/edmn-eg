@@ -1,0 +1,74 @@
+PASS ahmed: sign-in — POST /api/v1/auth/login 200
+PASS C1 buyer: order placed through the UI — #100041 total=1070898
+PASS C1 buyer: receipt submitted, payment awaits staff — PAYMENT_SUBMITTED
+PASS C2 staff: payment confirmed → seller order PAID — seller order status=PAID
+PASS C2 ledger: payment entries balanced — debits = credits
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS C3 seller: order shows the product — شاومي ريدمي نوت 13
+PASS C3 seller: «قبول الطلب» → SELLER_CONFIRMED — status=SELLER_CONFIRMED
+PASS C3 seller: «بدء التجهيز» → PROCESSING — status=PROCESSING
+PASS C3 seller: «جاهز للشحن» → READY_TO_SHIP — status=READY_TO_SHIP
+PASS C3 seller: shipment saved with carrier, waybill number and the waybill file — carrier=بوسطة tracking=JNY772440 docs=1
+PASS C3 security: the waybill is a PRIVATE file — PRIVATE|SHIPPING_WAYBILL
+PASS C3 seller: «تم الشحن» → SHIPPED — status=SHIPPED
+PASS C4 buyer: notified that the order shipped — notification row
+PASS ahmed: sign-in — POST /api/v1/auth/login 200
+PASS C4 buyer: sees the shipment on its way — shipment state on screen
+PASS C4 buyer: receipt confirmed through the UI and recorded — status=DELIVERED confirmedBy=buyer source=BUYER
+PASS C4 seller: notified of the buyer confirmation — BUYER_RECEIPT_CONFIRMED
+PASS C4 money: no release journal entry without the staff Maker/Checker step — SELLER_RELEASE count=0
+PASS C4 ledger: every entry for this order is balanced — debits = credits
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS E1 seller funds: withdrawable on screen = ledger account = journal sum — screen=20,544.21 account=2054421 journal=2054421
+PASS E1 seller funds: pending release on screen = ledger account = journal sum — screen=354,240.42 account=35424042 journal=35424042
+PASS E2 statement lists the delivered order #100041-A — #100041-A
+PASS E3 payout: one request through the UI (double tap) — REQUESTED, 100 EGP — rows=1 amount=10000 status=REQUESTED
+PASS E3 payout: request only — no journal entry, available balance unchanged — entries=0 available=2054421
+PASS E3 payout: the UI call succeeded once — POST /api/v1/seller/payout-requests/preview 200 | POST /api/v1/seller/payout-requests 201
+PASS ahmed: sign-in — POST /api/v1/auth/login 200
+PASS D1 buyer: «arrived damaged» selected (named radio) — checked
+PASS D1 buyer: return requested through the UI — status=REQUESTED reason=DAMAGED
+PASS D1 security: evidence stored PRIVATE as RETURN_EVIDENCE — PRIVATE:RETURN_EVIDENCE
+PASS D2 seller: notified of the return request — RETURN_REQUESTED
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS D2 seller: sees the return for the order — #100041-A
+PASS D2 seller: authorized rejection with a reason, persisted — status=REJECTED
+PASS ahmed: sign-in — POST /api/v1/auth/login 200
+PASS D3 buyer: sees the seller rejection — مرفوض on screen
+PASS D3 a11y: no unnamed buttons on the return screen — unnamed=0
+PASS D3 buyer: escalation opens one dispute linked to the return — dispute=OPEN return=DISPUTED
+PASS D3 money: escalation moves no money (no refund entry) — no refund record
+PASS D3 seller: notified that a dispute was opened — DISPUTE_OPENED
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS D4 seller: sees the dispute — dispute screen
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS B1 seller: draft product created through the UI — status=DRAFT condition=NEW
+PASS B2 seller: photo uploaded (PUBLIC product image, re-encoded by the server) — images=1 PUBLIC PRODUCT_IMAGE
+PASS B2 seller: description saved — length=66
+PASS B2 seller: price 799 EGP and stock 10 saved (integer piastres) — price=79900 stock=10
+PASS B2 seller: return policy confirmed — return_policy_confirmed
+PASS B3 seller: submitted for EDMN moderation — SUBMITTED
+PASS B4 staff: approved → product LIVE — status=LIVE
+PASS B4 buyers: the product page is public — GET catalog/products → 200
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS B5 seller: stop sales → stock down to reserved units — stock=0 reserved=0
+PASS B6 seller: archived through the UI — ARCHIVED
+PASS B6 buyers: an archived product is no longer public — GET catalog/products → 404
+PASS A1 new account registered through the UI — user=created
+PASS A2 an OTP was sent by SMS to the new number — code received
+PASS A2 phone verified through the UI — phone_verified_at set
+PASS A3 identity submitted through the UI (both sides), pending review — status=PENDING_REVIEW
+PASS A3 security: ID images are PRIVATE identity documents; the number is stored encrypted — PRIVATE:IDENTITY_DOCUMENT
+PASS A4 staff: identity approved — APPROVED
+PASS A5 application started through the UI (individual) — DRAFT
+PASS A6 governorate picker: search without hamza finds «الإسكندرية» and shows it — picker value
+PASS A6 owner identity and address saved with the governorate id — governorate_id=3 (Alexandria=3)
+PASS A7 application mobile verified (same as the verified account phone) — mobile_verified_at
+PASS A8 store created with name, return address (Cairo id from the picker) and logo — store=متجر سارة 52793 logo=true returnGovernorate=1
+PASS A9 seller documents uploaded through the UI, PRIVATE — NATIONAL_ID_BACK:PRIVATE,NATIONAL_ID_FRONT:PRIVATE
+PASS A10 payout account added (pending EDMN verification) — status=PENDING_VERIFICATION type=INSTAPAY
+PASS A11 application submitted through the UI — PENDING_REVIEW
+PASS A12 staff: seller approved, payout account verified — APPROVED
+PASS A12 the new seller is notified — SELLER_APPROVED
+PASS A13 the new seller sees the Seller Center (store + menu) — متجر سارة 52793
+73 PASS / 0 FAIL

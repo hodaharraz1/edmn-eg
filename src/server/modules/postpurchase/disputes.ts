@@ -8,7 +8,7 @@ import { conflict, forbidden, invalidState, notFound, validation } from '@/serve
 import { parseEgp } from '@/server/core/money';
 import { LABELS } from '@/lib/i18n/labels';
 import { db, type DbOrTx } from '@/server/db/client';
-import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerFinancialHolds, sellerOrders, sellers, users } from '@/server/db/schema';
+import { disputeEvidence, disputeMessages, disputes, externalDeals, orders, returnItems, returns, sellerFinancialHolds, sellerOrders, rolePermissions, sellers, userRoles, users } from '@/server/db/schema';
 import { requestRefundTx } from '@/server/modules/finance/refunds';
 import { notify } from '@/server/modules/notifications/notify';
 import { storeUpload } from '@/server/storage/uploads';
@@ -186,11 +186,27 @@ export async function setDisputeStatus(actor: Actor, disputeId: string, to: (typ
   });
 }
 
+/**
+ * Assign an open dispute to a staff member who can work it. The console assigns to «me»; the Admin App may pick any
+ * eligible colleague, so the assignee is checked here, server-side: an active staff account holding disputes.manage.
+ */
 export async function assignDispute(actor: Actor, disputeId: string, assigneeId: string) {
   requirePermission(actor, 'disputes.manage');
   await db.transaction(async (tx) => {
+    const [d] = await tx.select().from(disputes).where(eq(disputes.id, disputeId)).for('update');
+    if (!d) throw notFound('النزاع');
+    if (!OPEN.includes(d.status)) throw invalidState('تم حسم هذا النزاع بالفعل');
+    const [eligible] = await tx
+      .select({ id: users.id })
+      .from(users)
+      .innerJoin(userRoles, eq(userRoles.userId, users.id))
+      .innerJoin(rolePermissions, eq(rolePermissions.roleCode, userRoles.roleCode))
+      .where(and(eq(users.id, assigneeId), eq(users.isStaff, true), eq(users.status, 'ACTIVE'), eq(rolePermissions.permission, 'disputes.manage')))
+      .limit(1);
+    if (!eligible) throw validation('لا يمكن إسناد النزاع لهذا الحساب: يجب أن يكون موظفًا نشطًا بصلاحية إدارة النزاعات');
+    if (d.assignedTo === assigneeId) return; // idempotent: no duplicate audit row
     await tx.update(disputes).set({ assignedTo: assigneeId }).where(eq(disputes.id, disputeId));
-    await audit(tx, actor, { action: 'dispute.assigned', entityType: 'dispute', entityId: disputeId, newValues: { assigneeId } });
+    await audit(tx, actor, { action: 'dispute.assigned', entityType: 'dispute', entityId: disputeId, oldValues: { assigneeId: d.assignedTo }, newValues: { assigneeId } });
   });
 }
 

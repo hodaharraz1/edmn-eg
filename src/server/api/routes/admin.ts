@@ -12,6 +12,8 @@ import {
   revokeMyOtherSessions,
   revokeMySession,
 } from '@/server/auth/mobile';
+import { adminDashboard, rangeFromPreset } from '@/server/modules/reports/service';
+import { realMoneyEnabled } from '@/server/modules/settings';
 import { defineRoute } from '../http';
 import { deviceInfo, isoDateTime, ok, profile, revokedCount, sessionList, sessionResult, tokenPair } from '../schemas';
 
@@ -188,4 +190,53 @@ export const adminRevokeUser = defineRoute({
   handler: ({ actor, params, body }) => adminRevokeUserSessions(actor!, params.userId, body.reason),
 });
 
-export const adminRoutes = [adminLogin, adminRefresh, adminMfaEnroll, adminMfaVerify, adminStepUp, adminLogout, adminMe, adminMySessions, adminRevokeMySession, adminRevokeMyOthers, adminRevokeUser];
+const named = z.array(z.object({ name: z.string(), gmv: z.number().int() }));
+
+/**
+ * Operational dashboard: the same figures and the same permission (dashboard.view) as the web console's /admin page.
+ * Read-only. Amounts are integer piastres; `realMoney: false` tells the app every figure comes from test payments.
+ */
+export const adminDashboardRoute = defineRoute({
+  id: 'adminGetDashboard',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/dashboard',
+  summary: 'Executive KPIs and operational queues (read-only)',
+  tags: ['Admin Operations'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden'],
+  query: z.object({ range: z.enum(['today', '7d', '30d', '90d', '365d']).optional() }),
+  response: z.object({
+    range: z.enum(['today', '7d', '30d', '90d', '365d']),
+    realMoney: z.boolean(),
+    kpis: z.object({
+      gmv: z.number().int(), revenue: z.number().int(), ordersTotal: z.number().int(), ordersPaid: z.number().int(), aov: z.number().int(),
+      deals: z.number().int(), dealsValue: z.number().int(), activeBuyers: z.number().int(), activeSellers: z.number().int(),
+      returnRate: z.number(), disputeRate: z.number(),
+    }),
+    queues: z.object({
+      pendingSellers: z.number().int(), pendingProducts: z.number().int(), pendingPayments: z.number().int(),
+      pendingWithdrawals: z.number().int(), pendingWithdrawalsAmount: z.number().int(), pendingRefunds: z.number().int(),
+      openDisputes: z.number().int(), openTickets: z.number().int(), unconfirmedDeliveries: z.number().int(),
+    }),
+    topCategories: named,
+    topSellers: named,
+    daily: z.array(z.object({ day: z.string(), gmv: z.number().int(), orders: z.number().int() })),
+  }),
+  handler: async ({ actor, query }) => {
+    const range = query.range ?? '30d';
+    const d = await adminDashboard(actor!, rangeFromPreset(range));
+    return {
+      range,
+      realMoney: await realMoneyEnabled(),
+      kpis: { gmv: d.gmv, revenue: d.revenue, ordersTotal: d.ordersTotal, ordersPaid: d.ordersPaid, aov: d.aov, deals: d.deals, dealsValue: d.dealsValue, activeBuyers: d.activeBuyers, activeSellers: d.activeSellers, returnRate: d.returnRate, disputeRate: d.disputeRate },
+      queues: { pendingSellers: d.pendingSellers, pendingProducts: d.pendingProducts, pendingPayments: d.pendingPayments, pendingWithdrawals: d.pendingWithdrawals, pendingWithdrawalsAmount: d.pendingWithdrawalsAmount, pendingRefunds: d.pendingRefunds, openDisputes: d.openDisputes, openTickets: d.openTickets, unconfirmedDeliveries: d.unconfirmedDeliveries },
+      topCategories: d.topCategories.map(({ name, gmv }) => ({ name, gmv })),
+      topSellers: d.topSellers.map(({ name, gmv }) => ({ name, gmv })),
+      daily: d.daily,
+    };
+  },
+});
+
+export const adminRoutes = [adminDashboardRoute, adminLogin, adminRefresh, adminMfaEnroll, adminMfaVerify, adminStepUp, adminLogout, adminMe, adminMySessions, adminRevokeMySession, adminRevokeMyOthers, adminRevokeUser];

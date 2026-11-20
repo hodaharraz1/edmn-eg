@@ -48,7 +48,15 @@ async function session(b, email, fn) {
     await go('/cart'); await shot('e2-cart');
 
     // 2. Chat: send a message in the order conversation.
-    const conv = sql(`select id from conversations where buyer_user_id='${uid}' order by created_at limit 1`);
+    // Opened through the UI (order page → «مراسلة البائع»), so the journey also works on a freshly seeded database.
+    let conv = sql(`select id from conversations where buyer_user_id='${uid}' order by created_at limit 1`);
+    if (!conv) {
+      const order = sql(`select id from orders where customer_id='${uid}' order by placed_at limit 1`);
+      await go(`/orders/${order}`);
+      await p.getByRole('button', { name: 'مراسلة البائع' }).first().click(); await p.waitForTimeout(3500); await sem();
+      check('chat: UI opens the order conversation', calls.some((c) => /POST \/api\/v1\/seller-orders\/.+\/conversation 20\d/.test(c)), calls.slice(-1).join(''));
+      conv = sql(`select id from conversations where buyer_user_id='${uid}' order by created_at limit 1`);
+    }
     const msgsBefore = Number(sql(`select count(*) from conversation_messages where conversation_id='${conv}'`));
     await go(`/messages/${conv}`);
     const text = `رسالة من اختبار الواجهة ${Date.now() % 100000}`;

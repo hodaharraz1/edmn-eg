@@ -348,7 +348,7 @@ class _AddressFormScreenState extends ConsumerState<AddressFormScreen> {
             key: const Key('delete-address'),
             tooltip: t.delete,
             color: EdmnColors.onPrimary,
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: Icon(Icons.delete_outline_rounded, semanticLabel: t.delete),
             onPressed: () async {
               if (!await showEdmnConfirmation(context, title: t.delete, message: t.deleteAddressConfirm, confirmLabel: t.delete, destructive: true)) return;
               if (!context.mounted) return;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/edmn_localizations.dart';
 import '../tokens.dart';
 
 /// Pill primary button. `loading` disables it and shows a spinner, so a second tap can never send the request twice.
@@ -148,6 +149,7 @@ class EdmnTextField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final bool enabled;
   final int maxLines;
+
   /// When set, the field starts at this height and grows up to [maxLines] (chat composers).
   final int? minLines;
   final int? maxLength;
@@ -310,6 +312,8 @@ class EdmnQuantityStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onChanged != null && !busy;
+    final t = EdmnLocalizations.of(context);
+    // Named through the icon's semantic label (a tooltip as well would make screen readers say it twice).
     Widget btn(IconData i, int next, String key) => SizedBox.square(
       dimension: 36,
       child: IconButton(
@@ -318,7 +322,7 @@ class EdmnQuantityStepper extends StatelessWidget {
         iconSize: EdmnSizes.iconSm,
         color: EdmnColors.textPrimary,
         disabledColor: EdmnColors.disabled,
-        icon: Icon(i),
+        icon: Icon(i, semanticLabel: key == 'qty-inc' ? t.qtyIncrease : t.qtyDecrease),
         onPressed: enabled && next >= min && next <= max
             ? () => onChanged!(next)
             : null,
@@ -426,51 +430,55 @@ class EdmnRadioCard<T> extends StatelessWidget {
           for (var i = 0; i < options.length; i++) ...[
             if (i > 0)
               const Divider(indent: EdmnSpacing.md, endIndent: EdmnSpacing.md),
-            InkWell(
-              onTap: onChanged == null || !options[i].enabled
-                  ? null
-                  : () => onChanged!(options[i].value),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: EdmnSpacing.sm,
-                  vertical: EdmnSpacing.xs,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      options[i].icon,
-                      color: EdmnColors.primaryDark,
-                      size: EdmnSizes.icon,
-                    ),
-                    const SizedBox(width: EdmnSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            options[i].label,
-                            style: EdmnType.bodyStrong.copyWith(
-                              color: options[i].enabled
-                                  ? EdmnColors.textPrimary
-                                  : EdmnColors.disabled,
-                            ),
-                          ),
-                          if (options[i].subtitle != null)
+            // One accessible element per option: the radio carries the option's label and subtitle, so a screen
+            // reader announces «إنستاباي، زر اختيار» instead of three unnamed radios (found by the checkout journey).
+            MergeSemantics(
+              child: InkWell(
+                onTap: onChanged == null || !options[i].enabled
+                    ? null
+                    : () => onChanged!(options[i].value),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: EdmnSpacing.sm,
+                    vertical: EdmnSpacing.xs,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        options[i].icon,
+                        color: EdmnColors.primaryDark,
+                        size: EdmnSizes.icon,
+                      ),
+                      const SizedBox(width: EdmnSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              options[i].subtitle!,
-                              style: EdmnType.secondary.copyWith(
-                                color: EdmnColors.textSecondary,
+                              options[i].label,
+                              style: EdmnType.bodyStrong.copyWith(
+                                color: options[i].enabled
+                                    ? EdmnColors.textPrimary
+                                    : EdmnColors.disabled,
                               ),
                             ),
-                        ],
+                            if (options[i].subtitle != null)
+                              Text(
+                                options[i].subtitle!,
+                                style: EdmnType.secondary.copyWith(
+                                  color: EdmnColors.textSecondary,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Radio<T>(
-                      key: Key('radio-${options[i].value}'),
-                      value: options[i].value,
-                      enabled: options[i].enabled,
-                    ),
-                  ],
+                      Radio<T>(
+                        key: Key('radio-${options[i].value}'),
+                        value: options[i].value,
+                        enabled: options[i].enabled,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -120,9 +120,15 @@ class _EvidenceGrid extends ConsumerWidget {
               child: ref.watch(fileBytesProvider(id)).when(
                     loading: () => const ColoredBox(color: EdmnColors.subtle),
                     error: (_, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.description_outlined)),
-                    data: (b) => GestureDetector(
-                      onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(child: InteractiveViewer(child: Image.memory(b)))),
-                      child: Image.memory(b, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.picture_as_pdf_outlined, color: EdmnColors.error))),
+                    // Named for screen readers (it was an unnamed tappable area): «image attachment», opens the viewer.
+                    data: (b) => Semantics(
+                      button: true,
+                      label: EdmnLocalizations.of(context).imageAttachment,
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(child: InteractiveViewer(child: Image.memory(b)))),
+                        child: Image.memory(b, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.picture_as_pdf_outlined, color: EdmnColors.error))),
+                      ),
                     ),
                   ),
             ),
@@ -874,7 +880,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             IconButton(
               key: Key('${widget.key is ValueKey ? (widget.key as ValueKey).value : ''}-star-$i'),
               tooltip: '$i',
-              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34),
+              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34, semanticLabel: '$i'),
               onPressed: () => setState(() => _stars = i),
             ),
         ]),

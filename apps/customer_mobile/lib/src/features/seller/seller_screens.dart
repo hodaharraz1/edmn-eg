@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../common/file_pick.dart';
+import '../../common/status.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
 import '../messages/messages_screens.dart' show openConversation;
@@ -31,18 +32,6 @@ String sellerStatusLabel(EdmnLocalizations t, String s) => switch (s) {
       'SUSPENDED' => t.sellerSuspended,
       'REJECTED' => t.sellerRejected,
       _ => s,
-    };
-
-(String, EdmnTone) sellerOrderStatusChip(EdmnLocalizations t, String s) => switch (s) {
-      'PAID' => (t.soNew, EdmnTone.warning),
-      'SELLER_CONFIRMED' => (t.soAccepted, EdmnTone.info),
-      'PROCESSING' || 'READY_TO_SHIP' => (t.stepPreparing, EdmnTone.info),
-      'SHIPPED' => (t.stepShipped, EdmnTone.info),
-      'AWAITING_BUYER_RESPONSE' || 'DELIVERED' => (t.stepDelivered, EdmnTone.success),
-      'COMPLETED' => (t.statusCompleted, EdmnTone.success),
-      'DELIVERY_FAILED' => (t.deliveryFailed, EdmnTone.danger),
-      'CANCELLED' => (t.statusCancelled, EdmnTone.danger),
-      _ => (s, EdmnTone.neutral),
     };
 
 /// Board "مركز البائع": store header + active chip, stat tiles, menu. Non-sellers and pending applications get an
@@ -167,7 +156,7 @@ class _SellerOrdersScreenState extends ConsumerState<SellerOrdersScreen> {
       body: Column(children: [
         const SizedBox(height: EdmnSpacing.md),
         EdmnFilterPills<String?>(
-          options: [('PAID', t.soNew), ('SELLER_CONFIRMED', t.soAccepted), ('PROCESSING', t.stepPreparing), ('READY_TO_SHIP', t.soReady), ('SHIPPED', t.stepShipped), ('COMPLETED', t.statusCompleted), ('CANCELLED', t.statusCancelled), (null, t.all)],
+          options: [('PAID', t.soNew), ('SELLER_CONFIRMED', t.soAccepted), ('PROCESSING', t.soPreparing), ('READY_TO_SHIP', t.soReady), ('SHIPPED', t.soShipped), ('COMPLETED', t.soCompleted), ('CANCELLED', t.soCancelled), (null, t.all)],
           selected: _status,
           onSelected: (s) => setState(() => _status = s),
         ),
@@ -260,6 +249,7 @@ class _SellerOrderScreenState extends ConsumerState<SellerOrderScreen> {
               EdmnStatusChip(label: l, tone: tone),
             ]),
             Text(formatDateTime(context, o.paidAt), style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+            if (sellerOrderStatusHint(t, o.status) case final hint?) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(key: const Key('so-hint'), message: hint, tone: tone)],
             if (o.cancellationRequest != null) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(title: t.cancellationRequested, message: o.cancellationRequest!.note ?? '', tone: EdmnTone.warning)],
             if (o.openDispute) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(message: t.disputeOpen, tone: EdmnTone.warning)],
             const SizedBox(height: EdmnSpacing.md),
@@ -271,7 +261,7 @@ class _SellerOrderScreenState extends ConsumerState<SellerOrderScreen> {
                 if (a.phone != null)
                   Row(children: [
                     Text(a.phone!, textDirection: TextDirection.ltr, style: EdmnType.body.copyWith(color: EdmnColors.textPrimary)),
-                    IconButton(icon: const Icon(Icons.copy_rounded, size: EdmnSizes.iconSm, color: EdmnColors.primary), onPressed: () => Clipboard.setData(ClipboardData(text: a.phone!))),
+                    IconButton(icon: Icon(Icons.copy_rounded, size: EdmnSizes.iconSm, color: EdmnColors.primary, semanticLabel: t.copyPhone), onPressed: () => Clipboard.setData(ClipboardData(text: a.phone!))),
                   ]),
                 Text([a.street, a.building, a.floor, a.apartment, a.district, a.city, a.governorate].whereType<String>().where((x) => x.isNotEmpty).join('، '), style: EdmnType.body.copyWith(color: EdmnColors.textPrimary)),
                 if (a.landmark != null) Text(a.landmark!, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
@@ -466,7 +456,7 @@ class SellerProductsScreen extends ConsumerWidget {
                           IconButton(
                             key: Key('edit-stock-${v.id}'),
                             tooltip: t.editStock,
-                            icon: const Icon(Icons.edit_outlined, color: EdmnColors.primary),
+                            icon: Icon(Icons.edit_outlined, color: EdmnColors.primary, semanticLabel: t.editStock),
                             onPressed: () => _editStock(context, ref, v),
                           ),
                         ]),
