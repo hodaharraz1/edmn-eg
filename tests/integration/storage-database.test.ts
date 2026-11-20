@@ -69,4 +69,33 @@ describe('database storage driver (hosts without persistent disk)', () => {
     })).rejects.toThrow();
     expect((await storage().get('PRIVATE', key))?.toString()).toBe('original');
   });
+
+  it('does not remove a concurrent committed upload when another transaction rolls back', async () => {
+    const user = await makeUser({ identity: false });
+    const actor = customerActor(user.id);
+    const data = await png('parallel');
+    let release!: () => void;
+    let staged!: () => void;
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    const ready = new Promise<void>((resolve) => { staged = resolve; });
+    let rolledBackKey = '';
+    const rollback = db.transaction(async (tx) => {
+      rolledBackKey = (await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data, originalName: 'photo.png' })).storageKey;
+      staged();
+      await wait;
+      throw new Error('rollback concurrent upload');
+    }).catch((e: Error) => e);
+    try {
+      await ready;
+      const committed = await db.transaction((tx) => storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data, originalName: 'photo.png' }));
+      release();
+      expect((await rollback).message).toContain('rollback concurrent upload');
+      expect(await storage().get('PRIVATE', rolledBackKey)).toBeNull();
+      expect(await storage().get('PRIVATE', committed.storageKey)).not.toBeNull();
+      expect(await db.select().from(files).where(eq(files.storageKey, committed.storageKey))).toHaveLength(1);
+    } finally {
+      release();
+      await rollback;
+    }
+  });
 });
