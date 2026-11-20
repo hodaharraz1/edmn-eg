@@ -80,8 +80,10 @@ try {
   const invitationLink = (await invitation.json()).link;
   assert(invitationLink && invitationLink.includes('/deal/invite/'));
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
+  await page.mouse.wheel(0, -5000); await page.waitForTimeout(1000); await sem();
   await page.getByText('رابط الدعوة جاهز — أرسله للبائع فقط').waitFor({ state: 'visible' });
   // The link is used only in memory; never print it or capture a screenshot while it is displayed.
+  const buyerPage = page;
   const sellerContext = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
   page = await sellerContext.newPage();
   observe(page);
@@ -101,5 +103,27 @@ try {
   assert.equal(joined.status, 'SELLER_JOINED');
   assert(joined.seller_user_id);
   await page.getByRole('button', { name: 'إرسال عرض' }).waitFor({ state: 'visible' });
-  console.log('PASS Flutter buyer sign-in, validation, photo upload, wizard, invitation and seller join with database checks');
+  await tap('إرسال عرض');
+  await type(page.getByRole('textbox', { name: 'الاسم بالكامل' }), 'Test Seller');
+  await type(page.getByRole('textbox', { name: 'المدينة / المنطقة' }), 'Giza');
+  await type(page.getByRole('textbox', { name: 'الشارع' }), 'Test seller street');
+  await type(page.getByRole('textbox', { name: 'اسم صاحب الحساب' }), 'Test Seller');
+  await type(page.getByRole('textbox', { name: 'عنوان إنستاباي' }), 'test-seller@instapay');
+  await type(page.getByRole('textbox', { name: 'طريقة التسليم (مندوب، شركة شحن، استلام يدوي)' }), 'Delivery service');
+  const offer = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('إرسال العرض'); assert.equal((await offer).status(), 200);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'OFFER_PENDING_BUYER');
+  page = buyerPage;
+  await go(`/deals/${deal.id}`);
+  await tap('طلب تعديل');
+  await type(page.getByRole('textbox', { name: 'اكتب التعديل المطلوب بوضوح' }), 'Please confirm the delivery date');
+  const change = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer-response` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تأكيد'); assert.equal((await change).status(), 200);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'CHANGE_REQUESTED');
+  page = sellerContext.pages()[0];
+  await go(`/deals/${deal.id}`);
+  const accept = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/change-response` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('قبول التعديل'); assert.equal((await accept).status(), 200);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_PENDING');
+  console.log('PASS Flutter creation, photo, invitation, seller join, offer and negotiation with database checks');
 } finally { await browser.close(); await db.end(); }
