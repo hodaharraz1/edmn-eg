@@ -4,11 +4,21 @@ import pg from 'pg';
 import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { adminLogin, acceptDialogs } from '../e2e/helpers.ts';
 const url = new URL(process.env.JOURNEY_DATABASE_URL ?? '');
 if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname) || url.pathname !== '/edmn_journey_test') throw new Error('Journey requires the isolated local edmn_journey_test database');
 const db = new pg.Client({ connectionString: url.toString() });
 await db.connect();
 const rows = async (query, args = []) => (await db.query(query, args)).rows;
+const pollStatus = async (expected) => {
+  for (let i = 0; i < 30; i++) {
+    const [d] = await rows('select status from external_deals where id=$1', [dealIdForPoll]);
+    if (d?.status === expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Deal did not reach expected status: ${expected}`);
+};
+let dealIdForPoll;
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ar-EG' });
 let page = await context.newPage();
@@ -57,6 +67,7 @@ try {
   api('POST', /\/deals$/, 201); api('POST', /\/deals\/[^/]+\/photos$/, 200);
   const [deal] = await rows('select id, status from external_deals where buyer_id = $1 and title = $2', [user.id, 'Test camera']);
   assert.equal(deal.status, 'DRAFT');
+  dealIdForPoll = deal.id;
   const evidence = await rows('select f.visibility, f.scan_status from deal_evidence e join files f on f.id=e.file_id where e.deal_id=$1 and e.kind=$2', [deal.id, 'PRODUCT_PHOTO']);
   assert.deepEqual(evidence, [{ visibility: 'PRIVATE', scan_status: 'UNSCANNED' }]);
   await type(page.getByRole('textbox', { name: 'السعر (ج.م)' }), '3000');
@@ -101,7 +112,8 @@ try {
   const sellerLogin = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/auth/login' && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تسجيل الدخول'); assert.equal((await sellerLogin).status(), 200);
   await go('/deals/join');
-  await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink);
+  try { await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink); }
+  catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
   await tap('الانضمام للصفقة'); assert.equal((await claim).status(), 200);
   const [joined] = await rows('select status, seller_user_id from external_deals where id=$1', [deal.id]);
@@ -148,5 +160,74 @@ try {
   await page.getByText('الإيصال وصل وتحت المراجعة. الدفع مش هيتأكد غير بعد مراجعة فريق أضمن.').waitFor({ state: 'visible' });
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_UNDER_REVIEW');
   assert.equal((await rows('select count(*)::int n from payment_submissions where payment_id=$1', [pay.paymentId]))[0].n, 1);
-  console.log('PASS Flutter deal creation, photo, invitation, negotiation and test payment proof with database checks');
+  // Existing staff UI performs the real review, with the seeded demo staff's TOTP.
+  // No secret, code, receipt or invitation is logged or screenshotted.
+  const adminBrowser = { newContext: (options) => browser.newContext({ ...options, baseURL: 'http://127.0.0.1:3000' }) };
+  const staffLogin = async (email) => {
+    try { return await adminLogin(adminBrowser, email); }
+    catch { throw new Error('Test staff sign-in failed'); }
+  };
+  const admin = await staffLogin('payments@edmn.local');
+  acceptDialogs(admin);
+  await admin.goto(`/admin/payments/${pay.paymentId}`);
+  await admin.waitForLoadState('networkidle');
+  const reviewResponse = admin.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${pay.paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
+  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
+  assert((await reviewResponse).ok());
+  await pollStatus('ACTIVE');
+  page = sellerContext.pages()[0];
+  await go(`/deals/${deal.id}`); await toActions();
+  await tap('تم الشحن');
+  await type(page.getByRole('textbox', { name: 'تفاصيل الشحن (الشركة، رقم البوليصة)' }), 'Test delivery');
+  const ship = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/shipped` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تم الشحن'); assert.equal((await ship).status(), 200);
+  await pollStatus('DELIVERED');
+  page = buyerPage;
+  await go(`/deals/${deal.id}`); await toActions();
+  const codeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code` && r.request().method() === 'GET', { timeout: 60000 });
+  await tap('عرض كود التسليم');
+  const codeResult = await codeResponse; assert.equal(codeResult.status(), 200);
+  const code = (await codeResult.json()).code;
+  assert(/^\d{6}$/.test(code));
+  try { await page.getByText(code, { exact: true }).waitFor({ state: 'visible' }); }
+  catch { throw new Error('Buyer delivery code was not visible'); }
+  page = sellerContext.pages()[0];
+  await go(`/deals/${deal.id}`); await toActions();
+  await tap('إدخال كود التسليم');
+  const codeInput = page.getByRole('textbox', { name: 'الكود (6 أرقام)' });
+  const wrongCode = code === '000000' ? '111111' : '000000';
+  try { await type(codeInput, wrongCode); } catch { throw new Error('Could not enter the test code'); }
+  const wrongVerify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تحقق'); assert((await wrongVerify).status() >= 400);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'DELIVERED');
+  await page.waitForTimeout(5000);
+  try { await codeInput.click(); await page.keyboard.press('ControlOrMeta+A'); await page.keyboard.type(code); }
+  catch { throw new Error('Could not enter the delivery code'); }
+  const verify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تحقق'); assert.equal((await verify).status(), 200);
+  await pollStatus('DELIVERY_HANDOVER_VERIFIED');
+  page = buyerPage;
+  await go(`/deals/${deal.id}`); await toActions();
+  await tap('تأكيد الاستلام');
+  const confirmed = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/confirm-receipt` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تأكيد الاستلام'); assert.equal((await confirmed).status(), 200);
+  await pollStatus('BUYER_CONFIRMED_RECEIPT');
+  assert.equal((await rows("select count(*)::int n from journal_entries where source_id=$1 and entry_type='DEAL_SETTLEMENT'", [deal.id]))[0].n, 0);
+  // Two-person release stays in the authorized web console; the app has no release action.
+  const operator = await staffLogin('finance@edmn.local');
+  await operator.goto(`/admin/deals/${deal.id}`); await operator.waitForLoadState('networkidle');
+  await operator.getByTestId('movement-maker-DEAL_RELEASE').locator('input[name=reason]').fill('Test confirmed receipt');
+  const requestRelease = operator.waitForResponse((r) => new URL(r.url()).pathname === `/admin/deals/${deal.id}` && r.request().method() === 'POST', { timeout: 60000 });
+  await operator.getByRole('button', { name: /طلب تسوية صفقة محمية/ }).click();
+  assert((await requestRelease).ok());
+  await operator.getByTestId('movement-open-DEAL_RELEASE').waitFor({ state: 'visible' });
+  const checker = await staffLogin('checker@edmn.local');
+  await checker.goto(`/admin/deals/${deal.id}`); await checker.waitForLoadState('networkidle');
+  await checker.getByLabel('سبب الاعتماد').fill('Test confirmed receipt');
+  const approveRelease = checker.waitForResponse((r) => new URL(r.url()).pathname === `/admin/deals/${deal.id}` && r.request().method() === 'POST', { timeout: 60000 });
+  await checker.getByRole('button', { name: /اعتماد تسوية الصفقة/ }).click();
+  assert((await approveRelease).ok());
+  await pollStatus('COMPLETED');
+  assert.equal((await rows("select count(*)::int n from journal_entries where source_id=$1 and entry_type='DEAL_SETTLEMENT'", [deal.id]))[0].n, 1);
+  console.log('PASS Flutter Protected Deal with authorized staff review and two-person test settlement');
 } finally { await browser.close(); await db.end(); }

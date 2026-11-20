@@ -119,7 +119,7 @@ jobs:
           node tests/mobile-journey/server.mjs > "$RUNNER_TEMP/edmn-host.log" 2>&1 &
           for i in $(seq 1 90); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
           curl -fsS http://127.0.0.1:3000/api/health >/dev/null
-          node tests/mobile-journey/protected-deal.mjs
+          npx tsx tests/mobile-journey/protected-deal.mjs
       - name: Save synthetic UI screenshot
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
