@@ -37,7 +37,7 @@ const freshDeal = async (id) => {
   const response = await read;
   assert.equal(response.status(), 200, 'Deal details API');
   const projection = await response.json();
-  console.log(`Deal view: role=${projection.role}, status=${projection.status}, actions=${(projection.allowedActions ?? []).join(',')}`);
+  console.log(`Deal view: role=${projection.role}, status=${projection.status}, version=${projection.terms?.currentVersion ?? 'none'}, actions=${(projection.allowedActions ?? []).join(',')}`);
   await page.waitForTimeout(3000); await sem(); await toActions();
 };
 const tap = async (label) => {
