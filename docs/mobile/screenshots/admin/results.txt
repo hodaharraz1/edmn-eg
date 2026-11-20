@@ -15,6 +15,20 @@ PASS disputes: read-only notice — matches=1
 PASS audit: GET 200 — GET /api/v1/admin/audit 200
 PASS audit: shows the DB item «auth.totp_verified» — matches=3
 PASS audit: read-only notice — matches=1
+PASS admin@edmn.local: sign-in + TOTP — POST /api/v1/admin/auth/login 200 | POST /api/v1/admin/auth/mfa/verify 200
+PASS orders: server-side search — q=100005
+PASS order detail: GET 200 — GET /api/v1/admin/orders/20fe9c6b-4d5a-4d7c-9955-ae5af112fcd7 200
+PASS order detail: shows the shipment carrier «J&T Express» from the DB — carrier on screen
+PASS seller detail: GET 200 + checklist — checklist visible
+PASS deal detail: GET 200 — GET /api/v1/admin/deals/ec893e79-d256-4bdf-b7e9-b9c81fc280ff 200
+PASS dispute detail: GET 200 — GET /api/v1/admin/disputes/0257cb8a-6ce5-4cca-badc-5c395ea4171e 200
+PASS assign: UI → POST 200 — GET /api/v1/admin/disputes/assignees 200 | POST /api/v1/admin/disputes/0257cb8a-6ce5-4cca-badc-5c395ea4171e/assign 200
+PASS assign: DB assigned_to = me — assigned_to
+PASS assign: audited from the Admin App — audit row
+PASS note: UI → POST 200 — POST /api/v1/admin/disputes/0257cb8a-6ce5-4cca-badc-5c395ea4171e/notes 200
+PASS note: one DB row, internal, by me — dispute_messages
+PASS note: nobody notified — no notification row
+PASS audit: filtered by actor + action shows the assignment — dispute.assigned visible
 PASS catalog@edmn.local: sign-in + TOTP — POST /api/v1/admin/auth/login 200 | POST /api/v1/admin/auth/mfa/verify 200
 PASS catalog@: «طلبات البائعين» shown (sellers.review granted) — shown=true
 PASS catalog@: «التحقق من الهوية (KYC)» shown (identity.view granted) — shown=true

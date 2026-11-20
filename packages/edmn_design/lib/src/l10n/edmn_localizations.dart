@@ -5977,6 +5977,372 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'في الطريق'**
   String get adminStatusShipped;
+
+  /// No description provided for @adminSectionSummary.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملخص'**
+  String get adminSectionSummary;
+
+  /// No description provided for @adminSectionTimeline.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل الحالة'**
+  String get adminSectionTimeline;
+
+  /// No description provided for @adminSectionChecklist.
+  ///
+  /// In ar, this message translates to:
+  /// **'قائمة المتطلبات'**
+  String get adminSectionChecklist;
+
+  /// No description provided for @adminSectionDocuments.
+  ///
+  /// In ar, this message translates to:
+  /// **'المستندات (بيانات فقط)'**
+  String get adminSectionDocuments;
+
+  /// No description provided for @adminSectionReviewTrail.
+  ///
+  /// In ar, this message translates to:
+  /// **'سجل المراجعة'**
+  String get adminSectionReviewTrail;
+
+  /// No description provided for @adminSectionItems.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتجات'**
+  String get adminSectionItems;
+
+  /// No description provided for @adminSectionShipment.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحنة'**
+  String get adminSectionShipment;
+
+  /// No description provided for @adminSectionTracking.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتبع الشحن'**
+  String get adminSectionTracking;
+
+  /// No description provided for @adminSectionMessages.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرسائل والملاحظات'**
+  String get adminSectionMessages;
+
+  /// No description provided for @adminSectionEvidence.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأدلة (بيانات فقط)'**
+  String get adminSectionEvidence;
+
+  /// No description provided for @adminSectionDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'النزاعات المرتبطة'**
+  String get adminSectionDisputes;
+
+  /// No description provided for @adminFieldStatus.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحالة'**
+  String get adminFieldStatus;
+
+  /// No description provided for @adminFieldType.
+  ///
+  /// In ar, this message translates to:
+  /// **'النوع'**
+  String get adminFieldType;
+
+  /// No description provided for @adminFieldRisk.
+  ///
+  /// In ar, this message translates to:
+  /// **'المخاطر'**
+  String get adminFieldRisk;
+
+  /// No description provided for @adminFieldGovernorate.
+  ///
+  /// In ar, this message translates to:
+  /// **'المحافظة'**
+  String get adminFieldGovernorate;
+
+  /// No description provided for @adminFieldStore.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتجر'**
+  String get adminFieldStore;
+
+  /// No description provided for @adminFieldSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الإرسال'**
+  String get adminFieldSubmitted;
+
+  /// No description provided for @adminFieldReviewed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ المراجعة'**
+  String get adminFieldReviewed;
+
+  /// No description provided for @adminFieldReviewer.
+  ///
+  /// In ar, this message translates to:
+  /// **'المراجِع'**
+  String get adminFieldReviewer;
+
+  /// No description provided for @adminFieldReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب'**
+  String get adminFieldReason;
+
+  /// No description provided for @adminFieldCustomer.
+  ///
+  /// In ar, this message translates to:
+  /// **'العميل'**
+  String get adminFieldCustomer;
+
+  /// No description provided for @adminFieldPlaced.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الطلب'**
+  String get adminFieldPlaced;
+
+  /// No description provided for @adminFieldPaid.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الدفع'**
+  String get adminFieldPaid;
+
+  /// No description provided for @adminFieldMerchandise.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنتجات'**
+  String get adminFieldMerchandise;
+
+  /// No description provided for @adminFieldShipping.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن'**
+  String get adminFieldShipping;
+
+  /// No description provided for @adminFieldGrand.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإجمالي'**
+  String get adminFieldGrand;
+
+  /// No description provided for @adminFieldPayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع'**
+  String get adminFieldPayment;
+
+  /// No description provided for @adminFieldCarrier.
+  ///
+  /// In ar, this message translates to:
+  /// **'شركة الشحن'**
+  String get adminFieldCarrier;
+
+  /// No description provided for @adminFieldTracking.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم التتبع'**
+  String get adminFieldTracking;
+
+  /// No description provided for @adminFieldExpected.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموعد المتوقع'**
+  String get adminFieldExpected;
+
+  /// No description provided for @adminFieldBuyer.
+  ///
+  /// In ar, this message translates to:
+  /// **'المشتري'**
+  String get adminFieldBuyer;
+
+  /// No description provided for @adminFieldSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'البائع'**
+  String get adminFieldSeller;
+
+  /// No description provided for @adminFieldBuyerPays.
+  ///
+  /// In ar, this message translates to:
+  /// **'يدفع المشتري'**
+  String get adminFieldBuyerPays;
+
+  /// No description provided for @adminFieldSellerGets.
+  ///
+  /// In ar, this message translates to:
+  /// **'يستلم البائع'**
+  String get adminFieldSellerGets;
+
+  /// No description provided for @adminFieldDealTotal.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيمة الصفقة'**
+  String get adminFieldDealTotal;
+
+  /// No description provided for @adminFieldHold.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجميد مالي'**
+  String get adminFieldHold;
+
+  /// No description provided for @adminFieldEvidence.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور الأدلة'**
+  String get adminFieldEvidence;
+
+  /// No description provided for @adminFieldClaimant.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدّعي'**
+  String get adminFieldClaimant;
+
+  /// No description provided for @adminFieldRespondent.
+  ///
+  /// In ar, this message translates to:
+  /// **'المدّعى عليه'**
+  String get adminFieldRespondent;
+
+  /// No description provided for @adminFieldAssignee.
+  ///
+  /// In ar, this message translates to:
+  /// **'المسؤول'**
+  String get adminFieldAssignee;
+
+  /// No description provided for @adminFieldClaimed.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ المطالب'**
+  String get adminFieldClaimed;
+
+  /// No description provided for @adminFieldSubject.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرتبط بـ'**
+  String get adminFieldSubject;
+
+  /// No description provided for @adminFieldReasonCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب'**
+  String get adminFieldReasonCode;
+
+  /// No description provided for @adminYes.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم'**
+  String get adminYes;
+
+  /// No description provided for @adminNo.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا'**
+  String get adminNo;
+
+  /// No description provided for @adminUnassigned.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير مسند'**
+  String get adminUnassigned;
+
+  /// No description provided for @adminInternalNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة داخلية'**
+  String get adminInternalNote;
+
+  /// No description provided for @adminAssign.
+  ///
+  /// In ar, this message translates to:
+  /// **'إسناد'**
+  String get adminAssign;
+
+  /// No description provided for @adminAssignTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'إسناد النزاع إلى'**
+  String get adminAssignTo;
+
+  /// No description provided for @adminAddNote.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة ملاحظة داخلية'**
+  String get adminAddNote;
+
+  /// No description provided for @adminNoteHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملاحظة تظهر لفريق أضمن فقط، ولا تصل للأطراف'**
+  String get adminNoteHint;
+
+  /// No description provided for @adminSave.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ'**
+  String get adminSave;
+
+  /// No description provided for @adminCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء'**
+  String get adminCancel;
+
+  /// No description provided for @adminAssigned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إسناد النزاع'**
+  String get adminAssigned;
+
+  /// No description provided for @adminNoteAdded.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إضافة الملاحظة'**
+  String get adminNoteAdded;
+
+  /// No description provided for @adminMe.
+  ///
+  /// In ar, this message translates to:
+  /// **'أنا'**
+  String get adminMe;
+
+  /// No description provided for @adminDocsNoPermission.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض المستندات يحتاج صلاحية المستندات'**
+  String get adminDocsNoPermission;
+
+  /// No description provided for @adminSearch.
+  ///
+  /// In ar, this message translates to:
+  /// **'بحث'**
+  String get adminSearch;
+
+  /// No description provided for @adminActorAll.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get adminActorAll;
+
+  /// No description provided for @adminFilterAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم الإجراء (مثال: dispute)'**
+  String get adminFilterAction;
+
+  /// No description provided for @adminNoTimeline.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أحداث بعد'**
+  String get adminNoTimeline;
 }
 
 class _EdmnLocalizationsDelegate

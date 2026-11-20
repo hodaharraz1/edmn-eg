@@ -3125,4 +3125,187 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get adminStatusShipped => 'في الطريق';
+
+  @override
+  String get adminSectionSummary => 'الملخص';
+
+  @override
+  String get adminSectionTimeline => 'سجل الحالة';
+
+  @override
+  String get adminSectionChecklist => 'قائمة المتطلبات';
+
+  @override
+  String get adminSectionDocuments => 'المستندات (بيانات فقط)';
+
+  @override
+  String get adminSectionReviewTrail => 'سجل المراجعة';
+
+  @override
+  String get adminSectionItems => 'المنتجات';
+
+  @override
+  String get adminSectionShipment => 'الشحنة';
+
+  @override
+  String get adminSectionTracking => 'تتبع الشحن';
+
+  @override
+  String get adminSectionMessages => 'الرسائل والملاحظات';
+
+  @override
+  String get adminSectionEvidence => 'الأدلة (بيانات فقط)';
+
+  @override
+  String get adminSectionDisputes => 'النزاعات المرتبطة';
+
+  @override
+  String get adminFieldStatus => 'الحالة';
+
+  @override
+  String get adminFieldType => 'النوع';
+
+  @override
+  String get adminFieldRisk => 'المخاطر';
+
+  @override
+  String get adminFieldGovernorate => 'المحافظة';
+
+  @override
+  String get adminFieldStore => 'المتجر';
+
+  @override
+  String get adminFieldSubmitted => 'تاريخ الإرسال';
+
+  @override
+  String get adminFieldReviewed => 'تاريخ المراجعة';
+
+  @override
+  String get adminFieldReviewer => 'المراجِع';
+
+  @override
+  String get adminFieldReason => 'السبب';
+
+  @override
+  String get adminFieldCustomer => 'العميل';
+
+  @override
+  String get adminFieldPlaced => 'تاريخ الطلب';
+
+  @override
+  String get adminFieldPaid => 'تاريخ الدفع';
+
+  @override
+  String get adminFieldMerchandise => 'المنتجات';
+
+  @override
+  String get adminFieldShipping => 'الشحن';
+
+  @override
+  String get adminFieldGrand => 'الإجمالي';
+
+  @override
+  String get adminFieldPayment => 'الدفع';
+
+  @override
+  String get adminFieldCarrier => 'شركة الشحن';
+
+  @override
+  String get adminFieldTracking => 'رقم التتبع';
+
+  @override
+  String get adminFieldExpected => 'الموعد المتوقع';
+
+  @override
+  String get adminFieldBuyer => 'المشتري';
+
+  @override
+  String get adminFieldSeller => 'البائع';
+
+  @override
+  String get adminFieldBuyerPays => 'يدفع المشتري';
+
+  @override
+  String get adminFieldSellerGets => 'يستلم البائع';
+
+  @override
+  String get adminFieldDealTotal => 'قيمة الصفقة';
+
+  @override
+  String get adminFieldHold => 'تجميد مالي';
+
+  @override
+  String get adminFieldEvidence => 'صور الأدلة';
+
+  @override
+  String get adminFieldClaimant => 'المدّعي';
+
+  @override
+  String get adminFieldRespondent => 'المدّعى عليه';
+
+  @override
+  String get adminFieldAssignee => 'المسؤول';
+
+  @override
+  String get adminFieldClaimed => 'المبلغ المطالب';
+
+  @override
+  String get adminFieldSubject => 'مرتبط بـ';
+
+  @override
+  String get adminFieldReasonCode => 'السبب';
+
+  @override
+  String get adminYes => 'نعم';
+
+  @override
+  String get adminNo => 'لا';
+
+  @override
+  String get adminUnassigned => 'غير مسند';
+
+  @override
+  String get adminInternalNote => 'ملاحظة داخلية';
+
+  @override
+  String get adminAssign => 'إسناد';
+
+  @override
+  String get adminAssignTo => 'إسناد النزاع إلى';
+
+  @override
+  String get adminAddNote => 'إضافة ملاحظة داخلية';
+
+  @override
+  String get adminNoteHint => 'الملاحظة تظهر لفريق أضمن فقط، ولا تصل للأطراف';
+
+  @override
+  String get adminSave => 'حفظ';
+
+  @override
+  String get adminCancel => 'إلغاء';
+
+  @override
+  String get adminAssigned => 'تم إسناد النزاع';
+
+  @override
+  String get adminNoteAdded => 'تمت إضافة الملاحظة';
+
+  @override
+  String get adminMe => 'أنا';
+
+  @override
+  String get adminDocsNoPermission => 'عرض المستندات يحتاج صلاحية المستندات';
+
+  @override
+  String get adminSearch => 'بحث';
+
+  @override
+  String get adminActorAll => 'الكل';
+
+  @override
+  String get adminFilterAction => 'اسم الإجراء (مثال: dispute)';
+
+  @override
+  String get adminNoTimeline => 'لا توجد أحداث بعد';
 }

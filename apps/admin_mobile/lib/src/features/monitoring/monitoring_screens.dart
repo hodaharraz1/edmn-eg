@@ -3,13 +3,17 @@ import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../providers.dart';
 
 /// One row of any monitoring list, already mapped from the server payload. Nothing here is computed from money or
 /// status on the device: amounts are server piastres, statuses are server codes mapped to a label and a tone.
 class MonitorRow {
-  const MonitorRow({required this.id, required this.title, this.subtitle, required this.status, this.amount, this.badge, this.at});
+  const MonitorRow({required this.id, required this.title, this.subtitle, required this.status, this.amount, this.badge, this.at, this.detailId});
   final String id;
+  /// Opens `<spec.path>/<detailId>` when set (e.g. a follow-up row opens its parent order).
+  final String? detailId;
   final String title;
   final String? subtitle;
   final String status;
@@ -25,7 +29,7 @@ class MonitorPage {
   final Future<MonitorPage> Function()? next;
 }
 
-typedef MonitorLoader = Future<MonitorPage> Function(AdminApi api, String tab);
+typedef MonitorLoader = Future<MonitorPage> Function(AdminApi api, String tab, String query);
 
 /// Server status → label and tone, shared by the six lists. Unknown codes show as they are, neutrally.
 (String, EdmnTone) adminStatus(EdmnLocalizations t, String s) => switch (s) {
@@ -56,7 +60,10 @@ typedef MonitorLoader = Future<MonitorPage> Function(AdminApi api, String tab);
 /// The six screens: title, server permission (the home menu shows an entry only when the profile carries it; the server
 /// enforces it on every call regardless), tabs and the loader mapping the typed response to rows.
 class MonitorSpec {
-  const MonitorSpec({required this.path, required this.permission, required this.icon, required this.title, required this.tabs, required this.load});
+  const MonitorSpec({required this.path, required this.permission, required this.icon, required this.title, required this.tabs, required this.load, this.searchHint, this.hasDetail = true});
+  /// Shows a search field (server-side search) when set.
+  final String Function(EdmnLocalizations)? searchHint;
+  final bool hasDetail;
   final String path;
   final String permission;
   final IconData icon;
@@ -67,22 +74,22 @@ class MonitorSpec {
 
 String _date(String? iso) => iso == null ? '' : iso.substring(0, 10);
 
-Future<MonitorPage> _orders(AdminApi api, String tab, {int page = 1}) async {
-  final r = await api.orders(tab: tab, page: page);
+Future<MonitorPage> _orders(AdminApi api, String tab, String q, {int page = 1}) async {
+  final r = await api.orders(tab: tab, q: q, page: page);
   return MonitorPage(
-    [for (final o in r.items) MonitorRow(id: o.id, title: '#${o.number}', subtitle: [o.customer, o.store].whereType<String>().join(' · '), status: o.status, amount: o.total, at: o.at)],
-    next: r.hasMore ? () => _orders(api, tab, page: page + 1) : null,
+    [for (final o in r.items) MonitorRow(id: o.id, detailId: o.orderId, title: '#${o.number}', subtitle: [o.customer, o.store].whereType<String>().join(' · '), status: o.status, amount: o.total, at: o.at)],
+    next: r.hasMore ? () => _orders(api, tab, q, page: page + 1) : null,
   );
 }
 
-Future<MonitorPage> _audit(AdminApi api, {int? before}) async {
-  final r = await api.auditLog(before: before);
+Future<MonitorPage> _audit(AdminApi api, String actorType, String action, {int? before}) async {
+  final r = await api.auditLog(before: before, action: action, actorType: actorType == 'all' ? null : actorType);
   return MonitorPage(
     [
       for (final a in r.items)
         MonitorRow(id: '${a.id}', title: a.action, subtitle: '${a.actor ?? a.actorType} · ${a.entityType}${a.channel == null ? '' : ' · ${a.channel}'}', status: a.actorType, at: a.at),
     ],
-    next: r.nextBefore == null ? null : () => _audit(api, before: r.nextBefore),
+    next: r.nextBefore == null ? null : () => _audit(api, actorType, action, before: r.nextBefore),
   );
 }
 
@@ -93,7 +100,7 @@ final monitorSpecs = <MonitorSpec>[
     icon: Icons.storefront_outlined,
     title: (t) => t.adminSellerApplications,
     tabs: [('pending', (t) => t.adminTabPending), ('info', (t) => t.adminTabNeedsInfo)],
-    load: (api, tab) async => MonitorPage([
+    load: (api, tab, _) async => MonitorPage([
       for (final s in (await api.sellerApplications(tab: tab)).items)
         MonitorRow(id: s.id, title: s.storeName ?? s.applicant ?? '—', subtitle: [s.applicant, s.type, if (s.riskLevel != null) s.riskLevel].whereType<String>().join(' · '), status: s.status, at: s.submittedAt),
     ]),
@@ -104,7 +111,7 @@ final monitorSpecs = <MonitorSpec>[
     icon: Icons.badge_outlined,
     title: (t) => t.adminIdentityReviews,
     tabs: [('pending', (t) => t.adminTabPending), ('action', (t) => t.adminTabWaitingCustomer), ('approved', (t) => t.adminTabApproved), ('rejected', (t) => t.adminTabRejected)],
-    load: (api, tab) async => MonitorPage([
+    load: (api, tab, _) async => MonitorPage([
       for (final v in (await api.identityReviews(tab: tab)).items) MonitorRow(id: v.id, title: v.name ?? '—', status: v.status, badge: v.documentsComplete ? 'docs-ok' : 'docs-missing', at: v.submittedAt),
     ]),
   ),
@@ -114,7 +121,8 @@ final monitorSpecs = <MonitorSpec>[
     icon: Icons.local_shipping_outlined,
     title: (t) => t.adminOrders,
     tabs: [('all', (t) => t.adminTabAllOrders), ('followup', (t) => t.adminTabFollowUp)],
-    load: (api, tab) => _orders(api, tab),
+    searchHint: (t) => t.adminSearchOrders,
+    load: (api, tab, q) => _orders(api, tab, q),
   ),
   MonitorSpec(
     path: '/monitor/deals',
@@ -122,7 +130,7 @@ final monitorSpecs = <MonitorSpec>[
     icon: Icons.handshake_outlined,
     title: (t) => t.adminDeals,
     tabs: [('active', (t) => t.adminTabActive), ('disputed', (t) => t.adminTabDisputed), ('done', (t) => t.adminTabDone)],
-    load: (api, tab) async => MonitorPage([
+    load: (api, tab, _) async => MonitorPage([
       for (final d in (await api.deals(tab: tab)).items)
         MonitorRow(id: d.id, title: '#${d.number} · ${d.title}', subtitle: [d.buyer, d.seller].whereType<String>().join(' ⇄ '), status: d.status, amount: d.buyerPays, badge: d.sellerConfirmed ? null : 'seller-unconfirmed', at: d.updatedAt),
     ]),
@@ -133,7 +141,7 @@ final monitorSpecs = <MonitorSpec>[
     icon: Icons.gavel_outlined,
     title: (t) => t.adminDisputes,
     tabs: [('open', (t) => t.adminTabOpen), ('mine', (t) => t.adminTabMine), ('closed', (t) => t.adminTabClosed)],
-    load: (api, tab) async => MonitorPage([
+    load: (api, tab, _) async => MonitorPage([
       for (final d in (await api.disputes(tab: tab)).items)
         MonitorRow(id: d.id, title: '#${d.number}', subtitle: [d.kind, d.claimant, d.reasonCode].whereType<String>().join(' · '), status: d.status, amount: d.claimedAmount, badge: d.assignedToMe ? 'mine' : null, at: d.createdAt),
     ]),
@@ -143,8 +151,11 @@ final monitorSpecs = <MonitorSpec>[
     permission: 'audit.view',
     icon: Icons.history_rounded,
     title: (t) => t.adminAuditLog,
-    tabs: [('all', (t) => t.adminAuditLog)],
-    load: (api, tab) => _audit(api),
+    // Actor filter as tabs, action as server-side search; keyset paging.
+    tabs: [('all', (t) => t.adminActorAll), ('ADMIN', (_) => 'ADMIN'), ('SELLER', (_) => 'SELLER'), ('CUSTOMER', (_) => 'CUSTOMER'), ('SYSTEM', (_) => 'SYSTEM')],
+    searchHint: (t) => t.adminFilterAction,
+    hasDetail: false,
+    load: (api, tab, q) => _audit(api, tab, q),
   ),
 ];
 
@@ -157,6 +168,13 @@ class MonitorListScreen extends ConsumerStatefulWidget {
 
 class _MonitorListScreenState extends ConsumerState<MonitorListScreen> {
   late String _tab = widget.spec.tabs.first.$1;
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
   List<MonitorRow> _rows = const [];
   Future<MonitorPage> Function()? _next;
   Object? _error;
@@ -178,7 +196,7 @@ class _MonitorListScreenState extends ConsumerState<MonitorListScreen> {
       _rows = const []; // never show the previous tab's rows under the new tab
     });
     try {
-      final p = await widget.spec.load(ref.read(adminApiProvider), _tab);
+      final p = await widget.spec.load(ref.read(adminApiProvider), _tab, _query.text.trim());
       if (!mounted || gen != _generation) return;
       setState(() {
         _rows = p.rows;
@@ -241,6 +259,22 @@ class _MonitorListScreenState extends ConsumerState<MonitorListScreen> {
                 ),
             ]),
           ),
+        if (spec.searchHint != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(EdmnSpacing.sm, EdmnSpacing.xs, EdmnSpacing.sm, 0),
+            child: TextField(
+              key: const Key('search'),
+              controller: _query,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _reload(),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: spec.searchHint!(t),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(tooltip: t.adminSearch, icon: const Icon(Icons.arrow_forward), onPressed: _reload),
+              ),
+            ),
+          ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _reload,
@@ -259,7 +293,7 @@ class _MonitorListScreenState extends ConsumerState<MonitorListScreen> {
                     child: Center(child: Text(t.adminEmptyList, key: const Key('empty'), style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary))),
                   )
                 else ...[
-                  for (final r in _rows) _RowTile(row: r),
+                  for (final r in _rows) _RowTile(row: r, onOpen: spec.hasDetail ? () => context.push('${spec.path}/${r.detailId ?? r.id}') : null),
                   if (_next != null)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(top: EdmnSpacing.sm),
@@ -278,8 +312,9 @@ class _MonitorListScreenState extends ConsumerState<MonitorListScreen> {
 }
 
 class _RowTile extends StatelessWidget {
-  const _RowTile({required this.row});
+  const _RowTile({required this.row, this.onOpen});
   final MonitorRow row;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -296,6 +331,7 @@ class _RowTile extends StatelessWidget {
       key: Key('row-${row.id}'),
       padding: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.xs),
       child: EdmnCard(
+        onTap: onOpen,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(child: Text(row.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: EdmnType.bodyStrong)),
