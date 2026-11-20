@@ -4,6 +4,7 @@ import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_customer/src/common/governorate_field.dart';
 import 'package:edmn_customer/src/common/status.dart';
+import 'package:edmn_customer/src/features/seller/seller_setup_screens.dart';
 import 'package:edmn_customer/src/providers.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,42 @@ class _HolderState extends State<_Holder> {
         },
       );
 }
+
+/// A server that stores shipping rates and answers like `PUT /seller/shipping-rates` (the saved list).
+class _RatesApi extends MobileApi {
+  _RatesApi() : super(ApiClient(config: BuildConfig(environment: AppEnvironment.local, apiBaseUrl: 'http://localhost', appVersion: '1.2.0'), store: MemorySessionStore(), refreshPath: '/r', telemetry: Telemetry([])));
+  final rows = <int, GetSellerShippingRatesResponseItemsItem>{
+    1: const GetSellerShippingRatesResponseItemsItem(governorateId: 1, enabled: true, feePiastres: 5000, etaMinDays: 1, etaMaxDays: 3),
+    2: const GetSellerShippingRatesResponseItemsItem(governorateId: 2, enabled: false, feePiastres: 0, etaMinDays: 2, etaMaxDays: 5),
+  };
+  final saves = <List<Map<String, dynamic>>>[];
+  @override
+  Future<GetSellerShippingRatesResponse> shippingRates() async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return GetSellerShippingRatesResponse(items: rows.values.toList());
+  }
+
+  @override
+  Future<GetSellerShippingRatesResponse> saveShippingRates(List<Map<String, dynamic>> items) async {
+    saves.add(items);
+    for (final i in items) {
+      rows[i['governorateId'] as int] = GetSellerShippingRatesResponseItemsItem(governorateId: i['governorateId'] as int, enabled: i['enabled'] as bool, feePiastres: i['feePiastres'] as int, etaMinDays: i['etaMinDays'] as int, etaMaxDays: i['etaMaxDays'] as int);
+    }
+    return GetSellerShippingRatesResponse(items: rows.values.toList());
+  }
+}
+
+Widget _ratesHost(_RatesApi api) => ProviderScope(
+      overrides: [mobileApiProvider.overrideWithValue(api), governoratesProvider.overrideWith((ref) async => _govs)],
+      child: MaterialApp(
+        locale: const Locale('ar'),
+        localizationsDelegates: EdmnLocalizations.localizationsDelegates,
+        supportedLocales: EdmnLocalizations.supportedLocales,
+        home: const ShippingRatesScreen(),
+      ),
+    );
+
+Map<String, dynamic> _sent(_RatesApi api, int save, int gov) => api.saves[save].firstWhere((i) => i['governorateId'] == gov);
 
 void main() {
   group('governorate picker', () {
@@ -134,6 +171,52 @@ void main() {
       expect(Directionality.of(t.element(find.text('Alexandria'))), TextDirection.ltr);
       expect(find.bySemanticsLabel('Governorate: Alexandria'), findsOneWidget);
       h.dispose();
+    });
+  });
+
+  group('shipping rates screen (found by the batch 5 UI journey)', () {
+    testWidgets('editing only a fee shows Save (no switch toggled first)', (t) async {
+      final api = _RatesApi();
+      await t.pumpWidget(_ratesHost(api));
+      await t.pumpAndSettle();
+      expect(find.byKey(const Key('save-rates')), findsOneWidget, reason: 'the Save button must exist as soon as the rates are shown');
+      await t.enterText(find.byKey(const Key('rate-fee-1')), '62.5');
+      await t.tap(find.byKey(const Key('save-rates')));
+      await t.pumpAndSettle();
+      expect(_sent(api, 0, 1)['feePiastres'], 6250);
+    });
+
+    testWidgets('a second save keeps the first one (the form follows what the server stored, not the stale list)', (t) async {
+      final api = _RatesApi();
+      await t.pumpWidget(_ratesHost(api));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const Key('rate-on-2'))); // switch Giza on
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('rate-fee-2')), '85');
+      await t.tap(find.byKey(const Key('save-rates')));
+      await t.pumpAndSettle();
+      expect(_sent(api, 0, 2), containsPair('enabled', true));
+      expect(api.rows[2]!.feePiastres, 8500);
+      // Change another governorate and save again: Giza must stay as saved, not revert to "off, 0".
+      await t.pump(const Duration(seconds: 6)); // let the «saved» message go away
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('rate-fee-1')), '55');
+      await t.tap(find.byKey(const Key('save-rates')));
+      await t.pumpAndSettle();
+      expect(_sent(api, 1, 2), allOf(containsPair('enabled', true), containsPair('feePiastres', 8500)));
+      expect(api.rows[2]!.enabled, isTrue);
+    });
+
+    testWidgets('min above max is refused on the device; nothing is sent', (t) async {
+      final api = _RatesApi();
+      await t.pumpWidget(_ratesHost(api));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('rate-min-1')), '7');
+      await t.enterText(find.byKey(const Key('rate-max-1')), '2');
+      await t.tap(find.byKey(const Key('save-rates')));
+      await t.pumpAndSettle();
+      expect(api.saves, isEmpty);
+      expect(find.text('راجع الأرقام قبل الحفظ'), findsOneWidget);
     });
   });
 

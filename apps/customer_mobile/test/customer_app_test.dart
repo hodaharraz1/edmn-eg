@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
-import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton;
+import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton, EdmnThumb;
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
@@ -766,6 +766,18 @@ void main() {
     await t.tap(find.byKey(const Key('dialog-confirm')));
     await t.pumpAndSettle();
     expect(api.confirmKeys, hasLength(1));
+  });
+
+  testWidgets('order screen: the product thumbnail is a named button (batch 5 journey found it unnamed)', (t) async {
+    final h = t.ensureSemantics();
+    final api = FakeMobileApi()..orderStatus = 'PAID';
+    await _start(t, api, signedIn: true);
+    await _go(t, '/orders/o1');
+    final thumb = find.descendant(of: find.byKey(const Key('so-so1')), matching: find.byType(EdmnThumb)).first;
+    final node = t.getSemantics(thumb);
+    expect(node.label, isNotEmpty);
+    expect(node.flagsCollection.isButton, isTrue);
+    h.dispose();
   });
 
   testWidgets('notifications: empty state; a tap marks only that one read and opens its typed target; no target = no navigation', (t) async {

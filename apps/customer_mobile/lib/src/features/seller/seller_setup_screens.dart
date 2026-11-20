@@ -969,6 +969,9 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
     final govsAsync = ref.watch(governoratesProvider);
     final govs = govsAsync.value ?? const [];
     final en = languageOf(context) == 'en';
+    // Seed the editable copy BEFORE the bottom bar is decided: seeding it inside the body left the Save button hidden
+    // until something else rebuilt the screen (editing only a fee never showed it).
+    if (_edit == null && rates.hasValue) _edit = _editable(rates.requireValue);
     return EdmnAppScaffold(
       title: t.shippingRates,
       bottomBar: _edit == null
@@ -992,10 +995,13 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
                   items.add({'governorateId': e.key, 'enabled': e.value.$1, 'feePiastres': fee, 'etaMinDays': min, 'etaMaxDays': max});
                 }
                 setState(() => _busy = true);
-                final ok = await runAction(context, () => ref.read(mobileApiProvider).saveShippingRates(items), success: t.saved);
-                if (ok) {
+                GetSellerShippingRatesResponse? saved;
+                final ok = await runAction(context, () async => saved = await ref.read(mobileApiProvider).saveShippingRates(items), success: t.saved);
+                if (ok && saved != null) {
+                  // Edit from what the server stored. Rebuilding from the cached list (still the pre-save data while it
+                  // refetches) made the next save silently revert this one.
+                  setState(() => _edit = _editable(saved!));
                   ref.invalidate(shippingRatesProvider);
-                  setState(() => _edit = null);
                 }
                 if (mounted) setState(() => _busy = false);
               },
@@ -1012,12 +1018,14 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
     );
   }
 
+  static Map<int, (bool, String, String, String)> _editable(GetSellerShippingRatesResponse r) => {
+        for (final x in r.items)
+          x.governorateId: (x.enabled, x.feePiastres % 100 == 0 ? '${x.feePiastres ~/ 100}' : (x.feePiastres / 100).toStringAsFixed(2), '${x.etaMinDays}', '${x.etaMaxDays}'),
+      };
+
   Widget _rates(EdmnLocalizations t, GetSellerShippingRatesResponse r, List<ListGovernoratesResponseItemsItem> govs, bool en) {
           if (govs.isEmpty) return EdmnEmptyState(icon: Icons.map_outlined, title: t.noGovernorates);
-          _edit ??= {
-            for (final x in r.items)
-              x.governorateId: (x.enabled, x.feePiastres % 100 == 0 ? '${x.feePiastres ~/ 100}' : (x.feePiastres / 100).toStringAsFixed(2), '${x.etaMinDays}', '${x.etaMaxDays}'),
-          };
+          _edit ??= _editable(r);
           return ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
             EdmnNotice(message: t.shippingRatesNote),
             _gap(),
@@ -1027,13 +1035,14 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
                 final id = g.id;
                 final e = _edit![id]!;
                 Widget num(String k, String value, String label, void Function(String) on) => SizedBox(
-                      width: 72,
+                      width: k == 'fee' ? 96 : 72, // wide enough for «92.50»
                       child: TextFormField(
                         key: Key('rate-$k-$id'),
                         initialValue: value,
                         enabled: e.$1,
                         textDirection: TextDirection.ltr,
-                        keyboardType: TextInputType.number,
+                        // The fee is in pounds and may have piastres (92.50): offer the decimal key for it.
+                        keyboardType: k == 'fee' ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.number,
                         decoration: InputDecoration(labelText: label, isDense: true),
                         onChanged: on,
                       ),

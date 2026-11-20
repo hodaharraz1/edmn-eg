@@ -235,9 +235,15 @@ class _SellerOrderSection extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               itemCount: so.items.length,
               separatorBuilder: (_, _) => const SizedBox(width: EdmnSpacing.xs),
-              itemBuilder: (_, i) => InkWell(
-                onTap: so.items[i].productSlug == null ? null : () => context.push('/products/${Uri.encodeComponent(so.items[i].productSlug!)}'),
-                child: EdmnThumb(url: so.items[i].imageUrl),
+              // The thumbnail opens the product: a screen reader names it after the product, not "button".
+              itemBuilder: (_, i) => Semantics(
+                button: so.items[i].productSlug != null,
+                label: so.items[i].title,
+                excludeSemantics: true,
+                child: InkWell(
+                  onTap: so.items[i].productSlug == null ? null : () => context.push('/products/${Uri.encodeComponent(so.items[i].productSlug!)}'),
+                  child: EdmnThumb(url: so.items[i].imageUrl),
+                ),
               ),
             ),
           ),
