@@ -29,6 +29,8 @@ const sem = async () => { await page.evaluate(() => document.querySelector('flt-
 const go = async (path) => { await page.goto('http://127.0.0.1:8099/#' + path, { waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); };
 const type = async (locator, value) => { await locator.click(); await page.waitForTimeout(500); await page.keyboard.type(value, { delay: 20 }); };
 const toActions = async () => { await page.mouse.move(190, 400); await page.mouse.wheel(0, 8000); await page.waitForTimeout(1000); await sem(); };
+// Navigating to the same hash does not reload Flutter: another party may have changed the deal.
+const freshDeal = async (id) => { await go(`/deals/${id}`); await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(3000); await sem(); await toActions(); };
 const tap = async (label) => {
   const target = page.getByRole('button', { name: label }).last();
   if (!(await target.count())) {
@@ -144,7 +146,7 @@ try {
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'OFFER_PENDING_BUYER');
   console.log('PASS Flutter seller offer: API 200 and OFFER_PENDING_BUYER');
   page = buyerPage;
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   await tap('طلب تعديل');
   await type(page.getByRole('textbox', { name: 'اكتب التعديل المطلوب بوضوح' }), 'Please confirm the delivery date');
   const change = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/offer-response` && r.request().method() === 'POST', { timeout: 60000 });
@@ -152,13 +154,13 @@ try {
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'CHANGE_REQUESTED');
   console.log('PASS Flutter change request: API 200 and CHANGE_REQUESTED');
   page = sellerContext.pages()[0];
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   const accept = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/change-response` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('قبول التعديل'); assert.equal((await accept).status(), 200);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'PAYMENT_PENDING');
   console.log('PASS Flutter seller acceptance: API 200 and PAYMENT_PENDING');
   page = buyerPage;
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   const payment = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/payment` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('ادفع وارفع الإيصال');
   const paymentResponse = await payment;
@@ -193,7 +195,7 @@ try {
   await pollStatus('ACTIVE');
   console.log('PASS authorized test staff review: ACTIVE');
   page = sellerContext.pages()[0];
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   await tap('تم الشحن');
   await type(page.getByRole('textbox', { name: 'تفاصيل الشحن (الشركة، رقم البوليصة)' }), 'Test delivery');
   const ship = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/shipped` && r.request().method() === 'POST', { timeout: 60000 });
@@ -201,7 +203,7 @@ try {
   await pollStatus('DELIVERED');
   console.log('PASS Flutter shipment: API 200 and DELIVERED');
   page = buyerPage;
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   const codeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code` && r.request().method() === 'GET', { timeout: 60000 });
   await tap('عرض كود التسليم');
   const codeResult = await codeResponse; assert.equal(codeResult.status(), 200);
@@ -210,7 +212,7 @@ try {
   try { await page.getByText(code, { exact: true }).waitFor({ state: 'visible' }); }
   catch { throw new Error('Buyer delivery code was not visible'); }
   page = sellerContext.pages()[0];
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   await tap('إدخال كود التسليم');
   const codeInput = page.getByRole('textbox', { name: 'الكود (6 أرقام)' });
   const wrongCode = code === '000000' ? '111111' : '000000';
@@ -226,7 +228,7 @@ try {
   await pollStatus('DELIVERY_HANDOVER_VERIFIED');
   console.log('PASS Flutter OTP verification: API 200 and DELIVERY_HANDOVER_VERIFIED');
   page = buyerPage;
-  await go(`/deals/${deal.id}`); await toActions();
+  await freshDeal(deal.id);
   await tap('تأكيد الاستلام');
   const confirmed = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/confirm-receipt` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تأكيد الاستلام'); assert.equal((await confirmed).status(), 200);
