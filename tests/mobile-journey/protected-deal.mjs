@@ -152,7 +152,8 @@ try {
   assert((await invalidClaim).status() >= 400);
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'INVITED');
   await page.getByRole('button', { name: 'الانضمام للصفقة' }).waitFor({ state: 'visible' });
-  await page.getByRole('textbox', { name: 'الصق رابط الدعوة' }).click();
+  // Flutter exposes the entered value instead of the placeholder as the accessible name.
+  await page.getByRole('textbox').first().click();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.press('Backspace');
   console.log('PASS Flutter rejects an invalid invitation and preserves the deal');
