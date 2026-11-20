@@ -6427,6 +6427,18 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'تأكيد'**
   String get confirmAction;
+
+  /// No description provided for @qtyIncrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'زيادة الكمية'**
+  String get qtyIncrease;
+
+  /// No description provided for @qtyDecrease.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقليل الكمية'**
+  String get qtyDecrease;
 }
 
 class _EdmnLocalizationsDelegate

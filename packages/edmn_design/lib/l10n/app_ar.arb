@@ -1353,5 +1353,7 @@
   "archiveProduct": "أرشفة المنتج",
   "archiveProductConfirm": "المنتج هيختفي من المتجر، وسجل الطلبات القديمة هيفضل زي ما هو. مش هتقدر ترجعه من التطبيق.",
   "productArchivedDone": "اتأرشف المنتج",
-  "confirmAction": "تأكيد"
+  "confirmAction": "تأكيد",
+  "qtyIncrease": "زيادة الكمية",
+  "qtyDecrease": "تقليل الكمية"
 }

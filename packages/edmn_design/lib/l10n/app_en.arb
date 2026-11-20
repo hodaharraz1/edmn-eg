@@ -1188,5 +1188,7 @@
   "archiveProduct": "Archive product",
   "archiveProductConfirm": "The product disappears from your store; past orders stay as they are. This cannot be undone from the app.",
   "productArchivedDone": "Product archived",
-  "confirmAction": "Confirm"
+  "confirmAction": "Confirm",
+  "qtyIncrease": "Increase quantity",
+  "qtyDecrease": "Decrease quantity"
 }

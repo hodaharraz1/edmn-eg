@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/edmn_localizations.dart';
 import '../tokens.dart';
 
 /// Pill primary button. `loading` disables it and shows a spinner, so a second tap can never send the request twice.
@@ -311,6 +312,8 @@ class EdmnQuantityStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onChanged != null && !busy;
+    final t = EdmnLocalizations.of(context);
+    // Named through the icon's semantic label (a tooltip as well would make screen readers say it twice).
     Widget btn(IconData i, int next, String key) => SizedBox.square(
       dimension: 36,
       child: IconButton(
@@ -319,7 +322,7 @@ class EdmnQuantityStepper extends StatelessWidget {
         iconSize: EdmnSizes.iconSm,
         color: EdmnColors.textPrimary,
         disabledColor: EdmnColors.disabled,
-        icon: Icon(i),
+        icon: Icon(i, semanticLabel: key == 'qty-inc' ? t.qtyIncrease : t.qtyDecrease),
         onPressed: enabled && next >= min && next <= max
             ? () => onChanged!(next)
             : null,

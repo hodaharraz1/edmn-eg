@@ -3353,4 +3353,10 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get confirmAction => 'تأكيد';
+
+  @override
+  String get qtyIncrease => 'زيادة الكمية';
+
+  @override
+  String get qtyDecrease => 'تقليل الكمية';
 }
