@@ -14,6 +14,7 @@ import { flushOutbound, redactExpiredSecrets } from '@/server/modules/notificati
 import { runLedgerHealthCheck } from '@/server/modules/finance/ledger-health';
 import { releaseLapsedReturnHolds } from '@/server/modules/finance/holds';
 import { scanPendingFiles } from '@/server/storage/scanning';
+import { reconcilePrivateOrphans } from '@/server/storage/reconcile';
 import type { ScheduledJob } from './scheduler';
 import { dispatchDeliveries } from '@/server/modules/notifications/message-alerts';
 
@@ -55,6 +56,8 @@ export const SCHEDULE: ScheduledJob[] = [
   { name: 'holds.release_lapsed_returns', everyMs: 60 * 60_000, run: () => db.transaction((tx) => releaseLapsedReturnHolds(tx, SYSTEM_ACTOR)) },
   // Malware scanning of quarantined uploads (no-op while no scanner is configured — never fakes CLEAN).
   { name: 'files.scan', everyMs: 5 * 60_000, run: () => scanPendingFiles() },
+  // Enable only after all local-disk upload writers have the reconciliation locks and the grace period has elapsed.
+  { name: 'files.reconcile_private_orphans', everyMs: 60 * 60_000, run: () => process.env.PRIVATE_UPLOAD_RECONCILE_ENABLED === 'true' ? reconcilePrivateOrphans() : Promise.resolve() },
   // Operational telemetry retention (job runs, resolved error groups) — see docs/runbooks retention policy.
   { name: 'ops.prune_telemetry', everyMs: 24 * 60 * 60_000, run: () => pruneTelemetry() },
 ];

@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile, stat, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { env } from '@/server/core/env';
@@ -23,7 +23,7 @@ export function isSafeKey(key: string): boolean {
   return KEY_RE.test(key) && !key.includes('..');
 }
 
-class LocalDiskStorage implements StorageDriver {
+export class LocalDiskStorage implements StorageDriver {
   constructor(private readonly root: string) {}
 
   private resolve(visibility: 'PUBLIC' | 'PRIVATE', key: string): string {
@@ -59,6 +59,41 @@ class LocalDiskStorage implements StorageDriver {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /** Only regular, correctly named private objects are candidates; never follow symlinks. */
+  async *oldPrivateKeys(before: Date): AsyncGenerator<string> {
+    const base = path.resolve(this.root, 'private');
+    const walk = async function* (dir: string): AsyncGenerator<string> {
+      let entries;
+      try { entries = await readdir(dir, { withFileTypes: true }); }
+      catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return; throw e; }
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) yield* walk(full);
+        else if (entry.isFile()) {
+          const key = path.relative(base, full).split(path.sep).join('/');
+          if (!isSafeKey(key)) continue;
+          try {
+            if ((await lstat(full)).mtimeMs < before.getTime()) yield key;
+          } catch (e) {
+            // Another worker may already have removed this candidate.
+            if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+          }
+        }
+      }
+    };
+    yield* walk(base);
+  }
+
+  async privateKeyStillOld(key: string, before: Date): Promise<boolean> {
+    try {
+      const s = await lstat(this.resolve('PRIVATE', key));
+      return s.isFile() && s.mtimeMs < before.getTime();
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return false;
+      throw e;
     }
   }
 }
