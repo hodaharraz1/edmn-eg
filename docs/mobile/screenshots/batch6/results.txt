@@ -1,0 +1,58 @@
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS r1 buyer: a damaged claim without photos is refused; nothing stored — returns=0
+PASS r1 buyer: return requested through the UI (REQUESTED) — #500042
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS r2 seller: approves the return (APPROVED) — status=APPROVED
+PASS r2 buyer: notified of the approval — RETURN_* notification
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS r3 buyer: sees the approval and where to send the item — شارع التسعين، التجمع الخامس، القاهرة الجديدة
+PASS r3 buyer: return shipment recorded (RETURN_IN_TRANSIT, carrier + tracking) — RETURN_IN_TRANSIT · بوسطة · RT651474
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS r4 seller: sees the buyer's carrier and tracking — RT651474
+PASS r4 seller: «استلمت المنتج المرتجع» → RECEIVED — status=RECEIVED
+PASS r4 seller: «بدء الفحص» → INSPECTION — status=INSPECTION
+PASS r4 seller: accepts → REFUND_PENDING, one refund REQUESTED for EDMN, no journal entry yet — refund #500043 19378.98 EGP
+PASS finance (web console): sign-in with 2FA — password + TOTP
+PASS r5 console: no approve button for the Maker — maker sees only «request», no approve
+PASS r5 console: Maker request PENDING; the refund is still REQUESTED — request=PENDING
+PASS checker (web console): sign-in with 2FA — password + TOTP
+PASS r5 console: a different person (Checker) approves → APPROVED; reversal journal balanced — status=APPROVED
+PASS finance (web console): sign-in with 2FA — password + TOTP
+PASS r6 console: TEST payout recorded with its reference → COMPLETED; payout journal balanced — COMPLETED · TEST-RFD-750813
+PASS r6 return: REFUNDED after the payout — REFUNDED
+PASS r6 money: one payout entry, no seller release, every entry of this order balanced — ledger
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS r7 buyer app: return refunded, refund paid with the transfer reference — TEST-RFD-750813
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS r7 seller app: the return reads refunded, no further steps — REFUNDED
+PASS mona: sign-in — POST /api/v1/auth/login 429 | POST /api/v1/auth/login 200
+PASS rf1 buyer: return requested through the UI (REQUESTED) — #500044
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS rf2 seller: approves the return (APPROVED) — status=APPROVED
+PASS rf2 buyer: notified of the approval — RETURN_* notification
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS rf3 buyer: sees the approval and where to send the item — شارع التسعين، التجمع الخامس، القاهرة الجديدة
+PASS rf3 buyer: return shipment recorded (RETURN_IN_TRANSIT, carrier + tracking) — RETURN_IN_TRANSIT · بوسطة · RT295284
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS rf4 seller: sees the buyer's carrier and tracking — RT295284
+PASS rf4 seller: «استلمت المنتج المرتجع» → RECEIVED — status=RECEIVED
+PASS rf4 seller: «بدء الفحص» → INSPECTION — status=INSPECTION
+PASS rf4 seller: accepts → REFUND_PENDING, one refund REQUESTED for EDMN, no journal entry yet — refund #500045 19378.98 EGP
+PASS finance (web console): sign-in with 2FA — password + TOTP
+PASS rf5 console: no approve button for the Maker — maker sees only «request», no approve
+PASS rf5 console: Maker request PENDING; the refund is still REQUESTED — request=PENDING
+PASS checker (web console): sign-in with 2FA — password + TOTP
+PASS rf5 console: a different person (Checker) approves → APPROVED; reversal journal balanced — status=APPROVED
+PASS finance (web console): sign-in with 2FA — password + TOTP
+PASS rf6 console: failure recorded (FAILED); the payout form is gone; the money stays owed — FAILED, no payout entry
+PASS rf6 console: the person who recorded the failure is not offered to resolve it — not offered
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS rf6 buyer app: the refund is not shown as paid — not paid
+PASS checker (web console): sign-in with 2FA — password + TOTP
+PASS rf7 console: a second person proves no money left → APPROVED (payable again) — APPROVED
+PASS finance (web console): sign-in with 2FA — password + TOTP
+PASS rf8 console: retry paid once → COMPLETED; exactly one payout entry; balanced — COMPLETED · TEST-RFD-441167
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS rf8 buyer app: refunded with the retry reference — TEST-RFD-441167
+
+56 PASS / 0 FAIL

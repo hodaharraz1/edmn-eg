@@ -93,7 +93,7 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
     final en = languageOf(context) == 'en';
     return EdmnAppScaffold(
       title: cat == null ? EdmnLocalizations.of(context).categories : (en ? cat.nameEn : cat.nameAr),
-      actions: [IconButton(tooltip: EdmnLocalizations.of(context).searchTitle, color: EdmnColors.onPrimary, icon: const Icon(Icons.search_rounded), onPressed: () => context.push('/search'))],
+      actions: [IconButton(tooltip: EdmnLocalizations.of(context).searchTitle, color: EdmnColors.onPrimary, icon: Icon(Icons.search_rounded, semanticLabel: EdmnLocalizations.of(context).searchTitle), onPressed: () => context.push('/search'))],
       body: ProductListView(
         query: _q,
         onQuery: (q) => setState(() => _q = q),

@@ -2900,4 +2900,553 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get pageNotFoundBody =>
       'الرابط غير صحيح أو مبقاش متاح. ارجع للرئيسية وكمّل من هناك.';
+
+  @override
+  String get adminDashboard => 'لوحة القيادة';
+
+  @override
+  String get adminRangeToday => 'اليوم';
+
+  @override
+  String get adminRange7d => '٧ أيام';
+
+  @override
+  String get adminRange30d => '٣٠ يوم';
+
+  @override
+  String get adminRange90d => '٩٠ يوم';
+
+  @override
+  String get adminRange365d => 'سنة';
+
+  @override
+  String get adminKpiGmv => 'إجمالي قيمة البضائع (GMV)';
+
+  @override
+  String get adminKpiRevenue => 'إيرادات اضمن';
+
+  @override
+  String get adminKpiOrders => 'الطلبات (المدفوعة / الكل)';
+
+  @override
+  String get adminKpiDeals => 'الصفقات المحمية';
+
+  @override
+  String get adminKpiBuyers => 'مشترون نشطون';
+
+  @override
+  String get adminKpiSellers => 'بائعون نشطون';
+
+  @override
+  String get adminKpiReturnRate => 'نسبة المرتجعات';
+
+  @override
+  String get adminKpiDisputeRate => 'نسبة النزاعات';
+
+  @override
+  String get adminQueues => 'قوائم الانتظار التشغيلية';
+
+  @override
+  String get adminQueueSellers => 'طلبات بائعين للمراجعة';
+
+  @override
+  String get adminQueueProducts => 'منتجات للمراجعة';
+
+  @override
+  String get adminQueuePayments => 'مدفوعات للتحقق';
+
+  @override
+  String get adminQueueWithdrawals => 'سحوبات قيد التنفيذ';
+
+  @override
+  String get adminQueueRefunds => 'مستردات بانتظار الصرف';
+
+  @override
+  String get adminQueueDisputes => 'نزاعات مفتوحة';
+
+  @override
+  String get adminQueueTickets => 'تذاكر دعم مفتوحة';
+
+  @override
+  String get adminQueueDeliveries => 'شحنات بلا تأكيد استلام';
+
+  @override
+  String get adminTopCategories => 'أعلى التصنيفات';
+
+  @override
+  String get adminTopSellers => 'أعلى البائعين';
+
+  @override
+  String get adminNoData => 'لا توجد بيانات في الفترة دي';
+
+  @override
+  String get adminTestMoneyNotice =>
+      'كل المبالغ هنا من مدفوعات تجريبية وليست إيرادات حقيقية.';
+
+  @override
+  String get adminReadOnlyNotice =>
+      'عرض فقط: الموافقات والإجراءات المالية من لوحة الإدارة على الويب.';
+
+  @override
+  String get adminAccount => 'الحساب والأمان';
+
+  @override
+  String get adminMonitoring => 'المتابعة';
+
+  @override
+  String get adminSellerApplications => 'طلبات البائعين';
+
+  @override
+  String get adminIdentityReviews => 'التحقق من الهوية (KYC)';
+
+  @override
+  String get adminOrders => 'الطلبات والشحن';
+
+  @override
+  String get adminDeals => 'الصفقات المضمونة';
+
+  @override
+  String get adminDisputes => 'النزاعات والشكاوى';
+
+  @override
+  String get adminAuditLog => 'سجل العمليات';
+
+  @override
+  String get adminTabPending => 'قيد المراجعة';
+
+  @override
+  String get adminTabNeedsInfo => 'بانتظار معلومات';
+
+  @override
+  String get adminTabWaitingCustomer => 'بانتظار العميل';
+
+  @override
+  String get adminTabApproved => 'تم التحقق';
+
+  @override
+  String get adminTabRejected => 'مرفوض';
+
+  @override
+  String get adminTabAllOrders => 'كل الطلبات';
+
+  @override
+  String get adminTabFollowUp => 'شحنات بلا تأكيد استلام';
+
+  @override
+  String get adminTabActive => 'جارية';
+
+  @override
+  String get adminTabDisputed => 'متنازع عليها';
+
+  @override
+  String get adminTabDone => 'منتهية';
+
+  @override
+  String get adminTabOpen => 'مفتوحة';
+
+  @override
+  String get adminTabMine => 'مسندة إليّ';
+
+  @override
+  String get adminTabClosed => 'منتهية';
+
+  @override
+  String get adminEmptyList => 'مفيش عناصر هنا دلوقتي';
+
+  @override
+  String get adminLoadMore => 'عرض المزيد';
+
+  @override
+  String get adminDocsComplete => 'المستندات كاملة';
+
+  @override
+  String get adminDocsMissing => 'مستندات ناقصة';
+
+  @override
+  String get adminSellerUnconfirmed => 'البائع لم ينضم بعد';
+
+  @override
+  String get adminKindDeal => 'صفقة مضمونة';
+
+  @override
+  String get adminKindReturn => 'مرتجع';
+
+  @override
+  String get adminKindOrder => 'طلب';
+
+  @override
+  String get adminAssignedToMe => 'مسند إليك';
+
+  @override
+  String get adminSearchOrders => 'رقم الطلب أو اسم العميل';
+
+  @override
+  String get adminDecisionsOnWeb =>
+      'عرض فقط. القرارات (موافقة/رفض، حسم النزاع، إتاحة الأموال) من لوحة الإدارة على الويب، والأسماء مختصرة لحماية البيانات.';
+
+  @override
+  String get adminStatusPendingReview => 'قيد المراجعة';
+
+  @override
+  String get adminStatusMoreInfo => 'مطلوب معلومات';
+
+  @override
+  String get adminStatusApproved => 'مقبول';
+
+  @override
+  String get adminStatusRejected => 'مرفوض';
+
+  @override
+  String get adminStatusReverify => 'إعادة تحقق';
+
+  @override
+  String get adminStatusOpen => 'مفتوح';
+
+  @override
+  String get adminStatusUnderReview => 'تحت المراجعة';
+
+  @override
+  String get adminStatusAwaitingInfo => 'بانتظار معلومات';
+
+  @override
+  String get adminStatusResolved => 'تم الحسم';
+
+  @override
+  String get adminStatusClosed => 'مغلق';
+
+  @override
+  String get adminStatusActive => 'نشطة';
+
+  @override
+  String get adminStatusDisputed => 'عليها نزاع';
+
+  @override
+  String get adminStatusRefunded => 'مستردة';
+
+  @override
+  String get adminStatusShipped => 'في الطريق';
+
+  @override
+  String get adminSectionSummary => 'الملخص';
+
+  @override
+  String get adminSectionTimeline => 'سجل الحالة';
+
+  @override
+  String get adminSectionChecklist => 'قائمة المتطلبات';
+
+  @override
+  String get adminSectionDocuments => 'المستندات (بيانات فقط)';
+
+  @override
+  String get adminSectionReviewTrail => 'سجل المراجعة';
+
+  @override
+  String get adminSectionItems => 'المنتجات';
+
+  @override
+  String get adminSectionShipment => 'الشحنة';
+
+  @override
+  String get adminSectionTracking => 'تتبع الشحن';
+
+  @override
+  String get adminSectionMessages => 'الرسائل والملاحظات';
+
+  @override
+  String get adminSectionEvidence => 'الأدلة (بيانات فقط)';
+
+  @override
+  String get adminSectionDisputes => 'النزاعات المرتبطة';
+
+  @override
+  String get adminFieldStatus => 'الحالة';
+
+  @override
+  String get adminFieldType => 'النوع';
+
+  @override
+  String get adminFieldRisk => 'المخاطر';
+
+  @override
+  String get adminFieldGovernorate => 'المحافظة';
+
+  @override
+  String get adminFieldStore => 'المتجر';
+
+  @override
+  String get adminFieldSubmitted => 'تاريخ الإرسال';
+
+  @override
+  String get adminFieldReviewed => 'تاريخ المراجعة';
+
+  @override
+  String get adminFieldReviewer => 'المراجِع';
+
+  @override
+  String get adminFieldReason => 'السبب';
+
+  @override
+  String get adminFieldCustomer => 'العميل';
+
+  @override
+  String get adminFieldPlaced => 'تاريخ الطلب';
+
+  @override
+  String get adminFieldPaid => 'تاريخ الدفع';
+
+  @override
+  String get adminFieldMerchandise => 'المنتجات';
+
+  @override
+  String get adminFieldShipping => 'الشحن';
+
+  @override
+  String get adminFieldGrand => 'الإجمالي';
+
+  @override
+  String get adminFieldPayment => 'الدفع';
+
+  @override
+  String get adminFieldCarrier => 'شركة الشحن';
+
+  @override
+  String get adminFieldTracking => 'رقم التتبع';
+
+  @override
+  String get adminFieldExpected => 'الموعد المتوقع';
+
+  @override
+  String get adminFieldBuyer => 'المشتري';
+
+  @override
+  String get adminFieldSeller => 'البائع';
+
+  @override
+  String get adminFieldBuyerPays => 'يدفع المشتري';
+
+  @override
+  String get adminFieldSellerGets => 'يستلم البائع';
+
+  @override
+  String get adminFieldDealTotal => 'قيمة الصفقة';
+
+  @override
+  String get adminFieldHold => 'تجميد مالي';
+
+  @override
+  String get adminFieldEvidence => 'صور الأدلة';
+
+  @override
+  String get adminFieldClaimant => 'المدّعي';
+
+  @override
+  String get adminFieldRespondent => 'المدّعى عليه';
+
+  @override
+  String get adminFieldAssignee => 'المسؤول';
+
+  @override
+  String get adminFieldClaimed => 'المبلغ المطالب';
+
+  @override
+  String get adminFieldSubject => 'مرتبط بـ';
+
+  @override
+  String get adminFieldReasonCode => 'السبب';
+
+  @override
+  String get adminYes => 'نعم';
+
+  @override
+  String get adminNo => 'لا';
+
+  @override
+  String get adminUnassigned => 'غير مسند';
+
+  @override
+  String get adminInternalNote => 'ملاحظة داخلية';
+
+  @override
+  String get adminAssign => 'إسناد';
+
+  @override
+  String get adminAssignTo => 'إسناد النزاع إلى';
+
+  @override
+  String get adminAddNote => 'إضافة ملاحظة داخلية';
+
+  @override
+  String get adminNoteHint => 'الملاحظة تظهر لفريق أضمن فقط، ولا تصل للأطراف';
+
+  @override
+  String get adminSave => 'حفظ';
+
+  @override
+  String get adminCancel => 'إلغاء';
+
+  @override
+  String get adminAssigned => 'تم إسناد النزاع';
+
+  @override
+  String get adminNoteAdded => 'تمت إضافة الملاحظة';
+
+  @override
+  String get adminMe => 'أنا';
+
+  @override
+  String get adminDocsNoPermission => 'عرض المستندات يحتاج صلاحية المستندات';
+
+  @override
+  String get adminSearch => 'بحث';
+
+  @override
+  String get adminActorAll => 'الكل';
+
+  @override
+  String get adminFilterAction => 'اسم الإجراء (مثال: dispute)';
+
+  @override
+  String get adminNoTimeline => 'لا توجد أحداث بعد';
+
+  @override
+  String get storeMedia => 'صور المتجر';
+
+  @override
+  String get storeBannerLabel => 'صورة الغلاف';
+
+  @override
+  String get storeLogoLabel => 'الشعار';
+
+  @override
+  String get changeBanner => 'تغيير الغلاف';
+
+  @override
+  String get changeLogo => 'تغيير الشعار';
+
+  @override
+  String get storeMediaHint =>
+      'صور JPG أو PNG أو WebP فقط. السيرفر بيراجع الملف قبل ما يظهر للعملاء.';
+
+  @override
+  String get storeMediaSaved => 'اتحفظت صورة المتجر';
+
+  @override
+  String get markOutOfStock => 'وقف البيع (نفد المخزون)';
+
+  @override
+  String get markOutOfStockConfirm =>
+      'المخزون هيتصفّر ما عدا الكميات المحجوزة لطلبات قائمة. تقدر تزوده تاني من المخزون.';
+
+  @override
+  String get markedOutOfStock => 'اتوقف البيع على المنتج';
+
+  @override
+  String get archiveProduct => 'أرشفة المنتج';
+
+  @override
+  String get archiveProductConfirm =>
+      'المنتج هيختفي من المتجر، وسجل الطلبات القديمة هيفضل زي ما هو. مش هتقدر ترجعه من التطبيق.';
+
+  @override
+  String get productArchivedDone => 'اتأرشف المنتج';
+
+  @override
+  String get confirmAction => 'تأكيد';
+
+  @override
+  String get qtyIncrease => 'زيادة الكمية';
+
+  @override
+  String get qtyDecrease => 'تقليل الكمية';
+
+  @override
+  String get addProductPhoto => 'إضافة صورة للمنتج';
+
+  @override
+  String get searchGovernorate => 'ابحث عن المحافظة';
+
+  @override
+  String get noGovernorates => 'لا توجد محافظات متاحة حاليًا';
+
+  @override
+  String get noGovernorateMatch => 'لا توجد محافظة بهذا الاسم';
+
+  @override
+  String get governorateUnavailable =>
+      'هذه المحافظة غير متاحة. اختر محافظة من القائمة';
+
+  @override
+  String get copyPhone => 'نسخ رقم الهاتف';
+
+  @override
+  String get soAwaitingPayment => 'بانتظار دفع المشتري';
+
+  @override
+  String get soPaymentReview => 'الدفع قيد المراجعة';
+
+  @override
+  String get soPreparing => 'قيد التجهيز';
+
+  @override
+  String get soShipped => 'تم الشحن';
+
+  @override
+  String get soAwaitingBuyer => 'تم التوصيل – بانتظار تأكيد المشتري';
+
+  @override
+  String get soReceived => 'استلمه المشتري – المستحقات قيد المراجعة';
+
+  @override
+  String get soCompleted => 'مكتمل';
+
+  @override
+  String get soDeliveryFailed => 'تعذّر التوصيل';
+
+  @override
+  String get soCancelled => 'ملغي';
+
+  @override
+  String get soHintAwaitingPayment =>
+      'لم يتم تأكيد دفع المشتري بعد. لا تجهّز الطلب حتى يتم تأكيد الدفع.';
+
+  @override
+  String get soHintPaid => 'تم تأكيد الدفع. راجع الطلب ثم اضغط «تأكيد الطلب».';
+
+  @override
+  String get soHintConfirmed =>
+      'أكدت الطلب. ابدأ تجهيزه أو حدّده جاهزًا للشحن.';
+
+  @override
+  String get soHintProcessing =>
+      'الطلب قيد التجهيز. عند الانتهاء حدّده «جاهز للشحن».';
+
+  @override
+  String get soHintReady =>
+      'الطلب جاهز. سجّل بيانات الشحنة وبوليصة الشحن ثم أكّد الشحن.';
+
+  @override
+  String get soHintShipped =>
+      'الطلب في الطريق إلى المشتري. لا يلزم أي إجراء منك الآن.';
+
+  @override
+  String get soHintAwaitingBuyer =>
+      'تم التوصيل. أمام المشتري مهلة لتأكيد الاستلام أو الإبلاغ عن مشكلة.';
+
+  @override
+  String get soHintReceived =>
+      'استلم المشتري الطلب. مستحقاتك معلّقة حتى تراجعها أضمن وتعتمدها.';
+
+  @override
+  String get soHintCompleted => 'اكتمل الطلب واعتمدت أضمن تحويل مستحقاته.';
+
+  @override
+  String get soHintFailed =>
+      'تعذّر توصيل الطلب. سيتواصل معك فريق أضمن بشأن الخطوات التالية.';
+
+  @override
+  String get soHintCancelled => 'تم إلغاء الطلب. لا تقم بشحنه.';
+
+  @override
+  String get retInspecting => 'قيد الفحص لدى البائع';
 }

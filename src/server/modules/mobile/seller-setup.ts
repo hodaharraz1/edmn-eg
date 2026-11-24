@@ -7,7 +7,9 @@ import type { SellerDocumentKind } from '@/domain/machines';
 import { publicMediaUrl } from '@/server/modules/catalog/public-read';
 import {
   addImages,
+  archiveProduct,
   createDraft,
+  markOutOfStock,
   productForSellerEdit,
   removeImage,
   saveVariants,
@@ -30,6 +32,7 @@ import {
   setShippingRates,
   startApplication,
   submitApplication,
+  updateStoreMedia,
   updateStoreSettings,
   uploadSellerDocument,
   type PayoutInput,
@@ -96,7 +99,7 @@ export async function sellerApplication(actor: Actor) {
       businessLegalName: s.businessLegalName,
       businessAddress: s.businessAddress,
       authorizedRepresentative: s.authorizedRepresentative,
-      store: store ? { name: store.name, slug: store.slug, description: store.description, returnAddress: store.returnAddress, supportPhone: store.supportPhone } : null,
+      store: store ? { name: store.name, slug: store.slug, description: store.description, returnAddress: store.returnAddress, returnGovernorateId: store.returnGovernorateId, supportPhone: store.supportPhone } : null,
       documents: docs.map((d) => d.kind),
       payout: payout ? { type: payout.type, status: payout.status, masked: payout.masked } : null,
     },
@@ -242,6 +245,18 @@ export async function setProductVisible(actor: Actor, productId: string, active:
   return productEditor(actor, productId);
 }
 
+/** Soft archive (the console's rule: not while under review, not while unpaid orders reserve stock). History is kept. */
+export async function archiveMyProduct(actor: Actor, productId: string) {
+  await archiveProduct(actor, productId);
+  return productEditor(actor, productId);
+}
+
+/** Sets on-hand stock down to what is already reserved, so nothing more can be sold; reserved orders are untouched. */
+export async function markMyProductOutOfStock(actor: Actor, productId: string) {
+  await markOutOfStock(actor, productId);
+  return productEditor(actor, productId);
+}
+
 /* ───────────────────────── Shipping rates & store settings ───────────────────────── */
 
 export async function shippingRates(actor: Actor) {
@@ -280,6 +295,11 @@ export async function storeSettings(actor: Actor) {
     logoUrl: publicMediaUrl(await keyOf(s.logoFileId), 'thumb'),
     bannerUrl: publicMediaUrl(await keyOf(s.bannerFileId), 'md'),
   };
+}
+
+export async function saveStoreMedia(actor: Actor, logo: Upload | null, banner: Upload | null) {
+  await updateStoreMedia(actor, { logo, banner });
+  return storeSettings(actor);
 }
 
 export async function saveStoreSettings(actor: Actor, input: Parameters<typeof updateStoreSettings>[1], logo: Upload | null, banner: Upload | null) {

@@ -230,6 +230,16 @@ class MobileApi {
   Future<GetSellerShippingRatesResponse> saveShippingRates(List<Map<String, dynamic>> items) async =>
       GetSellerShippingRatesResponse.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerShippingRates.path, body: {'items': items}));
   Future<SellerStoreSettings> storeSettings() async => SellerStoreSettings.fromJson(await client.getJson(MobileApiPaths.getSellerStoreSettings.path));
+  /// Logo and/or banner (images; validated, re-encoded and malware-gated by the server). One key per intent.
+  Future<SellerStoreSettings> saveStoreMedia({(Uint8List, String)? logo, (Uint8List, String)? banner, required String idempotencyKey}) async => SellerStoreSettings.fromJson(await _multipart(
+      MobileApiPaths.saveSellerStoreMedia.path,
+      fields: const {},
+      files: {'logo': ?(logo == null ? null : [logo]), 'banner': ?(banner == null ? null : [banner])},
+      idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> archiveProduct(String id, {required String idempotencyKey}) async =>
+      SellerProductEditor.fromJson(await client.sendJson('POST', fillPath(MobileApiPaths.archiveSellerProduct.path, {'productId': id}), idempotencyKey: idempotencyKey));
+  Future<SellerProductEditor> markProductOutOfStock(String id, {required String idempotencyKey}) async =>
+      SellerProductEditor.fromJson(await client.sendJson('POST', fillPath(MobileApiPaths.markSellerProductOutOfStock.path, {'productId': id}), idempotencyKey: idempotencyKey));
   Future<SellerStoreSettings> saveStoreSettings(Map<String, dynamic> body) async =>
       SellerStoreSettings.fromJson(await client.sendJson('PUT', MobileApiPaths.saveSellerStoreSettings.path, body: body));
 

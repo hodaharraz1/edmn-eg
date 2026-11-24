@@ -2931,4 +2931,557 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get pageNotFoundBody =>
       'The link is wrong or no longer available. Go back home and continue from there.';
+
+  @override
+  String get adminDashboard => 'Dashboard';
+
+  @override
+  String get adminRangeToday => 'Today';
+
+  @override
+  String get adminRange7d => '7 days';
+
+  @override
+  String get adminRange30d => '30 days';
+
+  @override
+  String get adminRange90d => '90 days';
+
+  @override
+  String get adminRange365d => 'Year';
+
+  @override
+  String get adminKpiGmv => 'Gross merchandise value (GMV)';
+
+  @override
+  String get adminKpiRevenue => 'EDMN revenue';
+
+  @override
+  String get adminKpiOrders => 'Orders (paid / all)';
+
+  @override
+  String get adminKpiDeals => 'Protected deals';
+
+  @override
+  String get adminKpiBuyers => 'Active buyers';
+
+  @override
+  String get adminKpiSellers => 'Active sellers';
+
+  @override
+  String get adminKpiReturnRate => 'Return rate';
+
+  @override
+  String get adminKpiDisputeRate => 'Dispute rate';
+
+  @override
+  String get adminQueues => 'Operational queues';
+
+  @override
+  String get adminQueueSellers => 'Seller applications to review';
+
+  @override
+  String get adminQueueProducts => 'Products to review';
+
+  @override
+  String get adminQueuePayments => 'Payments to verify';
+
+  @override
+  String get adminQueueWithdrawals => 'Withdrawals in progress';
+
+  @override
+  String get adminQueueRefunds => 'Refunds awaiting payout';
+
+  @override
+  String get adminQueueDisputes => 'Open disputes';
+
+  @override
+  String get adminQueueTickets => 'Open support tickets';
+
+  @override
+  String get adminQueueDeliveries => 'Shipments without receipt';
+
+  @override
+  String get adminTopCategories => 'Top categories';
+
+  @override
+  String get adminTopSellers => 'Top sellers';
+
+  @override
+  String get adminNoData => 'No data for this period';
+
+  @override
+  String get adminTestMoneyNotice =>
+      'Every amount here comes from test payments, not real revenue.';
+
+  @override
+  String get adminReadOnlyNotice =>
+      'View only: approvals and financial actions stay in the web admin console.';
+
+  @override
+  String get adminAccount => 'Account and security';
+
+  @override
+  String get adminMonitoring => 'Monitoring';
+
+  @override
+  String get adminSellerApplications => 'Seller applications';
+
+  @override
+  String get adminIdentityReviews => 'Identity checks (KYC)';
+
+  @override
+  String get adminOrders => 'Orders and shipping';
+
+  @override
+  String get adminDeals => 'Protected deals';
+
+  @override
+  String get adminDisputes => 'Disputes and complaints';
+
+  @override
+  String get adminAuditLog => 'Audit log';
+
+  @override
+  String get adminTabPending => 'Under review';
+
+  @override
+  String get adminTabNeedsInfo => 'Awaiting info';
+
+  @override
+  String get adminTabWaitingCustomer => 'Waiting on customer';
+
+  @override
+  String get adminTabApproved => 'Verified';
+
+  @override
+  String get adminTabRejected => 'Rejected';
+
+  @override
+  String get adminTabAllOrders => 'All orders';
+
+  @override
+  String get adminTabFollowUp => 'Shipped, no receipt';
+
+  @override
+  String get adminTabActive => 'In progress';
+
+  @override
+  String get adminTabDisputed => 'Disputed';
+
+  @override
+  String get adminTabDone => 'Finished';
+
+  @override
+  String get adminTabOpen => 'Open';
+
+  @override
+  String get adminTabMine => 'Assigned to me';
+
+  @override
+  String get adminTabClosed => 'Closed';
+
+  @override
+  String get adminEmptyList => 'Nothing here right now';
+
+  @override
+  String get adminLoadMore => 'Load more';
+
+  @override
+  String get adminDocsComplete => 'Documents complete';
+
+  @override
+  String get adminDocsMissing => 'Documents missing';
+
+  @override
+  String get adminSellerUnconfirmed => 'Seller has not joined yet';
+
+  @override
+  String get adminKindDeal => 'Protected deal';
+
+  @override
+  String get adminKindReturn => 'Return';
+
+  @override
+  String get adminKindOrder => 'Order';
+
+  @override
+  String get adminAssignedToMe => 'Assigned to you';
+
+  @override
+  String get adminSearchOrders => 'Order number or customer name';
+
+  @override
+  String get adminDecisionsOnWeb =>
+      'View only. Decisions (approve/reject, resolve a dispute, release funds) are made in the web admin console; names are shortened to protect personal data.';
+
+  @override
+  String get adminStatusPendingReview => 'Under review';
+
+  @override
+  String get adminStatusMoreInfo => 'Info requested';
+
+  @override
+  String get adminStatusApproved => 'Approved';
+
+  @override
+  String get adminStatusRejected => 'Rejected';
+
+  @override
+  String get adminStatusReverify => 'Re-verify';
+
+  @override
+  String get adminStatusOpen => 'Open';
+
+  @override
+  String get adminStatusUnderReview => 'Under review';
+
+  @override
+  String get adminStatusAwaitingInfo => 'Awaiting info';
+
+  @override
+  String get adminStatusResolved => 'Resolved';
+
+  @override
+  String get adminStatusClosed => 'Closed';
+
+  @override
+  String get adminStatusActive => 'Active';
+
+  @override
+  String get adminStatusDisputed => 'Disputed';
+
+  @override
+  String get adminStatusRefunded => 'Refunded';
+
+  @override
+  String get adminStatusShipped => 'On the way';
+
+  @override
+  String get adminSectionSummary => 'Summary';
+
+  @override
+  String get adminSectionTimeline => 'Status history';
+
+  @override
+  String get adminSectionChecklist => 'Requirements';
+
+  @override
+  String get adminSectionDocuments => 'Documents (metadata only)';
+
+  @override
+  String get adminSectionReviewTrail => 'Review trail';
+
+  @override
+  String get adminSectionItems => 'Items';
+
+  @override
+  String get adminSectionShipment => 'Shipment';
+
+  @override
+  String get adminSectionTracking => 'Tracking';
+
+  @override
+  String get adminSectionMessages => 'Messages and notes';
+
+  @override
+  String get adminSectionEvidence => 'Evidence (metadata only)';
+
+  @override
+  String get adminSectionDisputes => 'Linked disputes';
+
+  @override
+  String get adminFieldStatus => 'Status';
+
+  @override
+  String get adminFieldType => 'Type';
+
+  @override
+  String get adminFieldRisk => 'Risk';
+
+  @override
+  String get adminFieldGovernorate => 'Governorate';
+
+  @override
+  String get adminFieldStore => 'Store';
+
+  @override
+  String get adminFieldSubmitted => 'Submitted';
+
+  @override
+  String get adminFieldReviewed => 'Reviewed';
+
+  @override
+  String get adminFieldReviewer => 'Reviewer';
+
+  @override
+  String get adminFieldReason => 'Reason';
+
+  @override
+  String get adminFieldCustomer => 'Customer';
+
+  @override
+  String get adminFieldPlaced => 'Placed';
+
+  @override
+  String get adminFieldPaid => 'Paid';
+
+  @override
+  String get adminFieldMerchandise => 'Items';
+
+  @override
+  String get adminFieldShipping => 'Shipping';
+
+  @override
+  String get adminFieldGrand => 'Total';
+
+  @override
+  String get adminFieldPayment => 'Payment';
+
+  @override
+  String get adminFieldCarrier => 'Carrier';
+
+  @override
+  String get adminFieldTracking => 'Tracking number';
+
+  @override
+  String get adminFieldExpected => 'Expected';
+
+  @override
+  String get adminFieldBuyer => 'Buyer';
+
+  @override
+  String get adminFieldSeller => 'Seller';
+
+  @override
+  String get adminFieldBuyerPays => 'Buyer pays';
+
+  @override
+  String get adminFieldSellerGets => 'Seller receives';
+
+  @override
+  String get adminFieldDealTotal => 'Deal value';
+
+  @override
+  String get adminFieldHold => 'Financial hold';
+
+  @override
+  String get adminFieldEvidence => 'Evidence photos';
+
+  @override
+  String get adminFieldClaimant => 'Claimant';
+
+  @override
+  String get adminFieldRespondent => 'Respondent';
+
+  @override
+  String get adminFieldAssignee => 'Assignee';
+
+  @override
+  String get adminFieldClaimed => 'Amount claimed';
+
+  @override
+  String get adminFieldSubject => 'About';
+
+  @override
+  String get adminFieldReasonCode => 'Reason';
+
+  @override
+  String get adminYes => 'Yes';
+
+  @override
+  String get adminNo => 'No';
+
+  @override
+  String get adminUnassigned => 'Unassigned';
+
+  @override
+  String get adminInternalNote => 'Internal note';
+
+  @override
+  String get adminAssign => 'Assign';
+
+  @override
+  String get adminAssignTo => 'Assign dispute to';
+
+  @override
+  String get adminAddNote => 'Add internal note';
+
+  @override
+  String get adminNoteHint =>
+      'Visible to the EDMN team only; never sent to the parties';
+
+  @override
+  String get adminSave => 'Save';
+
+  @override
+  String get adminCancel => 'Cancel';
+
+  @override
+  String get adminAssigned => 'Dispute assigned';
+
+  @override
+  String get adminNoteAdded => 'Note added';
+
+  @override
+  String get adminMe => 'Me';
+
+  @override
+  String get adminDocsNoPermission =>
+      'Viewing documents needs the documents permission';
+
+  @override
+  String get adminSearch => 'Search';
+
+  @override
+  String get adminActorAll => 'All';
+
+  @override
+  String get adminFilterAction => 'Action name (e.g. dispute)';
+
+  @override
+  String get adminNoTimeline => 'No events yet';
+
+  @override
+  String get storeMedia => 'Store images';
+
+  @override
+  String get storeBannerLabel => 'Banner';
+
+  @override
+  String get storeLogoLabel => 'Logo';
+
+  @override
+  String get changeBanner => 'Change banner';
+
+  @override
+  String get changeLogo => 'Change logo';
+
+  @override
+  String get storeMediaHint =>
+      'JPG, PNG or WebP only. The server checks the file before buyers see it.';
+
+  @override
+  String get storeMediaSaved => 'Store image saved';
+
+  @override
+  String get markOutOfStock => 'Stop sales (out of stock)';
+
+  @override
+  String get markOutOfStockConfirm =>
+      'Stock drops to the units already reserved by open orders. You can add stock again later.';
+
+  @override
+  String get markedOutOfStock => 'Sales stopped for this product';
+
+  @override
+  String get archiveProduct => 'Archive product';
+
+  @override
+  String get archiveProductConfirm =>
+      'The product disappears from your store; past orders stay as they are. This cannot be undone from the app.';
+
+  @override
+  String get productArchivedDone => 'Product archived';
+
+  @override
+  String get confirmAction => 'Confirm';
+
+  @override
+  String get qtyIncrease => 'Increase quantity';
+
+  @override
+  String get qtyDecrease => 'Decrease quantity';
+
+  @override
+  String get addProductPhoto => 'Add a product photo';
+
+  @override
+  String get searchGovernorate => 'Search governorates';
+
+  @override
+  String get noGovernorates => 'No governorates are available right now';
+
+  @override
+  String get noGovernorateMatch => 'No governorate matches this name';
+
+  @override
+  String get governorateUnavailable =>
+      'This governorate isn\'t available. Choose one from the list';
+
+  @override
+  String get copyPhone => 'Copy phone number';
+
+  @override
+  String get soAwaitingPayment => 'Awaiting buyer payment';
+
+  @override
+  String get soPaymentReview => 'Payment under review';
+
+  @override
+  String get soPreparing => 'Being prepared';
+
+  @override
+  String get soShipped => 'Shipped';
+
+  @override
+  String get soAwaitingBuyer => 'Delivered – awaiting buyer confirmation';
+
+  @override
+  String get soReceived => 'Received by buyer – earnings under review';
+
+  @override
+  String get soCompleted => 'Completed';
+
+  @override
+  String get soDeliveryFailed => 'Delivery failed';
+
+  @override
+  String get soCancelled => 'Cancelled';
+
+  @override
+  String get soHintAwaitingPayment =>
+      'The buyer\'s payment isn\'t confirmed yet. Don\'t prepare the order until it is.';
+
+  @override
+  String get soHintPaid =>
+      'Payment is confirmed. Review the order, then tap “Confirm order”.';
+
+  @override
+  String get soHintConfirmed =>
+      'You confirmed the order. Start preparing it or mark it ready to ship.';
+
+  @override
+  String get soHintProcessing =>
+      'The order is being prepared. Mark it “Ready to ship” when done.';
+
+  @override
+  String get soHintReady =>
+      'The order is ready. Add the shipment and waybill, then confirm shipping.';
+
+  @override
+  String get soHintShipped =>
+      'The order is on its way to the buyer. Nothing to do right now.';
+
+  @override
+  String get soHintAwaitingBuyer =>
+      'Delivered. The buyer has a window to confirm receipt or report a problem.';
+
+  @override
+  String get soHintReceived =>
+      'The buyer received the order. Your earnings stay pending until EDMN reviews and approves them.';
+
+  @override
+  String get soHintCompleted =>
+      'The order is complete and EDMN approved the transfer of its earnings.';
+
+  @override
+  String get soHintFailed =>
+      'The order couldn\'t be delivered. The EDMN team will contact you about next steps.';
+
+  @override
+  String get soHintCancelled => 'This order was cancelled. Do not ship it.';
+
+  @override
+  String get retInspecting => 'Being inspected by the seller';
 }

@@ -11,7 +11,7 @@ import { ADMIN_API_ROUTES, ALL_API_ROUTES, MOBILE_API_ROUTES } from '@/server/ap
 const SELLER_WRITES = new Set([
   'runSellerOrderStep', 'saveSellerShipment', 'setSellerVariantStock',
   'createSellerProduct', 'saveSellerProductDetails', 'saveSellerProductLogistics', 'addSellerProductImages', 'deleteSellerProductImage',
-  'saveSellerProductVariants', 'submitSellerProduct', 'setSellerProductVisibility', 'saveSellerShippingRates', 'saveSellerStoreSettings',
+  'saveSellerProductVariants', 'submitSellerProduct', 'setSellerProductVisibility', 'saveSellerShippingRates', 'saveSellerStoreSettings', 'saveSellerStoreMedia', 'archiveSellerProduct', 'markSellerProductOutOfStock',
   // Payout REQUESTS only (owner-approved). The request is a claim reviewed by EDMN Maker/Checker; nothing is transferred.
   'previewSellerPayoutRequest', 'createSellerPayoutRequest', 'cancelSellerPayoutRequest',
 ]);
@@ -53,6 +53,8 @@ const BUYER_POSTPURCHASE_WRITES = new Set(['createReturn', 'shipBackReturn', 'es
 const STORE_POSTPURCHASE_WRITES = new Set(['runStoreReturnStep', 'escalateStoreReturn', 'replyStoreDispute']);
 /** Notification center writes: mark my notifications read, change my own preferences. Naturally idempotent. */
 const NOTIFICATION_WRITES = new Set(['markNotificationsRead', 'saveNotificationPreferences']);
+/** Admin App (Batch 3): the only staff actions on mobile. Workflow-only, audited, no financial or KYC decision. */
+const ADMIN_SAFE_WRITES = new Set(['adminAssignDispute', 'adminAddDisputeNote']);
 const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
@@ -132,6 +134,7 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...BUYER_POSTPURCHASE_WRITES,
       ...STORE_POSTPURCHASE_WRITES,
       ...NOTIFICATION_WRITES,
+      ...ADMIN_SAFE_WRITES,
     ]);
     const writes = ALL_API_ROUTES.filter((r) => r.method !== 'GET');
     for (const r of writes) expect(ALLOWED_WRITES.has(r.id), `unreviewed write route ${r.id}`).toBe(true);
@@ -143,6 +146,16 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       const body = r.body as { shape?: Record<string, unknown> } | undefined;
       for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} accepts a client-supplied identity`).not.toMatch(/^(userId|customerId|sellerId|storeId|buyerId|ownerId|actorId)$/i);
     }
+    for (const r of writes.filter((w) => ADMIN_SAFE_WRITES.has(w.id))) {
+      // Staff with TOTP, replay-safe, and nothing in the body that could carry a decision or an amount.
+      expect(r.api, r.id).toBe('admin');
+      expect(r.auth, r.id).toBe('admin');
+      expect(r.idempotency, r.id).toBe('required');
+      const body = r.body as { shape?: Record<string, unknown> } | undefined;
+      for (const f of Object.keys(body?.shape ?? {})) expect(f, `${r.id} body field`).not.toMatch(/amount|decision|status|refund|release|internal|visibility/i);
+    }
+    // Admin writes outside that list do not exist on mobile (approvals, payments, refunds, KYC decisions stay on the web).
+    for (const r of writes.filter((w) => w.api === 'admin' && !/Auth|Account|Security/.test(w.tags.join(' ')))) expect(ADMIN_SAFE_WRITES.has(r.id), `unreviewed admin write ${r.id}`).toBe(true);
     for (const r of writes.filter((w) => SELLER_WRITES.has(w.id))) {
       // Seller writes act for the session user's own store only (auth `seller`), never for a client-named store.
       expect(r.auth, r.id).toBe('seller');

@@ -46,7 +46,7 @@ class DevicesScreen extends ConsumerWidget {
                     ? EdmnStatusChip(label: t.thisDevice, tone: EdmnTone.success)
                     : IconButton(
                         tooltip: t.signOutDevice,
-                        icon: const Icon(Icons.logout_rounded, color: EdmnColors.error),
+                        icon: Icon(Icons.logout_rounded, color: EdmnColors.error, semanticLabel: t.signOutDevice),
                         onPressed: () {
                           final key = newIdempotencyKey();
                           run(() => api.revokeSession(s.id, idempotencyKey: key));

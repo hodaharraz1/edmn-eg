@@ -115,7 +115,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final t = EdmnLocalizations.of(context);
     return EdmnAppScaffold(
       title: t.notifications,
-      actions: [IconButton(key: const Key('notif-settings'), tooltip: t.notificationSettings, icon: const Icon(Icons.tune_rounded), color: EdmnColors.onPrimary, onPressed: () => context.push('/notifications/settings'))],
+      actions: [IconButton(key: const Key('notif-settings'), tooltip: t.notificationSettings, icon: Icon(Icons.tune_rounded, semanticLabel: t.notificationSettings), color: EdmnColors.onPrimary, onPressed: () => context.push('/notifications/settings'))],
       body: RefreshIndicator(
         onRefresh: () => _load(reset: true),
         child: ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [

@@ -28,6 +28,41 @@ class AdminApi {
     }
   }
 
+  /// Read-only operational dashboard (dashboard.view). [range]: today, 7d, 30d, 90d or 365d.
+  Future<AdminGetDashboardResponse> dashboard({String range = '30d'}) async =>
+      AdminGetDashboardResponse.fromJson(await client.getJson(AdminApiPaths.adminGetDashboard.path, query: {'range': range}));
+
+  // Monitoring (read-only; each enforced server-side with the web console's permission for the same page).
+  Future<AdminListSellerApplicationsResponse> sellerApplications({String tab = 'pending'}) async =>
+      AdminListSellerApplicationsResponse.fromJson(await client.getJson(AdminApiPaths.adminListSellerApplications.path, query: {'tab': tab}));
+  Future<AdminListIdentityReviewsResponse> identityReviews({String tab = 'pending'}) async =>
+      AdminListIdentityReviewsResponse.fromJson(await client.getJson(AdminApiPaths.adminListIdentityReviews.path, query: {'tab': tab}));
+  Future<AdminListOrdersResponse> orders({String tab = 'all', String? q, int page = 1}) async => AdminListOrdersResponse.fromJson(
+      await client.getJson(AdminApiPaths.adminListOrders.path, query: {'tab': tab, if (q != null && q.trim().isNotEmpty) 'q': q.trim(), 'page': '$page'}));
+  Future<AdminListDealsResponse> deals({String tab = 'active'}) async => AdminListDealsResponse.fromJson(await client.getJson(AdminApiPaths.adminListDeals.path, query: {'tab': tab}));
+  Future<AdminListDisputesResponse> disputes({String tab = 'open'}) async =>
+      AdminListDisputesResponse.fromJson(await client.getJson(AdminApiPaths.adminListDisputes.path, query: {'tab': tab}));
+  Future<AdminListAuditLogResponse> auditLog({int? before, String? action, String? actorType}) async => AdminListAuditLogResponse.fromJson(await client.getJson(AdminApiPaths.adminListAuditLog.path, query: {
+        if (before != null) 'before': '$before',
+        if (action != null && action.trim().isNotEmpty) 'action': action.trim(),
+        'actorType': ?actorType,
+      }));
+
+  // Detail views (read-only; same permission as the console page).
+  Future<AdminGetSellerResponse> seller(String id) async => AdminGetSellerResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminGetSeller.path, {'sellerId': id})));
+  Future<AdminGetIdentityReviewResponse> identityReview(String id) async =>
+      AdminGetIdentityReviewResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminGetIdentityReview.path, {'verificationId': id})));
+  Future<AdminGetOrderResponse> order(String id) async => AdminGetOrderResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminGetOrder.path, {'orderId': id})));
+  Future<AdminGetDealResponse> deal(String id) async => AdminGetDealResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminGetDeal.path, {'dealId': id})));
+  Future<AdminGetDisputeResponse> dispute(String id) async => AdminGetDisputeResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminGetDispute.path, {'disputeId': id})));
+
+  // The only staff actions on mobile: workflow-only, audited, no money and no KYC/seller decision.
+  Future<AdminListDisputeAssigneesResponse> disputeAssignees() async => AdminListDisputeAssigneesResponse.fromJson(await client.getJson(AdminApiPaths.adminListDisputeAssignees.path));
+  Future<void> assignDispute(String disputeId, String assigneeId, {required String idempotencyKey}) => client.sendJson('POST', fillPath(AdminApiPaths.adminAssignDispute.path, {'disputeId': disputeId}),
+      body: AdminAssignDisputeRequest(assigneeId: assigneeId).toJson(), idempotencyKey: idempotencyKey);
+  Future<void> addDisputeNote(String disputeId, String body, {required String idempotencyKey}) => client.sendJson('POST', fillPath(AdminApiPaths.adminAddDisputeNote.path, {'disputeId': disputeId}),
+      body: AdminAddDisputeNoteRequest(body: body).toJson(), idempotencyKey: idempotencyKey);
+
   Future<Profile> me() async => Profile.fromJson(await client.getJson(AdminApiPaths.adminGetMe.path));
   Future<AdminListMySessionsResponse> mySessions() async => AdminListMySessionsResponse.fromJson(await client.getJson(AdminApiPaths.adminListMySessions.path));
   Future<void> revokeSession(String sessionId, {required String idempotencyKey}) =>

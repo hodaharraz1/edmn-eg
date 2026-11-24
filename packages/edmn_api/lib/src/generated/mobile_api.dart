@@ -11,6 +11,7 @@ abstract final class MobileApiPaths {
   static const addSellerProductImages = (method: 'POST', path: '/api/v1/seller/products/{productId}/images');
   static const addWishlistItem = (method: 'PUT', path: '/api/v1/wishlist/{productId}');
   static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
+  static const archiveSellerProduct = (method: 'POST', path: '/api/v1/seller/products/{productId}/archive');
   static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
@@ -100,6 +101,7 @@ abstract final class MobileApiPaths {
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
   static const markDealShipped = (method: 'POST', path: '/api/v1/deals/{dealId}/shipped');
   static const markNotificationsRead = (method: 'POST', path: '/api/v1/notifications/read');
+  static const markSellerProductOutOfStock = (method: 'POST', path: '/api/v1/seller/products/{productId}/out-of-stock');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
   static const openDispute = (method: 'POST', path: '/api/v1/disputes');
@@ -144,6 +146,7 @@ abstract final class MobileApiPaths {
   static const saveSellerProductVariants = (method: 'PUT', path: '/api/v1/seller/products/{productId}/variants');
   static const saveSellerShipment = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/shipment');
   static const saveSellerShippingRates = (method: 'PUT', path: '/api/v1/seller/shipping-rates');
+  static const saveSellerStoreMedia = (method: 'POST', path: '/api/v1/seller/store/media');
   static const saveSellerStoreSettings = (method: 'PUT', path: '/api/v1/seller/store');
   static const searchProducts = (method: 'GET', path: '/api/v1/catalog/products');
   static const sendMessage = (method: 'POST', path: '/api/v1/conversations/{conversationId}/messages');
@@ -4980,9 +4983,9 @@ class SellerApplicationSellerPayout {
 }
 
 class SellerApplicationSellerStore {
-  const SellerApplicationSellerStore({required this.name, required this.slug, required this.description, required this.returnAddress, required this.supportPhone});
+  const SellerApplicationSellerStore({required this.name, required this.slug, required this.description, required this.returnAddress, required this.returnGovernorateId, required this.supportPhone});
 
-  factory SellerApplicationSellerStore.fromJson(Map<String, dynamic> json) => SellerApplicationSellerStore(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, supportPhone: json['supportPhone'] as String?);
+  factory SellerApplicationSellerStore.fromJson(Map<String, dynamic> json) => SellerApplicationSellerStore(name: json['name'] as String, slug: json['slug'] as String, description: json['description'] as String?, returnAddress: json['returnAddress'] as String?, returnGovernorateId: (json['returnGovernorateId'] as num?)?.toInt(), supportPhone: json['supportPhone'] as String?);
 
   final String name;
 
@@ -4992,9 +4995,11 @@ class SellerApplicationSellerStore {
 
   final String? returnAddress;
 
+  final int? returnGovernorateId;
+
   final String? supportPhone;
 
-  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'supportPhone': supportPhone};
+  Map<String, dynamic> toJson() => {'name': name, 'slug': slug, 'description': description, 'returnAddress': returnAddress, 'returnGovernorateId': returnGovernorateId, 'supportPhone': supportPhone};
 }
 
 class SellerOrder {

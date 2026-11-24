@@ -26,13 +26,25 @@ final reviewOptionsProvider = FutureProvider.autoDispose.family<ReviewOptions, S
       'REQUESTED' || 'UNDER_REVIEW' => (t.retRequested, EdmnTone.warning),
       'APPROVED' => (t.retApproved, EdmnTone.info),
       'RETURN_IN_TRANSIT' => (t.retInTransit, EdmnTone.info),
-      'RECEIVED' || 'INSPECTION' => (t.retReceived, EdmnTone.info),
+      'RECEIVED' => (t.retReceived, EdmnTone.info),
+      'INSPECTION' => (t.retInspecting, EdmnTone.info),
       'REFUND_PENDING' => (t.retRefundPending, EdmnTone.warning),
       'REFUNDED' => (t.retRefunded, EdmnTone.success),
       'REJECTED' => (t.retRejected, EdmnTone.danger),
       'DISPUTED' => (t.retDisputed, EdmnTone.warning),
       _ => (s, EdmnTone.neutral),
     };
+
+/// State of step [i] of the buyer/seller return timeline (requested, approved, in transit, received, refund pending,
+/// refunded) for the server status. REFUNDED is the end: every step, the last included, is done (it used to stay
+/// "current", as if something were still to happen).
+EdmnStepState returnStepState(String status, int i) {
+  if (status == 'REJECTED' || status == 'DISPUTED') return i == 0 ? EdmnStepState.done : EdmnStepState.pending;
+  const flow = ['REQUESTED', 'APPROVED', 'RETURN_IN_TRANSIT', 'RECEIVED', 'REFUND_PENDING', 'REFUNDED'];
+  if (status == 'REFUNDED') return EdmnStepState.done;
+  final rank = switch (status) { 'UNDER_REVIEW' => 0, 'INSPECTION' => 3, _ => flow.indexOf(status) };
+  return rank > i ? EdmnStepState.done : (rank == i ? EdmnStepState.current : EdmnStepState.pending);
+}
 
 (String, EdmnTone) disputeStatus(EdmnLocalizations t, String s) => switch (s) {
       'OPEN' => (t.dspOpen, EdmnTone.warning),
@@ -120,9 +132,15 @@ class _EvidenceGrid extends ConsumerWidget {
               child: ref.watch(fileBytesProvider(id)).when(
                     loading: () => const ColoredBox(color: EdmnColors.subtle),
                     error: (_, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.description_outlined)),
-                    data: (b) => GestureDetector(
-                      onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(child: InteractiveViewer(child: Image.memory(b)))),
-                      child: Image.memory(b, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.picture_as_pdf_outlined, color: EdmnColors.error))),
+                    // Named for screen readers (it was an unnamed tappable area): «image attachment», opens the viewer.
+                    data: (b) => Semantics(
+                      button: true,
+                      label: EdmnLocalizations.of(context).imageAttachment,
+                      excludeSemantics: true,
+                      child: GestureDetector(
+                        onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(child: InteractiveViewer(child: Image.memory(b)))),
+                        child: Image.memory(b, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: EdmnColors.subtle, child: Icon(Icons.picture_as_pdf_outlined, color: EdmnColors.error))),
+                      ),
                     ),
                   ),
             ),
@@ -353,9 +371,7 @@ class _ReturnScreenState extends ConsumerState<ReturnScreen> {
         data: (r) {
           final a = r.allowedActions.toSet();
           final (l, tone) = returnStatus(t, r.status);
-          const flow = ['REQUESTED', 'APPROVED', 'RETURN_IN_TRANSIT', 'RECEIVED', 'REFUND_PENDING', 'REFUNDED'];
-          final rank = switch (r.status) { 'UNDER_REVIEW' => 0, 'INSPECTION' => 3, _ => flow.indexOf(r.status) };
-          EdmnStepState st(int i) => r.status == 'REJECTED' || r.status == 'DISPUTED' ? (i == 0 ? EdmnStepState.done : EdmnStepState.pending) : (rank > i ? EdmnStepState.done : (rank == i ? EdmnStepState.current : EdmnStepState.pending));
+          EdmnStepState st(int i) => returnStepState(r.status, i);
           Widget btn(String k, String label, VoidCallback onTap, {bool danger = false, bool primary = true}) => Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.xs),
                 child: primary && !danger
@@ -874,7 +890,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             IconButton(
               key: Key('${widget.key is ValueKey ? (widget.key as ValueKey).value : ''}-star-$i'),
               tooltip: '$i',
-              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34),
+              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34, semanticLabel: '$i'),
               onPressed: () => setState(() => _stars = i),
             ),
         ]),

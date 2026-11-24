@@ -107,12 +107,19 @@ export const identitySchema = z.object({
   governorateId: z.coerce.number().int().positive('اختر المحافظة'),
 });
 
+/** The governorate must exist in the authoritative list and be active; an unknown id would otherwise fail as a foreign-key error. */
+async function assertActiveGovernorate(tx: DbOrTx, id: number, field: string) {
+  const [g] = await tx.select({ isActive: governorates.isActive }).from(governorates).where(eq(governorates.id, id));
+  if (!g || !g.isActive) throw validation('المحافظة غير متاحة. اختر محافظة من القائمة', { [field]: ['المحافظة غير متاحة'] });
+}
+
 export async function saveIdentity(actor: Actor, input: z.input<typeof identitySchema>) {
   const d = parse(identitySchema, input);
   const mobile = normalizeEgyptMobile(d.mobile);
   if (!mobile) throw validation('رقم الموبايل غير صحيح', { mobile: ['رقم الموبايل غير صحيح'] });
   await db.transaction(async (tx) => {
     const s = await loadEditable(tx, actor);
+    await assertActiveGovernorate(tx, d.governorateId, 'governorateId');
     const [u] = await tx.select().from(users).where(eq(users.id, s.ownerUserId));
     await tx
       .update(sellers)
@@ -176,6 +183,7 @@ export async function saveStore(actor: Actor, input: z.input<typeof storeSchema>
   const d = parse(storeSchema, input);
   await db.transaction(async (tx) => {
     const s = await loadEditable(tx, actor);
+    await assertActiveGovernorate(tx, d.returnGovernorateId, 'returnGovernorateId');
     const logoFile = logo ? await storeUpload(tx, actor, { purpose: 'STORE_LOGO', data: logo.data, originalName: logo.name }) : null;
     const [existing] = await tx.select().from(stores).where(eq(stores.sellerId, s.id));
     const values = {
@@ -496,6 +504,11 @@ export async function setShippingRates(actor: Actor, rates: z.input<typeof shipp
   const parsed = rates.map((r) => parse(shippingRateSchema, r));
   for (const r of parsed) if (r.etaMaxDays < r.etaMinDays) throw validation('مدة التوصيل القصوى يجب أن تكون أكبر من أو تساوي الدنيا');
   await db.transaction(async (tx) => {
+    const ids = [...new Set(parsed.map((r) => r.governorateId))];
+    const known = ids.length ? await tx.select({ id: governorates.id, isActive: governorates.isActive }).from(governorates).where(inArray(governorates.id, ids)) : [];
+    const active = new Map(known.map((g) => [g.id, g.isActive]));
+    // Unknown governorates are refused; an inactive one may only be switched off, never offered for delivery.
+    if (parsed.some((r) => !active.has(r.governorateId) || (r.enabled && !active.get(r.governorateId)))) throw validation('المحافظة غير متاحة. اختر محافظة من القائمة');
     for (const r of parsed) {
       await tx
         .insert(sellerShippingRates)
@@ -557,6 +570,33 @@ export async function updateStoreSettings(
       })
       .where(eq(stores.id, store.id));
     await audit(tx, actor, { action: 'seller.store_updated', entityType: 'store', entityId: store.id, oldValues: { name: store.name }, newValues: { name: d.name } });
+  });
+}
+
+/**
+ * Replace the store logo and/or banner only (Seller Center media; the Customer App's store screen). Same storage path as
+ * updateStoreSettings: storeUpload with STORE_LOGO / STORE_BANNER (content sniffing, size caps, re-encoding, public
+ * visibility only after the malware gate in production). store.manage; the seller is the session's, never a client id.
+ */
+export async function updateStoreMedia(actor: Actor, uploads: { logo?: { data: Buffer; name: string } | null; banner?: { data: Buffer; name: string } | null }) {
+  const sellerId = requireSeller(actor, 'store.manage');
+  if (!uploads.logo && !uploads.banner) throw validation('اختار صورة الشعار أو الغلاف');
+  await db.transaction(async (tx) => {
+    const [store] = await tx.select().from(stores).where(eq(stores.sellerId, sellerId)).for('update');
+    if (!store) throw notFound('المتجر');
+    const logo = uploads.logo ? await storeUpload(tx, actor, { purpose: 'STORE_LOGO', data: uploads.logo.data, originalName: uploads.logo.name }) : null;
+    const banner = uploads.banner ? await storeUpload(tx, actor, { purpose: 'STORE_BANNER', data: uploads.banner.data, originalName: uploads.banner.name }) : null;
+    await tx
+      .update(stores)
+      .set({ ...(logo ? { logoFileId: logo.id } : {}), ...(banner ? { bannerFileId: banner.id } : {}) })
+      .where(eq(stores.id, store.id));
+    await audit(tx, actor, {
+      action: 'seller.store_media_updated',
+      entityType: 'store',
+      entityId: store.id,
+      oldValues: { logoFileId: store.logoFileId, bannerFileId: store.bannerFileId },
+      newValues: { logoFileId: logo?.id ?? store.logoFileId, bannerFileId: banner?.id ?? store.bannerFileId },
+    });
   });
 }
 
