@@ -97,6 +97,27 @@ describe('private local upload reconciliation', () => {
     } finally { release(); await writer; }
   });
 
+  it('does not remove a file while the real local upload is still writing', async () => {
+    const put = driver.put.bind(driver);
+    let ready!: (key: string) => void; let release!: () => void;
+    const staged = new Promise<string>((resolve) => { ready = resolve; });
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    const spy = vi.spyOn(driver, 'put').mockImplementation(async (visibility, k, body) => {
+      await put(visibility, k, body); await age(k); ready(k); await wait;
+    });
+    const uploading = db.transaction(async (tx) => {
+      await storeUpload(tx, actor, { purpose: 'DEAL_EVIDENCE', data: await png('in-flight'), originalName: 'a.png' });
+      throw new Error('abort after write');
+    }).catch((e: Error) => e);
+    try {
+      const k = await staged;
+      expect((await reconcilePrivateOrphans()).busy).toBeGreaterThanOrEqual(1);
+      expect(await driver.exists('PRIVATE', k)).toBe(true);
+      release(); expect((await uploading).message).toContain('abort after write');
+      expect((await reconcilePrivateOrphans()).removed).toBe(1);
+    } finally { release(); await uploading; spy.mockRestore(); }
+  });
+
   it('cleans a rolled-back upload without touching a concurrent committed retry', async () => {
     const data = await png('parallel-local');
     let ready!: () => void; let release!: () => void; let failedKey = '';

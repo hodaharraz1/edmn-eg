@@ -205,7 +205,15 @@ try {
   try { await type(page.getByRole('textbox').first(), invitationLink); }
   catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
-  await tap('الانضمام للصفقة'); assert.equal((await claim).status(), 200);
+  await tap('الانضمام للصفقة');
+  const claimResult = await claim;
+  if (claimResult.status() !== 200) {
+    const sentToken = JSON.parse(claimResult.request().postData() ?? '{}').token;
+    const expectedToken = invitationLink.split('/').filter(Boolean).at(-1);
+    const [inv] = await rows("select status, expires_at>now() as unexpired, bound_user_id is not null as bound from deal_invitations where deal_id=$1 order by created_at desc limit 1", [deal.id]);
+    console.log(`Claim diagnostic: tokenMatches=${sentToken === expectedToken}, invitationStatus=${inv?.status}, unexpired=${inv?.unexpired}, bound=${inv?.bound}`);
+  }
+  assert.equal(claimResult.status(), 200);
   const [joined] = await rows('select status, seller_user_id from external_deals where id=$1', [deal.id]);
   assert.equal(joined.status, 'SELLER_JOINED');
   assert(joined.seller_user_id);
