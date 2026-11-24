@@ -10,16 +10,16 @@ PASS F6 persistence: after reload «أسوان» is on and shows 92.50 — fee f
 PASS F7 ownership (API): another seller reads only its own rates — status=200 otherFee=12000
 PASS F7 ownership (API): a buyer cannot change seller rates — status=403
 PASS mona: sign-in — POST /api/v1/auth/login 200
-PASS BA1 buyer: order placed through the UI — #100037
-PASS BA1 DB: one order PENDING_PAYMENT, stock reserved for it — reservations=[ACTIVE] variant reserved=4
-PASS BA2 buyer: the order is in «طلباتي» — #100037
-PASS BA3 buyer: details show the product and «في انتظار الدفع» — شاومي ريدمي نوت 13
+PASS BA1 buyer: order placed through the UI — #100053
+PASS BA1 DB: one order PENDING_PAYMENT, stock reserved for it — reservations=[ACTIVE] variant reserved=10
+PASS BA2 buyer: the order is in «طلباتي» — #100053
+PASS BA3 buyer: details show the product and «في انتظار الدفع» — سامسونج جالاكسي A55 5G
 PASS BA3 a11y: no unnamed buttons on the order screen — all named
 PASS BC1 buyer: unpaid order cancelled through the UI — status=CANCELLED
-PASS BC1 stock: the reservation is released — reservations=[RELEASED] variant reserved 4 → 3
+PASS BC1 stock: the reservation is released — reservations=[RELEASED] variant reserved 10 → 9
 PASS BC1 money: no payment was confirmed and no refund created — none
 PASS mona: sign-in — POST /api/v1/auth/login 200
-PASS BC2 buyer: order placed through the UI — #100038
+PASS BC2 buyer: order placed through the UI — #100054
 PASS BC2 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
 PASS BC2 staff: payment confirmed in the console service → PAID — PAID
 PASS mona: sign-in — POST /api/v1/auth/login 200
@@ -27,7 +27,7 @@ PASS BC2 buyer: a paid order offers no direct cancel, only a cancellation reques
 PASS BC2 buyer: before the seller confirms, the request cancels the seller order at once — status=CANCELLED
 PASS BC2 money: a refund is REQUESTED for EDMN, nothing paid from the app — refunds=[REQUESTED]
 PASS mona: sign-in — POST /api/v1/auth/login 200
-PASS BC3 buyer: order placed through the UI — #100039
+PASS BC3 buyer: order placed through the UI — #100055
 PASS BC3 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
 PASS BC3 staff: payment confirmed in the console service → PAID — PAID
 PASS techzone: sign-in — POST /api/v1/auth/login 200
@@ -39,8 +39,8 @@ PASS BC3 seller: sees the buyer’s cancellation request and its reason — reas
 PASS BC3 seller: accepts → seller order CANCELLED, label «ملغي» with «do not ship» — status=CANCELLED
 PASS BC3 money: refund REQUESTED for EDMN approval, nothing paid from the app — refunds=[REQUESTED]
 PASS BC3 buyer: notified of the cancellation — SELLER_ORDER_CANCELLED
-PASS mona: sign-in — POST /api/v1/auth/login 200
-PASS BB1 buyer: order placed through the UI — #100040
+PASS mona: sign-in — POST /api/v1/auth/login 429 | POST /api/v1/auth/login 200
+PASS BB1 buyer: order placed through the UI — #100056
 PASS BB1 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
 PASS BB1 staff: payment confirmed in the console service → PAID — PAID
 PASS techzone: sign-in — POST /api/v1/auth/login 200
@@ -51,12 +51,12 @@ PASS BB2 seller: «جاهز للشحن» → READY_TO_SHIP, shown as «جاهز 
 PASS BB2 labels: PROCESSING and READY_TO_SHIP no longer share a label — distinct
 PASS BB2 seller: «تم الشحن» → SHIPPED, shown as «تم الشحن» — status=SHIPPED
 PASS mona: sign-in — POST /api/v1/auth/login 200
-PASS BB3 buyer: tracking shows the shipment on its way with the carrier and waybill number — tracking=B5376698
+PASS BB3 buyer: tracking shows the shipment on its way with the carrier and waybill number — tracking=B5209643
 PASS mona: sign-in — POST /api/v1/auth/login 200
 PASS G1 buyer: message sent from the order, stored once (double tap → one row) — rows=1
 PASS G2 seller: notified of the new message — MESSAGE_RECEIVED
 PASS techzone: sign-in — POST /api/v1/auth/login 200
-PASS G2 seller: the conversation is in the store inbox with an unread count — #100040
+PASS G2 seller: the conversation is in the store inbox with an unread count — #100056
 PASS G3 seller: opens the conversation and reads the buyer’s message — message on screen
 PASS G3 a11y: no unnamed buttons in the conversation (attach / send named) — all named
 PASS G3 seller: reading it records the read position (unread cleared) — reads=1

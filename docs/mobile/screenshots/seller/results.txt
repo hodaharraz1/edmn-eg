@@ -1,14 +1,14 @@
 PASS ahmed: sign-in — POST /api/v1/auth/login 200
-PASS C1 buyer: order placed through the UI — #100041 total=1070898
+PASS C1 buyer: order placed through the UI — #100057 total=1937898
 PASS C1 buyer: receipt submitted, payment awaits staff — PAYMENT_SUBMITTED
 PASS C2 staff: payment confirmed → seller order PAID — seller order status=PAID
 PASS C2 ledger: payment entries balanced — debits = credits
 PASS techzone: sign-in — POST /api/v1/auth/login 200
-PASS C3 seller: order shows the product — شاومي ريدمي نوت 13
+PASS C3 seller: order shows the product — سامسونج جالاكسي A55 5G
 PASS C3 seller: «قبول الطلب» → SELLER_CONFIRMED — status=SELLER_CONFIRMED
 PASS C3 seller: «بدء التجهيز» → PROCESSING — status=PROCESSING
 PASS C3 seller: «جاهز للشحن» → READY_TO_SHIP — status=READY_TO_SHIP
-PASS C3 seller: shipment saved with carrier, waybill number and the waybill file — carrier=بوسطة tracking=JNY772440 docs=1
+PASS C3 seller: shipment saved with carrier, waybill number and the waybill file — carrier=بوسطة tracking=JNY599539 docs=1
 PASS C3 security: the waybill is a PRIVATE file — PRIVATE|SHIPPING_WAYBILL
 PASS C3 seller: «تم الشحن» → SHIPPED — status=SHIPPED
 PASS C4 buyer: notified that the order shipped — notification row
@@ -20,8 +20,8 @@ PASS C4 money: no release journal entry without the staff Maker/Checker step —
 PASS C4 ledger: every entry for this order is balanced — debits = credits
 PASS techzone: sign-in — POST /api/v1/auth/login 200
 PASS E1 seller funds: withdrawable on screen = ledger account = journal sum — screen=20,544.21 account=2054421 journal=2054421
-PASS E1 seller funds: pending release on screen = ledger account = journal sum — screen=354,240.42 account=35424042 journal=35424042
-PASS E2 statement lists the delivered order #100041-A — #100041-A
+PASS E1 seller funds: pending release on screen = ledger account = journal sum — screen=462,654.66 account=46265466 journal=46265466
+PASS E2 statement lists the delivered order #100057-A — #100057-A
 PASS E3 payout: one request through the UI (double tap) — REQUESTED, 100 EGP — rows=1 amount=10000 status=REQUESTED
 PASS E3 payout: request only — no journal entry, available balance unchanged — entries=0 available=2054421
 PASS E3 payout: the UI call succeeded once — POST /api/v1/seller/payout-requests/preview 200 | POST /api/v1/seller/payout-requests 201
@@ -31,7 +31,7 @@ PASS D1 buyer: return requested through the UI — status=REQUESTED reason=DAMAG
 PASS D1 security: evidence stored PRIVATE as RETURN_EVIDENCE — PRIVATE:RETURN_EVIDENCE
 PASS D2 seller: notified of the return request — RETURN_REQUESTED
 PASS techzone: sign-in — POST /api/v1/auth/login 200
-PASS D2 seller: sees the return for the order — #100041-A
+PASS D2 seller: sees the return for the order — #100057-A
 PASS D2 seller: authorized rejection with a reason, persisted — status=REJECTED
 PASS ahmed: sign-in — POST /api/v1/auth/login 200
 PASS D3 buyer: sees the seller rejection — مرفوض on screen
@@ -64,11 +64,11 @@ PASS A5 application started through the UI (individual) — DRAFT
 PASS A6 governorate picker: search without hamza finds «الإسكندرية» and shows it — picker value
 PASS A6 owner identity and address saved with the governorate id — governorate_id=3 (Alexandria=3)
 PASS A7 application mobile verified (same as the verified account phone) — mobile_verified_at
-PASS A8 store created with name, return address (Cairo id from the picker) and logo — store=متجر سارة 52793 logo=true returnGovernorate=1
+PASS A8 store created with name, return address (Cairo id from the picker) and logo — store=متجر سارة 73436 logo=true returnGovernorate=1
 PASS A9 seller documents uploaded through the UI, PRIVATE — NATIONAL_ID_BACK:PRIVATE,NATIONAL_ID_FRONT:PRIVATE
 PASS A10 payout account added (pending EDMN verification) — status=PENDING_VERIFICATION type=INSTAPAY
 PASS A11 application submitted through the UI — PENDING_REVIEW
 PASS A12 staff: seller approved, payout account verified — APPROVED
 PASS A12 the new seller is notified — SELLER_APPROVED
-PASS A13 the new seller sees the Seller Center (store + menu) — متجر سارة 52793
+PASS A13 the new seller sees the Seller Center (store + menu) — متجر سارة 73436
 73 PASS / 0 FAIL

@@ -1,0 +1,36 @@
+Batch 6 database and ledger evidence (local demo DB, 2026-11-24, Real Money OFF, TEST references)
+
+ refund |  status   | piastres | paid_reference  | return_no | return_status 
+--------+-----------+----------+-----------------+-----------+---------------
+ 500043 | COMPLETED |  1937898 | TEST-RFD-750813 |    500042 | REFUNDED
+ 500045 | COMPLETED |  1937898 | TEST-RFD-441167 |    500044 | REFUNDED
+(2 rows)
+
+      kind       |  status  |       maker        |      checker       
+-----------------+----------+--------------------+--------------------
+ REFUND_APPROVAL | EXECUTED | finance@edmn.local | checker@edmn.local
+ REFUND_APPROVAL | EXECUTED | finance@edmn.local | checker@edmn.local
+(2 rows)
+
+ refund | from_status | to_status |          actor           
+--------+-------------+-----------+--------------------------
+ 500043 |             | REQUESTED | techzone@demo.edmn.local
+ 500043 | REQUESTED   | APPROVED  | checker@edmn.local
+ 500043 | APPROVED    | COMPLETED | finance@edmn.local
+ 500045 |             | REQUESTED | techzone@demo.edmn.local
+ 500045 | REQUESTED   | APPROVED  | checker@edmn.local
+ 500045 | APPROVED    | FAILED    | finance@edmn.local
+ 500045 | FAILED      | APPROVED  | checker@edmn.local
+ 500045 | APPROVED    | COMPLETED | finance@edmn.local
+(8 rows)
+
+ refund | entry_type  |  debit  | credit  
+--------+-------------+---------+---------
+ 500043 | REFUND      | 1937898 | 1937898
+ 500043 | REFUND_PAID | 1937898 | 1937898
+ 500045 | REFUND      | 1937898 | 1937898
+ 500045 | REFUND_PAID | 1937898 | 1937898
+(4 rows)
+
+Unbalanced journal entries in the whole demo ledger: 0
+Trial balance (all debits - all credits): 0
