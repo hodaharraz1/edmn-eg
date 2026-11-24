@@ -330,8 +330,15 @@ try {
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'DELIVERED');
   console.log('PASS Flutter rejects an incorrect delivery code without advancing the deal');
   await page.waitForTimeout(5000);
-  // Advance only the synthetic fixture's expiry; the server clock and other data are unchanged.
-  await rows("update deal_delivery_otps set expires_at=now()-interval '1 minute' where deal_id=$1 and used_at is null and invalidated_at is null", [deal.id]);
+  // OTP expiry is intentionally immutable. In this disposable database, retire
+  // the first test OTP and insert a separate already-expired fixture. No trigger
+  // is disabled; verification checks expiry before checking its copied hash.
+  await rows(`with previous as (
+    update deal_delivery_otps set invalidated_at=now(), invalid_reason='REGENERATED'
+    where deal_id=$1 and used_at is null and invalidated_at is null
+    returning deal_id, buyer_id, delivery_attempt, code_hash, code_hash_version, max_attempts
+  ) insert into deal_delivery_otps (id, deal_id, buyer_id, delivery_attempt, code_hash, code_hash_version, expires_at, max_attempts)
+    select gen_random_uuid(), deal_id, buyer_id, delivery_attempt, code_hash, code_hash_version, now()-interval '1 minute', max_attempts from previous`, [deal.id]);
   await freshDeal(deal.id);
   await tap('إدخال كود التسليم');
   try { await type(page.getByRole('textbox', { name: 'الكود (6 أرقام)' }), code); }
