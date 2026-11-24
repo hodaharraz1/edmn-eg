@@ -267,6 +267,26 @@ try {
   acceptDialogs(admin);
   await admin.goto(`/admin/payments/${pay.paymentId}`);
   await admin.waitForLoadState('networkidle');
+  await admin.getByLabel('سبب الرفض (يظهر للعميل)').fill('Test receipt needs a clearer image');
+  const rejectProof = admin.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${pay.paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
+  await admin.getByRole('button', { name: 'رفض', exact: true }).click();
+  assert((await rejectProof).ok());
+  await pollStatus('PAYMENT_PENDING');
+  assert.equal((await rows('select status from payments where id=$1', [pay.paymentId]))[0].status, 'REJECTED');
+  page = buyerPage;
+  await go(`/payments/${pay.paymentId}`);
+  await page.getByText(/الإيصال اترفض:.*Test receipt needs a clearer image/).first().waitFor({ state: 'visible' });
+  const [replacement] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: /للإيصال/ }).first().click()]);
+  await replacement.setFiles({ name: 'receipt-retry.png', mimeType: 'image/png', buffer: png }); await page.waitForTimeout(500); await sem();
+  await type(page.getByRole('textbox', { name: 'المبلغ اللي حوّلته (ج.م)' }), String(pay.deal.payment.amountDuePiastres / 100));
+  const proofRetry = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/payments/${pay.paymentId}/proof` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('إرسال الإيصال للمراجعة'); assert.equal((await proofRetry).status(), 201);
+  await page.getByText('الإيصال وصل وتحت المراجعة. الدفع مش هيتأكد غير بعد مراجعة فريق أضمن.').waitFor({ state: 'visible' });
+  await pollStatus('PAYMENT_UNDER_REVIEW');
+  assert.equal((await rows('select count(*)::int n from payment_submissions where payment_id=$1', [pay.paymentId]))[0].n, 2);
+  console.log('PASS Flutter displays rejected proof and resubmits for review');
+  await admin.goto(`/admin/payments/${pay.paymentId}`);
+  await admin.waitForLoadState('networkidle');
   const reviewResponse = admin.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${pay.paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
   await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
   assert((await reviewResponse).ok());
@@ -285,7 +305,7 @@ try {
   const codeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code` && r.request().method() === 'GET', { timeout: 60000 });
   await tap('عرض كود التسليم');
   const codeResult = await codeResponse; assert.equal(codeResult.status(), 200);
-  const code = (await codeResult.json()).code;
+  let code = (await codeResult.json()).code;
   assert(/^\d{6}$/.test(code));
   try { await page.getByText(code, { exact: true }).waitFor({ state: 'visible' }); }
   catch { throw new Error('Buyer delivery code was not visible'); }
@@ -300,15 +320,52 @@ try {
   assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'DELIVERED');
   console.log('PASS Flutter rejects an incorrect delivery code without advancing the deal');
   await page.waitForTimeout(5000);
+  // Advance only the synthetic fixture's expiry; the server clock and other data are unchanged.
+  await rows("update deal_delivery_otps set expires_at=now()-interval '1 minute' where deal_id=$1 and used_at is null and invalidated_at is null", [deal.id]);
+  await freshDeal(deal.id);
+  await tap('إدخال كود التسليم');
+  try { await type(page.getByRole('textbox', { name: 'الكود (6 أرقام)' }), code); }
+  catch { throw new Error('Could not enter expired test code'); }
+  const expiredOtp = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('تحقق'); assert((await expiredOtp).status() >= 400);
+  await page.getByText('الإجراء ده مش متاح في الحالة الحالية').first().waitFor({ state: 'visible' });
+  assert.equal((await rows("select count(*)::int n from deal_delivery_otps where deal_id=$1 and invalid_reason='EXPIRED'", [deal.id]))[0].n, 1);
+  assert.equal((await rows('select status from external_deals where id=$1', [deal.id]))[0].status, 'DELIVERED');
+  await freshDeal(deal.id);
+  const regenerate = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/regenerate` && r.request().method() === 'POST', { timeout: 60000 });
+  await tap('إرسال كود جديد'); assert.equal((await regenerate).status(), 200);
+  page = buyerPage;
+  await freshDeal(deal.id);
+  const freshCodeResponse = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code` && r.request().method() === 'GET', { timeout: 60000 });
+  await tap('عرض كود التسليم');
+  const freshCodeResult = await freshCodeResponse; assert.equal(freshCodeResult.status(), 200);
+  code = (await freshCodeResult.json()).code;
+  assert(/^\d{6}$/.test(code));
+  try { await page.getByText(code, { exact: true }).waitFor({ state: 'visible' }); }
+  catch { throw new Error('Replacement delivery code was not visible'); }
+  console.log('PASS Flutter rejects an expired OTP and regenerates a replacement');
+  page = sellerContext.pages()[0];
   // Refreshing the deal after a rejected attempt can remove the bottom sheet.
   // Open it again just as the seller would before trying another code.
   await freshDeal(deal.id);
   await tap('إدخال كود التسليم');
   try { await type(page.getByRole('textbox', { name: 'الكود (6 أرقام)' }), code); }
   catch { throw new Error('Could not enter the delivery code'); }
+  let replayStatus;
+  const verifyRoute = '**/api/v1/deals/*/delivery-code/verify';
+  const replayOnce = async (route) => {
+    const first = await route.fetch();
+    replayStatus = (await route.fetch()).status();
+    await route.fulfill({ response: first });
+  };
+  await page.route(verifyRoute, replayOnce);
   const verify = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/v1/deals/${deal.id}/delivery-code/verify` && r.request().method() === 'POST', { timeout: 60000 });
   await tap('تحقق'); assert.equal((await verify).status(), 200);
+  await page.unroute(verifyRoute, replayOnce);
+  assert(replayStatus >= 400, 'A used delivery OTP must not be accepted again');
   await pollStatus('DELIVERY_HANDOVER_VERIFIED');
+  await freshDeal(deal.id);
+  assert.equal(await page.getByRole('button', { name: 'إدخال كود التسليم' }).count(), 0);
   console.log('PASS Flutter OTP verification: API 200 and DELIVERY_HANDOVER_VERIFIED');
   page = buyerPage;
   await freshDeal(deal.id);
