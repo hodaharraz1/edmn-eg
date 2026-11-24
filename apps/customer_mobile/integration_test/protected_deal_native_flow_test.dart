@@ -147,5 +147,23 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.byKey(const Key('deal-offer')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('deal-offer')));
+    await tester.pumpAndSettle();
+    await enter('offer-fullName', 'Test Seller');
+    await enter('offer-city', 'Giza');
+    await enter('offer-street', 'Test seller street');
+    await enter('offer-holderName', 'Test Seller');
+    await enter('offer-instapay', 'test-seller@instapay');
+    await enter('offer-deliveryMethod', 'Delivery service');
+    await tester.ensureVisible(find.byKey(const Key('offer-submit')));
+    await tester.tap(find.byKey(const Key('offer-submit')));
+    for (
+      var i = 0;
+      i < 40 && find.byKey(const Key('offer-submit')).evaluate().isNotEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.byKey(const Key('offer-submit')), findsNothing);
   });
 }
