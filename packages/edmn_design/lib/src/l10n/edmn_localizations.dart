@@ -6595,6 +6595,12 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'تم إلغاء الطلب. لا تقم بشحنه.'**
   String get soHintCancelled;
+
+  /// No description provided for @retInspecting.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد الفحص لدى البائع'**
+  String get retInspecting;
 }
 
 class _EdmnLocalizationsDelegate

@@ -1216,5 +1216,6 @@
   "soHintReceived": "The buyer received the order. Your earnings stay pending until EDMN reviews and approves them.",
   "soHintCompleted": "The order is complete and EDMN approved the transfer of its earnings.",
   "soHintFailed": "The order couldn't be delivered. The EDMN team will contact you about next steps.",
-  "soHintCancelled": "This order was cancelled. Do not ship it."
+  "soHintCancelled": "This order was cancelled. Do not ship it.",
+  "retInspecting": "Being inspected by the seller"
 }

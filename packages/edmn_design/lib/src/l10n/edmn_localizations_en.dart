@@ -3481,4 +3481,7 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'This order was cancelled. Do not ship it.';
+
+  @override
+  String get retInspecting => 'Being inspected by the seller';
 }

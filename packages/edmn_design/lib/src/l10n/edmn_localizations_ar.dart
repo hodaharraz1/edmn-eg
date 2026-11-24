@@ -3446,4 +3446,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'تم إلغاء الطلب. لا تقم بشحنه.';
+
+  @override
+  String get retInspecting => 'قيد الفحص لدى البائع';
 }
