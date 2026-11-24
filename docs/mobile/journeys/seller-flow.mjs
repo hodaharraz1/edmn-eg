@@ -11,6 +11,7 @@ import { chromium } from 'playwright';
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
+import { waitOutLoginLimit } from './harness.mjs';
 const OUT = process.env.OUT ?? 'docs/mobile/screenshots/seller';
 const BASE = process.env.JOURNEY_APP_URL ?? 'http://localhost:8099/'; // not APP_URL: that names the backend
 const DB = process.env.JOURNEY_DB ?? 'postgresql://edmn:edmn@127.0.0.1:55432/edmn_device';
@@ -43,6 +44,11 @@ async function session(b, email, password, fn) {
   await type(p.getByRole('textbox').nth(0), email);
   await type(p.getByRole('textbox').nth(1), password);
   await tap('تسجيل الدخول'); await p.waitForTimeout(1500);
+  if (await waitOutLoginLimit(calls)) {
+    await p.reload({ waitUntil: 'networkidle' }); await go('/sign-in'); await p.getByRole('textbox').first().waitFor({ timeout: 20000 });
+    await type(p.getByRole('textbox').nth(0), email); await type(p.getByRole('textbox').nth(1), password);
+    await tap('تسجيل الدخول'); await p.waitForTimeout(1500);
+  }
   check(`${email.split('@')[0]}: sign-in`, calls.some((c) => c.startsWith('POST /api/v1/auth/login 200')), calls.filter((c) => c.includes('login')).join(' | '));
   try { await fn({ p, go, shot, type, tap, tapFresh, sem, calls, dump }); } catch (e) { check(`${email.split('@')[0]}: journey error`, false, String(e).split('\n')[0]); await shot(`error-${email.split('@')[0]}-${Date.now() % 10000}`); }
   await ctx.close();

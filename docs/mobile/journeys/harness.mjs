@@ -2,6 +2,7 @@
 // The app is driven only through its accessibility tree (what a screen reader sees); every step is checked against
 // the HTTP call the UI made and the database row it produced.
 import { execSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 
 export const BASE = process.env.JOURNEY_APP_URL ?? 'http://localhost:8099/'; // not APP_URL: that names the backend
 export const API = process.env.JOURNEY_API_URL ?? 'http://localhost:8099/api/v1';
@@ -25,6 +26,20 @@ export async function apiAs(email, password, path, init = {}) {
   const token = (await login.json()).tokens.accessToken;
   const r = await fetch(`${API}${path}`, { ...init, headers: { ...(init.headers ?? {}), authorization: `Bearer ${token}`, 'x-edmn-installation': inst } });
   return { status: r.status, text: await r.text() };
+}
+
+/**
+ * The server limits sign-ins (10 per account and 30 per address per 15-minute window). A long run from one address
+ * reaches that limit: when the last sign-in answered 429, wait for the next window (the limit is respected, never
+ * bypassed) and tell the caller to sign in once more.
+ */
+export async function waitOutLoginLimit(calls) {
+  const last = calls.filter((c) => c.startsWith('POST /api/v1/auth/login')).pop();
+  if (!last?.endsWith(' 429')) return false;
+  const ms = 900_000 - (Date.now() % 900_000) + 5_000;
+  console.log(`(login rate limit reached: waiting ${Math.round(ms / 1000)} s for the next window)`);
+  await new Promise((r) => setTimeout(r, ms));
+  return true;
 }
 
 export async function session(b, out, email, password, fn) {
@@ -106,6 +121,16 @@ export async function session(b, out, email, password, fn) {
     await type(p.getByRole('textbox').nth(1), password);
     await tap('تسجيل الدخول');
     await p.waitForTimeout(1500);
+    if (await waitOutLoginLimit(calls)) {
+      // A full reload: the sign-in fields keep their text across in-app navigation (and Ctrl+A does not select it).
+      await p.reload({ waitUntil: 'networkidle' });
+      await go('/sign-in');
+      await p.getByRole('textbox').first().waitFor({ timeout: 20000 });
+      await type(p.getByRole('textbox').nth(0), email);
+      await type(p.getByRole('textbox').nth(1), password);
+      await tap('تسجيل الدخول');
+      await p.waitForTimeout(1500);
+    }
     check(`${who}: sign-in`, calls.some((c) => c.startsWith('POST /api/v1/auth/login 200')), calls.filter((c) => c.includes('login')).join(' | '));
     await fn({ p, go, shot, type, tap, tapFresh, reveal, confirmDialog, has, unnamedButtons, sem, calls, dump });
   } catch (e) {
@@ -113,4 +138,17 @@ export async function session(b, out, email, password, fn) {
     await shot(`error-${who}-${Date.now() % 10000}`).catch(() => {});
   }
   await ctx.close();
+}
+
+/** RFC 6238 TOTP (SHA-1, 30 s, 6 digits) for the demo staff accounts of the LOCAL demo database. */
+export function totp(secretBase32, at = Date.now()) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const c of secretBase32.replace(/=+$/, '').toUpperCase()) bits += alphabet.indexOf(c).toString(2).padStart(5, '0');
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 30000)));
+  const h = createHmac('sha1', key).update(counter).digest();
+  const o = h[h.length - 1] & 0xf;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, '0');
 }
