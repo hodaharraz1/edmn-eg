@@ -36,4 +36,6 @@ class Orders extends AsyncNotifier<OrdersState> {
 
 final ordersProvider = AsyncNotifierProvider<Orders, OrdersState>(Orders.new);
 final orderProvider = FutureProvider.family<Order, String>((ref, id) => ref.watch(mobileApiProvider).order(id));
-final paymentProvider = FutureProvider.family<GetPaymentResponse, String>((ref, id) => ref.watch(mobileApiProvider).payment(id));
+// Staff can review a receipt while the user is elsewhere. Reload when the
+// payment screen is reopened instead of retaining a stale review status.
+final paymentProvider = FutureProvider.autoDispose.family<GetPaymentResponse, String>((ref, id) => ref.watch(mobileApiProvider).payment(id));

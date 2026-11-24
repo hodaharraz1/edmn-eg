@@ -282,6 +282,7 @@ try {
   await pollStatus('PAYMENT_PENDING');
   assert.equal((await rows('select status from payments where id=$1', [pay.paymentId]))[0].status, 'REJECTED');
   page = buyerPage;
+  await go('/deals'); // Dispose the old payment view before reopening it.
   await go(`/payments/${pay.paymentId}`);
   await page.getByText(/الإيصال اترفض:.*Test receipt needs a clearer image/).first().waitFor({ state: 'visible' });
   const [replacement] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: /للإيصال/ }).first().click()]);
