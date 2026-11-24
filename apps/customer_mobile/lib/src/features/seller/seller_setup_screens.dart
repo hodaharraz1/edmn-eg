@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../common/file_pick.dart';
+import '../../common/governorate_field.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
 import '../catalog/catalog_providers.dart';
@@ -321,10 +322,13 @@ class _SubmitApplicationState extends ConsumerState<_SubmitApplication> {
 
 /// Generic bottom-sheet form: fields + save; closes on success and refreshes the application.
 class _SheetForm extends ConsumerStatefulWidget {
-  const _SheetForm({super.key, required this.fields, required this.save, this.extra = const []});
+  const _SheetForm({super.key, required this.fields, required this.save, this.extra = const [], this.governorate});
   final List<(String key, String hint, String initial, bool required, TextInputType? type)> fields;
   final Future<void> Function(Map<String, String> values) save;
   final List<Widget> extra;
+
+  /// A governorate picked from the database list (field key, current id). Sent as the id, never as typed text.
+  final (String key, int? initial)? governorate;
   @override
   ConsumerState<_SheetForm> createState() => _SheetFormState();
 }
@@ -336,6 +340,7 @@ class _SheetFormState extends ConsumerState<_SheetForm> {
 
   final _form = GlobalKey<FormState>();
   late final _c = {for (final f in widget.fields) f.$1: TextEditingController(text: f.$3)};
+  late int? _gov = widget.governorate?.$2;
   bool _busy = false;
 
   @override
@@ -356,6 +361,10 @@ class _SheetFormState extends ConsumerState<_SheetForm> {
           EdmnTextField(key: Key('f-${f.$1}'), controller: _c[f.$1], hint: f.$2, keyboardType: f.$5, textDirection: _ltr(f.$1, f.$5), validator: f.$4 ? (v) => (v ?? '').trim().isEmpty ? t.fieldRequired : null : null),
           _gap(),
         ],
+        if (widget.governorate != null) ...[
+          GovernorateField(key: Key('f-${widget.governorate!.$1}'), value: _gov, onChanged: (v) => setState(() => _gov = v)),
+          _gap(),
+        ],
         ...widget.extra,
         EdmnPrimaryButton(
           key: const Key('sheet-save'),
@@ -364,7 +373,8 @@ class _SheetFormState extends ConsumerState<_SheetForm> {
           onPressed: () async {
             if (!_form.currentState!.validate()) return;
             setState(() => _busy = true);
-            final ok = await runAction(context, () => widget.save({for (final e in _c.entries) e.key: e.value.text.trim()}), success: t.saved);
+            final values = {for (final e in _c.entries) e.key: e.value.text.trim(), if (widget.governorate != null) widget.governorate!.$1: '$_gov'};
+            final ok = await runAction(context, () => widget.save(values), success: t.saved);
             ref.invalidate(applicationProvider);
             if (mounted) setState(() => _busy = false);
             if (ok && context.mounted) Navigator.pop(context);
@@ -390,9 +400,9 @@ class _OwnerForm extends ConsumerWidget {
         ('email', t.emailHint, seller.email ?? '', true, TextInputType.emailAddress),
         ('addressLine', t.streetHint, seller.addressLine ?? '', true, null),
         ('city', t.cityHint, seller.city ?? '', true, null),
-        ('governorateId', t.governorate, '${seller.governorateId ?? 1}', true, TextInputType.number),
       ],
-      save: (v) => ref.read(mobileApiProvider).saveApplicationIdentity({...v, 'type': seller.type, 'governorateId': int.tryParse(v['governorateId']!) ?? 1}),
+      governorate: ('governorateId', seller.governorateId),
+      save: (v) => ref.read(mobileApiProvider).saveApplicationIdentity({...v, 'type': seller.type, 'governorateId': int.parse(v['governorateId']!)}),
     );
   }
 }
@@ -437,9 +447,9 @@ class _StoreFormState extends ConsumerState<_StoreForm> {
         ('name', t.storeName, s?.name ?? '', true, null),
         ('description', t.storeDescription, s?.description ?? '', false, null),
         ('returnAddress', t.returnAddress, s?.returnAddress ?? '', true, null),
-        ('returnGovernorateId', t.governorate, '1', true, TextInputType.number),
         ('supportPhone', t.supportPhone, s?.supportPhone ?? '', false, TextInputType.phone),
       ],
+      governorate: ('returnGovernorateId', s?.returnGovernorateId),
       extra: [
         EdmnUploadField(label: t.storeLogo, hint: t.pickImage, fileName: _logo?.name, onPick: () async {
           final f = await ref.read(filePickerProvider).pick(allowPdf: false);
@@ -686,7 +696,7 @@ class _ProductEditorScreenState extends ConsumerState<ProductEditorScreen> {
                           end: 0,
                           child: IconButton(
                             tooltip: t.delete,
-                            icon: const Icon(Icons.cancel_rounded, color: EdmnColors.error),
+                            icon: Icon(Icons.cancel_rounded, color: EdmnColors.error, semanticLabel: t.delete),
                             onPressed: _busy ? null : () => _run(() => api.deleteProductImage(e.id, img.fileId, idempotencyKey: newKey())),
                           ),
                         ),
@@ -956,8 +966,12 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
   Widget build(BuildContext context) {
     final t = EdmnLocalizations.of(context);
     final rates = ref.watch(shippingRatesProvider);
-    final govs = ref.watch(governoratesProvider).value ?? const [];
+    final govsAsync = ref.watch(governoratesProvider);
+    final govs = govsAsync.value ?? const [];
     final en = languageOf(context) == 'en';
+    // Seed the editable copy BEFORE the bottom bar is decided: seeding it inside the body left the Save button hidden
+    // until something else rebuilt the screen (editing only a fee never showed it).
+    if (_edit == null && rates.hasValue) _edit = _editable(rates.requireValue);
     return EdmnAppScaffold(
       title: t.shippingRates,
       bottomBar: _edit == null
@@ -968,21 +982,26 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
               loading: _busy,
               onPressed: () async {
                 final items = <Map<String, dynamic>>[];
-                for (final e in _edit!.entries) {
+                final active = {for (final g in govs) g.id};
+                // Only governorates in the authoritative active list are sent; a deactivated one can't be offered.
+                for (final e in _edit!.entries.where((e) => active.contains(e.key))) {
                   final fee = parseEgpToPiastres(e.value.$2.isEmpty ? '0' : e.value.$2);
                   final min = int.tryParse(e.value.$3);
                   final max = int.tryParse(e.value.$4);
-                  if (fee == null || min == null || max == null) {
+                  if (fee == null || min == null || max == null || min < 0 || max > 60 || min > max) {
                     showEdmnMessage(context, t.checkRates, error: true);
                     return;
                   }
                   items.add({'governorateId': e.key, 'enabled': e.value.$1, 'feePiastres': fee, 'etaMinDays': min, 'etaMaxDays': max});
                 }
                 setState(() => _busy = true);
-                final ok = await runAction(context, () => ref.read(mobileApiProvider).saveShippingRates(items), success: t.saved);
-                if (ok) {
+                GetSellerShippingRatesResponse? saved;
+                final ok = await runAction(context, () async => saved = await ref.read(mobileApiProvider).saveShippingRates(items), success: t.saved);
+                if (ok && saved != null) {
+                  // Edit from what the server stored. Rebuilding from the cached list (still the pre-save data while it
+                  // refetches) made the next save silently revert this one.
+                  setState(() => _edit = _editable(saved!));
                   ref.invalidate(shippingRatesProvider);
-                  setState(() => _edit = null);
                 }
                 if (mounted) setState(() => _busy = false);
               },
@@ -990,25 +1009,40 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
       body: AsyncView(
         value: rates,
         onRetry: () => ref.invalidate(shippingRatesProvider),
-        data: (r) {
-          _edit ??= {
-            for (final x in r.items)
-              x.governorateId: (x.enabled, x.feePiastres % 100 == 0 ? '${x.feePiastres ~/ 100}' : (x.feePiastres / 100).toStringAsFixed(2), '${x.etaMinDays}', '${x.etaMaxDays}'),
-          };
+        data: (r) => AsyncView(
+          value: govsAsync,
+          onRetry: () => ref.invalidate(governoratesProvider),
+          data: (_) => _rates(t, r, govs, en),
+        ),
+      ),
+    );
+  }
+
+  static Map<int, (bool, String, String, String)> _editable(GetSellerShippingRatesResponse r) => {
+        for (final x in r.items)
+          x.governorateId: (x.enabled, x.feePiastres % 100 == 0 ? '${x.feePiastres ~/ 100}' : (x.feePiastres / 100).toStringAsFixed(2), '${x.etaMinDays}', '${x.etaMaxDays}'),
+      };
+
+  Widget _rates(EdmnLocalizations t, GetSellerShippingRatesResponse r, List<ListGovernoratesResponseItemsItem> govs, bool en) {
+          if (govs.isEmpty) return EdmnEmptyState(icon: Icons.map_outlined, title: t.noGovernorates);
+          _edit ??= _editable(r);
           return ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
             EdmnNotice(message: t.shippingRatesNote),
             _gap(),
-            for (final id in _edit!.keys)
+            for (final g in govs)
+              if (_edit!.containsKey(g.id))
               () {
-                final g = govs.where((x) => x.id == id).firstOrNull;
+                final id = g.id;
                 final e = _edit![id]!;
-                Widget num(String value, String label, void Function(String) on) => SizedBox(
-                      width: 72,
+                Widget num(String k, String value, String label, void Function(String) on) => SizedBox(
+                      width: k == 'fee' ? 96 : 72, // wide enough for «92.50»
                       child: TextFormField(
+                        key: Key('rate-$k-$id'),
                         initialValue: value,
                         enabled: e.$1,
                         textDirection: TextDirection.ltr,
-                        keyboardType: TextInputType.number,
+                        // The fee is in pounds and may have piastres (92.50): offer the decimal key for it.
+                        keyboardType: k == 'fee' ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.number,
                         decoration: InputDecoration(labelText: label, isDense: true),
                         onChanged: on,
                       ),
@@ -1019,22 +1053,23 @@ class _ShippingRatesScreenState extends ConsumerState<ShippingRatesScreen> {
                   padding: const EdgeInsetsDirectional.all(EdmnSpacing.sm),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Row(children: [
-                      Expanded(child: Text(g == null ? '#$id' : (en ? g.nameEn : g.nameAr), style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary))),
-                      Switch(value: e.$1, onChanged: (v) => setState(() => _edit![id] = (v, e.$2, e.$3, e.$4))),
+                      Expanded(child: Text(en ? g.nameEn : g.nameAr, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary))),
+                      // The switch carries the governorate's name so a screen reader says what it turns on.
+                      Semantics(
+                        label: en ? g.nameEn : g.nameAr,
+                        child: Switch(key: Key('rate-on-$id'), value: e.$1, onChanged: (v) => setState(() => _edit![id] = (v, e.$2, e.$3, e.$4))),
+                      ),
                     ]),
                     if (e.$1)
                       Wrap(spacing: EdmnSpacing.sm, children: [
-                        num(e.$2, t.feeEgp, (v) => _edit![id] = (_edit![id]!.$1, v, _edit![id]!.$3, _edit![id]!.$4)),
-                        num(e.$3, t.etaMin, (v) => _edit![id] = (_edit![id]!.$1, _edit![id]!.$2, v, _edit![id]!.$4)),
-                        num(e.$4, t.etaMax, (v) => _edit![id] = (_edit![id]!.$1, _edit![id]!.$2, _edit![id]!.$3, v)),
+                        num('fee', e.$2, t.feeEgp, (v) => _edit![id] = (_edit![id]!.$1, v, _edit![id]!.$3, _edit![id]!.$4)),
+                        num('min', e.$3, t.etaMin, (v) => _edit![id] = (_edit![id]!.$1, _edit![id]!.$2, v, _edit![id]!.$4)),
+                        num('max', e.$4, t.etaMax, (v) => _edit![id] = (_edit![id]!.$1, _edit![id]!.$2, _edit![id]!.$3, v)),
                       ]),
                   ]),
                 );
               }(),
           ]);
-        },
-      ),
-    );
   }
 }
 

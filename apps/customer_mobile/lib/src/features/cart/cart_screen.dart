@@ -196,7 +196,7 @@ class _CartLine extends StatelessWidget {
         IconButton(
           key: Key('remove-${l.variantId}'),
           tooltip: t.remove,
-          icon: const Icon(Icons.delete_outline_rounded, color: EdmnColors.textPrimary),
+          icon: Icon(Icons.delete_outline_rounded, color: EdmnColors.textPrimary, semanticLabel: t.remove),
           onPressed: busy
               ? null
               : () async {

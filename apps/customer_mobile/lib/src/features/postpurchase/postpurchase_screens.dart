@@ -880,7 +880,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
             IconButton(
               key: Key('${widget.key is ValueKey ? (widget.key as ValueKey).value : ''}-star-$i'),
               tooltip: '$i',
-              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34),
+              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34, semanticLabel: '$i'),
               onPressed: () => setState(() => _stars = i),
             ),
         ]),

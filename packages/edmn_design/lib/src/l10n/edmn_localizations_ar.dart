@@ -3362,4 +3362,88 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get addProductPhoto => 'إضافة صورة للمنتج';
+
+  @override
+  String get searchGovernorate => 'ابحث عن المحافظة';
+
+  @override
+  String get noGovernorates => 'لا توجد محافظات متاحة حاليًا';
+
+  @override
+  String get noGovernorateMatch => 'لا توجد محافظة بهذا الاسم';
+
+  @override
+  String get governorateUnavailable =>
+      'هذه المحافظة غير متاحة. اختر محافظة من القائمة';
+
+  @override
+  String get copyPhone => 'نسخ رقم الهاتف';
+
+  @override
+  String get soAwaitingPayment => 'بانتظار دفع المشتري';
+
+  @override
+  String get soPaymentReview => 'الدفع قيد المراجعة';
+
+  @override
+  String get soPreparing => 'قيد التجهيز';
+
+  @override
+  String get soShipped => 'تم الشحن';
+
+  @override
+  String get soAwaitingBuyer => 'تم التوصيل – بانتظار تأكيد المشتري';
+
+  @override
+  String get soReceived => 'استلمه المشتري – المستحقات قيد المراجعة';
+
+  @override
+  String get soCompleted => 'مكتمل';
+
+  @override
+  String get soDeliveryFailed => 'تعذّر التوصيل';
+
+  @override
+  String get soCancelled => 'ملغي';
+
+  @override
+  String get soHintAwaitingPayment =>
+      'لم يتم تأكيد دفع المشتري بعد. لا تجهّز الطلب حتى يتم تأكيد الدفع.';
+
+  @override
+  String get soHintPaid => 'تم تأكيد الدفع. راجع الطلب ثم اضغط «تأكيد الطلب».';
+
+  @override
+  String get soHintConfirmed =>
+      'أكدت الطلب. ابدأ تجهيزه أو حدّده جاهزًا للشحن.';
+
+  @override
+  String get soHintProcessing =>
+      'الطلب قيد التجهيز. عند الانتهاء حدّده «جاهز للشحن».';
+
+  @override
+  String get soHintReady =>
+      'الطلب جاهز. سجّل بيانات الشحنة وبوليصة الشحن ثم أكّد الشحن.';
+
+  @override
+  String get soHintShipped =>
+      'الطلب في الطريق إلى المشتري. لا يلزم أي إجراء منك الآن.';
+
+  @override
+  String get soHintAwaitingBuyer =>
+      'تم التوصيل. أمام المشتري مهلة لتأكيد الاستلام أو الإبلاغ عن مشكلة.';
+
+  @override
+  String get soHintReceived =>
+      'استلم المشتري الطلب. مستحقاتك معلّقة حتى تراجعها أضمن وتعتمدها.';
+
+  @override
+  String get soHintCompleted => 'اكتمل الطلب واعتمدت أضمن تحويل مستحقاته.';
+
+  @override
+  String get soHintFailed =>
+      'تعذّر توصيل الطلب. سيتواصل معك فريق أضمن بشأن الخطوات التالية.';
+
+  @override
+  String get soHintCancelled => 'تم إلغاء الطلب. لا تقم بشحنه.';
 }

@@ -327,14 +327,14 @@ class _Composer extends StatelessWidget {
                 for (final f in files) InputChip(label: Text(f.name, overflow: TextOverflow.ellipsis), onDeleted: locked ? null : () => onRemove(f)),
               ]),
             Row(children: [
-              IconButton(key: const Key('attach'), tooltip: t.attachFile, icon: const Icon(Icons.attach_file_rounded), color: EdmnColors.primary, onPressed: sending || locked ? null : onPick),
+              IconButton(key: const Key('attach'), tooltip: t.attachFile, icon: Icon(Icons.attach_file_rounded, semanticLabel: t.attachFile), color: EdmnColors.primary, onPressed: sending || locked ? null : onPick),
               Expanded(child: EdmnTextField(key: const Key('message-input'), enabled: !locked, controller: text, hint: t.typeMessage, minLines: 1, maxLines: 4, maxLength: 2000)),
               const SizedBox(width: EdmnSpacing.xs),
               IconButton.filled(
                 key: const Key('send'),
                 tooltip: t.send,
                 style: IconButton.styleFrom(backgroundColor: EdmnColors.primary),
-                icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded),
+                icon: sending ? Semantics(label: t.send, child: const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))) : Icon(Icons.send_rounded, semanticLabel: t.send),
                 onPressed: sending ? null : onSend,
               ),
             ]),

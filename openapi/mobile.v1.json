@@ -35057,6 +35057,18 @@
                               "null"
                             ]
                           },
+                          "returnGovernorateId": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "supportPhone": {
                             "type": [
                               "string",
@@ -35069,6 +35081,7 @@
                           "slug",
                           "description",
                           "returnAddress",
+                          "returnGovernorateId",
                           "supportPhone"
                         ]
                       },

@@ -3395,4 +3395,90 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get addProductPhoto => 'Add a product photo';
+
+  @override
+  String get searchGovernorate => 'Search governorates';
+
+  @override
+  String get noGovernorates => 'No governorates are available right now';
+
+  @override
+  String get noGovernorateMatch => 'No governorate matches this name';
+
+  @override
+  String get governorateUnavailable =>
+      'This governorate isn\'t available. Choose one from the list';
+
+  @override
+  String get copyPhone => 'Copy phone number';
+
+  @override
+  String get soAwaitingPayment => 'Awaiting buyer payment';
+
+  @override
+  String get soPaymentReview => 'Payment under review';
+
+  @override
+  String get soPreparing => 'Being prepared';
+
+  @override
+  String get soShipped => 'Shipped';
+
+  @override
+  String get soAwaitingBuyer => 'Delivered – awaiting buyer confirmation';
+
+  @override
+  String get soReceived => 'Received by buyer – earnings under review';
+
+  @override
+  String get soCompleted => 'Completed';
+
+  @override
+  String get soDeliveryFailed => 'Delivery failed';
+
+  @override
+  String get soCancelled => 'Cancelled';
+
+  @override
+  String get soHintAwaitingPayment =>
+      'The buyer\'s payment isn\'t confirmed yet. Don\'t prepare the order until it is.';
+
+  @override
+  String get soHintPaid =>
+      'Payment is confirmed. Review the order, then tap “Confirm order”.';
+
+  @override
+  String get soHintConfirmed =>
+      'You confirmed the order. Start preparing it or mark it ready to ship.';
+
+  @override
+  String get soHintProcessing =>
+      'The order is being prepared. Mark it “Ready to ship” when done.';
+
+  @override
+  String get soHintReady =>
+      'The order is ready. Add the shipment and waybill, then confirm shipping.';
+
+  @override
+  String get soHintShipped =>
+      'The order is on its way to the buyer. Nothing to do right now.';
+
+  @override
+  String get soHintAwaitingBuyer =>
+      'Delivered. The buyer has a window to confirm receipt or report a problem.';
+
+  @override
+  String get soHintReceived =>
+      'The buyer received the order. Your earnings stay pending until EDMN reviews and approves them.';
+
+  @override
+  String get soHintCompleted =>
+      'The order is complete and EDMN approved the transfer of its earnings.';
+
+  @override
+  String get soHintFailed =>
+      'The order couldn\'t be delivered. The EDMN team will contact you about next steps.';
+
+  @override
+  String get soHintCancelled => 'This order was cancelled. Do not ship it.';
 }

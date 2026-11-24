@@ -200,7 +200,7 @@ class _Destination extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: MaterialLocalizations.of(context).copyButtonLabel,
-                  icon: const Icon(Icons.copy_rounded, size: EdmnSizes.iconSm, color: EdmnColors.primary),
+                  icon: Icon(Icons.copy_rounded, size: EdmnSizes.iconSm, color: EdmnColors.primary, semanticLabel: MaterialLocalizations.of(context).copyButtonLabel),
                   onPressed: () => Clipboard.setData(ClipboardData(text: e.value)),
                 ),
               ]),

@@ -363,7 +363,7 @@ class _RateFormState extends State<_RateForm> {
           IconButton(
             key: Key('star-$i'),
             tooltip: '$i',
-            icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 36),
+            icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 36, semanticLabel: '$i'),
             onPressed: () => setState(() => _stars = i),
           ),
       ]),

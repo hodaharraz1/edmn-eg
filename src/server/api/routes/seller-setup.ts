@@ -101,7 +101,7 @@ const application = z
         businessLegalName: z.string().nullable(),
         businessAddress: z.string().nullable(),
         authorizedRepresentative: z.string().nullable(),
-        store: z.object({ name: z.string(), slug: z.string(), description: z.string().nullable(), returnAddress: z.string().nullable(), supportPhone: z.string().nullable() }).nullable(),
+        store: z.object({ name: z.string(), slug: z.string(), description: z.string().nullable(), returnAddress: z.string().nullable(), returnGovernorateId: z.number().int().nullable(), supportPhone: z.string().nullable() }).nullable(),
         documents: z.array(z.string()),
         payout: z.object({ type: z.string(), status: z.string(), masked: z.string() }).nullable(),
       })

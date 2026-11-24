@@ -1,0 +1,84 @@
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS F1 seller: governorates listed by name from the database (no raw ids) — 27 active governorates
+PASS F1 a11y: no unnamed buttons on the shipping screen — all named
+PASS F1 a11y: each switch is named after its governorate — switch «أسوان»
+PASS F2 add: Aswan enabled at 85 EGP, 3–6 days, saved through the UI — true|8500|3|6
+PASS F3 modify: fee changed to 92.50 EGP (9250 piastres, no floating point) — true|9250|3|6
+PASS F4 validation: min > max is refused on the device; no request sent, row unchanged — true|9250|3|6
+PASS F5 error handling: a failed save shows an error and stores nothing — error shown=true row=true|9250|3|6
+PASS F6 persistence: after reload «أسوان» is on and shows 92.50 — fee field=92.50
+PASS F7 ownership (API): another seller reads only its own rates — status=200 otherFee=12000
+PASS F7 ownership (API): a buyer cannot change seller rates — status=403
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BA1 buyer: order placed through the UI — #100037
+PASS BA1 DB: one order PENDING_PAYMENT, stock reserved for it — reservations=[ACTIVE] variant reserved=4
+PASS BA2 buyer: the order is in «طلباتي» — #100037
+PASS BA3 buyer: details show the product and «في انتظار الدفع» — شاومي ريدمي نوت 13
+PASS BA3 a11y: no unnamed buttons on the order screen — all named
+PASS BC1 buyer: unpaid order cancelled through the UI — status=CANCELLED
+PASS BC1 stock: the reservation is released — reservations=[RELEASED] variant reserved 4 → 3
+PASS BC1 money: no payment was confirmed and no refund created — none
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BC2 buyer: order placed through the UI — #100038
+PASS BC2 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
+PASS BC2 staff: payment confirmed in the console service → PAID — PAID
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BC2 buyer: a paid order offers no direct cancel, only a cancellation request — request only
+PASS BC2 buyer: before the seller confirms, the request cancels the seller order at once — status=CANCELLED
+PASS BC2 money: a refund is REQUESTED for EDMN, nothing paid from the app — refunds=[REQUESTED]
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BC3 buyer: order placed through the UI — #100039
+PASS BC3 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
+PASS BC3 staff: payment confirmed in the console service → PAID — PAID
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS BC3 seller: order confirmed through the UI — SELLER_CONFIRMED
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BC3 buyer: request recorded (PENDING); the order stays with the seller — request=PENDING
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS BC3 seller: sees the buyer’s cancellation request and its reason — reason on screen
+PASS BC3 seller: accepts → seller order CANCELLED, label «ملغي» with «do not ship» — status=CANCELLED
+PASS BC3 money: refund REQUESTED for EDMN approval, nothing paid from the app — refunds=[REQUESTED]
+PASS BC3 buyer: notified of the cancellation — SELLER_ORDER_CANCELLED
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BB1 buyer: order placed through the UI — #100040
+PASS BB1 buyer: receipt submitted; the payment waits for EDMN — PAYMENT_SUBMITTED
+PASS BB1 staff: payment confirmed in the console service → PAID — PAID
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS BB2 seller: a new paid order reads «جديد» with the next step — label + hint
+PASS BB2 seller: «قبول الطلب» → SELLER_CONFIRMED, shown as «مقبول» — status=SELLER_CONFIRMED
+PASS BB2 seller: «بدء التجهيز» → PROCESSING, shown as «قيد التجهيز» — status=PROCESSING
+PASS BB2 seller: «جاهز للشحن» → READY_TO_SHIP, shown as «جاهز للشحن» — status=READY_TO_SHIP
+PASS BB2 labels: PROCESSING and READY_TO_SHIP no longer share a label — distinct
+PASS BB2 seller: «تم الشحن» → SHIPPED, shown as «تم الشحن» — status=SHIPPED
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BB3 buyer: tracking shows the shipment on its way with the carrier and waybill number — tracking=B5376698
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS G1 buyer: message sent from the order, stored once (double tap → one row) — rows=1
+PASS G2 seller: notified of the new message — MESSAGE_RECEIVED
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS G2 seller: the conversation is in the store inbox with an unread count — #100040
+PASS G3 seller: opens the conversation and reads the buyer’s message — message on screen
+PASS G3 a11y: no unnamed buttons in the conversation (attach / send named) — all named
+PASS G3 seller: reading it records the read position (unread cleared) — reads=1
+PASS G4 seller: reply sent as the store and stored once — one row
+PASS G5 buyer: notified of the reply — MESSAGE_RECEIVED
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS G5 buyer: sees the store’s reply in the conversation — reply on screen
+PASS BB4 buyer: delivery confirmed in the app and recorded as the buyer’s — status=DELIVERED
+PASS BB4 money: no release without EDMN Maker/Checker — no SELLER_RELEASE
+PASS G6 denial (API): another seller and another buyer cannot open the conversation — seller=404 buyer=404
+PASS G6 seller inbox (API): the store has read everything (unread 0) — unread=0
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BD1 a11y: no unnamed buttons on the return form — all named
+PASS BD1 buyer: return requested from the order (REQUESTED) — status=REQUESTED reason=NOT_AS_DESCRIBED
+PASS BD1 security: evidence is PRIVATE — PRIVATE
+PASS BE1 seller: notified of the return — RETURN_REQUESTED
+PASS techzone: sign-in — POST /api/v1/auth/login 200
+PASS BE1 seller: rejects with a reason (REJECTED) — status=REJECTED
+PASS BE2 buyer: notified of the seller’s answer — RETURN_* notification
+PASS mona: sign-in — POST /api/v1/auth/login 200
+PASS BE2 buyer: sees the rejection and the seller’s reason — on screen
+PASS BE3 buyer: escalation opens one dispute for EDMN — dispute=OPEN
+PASS BE3 money: no refund created by the escalation — none
+
+82 PASS / 0 FAIL
