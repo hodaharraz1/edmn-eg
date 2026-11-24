@@ -88,6 +88,9 @@ export async function createReturn(actor: Actor, input: { sellerOrderId: string;
 
 type Ret = typeof returns.$inferSelect;
 
+/** A refund is paid out when COMPLETED (current lifecycle) or PAID (legacy records); only then is its reference shown. */
+const refundPaid = (status: string) => status === 'COMPLETED' || status === 'PAID';
+
 /** Steps the viewer may take now — the state machine plus the service's own role rules. */
 function returnActions(r: Ret, side: 'BUYER' | 'STORE', canManage: boolean): string[] {
   const next = returnMachine.next(r.status);
@@ -142,7 +145,7 @@ export async function returnView(actor: Actor, returnId: string) {
     /** Where to send the item back — only once the store approved the return. */
     shipBackTo: ['APPROVED', 'RETURN_IN_TRANSIT'].includes(r.status) && store?.returnAddress ? { address: store.returnAddress, governorateId: store.returnGovernorateId ?? null, shippingPayer: store.returnShippingPayer } : null,
     refundAmountPiastres: r.refundAmount,
-    refunds: refundRows.map((x) => ({ id: x.id, status: x.status, amountPiastres: x.amount, reference: x.status === 'PAID' ? x.paidReference : null })),
+    refunds: refundRows.map((x) => ({ id: x.id, status: x.status, amountPiastres: x.amount, reference: refundPaid(x.status) ? x.paidReference : null })),
     disputeId: dispute?.id ?? null,
     allowedActions: returnActions(r, side, canManage),
   };
@@ -163,6 +166,9 @@ export async function storeReturns(actor: Actor) {
 const returnRow = (r: Ret) => ({ id: r.id, number: String(r.number), status: r.status, reason: r.reason, refundAmountPiastres: r.refundAmount, createdAt: r.createdAt.toISOString() });
 
 export async function shipBack(actor: Actor, returnId: string, carrier: string, tracking: string) {
+  // Ownership first, with the same uniform 404 as the return view: a 403 here told a stranger the return existed.
+  const v = await returnView(actor, returnId);
+  if (v.side !== 'BUYER') throw notFound('طلب الإرجاع');
   await customerShipsReturn(actor, returnId, carrier, tracking);
   return returnView(actor, returnId);
 }
@@ -236,7 +242,7 @@ export async function disputeView(actor: Actor, disputeId: string) {
     messages: g.messages.map((x) => ({ id: x.m.id, from: x.m.authorRole === 'ADMIN' ? ('EDMN' as const) : (x.m.authorRole as 'CLAIMANT' | 'RESPONDENT'), mine: x.m.authorUserId === userId, body: x.m.body, createdAt: x.m.createdAt.toISOString() })),
     evidence: g.evidence.map((e) => ({ fileId: e.fileId, mimeType: evFiles.find((f) => f.id === e.fileId)?.mime ?? 'application/octet-stream', mine: e.uploadedBy === userId, note: e.note, createdAt: e.createdAt.toISOString() })),
     decision: d.decision ? { code: d.decision, amountPiastres: d.decisionAmount, note: d.decisionNote, decidedAt: d.decidedAt?.toISOString() ?? null } : null,
-    refunds: refundRows.map((x) => ({ id: x.id, status: x.status, amountPiastres: x.amount, reference: x.status === 'PAID' ? x.paidReference : null })),
+    refunds: refundRows.map((x) => ({ id: x.id, status: x.status, amountPiastres: x.amount, reference: refundPaid(x.status) ? x.paidReference : null })),
     /** While open, the seller's funds for this order / deal stay frozen (hold) until EDMN decides. */
     fundsFrozen: open,
     allowedActions: open ? (['REPLY', 'ADD_EVIDENCE'] as ('REPLY' | 'ADD_EVIDENCE')[]) : [],
