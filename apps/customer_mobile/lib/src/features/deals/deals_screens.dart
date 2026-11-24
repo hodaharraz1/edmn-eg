@@ -1,4 +1,5 @@
 import 'package:edmn_api/mobile.dart';
+import 'package:edmn_core/edmn_core.dart' show ApiFailure, ApiErrorCode;
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +149,10 @@ class _NewDealScreenState extends ConsumerState<NewDealScreen> {
   String _condition = 'NEW';
   bool _busy = false;
   final _intent = IntentKey();
+  final _photoIntent = IntentKey();
+  final _photos = <PickedFile>[];
+  bool _photoAttempted = false;
+  bool _photosUploaded = false;
   late final _c = {
     for (final k in ['title', 'description', 'quantity', 'sourceUrl', 'unitPrice', 'deliveryMethod', 'deadlineDays', 'inspectionDays', 'customTerms', 'city', 'street', 'sellerName', 'sellerPhone']) k: TextEditingController(),
   };
@@ -184,6 +189,21 @@ class _NewDealScreenState extends ConsumerState<NewDealScreen> {
           };
           final d = _dealId == null ? await api.createDeal(body, idempotencyKey: _intent.value) : await api.saveDealStep(_dealId!, 1, body);
           _dealId = d.id;
+          if (_photos.isNotEmpty && !_photosUploaded) {
+            _photoAttempted = true;
+            try {
+              await api.addDealPhotos(_dealId!, [for (final photo in _photos) (photo.bytes, photo.name)], idempotencyKey: _photoIntent.value);
+            } on ApiFailure catch (e) {
+              // A rejected file can be removed and replaced. Ambiguous failures must retain the original request/key.
+              if (e.code == ApiErrorCode.validationFailed) {
+                _photoAttempted = false;
+                _photoIntent.reset();
+              }
+              rethrow;
+            }
+            _photosUploaded = true;
+            _photos.clear();
+          }
         case 1:
           await api.saveDealStep(_dealId!, 2, {'unitPrice': _c['unitPrice']!.text.trim()});
         case 2:
@@ -247,6 +267,36 @@ class _NewDealScreenState extends ConsumerState<NewDealScreen> {
               const SizedBox(height: EdmnSpacing.sm),
               f('quantity', t.quantityHint, type: TextInputType.number, dir: TextDirection.ltr),
               f('sourceUrl', t.dealLinkHint, type: TextInputType.url, dir: TextDirection.ltr),
+              Text(t.photos, style: EdmnType.bodyStrong),
+              Text(languageOf(context) == 'en' ? 'Optional: up to 6 images (JPG, PNG or WebP).' : 'اختياري: حتى ٦ صور (JPG أو PNG أو WebP).'),
+              if (!_photosUploaded && !_photoAttempted && _photos.length < 6)
+                TextButton.icon(
+                  key: const Key('deal-pick-photo'),
+                  onPressed: _busy ? null : () async {
+                    try {
+                      final photo = await ref.read(filePickerProvider).pick(allowPdf: false);
+                      if (photo != null && mounted) setState(() => _photos.add(photo));
+                    } catch (e) {
+                      if (context.mounted) showEdmnMessage(context, apiErrorMessage(context, e), error: true);
+                    }
+                  },
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(t.pickImage),
+                ),
+              for (var i = 0; i < _photos.length; i++)
+                ListTile(
+                  title: Text(_photos[i].name),
+                  trailing: _photoAttempted ? null : IconButton(
+                    key: Key('deal-remove-photo-$i'),
+                    tooltip: t.remove,
+                    icon: const Icon(Icons.close),
+                    onPressed: _busy ? null : () => setState(() => _photos.removeAt(i)),
+                  ),
+                ),
+              if (_photoAttempted && !_photosUploaded)
+                Text(languageOf(context) == 'en' ? 'Retry to finish uploading the selected photos.' : 'أعد المحاولة لإكمال رفع الصور المحددة.'),
+              if (_photosUploaded)
+                Text(languageOf(context) == 'en' ? 'Photos uploaded.' : 'تم رفع الصور.'),
             ],
           1 => [f('unitPrice', t.priceEgp, type: const TextInputType.numberWithOptions(decimal: true), dir: TextDirection.ltr), EdmnNotice(message: t.dealFeesNote)],
           2 => [

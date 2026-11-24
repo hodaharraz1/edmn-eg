@@ -381,6 +381,23 @@ class FakeMobileApi extends MobileApi {
           {'id': 'd1', 'ref': 'PD-000001', 'title': 'لابتوب مستعمل', 'status': dealJson['status'], 'role': dealJson['role'], 'counterparty': 'أحمد', 'totalPiastres': 1520050, 'createdAt': '2030-01-01T10:00:00Z'},
         ],
       });
+  final photoKeys = <String>[];
+  final photoCounts = <int>[];
+  bool failPhotoOnce = false;
+  @override
+  Future<ProtectedDeal> createDeal(Map<String, dynamic> body, {required String idempotencyKey}) async => ProtectedDeal.fromJson(dealJson);
+  @override
+  Future<ProtectedDeal> saveDealStep(String id, int step, Map<String, dynamic> body) async => ProtectedDeal.fromJson(dealJson);
+  @override
+  Future<ProtectedDeal> addDealPhotos(String id, List<(Uint8List, String)> photos, {required String idempotencyKey}) async {
+    photoKeys.add(idempotencyKey);
+    photoCounts.add(photos.length);
+    if (failPhotoOnce) {
+      failPhotoOnce = false;
+      throw const ApiFailure(code: ApiErrorCode.network);
+    }
+    return ProtectedDeal.fromJson(dealJson);
+  }
   @override
   Future<ProtectedDeal> deal(String id) async => ProtectedDeal.fromJson(dealJson);
   @override
@@ -638,6 +655,28 @@ void main() {
     expect(pickableExtensions(allowPdf: true), ['jpg', 'jpeg', 'png', 'webp', 'pdf']);
     expect(pickableExtensions(allowPdf: false), isNot(contains('pdf')));
     expect(pickableExtensions(allowPdf: true), isNot(contains('heic')));
+  });
+
+  testWidgets('deal photos: selection, removal and retry reuse the same upload key', (t) async {
+    final api = FakeMobileApi()..failPhotoOnce = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/deals/new');
+    final pick = find.byKey(const Key('deal-pick-photo'));
+    await _reveal(t, pick);
+    await t.tap(pick); await t.pumpAndSettle();
+    await _reveal(t, find.text('receipt.png'));
+    await t.tap(find.byKey(const Key('deal-remove-photo-0'))); await t.pumpAndSettle();
+    expect(find.text('receipt.png'), findsNothing);
+    await _reveal(t, pick);
+    await t.tap(pick); await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('deal-next'))); await t.pumpAndSettle();
+    expect(api.photoCounts, [1]);
+    expect(find.byKey(const Key('deal-pick-photo')), findsNothing);
+    await t.pump(const Duration(seconds: 5));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('deal-next'))); await t.pumpAndSettle();
+    expect(api.photoCounts, [1, 1]);
+    expect(api.photoKeys[0], api.photoKeys[1]);
   });
 
   testWidgets('starts in Arabic (RTL) on the home tab: products with EGP prices, no global TEST banner, board navigation', (t) async {

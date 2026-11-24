@@ -5,12 +5,14 @@ import { sha256 } from '@/server/core/crypto';
 import { env } from '@/server/core/env';
 import { validation } from '@/server/core/errors';
 import { logger, safeErrorMessage } from '@/server/core/logger';
-import type { DbOrTx } from '@/server/db/client';
+import { db, type DbOrTx } from '@/server/db/client';
+import { sql } from 'drizzle-orm';
 import { files, type FilePurpose } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
 import { initialScanStatus } from './scanning';
 import { enforce } from '@/server/auth/rate-limit';
-import { storage } from './storage';
+import { LocalDiskStorage, storage } from './storage';
+import { metadataLockName, writeLockName } from './reconcile';
 
 type Kind = 'jpeg' | 'png' | 'webp' | 'pdf';
 
@@ -119,7 +121,20 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
   }
 
   const storageKey = `${prefix}/${id}.${ext}`;
-  await storage().put(visibility, storageKey, body);
+  const driver = storage();
+  if (visibility === 'PRIVATE' && driver instanceof LocalDiskStorage) {
+    // The metadata lock survives until the business transaction commits or rolls back.
+    // A second lock covers the disk write even if that transaction is aborted meanwhile.
+    if (!('rollback' in tx)) throw new Error('private local upload requires a transaction');
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${metadataLockName(storageKey)}, 0))`);
+    await db.transaction(async (lease) => {
+      await lease.execute(sql`select set_config('idle_in_transaction_session_timeout', '0', true)`);
+      await lease.execute(sql`select pg_advisory_xact_lock(hashtextextended(${writeLockName(storageKey)}, 0))`);
+      await driver.put(visibility, storageKey, body);
+    });
+  } else {
+    await driver.put(visibility, storageKey, body, tx);
+  }
 
   if (visibility === 'PUBLIC' && kind !== 'pdf') {
     for (const [suffix, size] of [
@@ -128,7 +143,7 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
     ] as const) {
       const v = await sharp(body).resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
       const k = `${prefix}/${id}_${suffix}.webp`;
-      await storage().put(visibility, k, v);
+      await storage().put(visibility, k, v, tx);
       variantKeys.push(k);
     }
   }
