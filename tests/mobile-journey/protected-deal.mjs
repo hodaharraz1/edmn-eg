@@ -199,10 +199,11 @@ try {
   console.log('PASS Flutter rejects expired invitation without joining');
   // Restore only the synthetic fixture so the existing happy path can continue.
   await rows("update deal_invitations set expires_at=now()+interval '1 hour' where deal_id=$1 and status='PENDING'", [deal.id]);
-  await page.getByRole('textbox').first().click();
-  await page.keyboard.press('ControlOrMeta+A');
-  await page.keyboard.press('Backspace');
-  try { await type(page.getByRole('textbox').first(), invitationLink); }
+  // Reopen the join form so native text-editing selection cannot retain an
+  // earlier value when semantics is re-created after the rejection message.
+  await go('/deals');
+  await go('/deals/join');
+  try { await type(page.getByRole('textbox', { name: 'الصق رابط الدعوة' }), invitationLink); }
   catch { throw new Error('Could not enter the seller invitation'); }
   const claim = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/deal-invitations/claim' && r.request().method() === 'POST', { timeout: 60000 });
   await tap('الانضمام للصفقة');
