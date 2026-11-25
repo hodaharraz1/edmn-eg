@@ -232,7 +232,7 @@ export async function seedDemo() {
   // ── Staff
   const admin = await user('admin@edmn.local', 'مدير النظام (تجريبي)', '+201000000001', { staff: true, roles: ['SUPER_ADMIN'], password: demoCredentials().adminPassword });
   await user('ops@edmn.local', 'مدير العمليات (تجريبي)', '+201000000002', { staff: true, roles: ['OPERATIONS_MANAGER'], password: demoCredentials().adminPassword });
-  await user('payments@edmn.local', 'مراجع المدفوعات (تجريبي)', '+201000000003', { staff: true, roles: ['PAYMENT_REVIEWER'], password: demoCredentials().adminPassword });
+  const paymentsReviewer = await user('payments@edmn.local', 'مراجع المدفوعات (تجريبي)', '+201000000003', { staff: true, roles: ['PAYMENT_REVIEWER'], password: demoCredentials().adminPassword });
   const checker = await user('checker@edmn.local', 'المراجع المالي (تجريبي)', '+201000000004', { staff: true, roles: ['FINANCE_CHECKER'], password: demoCredentials().adminPassword });
   const operator = await user('finance@edmn.local', 'المنفذ المالي (تجريبي)', '+201000000005', { staff: true, roles: ['FINANCE_OPERATOR'], password: demoCredentials().adminPassword });
   await user('support@edmn.local', 'خدمة العملاء (تجريبي)', '+201000000006', { staff: true, roles: ['CUSTOMER_SUPPORT'], password: demoCredentials().adminPassword });
@@ -241,6 +241,8 @@ export async function seedDemo() {
   const checkerActor = await adminActor(checker.id, { stepUpAt: new Date() });
   const operatorActor = await adminActor(operator.id, { stepUpAt: new Date() });
   const reviewerActor = await adminActor(catalog.id, { stepUpAt: new Date() });
+  // Two-person payment confirmation: the payments reviewer starts the review (maker), the admin confirms (checker).
+  const paymentsReviewerActor = await adminActor(paymentsReviewer.id, { stepUpAt: new Date() });
   // Global identity (Batch 1.5): every demo customer/seller goes through the REAL flow — the user submits the
   // National ID (front + back), an independent identity reviewer approves it. Never a direct status insert.
   async function verifyIdentity(u: { id: string; fullName: string }, nationalId: string) {
@@ -351,7 +353,7 @@ export async function seedDemo() {
   }
   async function confirm(paymentId: string) {
     const [sub] = await db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, paymentId));
-    await startReview(A, paymentId);
+    await startReview(paymentsReviewerActor, paymentId);
     await confirmPayment(A, paymentId, sub.id);
   }
   const sellerFor = async (soId: string) => {

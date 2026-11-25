@@ -19,7 +19,7 @@ import { orders, paymentSubmissions, payments, sellerPayoutMethods, sellers, use
 import { moderateProduct } from '@/server/modules/catalog/products';
 import { runLedgerHealthCheck } from '@/server/modules/finance/ledger-health';
 import { reviewIdentity } from '@/server/modules/identity/service';
-import { confirmPayment } from '@/server/modules/payments/service';
+import { confirmPayment, startReview } from '@/server/modules/payments/service';
 import { decideSeller, verifyPayoutMethod } from '@/server/modules/sellers/service';
 
 const url = process.env.DATABASE_URL ?? '';
@@ -43,7 +43,9 @@ async function main() {
         .where(eq(orders.number, Number(arg)));
       const [p] = await db.select().from(payments).where(eq(payments.orderId, o.id));
       const [s] = await db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, p.id)).orderBy(desc(paymentSubmissions.createdAt)).limit(1);
-      await confirmPayment(await staff('payments@edmn.local').catch(() => admin), p.id, s.id, 'UI journey (test money)');
+      // Two-person rule: payments@ starts the review, admin@ (a different staff member) confirms.
+      await startReview(await staff('payments@edmn.local'), p.id);
+      await confirmPayment(admin, p.id, s.id, 'UI journey (test money)');
       break;
     }
     case 'approve-identity': {

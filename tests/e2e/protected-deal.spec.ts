@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { acceptDialogs, adminLogin, customerLogin, png, q, verifyIdentityViaUi } from './helpers';
+import { acceptDialogs, adminLogin, customerLogin, png, q, reviewThenConfirmPayment, verifyIdentityViaUi } from './helpers';
 
 /**
  * External Protected Deal — invitation-first flow:
@@ -220,11 +220,7 @@ test('buyer pays and admin verifies; addresses become visible to the parties', a
   await page.getByRole('button', { name: 'رفع إثبات الدفع' }).click();
   await expect.poll(status).toBe('PAYMENT_UNDER_REVIEW');
   const [p] = await q<{ id: string }>(`select id from payments where deal_id = $1`, [dealId]);
-  const admin = await adminLogin(browser, 'payments@edmn.local');
-  acceptDialogs(admin);
-  await admin.goto(`/admin/payments/${p.id}`);
-  await admin.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
+  await reviewThenConfirmPayment(browser, p.id); // two-person: payments@ reviews, admin@ confirms
   await expect.poll(status).toBe('ACTIVE');
   await page.reload();
   await page.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
@@ -426,11 +422,7 @@ test('second deal reaches ACTIVE with the existing seller account (login path)',
   await buyer.getByRole('button', { name: 'رفع إثبات الدفع' }).click();
   await expect.poll(status2).toBe('PAYMENT_UNDER_REVIEW');
   const [p] = await q<{ id: string }>(`select id from payments where deal_id = $1`, [deal2]);
-  const admin = await adminLogin(browser, 'payments@edmn.local');
-  acceptDialogs(admin);
-  await admin.goto(`/admin/payments/${p.id}`);
-  await admin.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
-  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
+  await reviewThenConfirmPayment(browser, p.id); // two-person: payments@ reviews, admin@ confirms
   await expect.poll(status2).toBe('ACTIVE');
 });
 
