@@ -3515,6 +3515,18 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get adminSearchReturns => 'Search by return number';
 
   @override
+  String get adminCod => 'Cash on delivery (COD)';
+
+  @override
+  String get adminTabCodAwaiting => 'Awaiting courier statement';
+
+  @override
+  String get adminTabCodShortfalls => 'Open shortfalls';
+
+  @override
+  String get adminStatusCodCollected => 'Delivered, awaiting remittance';
+
+  @override
   String get adminSearchCustomers => 'Search by name, email or phone';
 
   @override

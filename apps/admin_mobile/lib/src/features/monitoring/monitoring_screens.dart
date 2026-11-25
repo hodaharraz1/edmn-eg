@@ -55,6 +55,7 @@ typedef MonitorLoader = Future<MonitorPage> Function(AdminApi api, String tab, S
       'CLOSED_UNFULFILLED' => (t.statusClosedUnfulfilled, EdmnTone.danger),
       'CANCELLED' => (t.statusCancelled, EdmnTone.danger),
       // Returns
+      'COD_COLLECTED' => (t.adminStatusCodCollected, EdmnTone.warning),
       'REQUESTED' => (t.adminStatusReturnRequested, EdmnTone.warning),
       'RETURN_IN_TRANSIT' => (t.adminStatusReturnInTransit, EdmnTone.info),
       'RECEIVED' => (t.adminStatusReturnReceived, EdmnTone.info),
@@ -129,6 +130,25 @@ Future<MonitorPage> _returns(AdminApi api, String tab, String q, {int page = 1})
   return MonitorPage(
     [for (final x in r.items) MonitorRow(id: x.id, title: '#${x.number}', subtitle: [x.store, x.customer, x.reason].whereType<String>().join(' · '), status: x.status, amount: x.refundAmount, at: x.createdAt)],
     next: r.hasMore ? () => _returns(api, tab, q, page: page + 1) : null,
+  );
+}
+
+Future<MonitorPage> _cod(AdminApi api, String tab, {int page = 1}) async {
+  final r = await api.codMonitor(tab: tab, page: page);
+  return MonitorPage(
+    [
+      for (final x in r.items)
+        MonitorRow(
+          id: x.id,
+          title: x.orderNumber == null ? '' : '#${x.orderNumber}',
+          subtitle: [x.customer, x.statementRef].whereType<String>().join(' · '),
+          status: x.status,
+          // The server decides which figure matters: the open shortfall on that tab, the expected remittance on the other.
+          amount: tab == 'shortfalls' ? x.shortfallAmount : x.expectedAmount,
+          at: x.at,
+        ),
+    ],
+    next: r.hasMore ? () => _cod(api, tab, page: page + 1) : null,
   );
 }
 
@@ -245,6 +265,15 @@ final monitorSpecs = <MonitorSpec>[
     tabs: [('pending', (t) => t.adminTabReturnsPending), ('action', (t) => t.adminTabReturnsActive), ('done', (t) => t.adminTabReturnsDone)],
     searchHint: (t) => t.adminSearchReturns,
     load: (api, tab, q) => _returns(api, tab, q),
+  ),
+  MonitorSpec(
+    path: '/monitor/cod',
+    permission: 'payments.view',
+    icon: Icons.local_shipping_outlined,
+    title: (t) => t.adminCod,
+    tabs: [('awaiting', (t) => t.adminTabCodAwaiting), ('shortfalls', (t) => t.adminTabCodShortfalls)],
+    hasDetail: false,
+    load: (api, tab, q) => _cod(api, tab),
   ),
   MonitorSpec(
     path: '/monitor/customers',

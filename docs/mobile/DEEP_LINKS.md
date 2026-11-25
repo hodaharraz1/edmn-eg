@@ -54,3 +54,6 @@
 - التطبيق: `lib/src/deep_links.dart` (تحويل مسار الويب لمسار التطبيق)، مربوط في `router.dart`، فلاتر
   الأندرويد في `AndroidManifest.xml` (مع `autoVerify`)، وUniversal Links في `Runner.entitlements`.
 - اختبارات: `tests/unit/app-links.test.ts` (ويب)، `apps/customer_mobile/test/deep_links_test.dart` (تطبيق).
+
+## ملاحظة للمالك: Associated Domains على iOS
+لازم تفعيل قدرة **Associated Domains** في حساب Apple Developer (معرّف التطبيق `com.edmneg.edmnCustomer`) وفي ملف الـprovisioning وقت النشر، وإلا فشل توقيع بناء الأجهزة. ملف `apple-app-site-association` بيفضل فاضي لحد ما المالك يدّينا Team ID.

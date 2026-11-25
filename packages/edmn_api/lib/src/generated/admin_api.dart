@@ -5,6 +5,7 @@
 abstract final class AdminApiPaths {
   static const adminAddDisputeNote = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/notes');
   static const adminAssignDispute = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/assign');
+  static const adminCodMonitor = (method: 'GET', path: '/api/v1/admin/cod');
   static const adminCustomerDetail = (method: 'GET', path: '/api/v1/admin/customers/{userId}');
   static const adminDeleteMyPushToken = (method: 'DELETE', path: '/api/v1/admin/me/devices/push-token');
   static const adminGetDashboard = (method: 'GET', path: '/api/v1/admin/dashboard');
@@ -61,6 +62,51 @@ class AdminAssignDisputeRequest {
   final String assigneeId;
 
   Map<String, dynamic> toJson() => {'assigneeId': assigneeId};
+}
+
+class AdminCodMonitorResponse {
+  const AdminCodMonitorResponse({required this.tab, required this.items, required this.page, required this.hasMore});
+
+  factory AdminCodMonitorResponse.fromJson(Map<String, dynamic> json) => AdminCodMonitorResponse(tab: json['tab'] as String, items: (json['items'] as List).map((e) => AdminCodMonitorResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), hasMore: json['hasMore'] as bool);
+
+  /// One of: awaiting, shortfalls (kept as String for forward compatibility).
+  final String tab;
+
+  final List<AdminCodMonitorResponseItemsItem> items;
+
+  final int page;
+
+  final bool hasMore;
+
+  Map<String, dynamic> toJson() => {'tab': tab, 'items': items.map((e) => e.toJson()).toList(), 'page': page, 'hasMore': hasMore};
+}
+
+class AdminCodMonitorResponseItemsItem {
+  const AdminCodMonitorResponseItemsItem({required this.id, required this.paymentId, required this.orderNumber, required this.customer, required this.status, required this.expectedAmount, required this.actualAmount, required this.shortfallAmount, required this.statementRef, required this.at});
+
+  factory AdminCodMonitorResponseItemsItem.fromJson(Map<String, dynamic> json) => AdminCodMonitorResponseItemsItem(id: json['id'] as String, paymentId: json['paymentId'] as String, orderNumber: json['orderNumber'] as String?, customer: json['customer'] as String?, status: json['status'] as String, expectedAmount: (json['expectedAmount'] as num).toInt(), actualAmount: (json['actualAmount'] as num?)?.toInt(), shortfallAmount: (json['shortfallAmount'] as num?)?.toInt(), statementRef: json['statementRef'] as String?, at: json['at'] as String?);
+
+  final String id;
+
+  final String paymentId;
+
+  final String? orderNumber;
+
+  final String? customer;
+
+  final String status;
+
+  final int expectedAmount;
+
+  final int? actualAmount;
+
+  final int? shortfallAmount;
+
+  final String? statementRef;
+
+  final String? at;
+
+  Map<String, dynamic> toJson() => {'id': id, 'paymentId': paymentId, 'orderNumber': orderNumber, 'customer': customer, 'status': status, 'expectedAmount': expectedAmount, 'actualAmount': actualAmount, 'shortfallAmount': shortfallAmount, 'statementRef': statementRef, 'at': at};
 }
 
 class AdminCustomerDetailResponse {

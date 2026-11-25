@@ -6656,6 +6656,30 @@ abstract class EdmnLocalizations {
   /// **'ابحث برقم المرتجع'**
   String get adminSearchReturns;
 
+  /// No description provided for @adminCod.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع عند الاستلام (COD)'**
+  String get adminCod;
+
+  /// No description provided for @adminTabCodAwaiting.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار كشف الشحن'**
+  String get adminTabCodAwaiting;
+
+  /// No description provided for @adminTabCodShortfalls.
+  ///
+  /// In ar, this message translates to:
+  /// **'عجز مفتوح'**
+  String get adminTabCodShortfalls;
+
+  /// No description provided for @adminStatusCodCollected.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتسلّم، بانتظار التحصيل'**
+  String get adminStatusCodCollected;
+
   /// No description provided for @adminSearchCustomers.
   ///
   /// In ar, this message translates to:

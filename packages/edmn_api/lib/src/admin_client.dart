@@ -76,6 +76,8 @@ class AdminApi {
   // Batch I02 (read-only mirrors of the console pages; permission enforced server-side on every call).
   Future<AdminListReturnsResponse> returns({String tab = 'pending', String? q, int page = 1}) async => AdminListReturnsResponse.fromJson(
       await client.getJson(AdminApiPaths.adminListReturns.path, query: {'tab': tab, if (q != null && q.trim().isNotEmpty) 'q': q.trim(), 'page': '$page'}));
+  Future<AdminCodMonitorResponse> codMonitor({String tab = 'awaiting', int page = 1}) async =>
+      AdminCodMonitorResponse.fromJson(await client.getJson(AdminApiPaths.adminCodMonitor.path, query: {'tab': tab, 'page': '$page'}));
   Future<AdminReturnDetailResponse> returnDetail(String id) async =>
       AdminReturnDetailResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminReturnDetail.path, {'returnId': id})));
   Future<AdminListAlertsResponse> alerts({String? stage, String? rule, int page = 1}) async => AdminListAlertsResponse.fromJson(

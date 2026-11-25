@@ -1,5 +1,7 @@
 # Mobile completeness matrix: buyer, seller, admin
 
+> **Update 25 Nov 2026 (PKG-DOCS-04), on `720ce681`:** rows for the work added after batch 5 are in the section "Added since 20 Nov 2026" at the end of this file. Each grade there is by the same rules, and nothing is graded on a device or by a Playwright run.
+
 **Date:** 20 Nov 2026 (batch 5) · **Branch:** `claude/mobile-completion` (from `claude/security-integration` 023804b)
 
 **Baseline check:** `claude/security-integration` contains every commit of `claude/mobile-unified-integration`, `claude/security-policy-v1`, `claude/mobile-phase6-notifications`, `codex/mobile-audit-fixes`, `claude/edmn-mobile-integration` and the older `claude/*` / `backup/*` branches (0 missing commits each).
@@ -90,3 +92,18 @@ No row is graded on a physical device. Native iOS simulator evidence is limited 
 | Android emulator / device runtime | **Not run** | No KVM or emulator in this environment, and no device attached |
 | iOS simulator | **Partial native journey verified** | On a Mac, an iPhone 17 Pro simulator connected to an isolated localhost PostgreSQL-backed test server. A native Flutter integration test signed in and created a DRAFT, verified in the test database; the rest of the native journey remains untested. A temporary copy outside Documents was used because the original location triggered a Flutter.framework codesign/provenance issue. No physical device was used. |
 | UI → API → DB journeys (Flutter web build, local server, Real Money OFF) | **Batch 5 runs: 185/185 PASS** | **batch 5 `batch5-flow.mjs` 82/82** (F shipping rates, BA order, BC cancel ×3, BB tracking + delivery, G seller inbox, BD/BE return → escalation) · `seller-flow.mjs` 73/73 re-run (A now uses the governorate picker) · checkout 9/9 · e2e 12/12 · wishlist 9/9. Admin journey (39/39) last run in batch 3; the Admin App did not change since |
+
+## Added since 20 Nov 2026 (PKG-DOCS-04)
+
+Grades follow the rules above. "Playwright specs written, not run" means the code exists in `tests/e2e/` (PKG-E2E-01) and nobody has executed it yet.
+
+| Feature | Grade | Evidence / gap |
+|---|---|---|
+| COD checkout, courier statement remittance, shortfall | COMPLETE (backend) / PARTIAL (UI journey) | PKG-COD-02: `cod02-courier-statement.test.ts`; two-person approval in the service and a DB trigger; shortfall `OPEN`/`RESOLVED` with RECOVERED or WRITTEN_OFF. Playwright specs written, not run (`tests/e2e/cod-remittance.spec.ts`). Runbook: `docs/runbooks/COD_REMITTANCE_AND_SHORTFALL.md`. Gap: no single demo role holds both `payments.verify` and `finance.movement.request` |
+| Admin App monitor for COD awaiting remittance and open shortfalls | MISSING | Requested as PKG-ADMIN-03 (read-only, `payments.view`) |
+| Marketing consent (grant, withdraw) | COMPLETE (backend and web) | PKG-PRIVACY-01: dated append-only events, audit. Playwright spec written, not run (`marketing-consent.spec.ts`) |
+| Marketing audience export (encrypted, two people) | COMPLETE (backend and web) | `customers.exportMarketing` + step-up + a different approver; AES-256-GCM; one-time passphrase; audited download. Runbook: `docs/runbooks/MARKETING_EXPORT.md`. Not driven through the UI |
+| Live push sending (FCM and APNs senders, encrypted keys) | COMPLETE (code) / BLOCKED (keys) | PKG-PUSH-02: `settings.manage` + step-up; default OFF and `log` driver. Needs owner Firebase and Apple keys. Runbook: `docs/runbooks/NOTIFICATION_KEYS.md`. Never sent to a real device |
+| Account deletion: request, withdraw, console execution | COMPLETE (backend) / PARTIAL (legal) | See the Buyer row. API-only for the customer, no web request screen. Playwright spec written, not run (`account-deletion.spec.ts`). Open gap: the published deletion page promises more than the code deletes (`docs/store/ACCOUNT_DELETION_PAGE.md`). Runbook: `docs/runbooks/ACCOUNT_DELETION_REQUESTS.md` |
+| App links (Android assetlinks, iOS AASA) | COMPLETE (code) / BLOCKED (owner) | PKG-LINKS-01: files serve empty until the owner supplies the signing fingerprint and Apple Team ID. iOS needs the Associated Domains capability in the Apple account and provisioning profile |
+| Store listings and Data Safety text | COMPLETE (drafts) / BLOCKED (legal review) | PKG-STORE-01 and `720ce68` corrections in `docs/store/` |

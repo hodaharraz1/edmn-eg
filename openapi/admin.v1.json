@@ -1454,6 +1454,259 @@
         }
       }
     },
+    "/api/v1/admin/cod": {
+      "get": {
+        "operationId": "adminCodMonitor",
+        "summary": "COD monitor by tab (payments.view): orders awaiting the courier remittance, or open remittance shortfalls. Masked customer names; read-only",
+        "tags": [
+          "Admin COD"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "tab",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "awaiting",
+                "shortfalls"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tab": {
+                      "type": "string",
+                      "enum": [
+                        "awaiting",
+                        "shortfalls"
+                      ]
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "paymentId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "orderNumber": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "customer": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "expectedAmount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "actualAmount": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "shortfallAmount": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "statementRef": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "paymentId",
+                          "orderNumber",
+                          "customer",
+                          "status",
+                          "expectedAmount",
+                          "actualAmount",
+                          "shortfallAmount",
+                          "statementRef",
+                          "at"
+                        ]
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "hasMore": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "tab",
+                    "items",
+                    "page",
+                    "hasMore"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: mfa_required, unauthenticated",
+            "x-error-codes": [
+              "mfa_required",
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: forbidden",
+            "x-error-codes": [
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "admin",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      }
+    },
     "/api/v1/admin/customers": {
       "get": {
         "operationId": "adminListCustomers",

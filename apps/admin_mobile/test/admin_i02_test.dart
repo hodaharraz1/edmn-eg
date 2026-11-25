@@ -39,6 +39,30 @@ class _Api extends AdminApi {
   }
 
   @override
+  Future<AdminCodMonitorResponse> codMonitor({String tab = 'awaiting', int page = 1}) async {
+    calls.add('cod:$tab');
+    return AdminCodMonitorResponse(
+      tab: tab,
+      items: [
+        AdminCodMonitorResponseItemsItem(
+          id: 'c1',
+          paymentId: 'p1',
+          orderNumber: '500077',
+          customer: 'أحمد س.',
+          status: tab == 'shortfalls' ? 'OPEN' : 'COD_COLLECTED',
+          expectedAmount: 150000,
+          actualAmount: null,
+          shortfallAmount: tab == 'shortfalls' ? 500 : null,
+          statementRef: tab == 'shortfalls' ? 'ST-77' : null,
+          at: '2026-11-25T10:00:00Z',
+        ),
+      ],
+      page: 1,
+      hasMore: false,
+    );
+  }
+
+  @override
   Future<AdminReturnDetailResponse> returnDetail(String id) async {
     calls.add('return:$id');
     return const AdminReturnDetailResponse(id: 'r1', number: '500031', status: 'REQUESTED', nextAction: 'Review and approve or reject on the web console', reason: 'DAMAGED', description: 'الشاشة وصلت مكسورة',
@@ -176,6 +200,25 @@ void main() {
     expect(find.textContaining('Review and approve'), findsNothing); // the server's English text is never shown
     expect(find.byKey(const Key('returns-on-web')), findsOneWidget);
     expect(find.byType(FilledButton), findsNothing); // monitoring only
+  });
+
+  testWidgets('COD monitor: entry needs payments.view; both tabs load read-only, no action button', (t) async {
+    await _ready(t, _Api(const ['returns.manage']));
+    expect(find.byKey(const Key('open-/monitor/cod')), findsNothing);
+  });
+
+  testWidgets('COD monitor: awaiting list, then the shortfalls tab; nothing to press', (t) async {
+    final api = _Api(const ['payments.view']);
+    await _ready(t, api);
+    await _open(t, '/monitor/cod');
+    expect(api.calls, contains('cod:awaiting'));
+    expect(find.text('#500077'), findsOneWidget);
+    expect(find.text('اتسلّم، بانتظار التحصيل'), findsOneWidget);
+    await t.tap(find.text('عجز مفتوح'));
+    await t.pumpAndSettle();
+    expect(api.calls, contains('cod:shortfalls'));
+    expect(find.textContaining('ST-77'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
   });
 
   testWidgets('customers: server-side search; 360 shows masked contact data left-to-right, counts and recent orders', (t) async {

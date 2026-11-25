@@ -3480,6 +3480,18 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get adminSearchReturns => 'ابحث برقم المرتجع';
 
   @override
+  String get adminCod => 'الدفع عند الاستلام (COD)';
+
+  @override
+  String get adminTabCodAwaiting => 'بانتظار كشف الشحن';
+
+  @override
+  String get adminTabCodShortfalls => 'عجز مفتوح';
+
+  @override
+  String get adminStatusCodCollected => 'اتسلّم، بانتظار التحصيل';
+
+  @override
   String get adminSearchCustomers => 'ابحث بالاسم أو البريد أو الموبايل';
 
   @override
