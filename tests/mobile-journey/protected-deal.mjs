@@ -110,6 +110,8 @@ try {
   };
   await page.route(photoRoute, loseFirstResponse);
   await tap('متابعة');
+  // The tap returns before the intercepted upload finishes; wait for the server's real answer, never assume it arrived.
+  for (let waited = 0; upstreamStatus === undefined && waited < 30_000; waited += 100) await page.waitForTimeout(100);
   assert.equal(upstreamStatus, 200);
   assert.equal((await rows('select count(*)::int n from deal_evidence where deal_id=$1', [invalidDraft.id]))[0].n, 1);
   await page.getByText('أعد المحاولة لإكمال رفع الصور المحددة.').waitFor({ state: 'visible' });
