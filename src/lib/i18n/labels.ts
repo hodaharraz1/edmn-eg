@@ -197,7 +197,7 @@ export function sellerOrderStatusLabel(status: string | null | undefined, receip
 }
 
 export const LABELS = {
-  paymentMethod: { BANK_TRANSFER: 'تحويل بنكي', INSTAPAY: 'إنستاباي', VODAFONE_CASH: 'فودافون كاش' } as Record<string, string>,
+  paymentMethod: { BANK_TRANSFER: 'تحويل بنكي', INSTAPAY: 'إنستاباي', VODAFONE_CASH: 'فودافون كاش', ORANGE_CASH: 'أورنج كاش', ETISALAT_CASH: 'إي آند كاش (اتصالات)', WE_PAY: 'وي باي', BM_WALLET: 'محفظة بنك مصر' } as Record<string, string>,
   payoutType: { BANK_ACCOUNT: 'حساب بنكي', INSTAPAY: 'إنستاباي', MOBILE_WALLET: 'محفظة موبايل' } as Record<string, string>,
   condition: { NEW: 'جديد', USED: 'مستعمل' } as Record<string, string>,
   usedGrade: { LIKE_NEW: 'زي الجديد', VERY_GOOD: 'جيد جداً', GOOD: 'جيد', ACCEPTABLE: 'مقبول' } as Record<string, string>,

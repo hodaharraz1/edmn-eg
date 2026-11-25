@@ -29,6 +29,7 @@ import {
   submitSellerOffer,
   verifyDeliveryOtp,
 } from '@/server/modules/deals/service';
+import { type PaymentMethodCode } from '@/domain/machines';
 
 type Upload = { data: Buffer; name: string };
 
@@ -198,7 +199,7 @@ export async function cancel(actor: Actor, dealId: string, reason: string) {
 }
 
 /** Opens (or returns) the deal's manual payment; the app then uses the shared payment screen / receipt upload. */
-export async function pay(actor: Actor, dealId: string, method: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH') {
+export async function pay(actor: Actor, dealId: string, method: PaymentMethodCode) {
   const p = await startDealPayment(actor, dealId, method);
   return { paymentId: (p as { id: string }).id, deal: await dealView(actor, dealId) };
 }

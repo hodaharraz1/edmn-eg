@@ -277,6 +277,10 @@ export async function seedDemo() {
     { methodCode: 'INSTAPAY', label: 'إنستاباي — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 1 },
     { methodCode: 'VODAFONE_CASH', label: 'فودافون كاش — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 2 },
     { methodCode: 'BANK_TRANSFER', label: 'تحويل بنكي — وجهة تجريبية', details: { accountName: 'TEST PAYMENT DESTINATION — NOT FOR REAL MONEY' }, instructionsAr: 'وجهة تجريبية للاختبار فقط. لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 3 },
+    { methodCode: 'ORANGE_CASH', label: 'أورنج كاش — DEMO — NOT REAL', details: { accountName: 'DEMO — NOT REAL' }, instructionsAr: 'وجهة تجريبية (DEMO — NOT REAL). لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 4 },
+    { methodCode: 'ETISALAT_CASH', label: 'إي آند كاش — DEMO — NOT REAL', details: { accountName: 'DEMO — NOT REAL' }, instructionsAr: 'وجهة تجريبية (DEMO — NOT REAL). لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 5 },
+    { methodCode: 'WE_PAY', label: 'وي باي — DEMO — NOT REAL', details: { accountName: 'DEMO — NOT REAL' }, instructionsAr: 'وجهة تجريبية (DEMO — NOT REAL). لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 6 },
+    { methodCode: 'BM_WALLET', label: 'محفظة بنك مصر — DEMO — NOT REAL', details: { accountName: 'DEMO — NOT REAL' }, instructionsAr: 'وجهة تجريبية (DEMO — NOT REAL). لا تحوّل أي أموال حقيقية.', isTest: true, sortOrder: 7 },
   ]);
 
   // ── Brands

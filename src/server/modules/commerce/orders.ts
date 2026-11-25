@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { orderMachine, paymentMachine, sellerOrderMachine, type OrderStatus, type PaymentMethodCode } from '@/domain/machines';
+import { orderMachine, paymentMachine, sellerOrderMachine, PAYMENT_METHOD_CODES, type OrderStatus, type PaymentMethodCode } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requireUser, SYSTEM_ACTOR, type Actor } from '@/server/core/actor';
 import { DomainError, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
@@ -34,7 +34,7 @@ import { formatEGP } from '@/lib/format';
 
 export const checkoutSchema = z.object({
   addressId: z.string().uuid('اختار عنوان التوصيل'),
-  paymentMethod: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'], { message: 'اختار طريقة الدفع' }),
+  paymentMethod: z.enum(PAYMENT_METHOD_CODES, { message: 'اختار طريقة الدفع' }),
   checkoutKey: z.string().min(8).max(100),
   expectedTotal: z.number().int().min(0),
   /** Pricing version the buyer was quoted; a different version at commit → re-confirm (stale quote). */

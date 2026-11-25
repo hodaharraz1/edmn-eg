@@ -10,6 +10,7 @@ import { submitProof } from '@/server/modules/payments/service';
 import { ApiError } from '../errors';
 import { defineRoute } from '../http';
 import { isoDateTime, ok, piastres, profile, tokenPair, uuid } from '../schemas';
+import { PAYMENT_METHOD_CODES } from '@/domain/machines';
 
 /**
  * Customer App — buyer account, cart, checkout, orders and manual payment. Thin transport over the existing domain
@@ -105,7 +106,7 @@ const addressInput = z.object({
 const payment = z
   .object({
     id: uuid,
-    method: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']),
+    method: z.enum(PAYMENT_METHOD_CODES),
     status: z.string(),
     amountDuePiastres: piastres,
     dueAt: isoDateTime,
@@ -447,7 +448,7 @@ export const getCheckout = defineRoute({
       selectedAddressId: uuid.nullable(),
       addresses: z.array(address),
       cart,
-      paymentMethods: z.array(z.object({ code: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable() })),
+      paymentMethods: z.array(z.object({ code: z.enum(PAYMENT_METHOD_CODES), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable() })),
       paymentWindowHours: z.number().int(),
       realMoneyEnabled: z.boolean(),
       mandatoryRightsNoticeAr: z.string(),
@@ -470,7 +471,7 @@ export const createOrder = defineRoute({
   errors: ['conflict', 'invalid_state', 'insufficient_stock', 'identity_required', 'forbidden'],
   body: z.object({
     addressId: uuid,
-    paymentMethod: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']),
+    paymentMethod: z.enum(PAYMENT_METHOD_CODES),
     checkoutKey: z.string().regex(/^[A-Za-z0-9_-]{16,100}$/),
     expectedTotalPiastres: z.number().int().min(0),
     expectedPricingVersionId: uuid.optional(),

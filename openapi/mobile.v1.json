@@ -7414,7 +7414,11 @@
                     "enum": [
                       "BANK_TRANSFER",
                       "INSTAPAY",
-                      "VODAFONE_CASH"
+                      "VODAFONE_CASH",
+                      "ORANGE_CASH",
+                      "ETISALAT_CASH",
+                      "WE_PAY",
+                      "BM_WALLET"
                     ]
                   }
                 },
@@ -13299,7 +13303,11 @@
                     "enum": [
                       "BANK_TRANSFER",
                       "INSTAPAY",
-                      "VODAFONE_CASH"
+                      "VODAFONE_CASH",
+                      "ORANGE_CASH",
+                      "ETISALAT_CASH",
+                      "WE_PAY",
+                      "BM_WALLET"
                     ]
                   },
                   "checkoutKey": {
@@ -14013,7 +14021,11 @@
                       "enum": [
                         "BANK_TRANSFER",
                         "INSTAPAY",
-                        "VODAFONE_CASH"
+                        "VODAFONE_CASH",
+                        "ORANGE_CASH",
+                        "ETISALAT_CASH",
+                        "WE_PAY",
+                        "BM_WALLET"
                       ]
                     },
                     "status": {
@@ -33039,7 +33051,11 @@
                   "enum": [
                     "BANK_TRANSFER",
                     "INSTAPAY",
-                    "VODAFONE_CASH"
+                    "VODAFONE_CASH",
+                    "ORANGE_CASH",
+                    "ETISALAT_CASH",
+                    "WE_PAY",
+                    "BM_WALLET"
                   ]
                 },
                 "nameAr": {
@@ -34270,7 +34286,11 @@
             "enum": [
               "BANK_TRANSFER",
               "INSTAPAY",
-              "VODAFONE_CASH"
+              "VODAFONE_CASH",
+              "ORANGE_CASH",
+              "ETISALAT_CASH",
+              "WE_PAY",
+              "BM_WALLET"
             ]
           },
           "status": {

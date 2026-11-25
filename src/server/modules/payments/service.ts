@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
+import { PAYMENT_METHOD_CODES, dealMachine, orderMachine, paymentMachine, sellerOrderMachine} from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
@@ -308,7 +308,7 @@ export async function rejectPayment(actor: Actor, paymentId: string, submissionI
 /* ───────── Admin: payment methods & destinations ───────── */
 
 export const destinationSchema = z.object({
-  methodCode: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']),
+  methodCode: z.enum(PAYMENT_METHOD_CODES),
   label: z.string().trim().min(2).max(100),
   details: z.record(z.string(), z.string().trim().max(200)),
   instructionsAr: z.string().trim().max(1000).optional().default(''),

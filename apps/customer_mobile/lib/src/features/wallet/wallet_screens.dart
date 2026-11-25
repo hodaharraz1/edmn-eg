@@ -357,7 +357,7 @@ class _ActivityDetailBody extends StatelessWidget {
 
 String methodLabel(EdmnLocalizations t, String m) => switch (m) {
       'INSTAPAY' => t.methodInstapay,
-      'VODAFONE_CASH' || 'MOBILE_WALLET' => t.methodWallet,
+      'VODAFONE_CASH' || 'ORANGE_CASH' || 'ETISALAT_CASH' || 'WE_PAY' || 'BM_WALLET' || 'MOBILE_WALLET' => t.methodWallet,
       'BANK_TRANSFER' || 'BANK_ACCOUNT' => t.methodBank,
       _ => m,
     };

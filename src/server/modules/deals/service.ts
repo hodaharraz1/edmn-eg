@@ -2,7 +2,7 @@ import { absoluteUrl } from '@/server/core/urls';
 import { smsAvailable } from '@/server/core/runtime-env';
 import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision } from '@/domain/machines';
+import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision, type PaymentMethodCode } from '@/domain/machines';
 import { audit, recordTransition } from '@/server/audit/audit';
 import { requireStepUp, requireUser, SYSTEM_ACTOR, type Actor, hasPermission } from '@/server/core/actor';
 import { decryptJson, encryptJson, randomToken, sha256 } from '@/server/core/crypto';
@@ -717,7 +717,7 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
 }
 
 /** Buyer chooses how to pay → manual payment record created (same verification flow as orders). */
-export async function startDealPayment(actor: Actor, dealId: string, method: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH') {
+export async function startDealPayment(actor: Actor, dealId: string, method: PaymentMethodCode) {
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_PAYMENT');
   return db.transaction(async (tx) => {

@@ -691,7 +691,7 @@ class CheckoutPaymentMethodsItem {
 
   factory CheckoutPaymentMethodsItem.fromJson(Map<String, dynamic> json) => CheckoutPaymentMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
   final String code;
 
   final String nameAr;
@@ -1507,7 +1507,7 @@ class GetPaymentResponse {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -3407,7 +3407,7 @@ class Payment {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -3479,7 +3479,7 @@ class PlaceOrderRequest {
 
   final String addressId;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
   final String paymentMethod;
 
   final String checkoutKey;
@@ -5624,7 +5624,7 @@ class StartDealPaymentRequest {
 
   factory StartDealPaymentRequest.fromJson(Map<String, dynamic> json) => StartDealPaymentRequest(method: json['method'] as String);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
   final String method;
 
   Map<String, dynamic> toJson() => {'method': method};

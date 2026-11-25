@@ -165,7 +165,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final en = languageOf(context) == 'en';
     IconData icon(String code) => switch (code) {
           'INSTAPAY' => Icons.bolt_rounded,
-          'VODAFONE_CASH' => Icons.phone_iphone_rounded,
+          'VODAFONE_CASH' || 'ORANGE_CASH' || 'ETISALAT_CASH' || 'WE_PAY' || 'BM_WALLET' => Icons.phone_iphone_rounded,
           _ => Icons.account_balance_outlined,
         };
     return [

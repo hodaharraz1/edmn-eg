@@ -304,6 +304,10 @@ export async function seedReference(opts: { mode?: ReferenceMode } = {}) {
     ['INSTAPAY', 'إنستاباي', 'InstaPay', 1],
     ['VODAFONE_CASH', 'فودافون كاش', 'Vodafone Cash', 2],
     ['BANK_TRANSFER', 'تحويل بنكي', 'Bank transfer', 3],
+    ['ORANGE_CASH', 'أورنج كاش', 'Orange Cash', 4],
+    ['ETISALAT_CASH', 'إي آند كاش (اتصالات)', 'e& cash (Etisalat)', 5],
+    ['WE_PAY', 'وي باي', 'WE Pay', 6],
+    ['BM_WALLET', 'محفظة بنك مصر', 'Banque Misr wallet', 7],
   ];
   for (const [code, ar, en, sort] of methods) {
     await db
