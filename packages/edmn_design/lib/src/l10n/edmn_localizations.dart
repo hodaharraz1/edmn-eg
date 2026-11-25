@@ -7091,7 +7091,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @marketingConsentLabel.
   ///
   /// In ar, this message translates to:
-  /// **'أوافق على استقبال عروض ورسائل تسويق من اضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)'**
+  /// **'أوافق على استقبال عروض ورسائل تسويق من أضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)'**
   String get marketingConsentLabel;
 
   /// No description provided for @marketingConsentTitle.

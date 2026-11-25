@@ -3713,7 +3713,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get marketingConsentLabel =>
-      'أوافق على استقبال عروض ورسائل تسويق من اضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)';
+      'أوافق على استقبال عروض ورسائل تسويق من أضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)';
 
   @override
   String get marketingConsentTitle => 'رسائل وعروض التسويق';

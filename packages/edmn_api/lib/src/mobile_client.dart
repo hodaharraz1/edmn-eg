@@ -72,7 +72,7 @@ class MobileApi {
   // ── Account ────────────────────────────────────────────────────────────────────────────────────────────────
   /// Marketing consent is OFF by default; changeable anytime here (a dated consent event is logged server-side).
   Future<Profile> updateMe({required String fullName, bool? marketingOptIn}) async =>
-      Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName, if (marketingOptIn != null) 'marketingOptIn': marketingOptIn}));
+      Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName, 'marketingOptIn': ?marketingOptIn}));
 
   /// Every other device is signed out; this device receives new tokens.
   Future<void> changePassword({required String current, required String next}) async {
