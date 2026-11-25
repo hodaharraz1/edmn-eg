@@ -954,18 +954,18 @@
     }
   },
   "rateStore": "Rate the store {store}",
+  "@rateStore": {
+    "placeholders": {
+      "store": {
+        "type": "String"
+      }
+    }
+  },
   "starRatingLabel": "{count} of 5 stars",
   "@starRatingLabel": {
     "placeholders": {
       "count": {
         "type": "int"
-      }
-    }
-  },
-  "@rateStore": {
-    "placeholders": {
-      "store": {
-        "type": "String"
       }
     }
   },

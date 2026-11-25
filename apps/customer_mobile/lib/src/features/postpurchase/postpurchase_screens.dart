@@ -909,6 +909,7 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
 /// Test-visible wrapper around the private [_ReviewForm] so widget tests can pump the star row
 /// without standing up the provider tree the surrounding screens need. Production routes use
 /// [_ReviewForm] directly; nothing in the app imports this.
+@visibleForTesting
 Widget buildReviewFormForTest(BuildContext context, WidgetRef ref, {Key? key}) {
   return _ReviewForm(key: key, title: 'عنصر', onSubmit: (rating, title, body, photos, k) async => null, onDone: () {});
 }
