@@ -11,7 +11,7 @@ import { acceptReturnRefund, approveReturn, customerShipsReturn, markReturnRecei
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
 import { createProductReview, moderateReview } from '@/server/modules/reviews/service';
 import { claimInvitation, confirmDealReceipt, createDeal, invitationByToken, inviteSeller, markDealDelivered, deliveryOtpForBuyer, verifyDeliveryOtp, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, releaseDeal } from '@/server/modules/deals/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { canReadPrivateFile } from '@/server/storage/access';
 import { approveRefundsOf, checkout, ensurePaymentSetup, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm, makerRequest } from '../helpers/factory';
 import type { Actor } from '@/server/core/actor';
@@ -169,6 +169,7 @@ describe('external protected deals', () => {
     const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
     const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await expect(markDealDelivered(seller, deal.id, 'تم')).rejects.toThrow(); // not active yet
+    await startReview(await makeAdmin(), p.id); // two-person rule: a different staff member reviews first
     await confirmPayment(admin, p.id, submission.id);
     let [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('ACTIVE');
