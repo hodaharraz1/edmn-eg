@@ -101,13 +101,13 @@ abstract class EdmnLocalizations {
   /// No description provided for @appNameCustomer.
   ///
   /// In ar, this message translates to:
-  /// **'اضمن'**
+  /// **'أضمن'**
   String get appNameCustomer;
 
   /// No description provided for @appNameAdmin.
   ///
   /// In ar, this message translates to:
-  /// **'اضمن — الإدارة'**
+  /// **'أضمن — الإدارة'**
   String get appNameAdmin;
 
   /// No description provided for @retry.
@@ -5579,7 +5579,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @adminKpiRevenue.
   ///
   /// In ar, this message translates to:
-  /// **'إيرادات اضمن'**
+  /// **'إيرادات أضمن'**
   String get adminKpiRevenue;
 
   /// No description provided for @adminKpiOrders.
@@ -7001,7 +7001,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @accountDeletionBody.
   ///
   /// In ar, this message translates to:
-  /// **'طلب حذف الحساب بيسجّل طلب عند فريق اضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.'**
+  /// **'طلب حذف الحساب بيسجّل طلب عند فريق أضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.'**
   String get accountDeletionBody;
 
   /// No description provided for @accountDeletionReasonHint.
@@ -7025,7 +7025,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @accountDeletionSent.
   ///
   /// In ar, this message translates to:
-  /// **'اتسجّل طلبك، وفريق اضمن هيكمّله بعد مراجعة الحساب'**
+  /// **'اتسجّل طلبك، وفريق أضمن هيكمّله بعد مراجعة الحساب'**
   String get accountDeletionSent;
 
   /// No description provided for @accountDeletionPending.
@@ -7037,7 +7037,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @accountDeletionPendingBody.
   ///
   /// In ar, this message translates to:
-  /// **'فريق اضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.'**
+  /// **'فريق أضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.'**
   String get accountDeletionPendingBody;
 
   /// No description provided for @accountDeletionBlockedTitle.

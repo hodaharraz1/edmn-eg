@@ -10,10 +10,10 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   EdmnLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appNameCustomer => 'اضمن';
+  String get appNameCustomer => 'أضمن';
 
   @override
-  String get appNameAdmin => 'اضمن — الإدارة';
+  String get appNameAdmin => 'أضمن — الإدارة';
 
   @override
   String get retry => 'حاول تاني';
@@ -2923,7 +2923,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get adminKpiGmv => 'إجمالي قيمة البضائع (GMV)';
 
   @override
-  String get adminKpiRevenue => 'إيرادات اضمن';
+  String get adminKpiRevenue => 'إيرادات أضمن';
 
   @override
   String get adminKpiOrders => 'الطلبات (المدفوعة / الكل)';
@@ -3660,7 +3660,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get accountDeletionBody =>
-      'طلب حذف الحساب بيسجّل طلب عند فريق اضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.';
+      'طلب حذف الحساب بيسجّل طلب عند فريق أضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.';
 
   @override
   String get accountDeletionReasonHint => 'سبب الحذف (اختياري)';
@@ -3674,14 +3674,14 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get accountDeletionSent =>
-      'اتسجّل طلبك، وفريق اضمن هيكمّله بعد مراجعة الحساب';
+      'اتسجّل طلبك، وفريق أضمن هيكمّله بعد مراجعة الحساب';
 
   @override
   String get accountDeletionPending => 'طلب حذف الحساب قيد التنفيذ';
 
   @override
   String get accountDeletionPendingBody =>
-      'فريق اضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.';
+      'فريق أضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.';
 
   @override
   String get accountDeletionBlockedTitle => 'مش هينفع تقفل حسابك دلوقتي';
