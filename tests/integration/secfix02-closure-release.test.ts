@@ -4,15 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { customerActor } from '@/server/auth/actors';
 import { encrypt } from '@/server/core/crypto';
 import { db } from '@/server/db/client';
-import { auditLogs, devicePushTokens, files, mobileDevices, pushSubscriptions, sellers } from '@/server/db/schema';
-import { completeAccountClosure, requestAccountClosure, requestClosureExecution } from '@/server/modules/customers/closure';
+import { accountClosureRequests, auditLogs, devicePushTokens, files, mobileDevices, pushSubscriptions, sellers } from '@/server/db/schema';
+import { completeAccountClosure, purgeClosedAccountIdentityFiles, requestAccountClosure, requestClosureExecution } from '@/server/modules/customers/closure';
 import { storage } from '@/server/storage/storage';
 import { makeAdmin, makeCustomer, makeSeller } from '../helpers/factory';
 
 /**
  * PKG-SEC-FIX-02 (SEC-165): closing an account removes what the published deletion page promises: device push tokens and
- * web-push subscriptions are deleted, mobile devices are revoked, and the account's own national-ID photos can no longer be
- * opened and their bytes are removed. Seller verification documents, evidence files and receipts are kept.
+ * web-push subscriptions are deleted, mobile devices are revoked, and the account's own national-ID photos are LOCKED (nothing
+ * can open them) and kept for 6 months after closure (owner decision 2026-11-25), then removed for good by the daily purge.
+ * Seller verification documents, evidence files and receipts are kept.
  */
 async function addDevice(userId: string) {
   const [d] = await db.insert(mobileDevices).values({ userId, app: 'CUSTOMER', installationId: randomUUID().replaceAll('-', '') + 'abcdefgh', platform: 'ANDROID' }).returning();
@@ -30,7 +31,7 @@ async function close(userId: string) {
 const idFiles = (userId: string) => db.select().from(files).where(and(eq(files.ownerUserId, userId), eq(files.purpose, 'IDENTITY_DOCUMENT')));
 
 describe('SEC-165: closing an account releases personal data', () => {
-  it('push tokens and subscriptions are deleted, devices revoked, ID photos unreachable and their bytes removed', async () => {
+  it('push tokens and subscriptions are deleted, devices revoked, ID photos locked but kept until the retention ends', async () => {
     const c = await makeCustomer();
     const deviceId = await addDevice(c.user.id);
     const before = await idFiles(c.user.id);
@@ -44,13 +45,43 @@ describe('SEC-165: closing an account releases personal data', () => {
     const [d] = await db.select().from(mobileDevices).where(eq(mobileDevices.id, deviceId));
     expect(d.revokedAt).not.toBeNull();
     const after = await idFiles(c.user.id);
-    expect(after).toHaveLength(before.length); // the rows stay as a record
+    expect(after).toHaveLength(before.length);
     for (const f of after) {
-      expect(f.deletedAt).not.toBeNull();
-      expect(await storage().exists(f.visibility, f.storageKey)).toBe(false);
+      expect(f.deletedAt).not.toBeNull(); // locked: /api/files refuses a deleted file
+      expect(f.purgedAt).toBeNull();
+      expect(await storage().exists(f.visibility, f.storageKey)).toBe(true); // kept for the retention period
     }
     const [log] = await db.select().from(auditLogs).where(and(eq(auditLogs.entityId, c.user.id), eq(auditLogs.action, 'account.closed')));
-    expect(JSON.stringify(log.newValues)).toContain('identityPhotos');
+    expect(JSON.stringify(log.newValues)).toContain('identityPhotosLocked');
+  });
+
+  it('the daily purge keeps ID photos inside the 6 months and removes them for good after, with an audit per file', async () => {
+    const c = await makeCustomer();
+    await close(c.user.id);
+    const locked = await idFiles(c.user.id);
+    const setClosedAt = (when: Date) => db.update(accountClosureRequests).set({ completedAt: when }).where(and(eq(accountClosureRequests.userId, c.user.id), eq(accountClosureRequests.status, 'COMPLETED')));
+    const monthsAgo = (m: number, plusDays = 0) => { const t = new Date(); t.setMonth(t.getMonth() - m); t.setDate(t.getDate() - plusDays); return t; };
+
+    await setClosedAt(monthsAgo(6, -1)); // one day short of 6 months
+    await purgeClosedAccountIdentityFiles();
+    for (const f of await idFiles(c.user.id)) {
+      expect(f.purgedAt).toBeNull();
+      expect(await storage().exists(f.visibility, f.storageKey)).toBe(true);
+    }
+
+    await setClosedAt(monthsAgo(6, 1)); // 6 months and a day
+    await purgeClosedAccountIdentityFiles();
+    const purged = await idFiles(c.user.id);
+    expect(purged).toHaveLength(locked.length); // the rows stay as a record
+    for (const f of purged) {
+      expect(f.purgedAt).not.toBeNull();
+      expect(await storage().exists(f.visibility, f.storageKey)).toBe(false);
+    }
+    const logs = await db.select().from(auditLogs).where(and(eq(auditLogs.entityId, c.user.id), eq(auditLogs.action, 'account.identity_files_purged')));
+    expect(logs).toHaveLength(locked.length);
+
+    await purgeClosedAccountIdentityFiles(); // idempotent: nothing left to do
+    expect(await db.select().from(auditLogs).where(and(eq(auditLogs.entityId, c.user.id), eq(auditLogs.action, 'account.identity_files_purged')))).toHaveLength(locked.length);
   });
 
   it('receipts and other evidence files are kept', async () => {

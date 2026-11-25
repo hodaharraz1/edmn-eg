@@ -56,6 +56,8 @@ export const files = pgTable(
     ownerUserId: uuid().references(() => users.id),
     createdAt: createdAt(),
     deletedAt: ts(),
+    /** Set when the stored bytes were removed for good (retention purge); the row stays as a record that a file existed. */
+    purgedAt: ts(),
     scanStatus: text({ enum: FILE_SCAN_STATUSES }).notNull().default('UNSCANNED'),
     scannedAt: ts(),
     scanEngine: text(),

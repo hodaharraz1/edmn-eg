@@ -225,6 +225,13 @@
       "when": 1795707417676,
       "tag": "0031_secfix01_closure_two_person",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795793817676,
+      "tag": "0032_closure_identity_retention",
+      "breakpoints": true
     }
   ]
 }

@@ -52,7 +52,7 @@
 
 **القرار: Production = NO-GO لحد ما الـ FAIL الأربعة تتقفل: SEC-002 وSEC-111 وSEC-112 وSEC-156. Staging = GO للاختبار الداخلي والفلوس الحقيقية مقفولة (Real Money OFF).**
 
-السجل أصبح 183 ضابطًا (`SECURITY_CONTROL_REGISTER.md`): PASS 101، IN PROGRESS 49، NOT TESTED 22، EXCEPTION 4، N/A 3، FAIL 4. التفاصيل في `SECURITY_REVERIFICATION_2026-11-25.md`.
+السجل أصبح 183 ضابطًا (`SECURITY_CONTROL_REGISTER.md`): PASS 102، IN PROGRESS 48، NOT TESTED 22، EXCEPTION 4، N/A 3، FAIL 4. التفاصيل في `SECURITY_REVERIFICATION_2026-11-25.md`.
 
 **لماذا ما زال NO-GO (أسباب مستقلة، أي واحد منها يكفي):**
 1. الـ FAIL الأربعة الأصلية تحتاج المالك ولم تتغير: SEC-002 (أدوار)، SEC-111 وSEC-112 (فحص حي 25/11: `main` غير محمي)، SEC-156 (DAST).
