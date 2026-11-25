@@ -8,6 +8,7 @@ import { placeOrder } from '@/server/modules/commerce/orders';
 import { priceLines } from '@/server/modules/commerce/pricing';
 import { cancelSellerOrder, confirmReceipt, recordShipmentException, resolveShipmentException } from '@/server/modules/commerce/fulfilment';
 import { recordCodRemittance } from '@/server/modules/payments/service';
+import { startDealPayment } from '@/server/modules/deals/service';
 import { updateSetting } from '@/server/modules/settings';
 import type { Actor } from '@/server/core/actor';
 import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makerRequest, paymentOf, sellerOrdersOf, shipIt } from '../helpers/factory';
@@ -86,6 +87,15 @@ describe('COD-01 — placement guards', () => {
     const pay = await paymentOf(order.id);
     expect(pay.amountDue).toBe(priced.grandTotal + 50_00);
     await updateSetting(admin, 'orders.codFee', 0, 'إعادة الرسم الافتراضي');
+    await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الإعداد الافتراضي');
+  });
+});
+
+describe('COD-01 — never for Protected Deals', () => {
+  it('a Protected Deal payment refuses COD explicitly, even with COD enabled for market orders', async () => {
+    await updateSetting(admin, 'orders.codEnabled', true, 'اختبار');
+    const c = await makeCustomer();
+    await expect(startDealPayment(c.actor, randomUUID(), 'COD')).rejects.toThrow(/الدفع عند الاستلام مش متاح للصفقات المحمية/);
     await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الإعداد الافتراضي');
   });
 });

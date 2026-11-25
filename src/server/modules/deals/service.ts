@@ -718,6 +718,9 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
 
 /** Buyer chooses how to pay → manual payment record created (same verification flow as orders). */
 export async function startDealPayment(actor: Actor, dealId: string, method: PaymentMethodCode) {
+  // Protected Deals are always prepaid and held by EDMN: cash on delivery would hand the goods over before the
+  // money is secured. Refused explicitly, whatever the payment-method settings say.
+  if (method === 'COD') throw validation('الدفع عند الاستلام مش متاح للصفقات المحمية. اختار طريقة دفع تانية');
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_PAYMENT');
   return db.transaction(async (tx) => {
