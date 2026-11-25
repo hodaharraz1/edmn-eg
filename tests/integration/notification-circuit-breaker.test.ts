@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { db } from '@/server/db/client';
 import { notifications, outboundMessages, systemSettings } from '@/server/db/schema';
@@ -41,11 +41,12 @@ async function forceState(channel: string, state: 'OPEN' | 'HALF_OPEN', opts: { 
     probe_lease_until = ${state === 'HALF_OPEN' ? (opts.leaseExpired ? sql`now() - interval '1 second'` : sql`now() + interval '5 minutes'`) : null}
     where channel = ${channel}`);
 }
-function provider(calls: { n: number; bodies: string[] }, mode: 'ok' | 'fail'): (channel: string) => OutboundProvider {
+function provider(calls: { n: number; bodies: string[]; recipients?: string[] }, mode: 'ok' | 'fail'): (channel: string) => OutboundProvider {
   return (channel) => ({
     name: `test-${channel.toLowerCase()}`,
     async send(msg) {
       calls.n++;
+      calls.recipients?.push(msg.recipient);
       if (mode === 'fail') throw new Error('provider 421 try later for someone@example.com code 123456');
       calls.bodies.push(msg.body);
       return { providerMessageId: `pm-${msg.reference}` };
@@ -69,6 +70,9 @@ describe('PKG-SEC-069 notification circuit breaker', () => {
     setProviderOverride(null);
     await setBreaker(null);
     await resetBreakerState();
+    // Messages this file queued and left deferred would otherwise be sent by the NEXT test's flush and skew its
+    // provider-call counts: settle them (only this file's synthetic recipients).
+    await db.update(outboundMessages).set({ status: 'FAILED' }).where(and(like(outboundMessages.recipient, 'brk%@x.test'), eq(outboundMessages.status, 'PENDING')));
   });
 
   it('DISABLED by default: failures follow the existing retry path and no breaker state is written', async () => {
@@ -168,13 +172,14 @@ describe('PKG-SEC-069 notification circuit breaker', () => {
 
   it('only PROVIDER failures count: an expired secret dead-letters as before and does not open the channel; state holds no sensitive data', async () => {
     await setBreaker(cfg({ failureThreshold: 2 }));
-    const calls = { n: 0, bodies: [] as string[] };
+    const calls = { n: 0, bodies: [] as string[], recipients: [] as string[] };
     setProviderOverride(provider(calls, 'ok'));
     const [m] = await queue('EMAIL', 1, { event: 'ACCOUNT_SECURITY', body: REDACTED_BODY });
     await flushOutbound(50);
     const [after] = await byIds([m]);
     expect(after.status).toBe('FAILED');
-    expect(calls.n).toBe(0);
+    // The flush may also send other pending messages of the shared test database: only THIS message matters.
+    expect(calls.recipients).not.toContain(m.recipient);
     expect((await breakerRow('EMAIL'))?.consecutive_failures ?? 0).toBe(0);
 
     setProviderOverride(provider({ n: 0, bodies: [] }, 'fail'));

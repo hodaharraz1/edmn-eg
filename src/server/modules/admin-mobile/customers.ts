@@ -36,7 +36,9 @@ export async function customersSearch(actor: Actor, opts: { q?: string; page: nu
   const rows = await db
     .select({
       u: users,
-      orderCount: sql<number>`(select count(*)::int from orders o where o.customer_id = ${users.id})`,
+      // Qualified on purpose: inside a select, ${users.id} renders as a bare "id" and the subquery would compare
+      // orders.customer_id with orders.id (always 0).
+      orderCount: sql<number>`(select count(*)::int from orders o where o.customer_id = "users"."id")`,
     })
     .from(users)
     .where(and(...conds))

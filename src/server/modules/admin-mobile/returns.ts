@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { orderItems, returnEvidence, returnItems, returns, stores, users, type Return } from '@/server/db/schema';
+import { orderItems, returnEvidence, returnItems, returns, stores, users } from '@/server/db/schema';
 import { requirePermission, type Actor } from '@/server/core/actor';
 import { notFound } from '@/server/core/errors';
 import { maskName } from './monitoring';

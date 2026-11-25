@@ -8,7 +8,7 @@ import { ADMIN_API_ROUTES } from '@/server/api/routes';
 import { totpCode } from '@/server/auth/totp';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { requestReturn } from '@/server/modules/postpurchase/returns';
-import { checkout, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
+import { checkout, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 
 vi.mock('server-only', () => ({}));
 
@@ -62,7 +62,8 @@ async function requestedReturn() {
   await shipIt(s.actor, so.id);
   await receiveAndRelease(c.actor, so.id);
   const [item] = await itemsOf(so.id);
-  const r = await requestReturn(c.actor, { sellerOrderId: so.id, reason: 'WRONG_ITEM', description: 'وصلني منتج مختلف عن اللي طلبته تمامًا', items: [{ orderItemId: item.id, quantity: 1 }] });
+  // A wrong-item claim needs photos (requestReturn refuses it without evidence).
+  const r = await requestReturn(c.actor, { sellerOrderId: so.id, reason: 'WRONG_ITEM', description: 'وصلني منتج مختلف عن اللي طلبته تمامًا', items: [{ orderItemId: item.id, quantity: 1 }] }, [{ data: await png('wrong'), name: 'wrong.png' }]);
   return { admin, s, c, order, so, item, ret: r };
 }
 

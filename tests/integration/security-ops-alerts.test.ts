@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
-import { and, eq, like, sql } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { and, eq, like, notLike, or } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import {
   alertStates,
@@ -26,9 +26,17 @@ import { makeAdmin, makeUser } from '../helpers/factory';
 
 const staff = () => makeAdmin(['SUPER_ADMIN']); // holds finance.view, settings.manage, audit.view
 const secRules = ['SEC_LEDGER_HEALTH', 'SEC_JOB_FAILED', 'SEC_JOB_STALE', 'SEC_LOGIN_FAILURE_SPIKE', 'SEC_ADMIN_ACTION_BURST'];
-const alertsTo = async (userId: string) =>
-  db.select().from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.event, 'OPS_ALERT')));
+const alertsTo = async (userId: string | null) =>
+  db.select().from(notifications).where(and(eq(notifications.userId, userId!), eq(notifications.event, 'OPS_ALERT')));
 const statesOf = async (rule: string) => db.select().from(alertStates).where(eq(alertStates.rule, rule));
+
+// These rules read GLOBAL state. Other test files leave failing job leases and login rate-limit counters in the shared
+// test database, which would add their own alerts here: neutralize those (test fixtures only; the append-only
+// financial and audit tables are never touched).
+beforeEach(async () => {
+  await db.update(jobLeases).set({ consecutiveFailures: 0 }).where(notLike(jobLeases.jobName, 'pkgsecops-%'));
+  await db.delete(rateLimits).where(or(like(rateLimits.key, 'login-id:%'), like(rateLimits.key, 'login-ip:%')));
+});
 
 afterEach(async () => {
   await db.delete(systemSettings).where(eq(systemSettings.key, 'alerts.rules'));

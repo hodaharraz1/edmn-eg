@@ -47,8 +47,9 @@ async function staffToken(roles: string[]) {
   expect((await call(adminMfaVerifyRoute, '/admin/auth/mfa/verify', { body: { code: totpCode(enroll.body.secret) }, token: s.token })).status).toBe(200);
   return s;
 }
-const reply = (token: string | undefined, ticketId: string, body: unknown, key: string | undefined = idem()) =>
-  call(replyRoute, '/admin/support/tickets/x/reply', { token, body, params: { ticketId }, idem: key });
+// null = send NO Idempotency-Key (undefined would fall back to the default and still send one).
+const reply = (token: string | undefined, ticketId: string, body: unknown, key: string | null = idem()) =>
+  call(replyRoute, '/admin/support/tickets/x/reply', { token, body, params: { ticketId }, idem: key ?? undefined });
 
 describe('Admin App — support reply (support.manage, idempotent, audited)', () => {
   it('posts a staff reply, notifies via the domain service, never closes, audits without the body, replays safely', async () => {
@@ -96,9 +97,9 @@ describe('Admin App — support reply (support.manage, idempotent, audited)', ()
     expect((await reply(preMfa.token, t.id, { body: 'مرحبا بك' })).status).toBe(401); // mfa_required
     const denied = await staffToken(['PAYMENT_REVIEWER']);
     expect((await reply(denied.token, t.id, { body: 'مرحبا بك' })).status).toBe(403);
-    expect((await reply(support.token, t.id, { body: 'مرحبا بك' }, undefined)).status).toBe(400);
-    expect((await reply(support.token, t.id, { body: 'x' })).status).toBe(400); // too short
-    expect((await reply(support.token, t.id, { body: 'ا'.repeat(4001) })).status).toBe(400); // too long
+    expect((await reply(support.token, t.id, { body: 'مرحبا بك' }, null)).status).toBe(400);
+    expect((await reply(support.token, t.id, { body: 'x' })).status).toBe(422); // too short (API validation = 422)
+    expect((await reply(support.token, t.id, { body: 'ا'.repeat(4001) })).status).toBe(422); // too long
     expect((await reply(support.token, t.id, { body: 'مرحبا بك', internal: true, status: 'CLOSED' })).status).toBeLessThan(500); // extra keys never act
     expect((await reply(support.token, randomUUID(), { body: 'مرحبا بك' })).status).toBe(404);
 

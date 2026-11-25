@@ -5,12 +5,9 @@ import { db } from '@/server/db/client';
 import {
   conversationMessageAttachments,
   conversationMessageReports,
-  conversationMessages,
-  conversations,
   deliveryEvidence,
   providerEvents,
   refundItems,
-  refunds,
   sellerOrders,
   withdrawalRequests,
 } from '@/server/db/schema';
@@ -30,17 +27,21 @@ import { checkout, itemsOf, makeAdmin, makeCustomer, makeProduct, makeSeller, pn
  * append-only, conversation binding immutability, report no-delete).
  */
 
+
+/** Drizzle wraps the PostgreSQL error: the SQLSTATE is on the error itself or on its cause. */
+const sqlstateOf = (e: unknown) => (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
+
 const rejected = async (label: string, run: () => Promise<unknown>, sqlstate = '42501') => {
   const err = await run().then(
     () => null,
     (e: unknown) => e,
   );
   expect(err, `${label}: the database accepted a forbidden mutation`).not.toBeNull();
-  expect((err as { code?: string })?.code, `${label}: unexpected SQLSTATE`).toBe(sqlstate); // 42501 = 0001/0008 guards; P0001 = 0007 messaging guards
+  expect(sqlstateOf(err), `${label}: unexpected SQLSTATE`).toBe(sqlstate); // 42501 = 0001/0008 guards; P0001 = 0007 messaging guards
 };
 
 /** One released purchase shared by the evidence tests. */
-async function releasedFlow() {
+async function releasedFlow(opts: { evidenceBeforeRelease?: boolean } = {}) {
   const admin = await makeAdmin(['SUPER_ADMIN']);
   const s = await makeSeller(admin);
   const p = await makeProduct(s.actor, admin, { price: 200_00 });
@@ -49,6 +50,8 @@ async function releasedFlow() {
   await submitAndConfirm(c, order.id, admin);
   const [so] = await db.select().from(sellerOrders).where(eq(sellerOrders.orderId, order.id));
   await shipIt(s.actor, so.id);
+  // Delivery evidence is accepted only while the order is in transit (SHIPPED / AWAITING_BUYER_RESPONSE).
+  if (opts.evidenceBeforeRelease) await submitDeliveryEvidence(s.actor, so.id, { carrierReference: 'CR-TEST-1', note: 'تسليم' }, [{ data: await png('ev'), name: 'ev.png' }]);
   await receiveAndRelease(c.actor, so.id);
   return { admin, s, c, order, so };
 }
@@ -58,7 +61,7 @@ describe('refund_items + refunds — append-only financial evidence (0008)', () 
     const { admin, so } = await releasedFlow();
     const [item] = await itemsOf(so.id);
     const refund = await db.transaction((tx) =>
-      requestRefundTx(tx, admin, { sellerOrderId: so.id, sourceType: 'ADMIN', sourceId: randomUUID(), items: [{ orderItemId: item.id, quantity: 1 }] }),
+      requestRefundTx(tx, admin, { sellerOrderId: so.id, sourceType: 'ADMIN', sourceId: randomUUID(), items: [{ orderItemId: item.id, quantity: 1 }], reason: 'اختبار حارس سجل الاسترداد' }),
     );
     const [ri] = await db.select().from(refundItems).where(eq(refundItems.refundId, refund.id));
     expect(ri, 'item refund did not record refund_items').toBeTruthy();
@@ -70,8 +73,7 @@ describe('refund_items + refunds — append-only financial evidence (0008)', () 
 
 describe('delivery_evidence — append-only (0008)', () => {
   it('refuses UPDATE and DELETE on submitted delivery evidence', async () => {
-    const { s, so } = await releasedFlow();
-    await submitDeliveryEvidence(s.actor, so.id, { carrierReference: 'CR-TEST-1', note: 'تسليم' }, [{ data: await png('ev'), name: 'ev.png' }]);
+    const { so } = await releasedFlow({ evidenceBeforeRelease: true });
     const [ev] = await db.select().from(deliveryEvidence).where(eq(deliveryEvidence.sellerOrderId, so.id));
     expect(ev, 'delivery evidence was not recorded').toBeTruthy();
     await rejected('delivery_evidence UPDATE', () => db.execute(sql`update delivery_evidence set note = 'tampered' where id = ${ev.id}`));
@@ -94,7 +96,7 @@ describe('withdrawal destination snapshot — frozen at approval (0008)', () => 
   it('refuses changing the destination snapshot once the approval froze it', async () => {
     const { s, so } = await releasedFlow();
     void so;
-    const { withdrawal: w } = await requestWithdrawal(s.actor, { amount: 30_00, clientKey: randomUUID() });
+    const { withdrawal: w } = await requestWithdrawal(s.actor, { amount: 150_00, clientKey: randomUUID() } /* ≥ withdrawals.minimumAmount (100 EGP) */);
     await approveWithdrawal(await makeAdmin(['FINANCE_CHECKER']), w.id);
     const [after] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, w.id));
     expect(after.destinationSnapshot, 'approval did not freeze a destination snapshot').not.toBeNull();

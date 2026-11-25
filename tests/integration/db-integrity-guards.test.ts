@@ -22,13 +22,17 @@ import { checkout, makeAdmin, makeCustomer, makeProduct, makeSeller, receiveAndR
  * immutability (snapshot is only set later in the payout path), messaging guards.
  */
 
+
+/** Drizzle wraps the PostgreSQL error: the SQLSTATE is on the error itself or on its cause. */
+const sqlstateOf = (e: unknown) => (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
+
 const rejected = async (label: string, run: () => Promise<unknown>, sqlstate = '42501') => {
   const err = await run().then(
     () => null,
     (e: unknown) => e,
   );
   expect(err, `${label}: the database accepted a forbidden mutation`).not.toBeNull();
-  if (sqlstate) expect((err as { code?: string })?.code, `${label}: unexpected SQLSTATE`).toBe(sqlstate);
+  if (sqlstate) expect(sqlstateOf(err), `${label}: unexpected SQLSTATE`).toBe(sqlstate);
 };
 
 /** Synthetic, fully-valid approval row (INSERT is allowed; the guard blocks UPDATE/DELETE only). */
@@ -107,10 +111,11 @@ describe('journal_entries_require_approval — every journal entry executes a va
       db.transaction(async (tx) => {
         const rows = await tx.execute(sql`
           insert into journal_entries (entry_type, source_type, source_id, idempotency_key, description, approval_id)
-          values ('TEST_ENTRY', 'test', ${randomUUID()}, ${randomUUID()}, 'اختبار', ${a.id}) returning id`), 'P0001';
+          values ('TEST_ENTRY', 'test', ${randomUUID()}, ${randomUUID()}, 'اختبار', ${a.id}) returning id`);
         const entryId = (rows.rows[0] as { id: string }).id;
         await tx.execute(sql`insert into journal_lines (entry_id, account_id, debit) values (${entryId}, ${account.id}, 100)`);
       }),
+      'P0001',
     );
   });
 });

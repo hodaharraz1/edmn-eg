@@ -13,7 +13,7 @@ import { getSetting } from '@/server/modules/settings';
  * exposed here either. Alerts never change business state; this endpoint only reads.
  */
 
-const ALERT_STAGES = ['PRE_DEADLINE', 'DUE', 'OVERDUE'] as const;
+export const ALERT_STAGES = ['PRE_DEADLINE', 'DUE', 'OVERDUE'] as const;
 export type AlertInboxStage = (typeof ALERT_STAGES)[number];
 
 export async function alertsInbox(actor: Actor, opts: { stage?: AlertInboxStage; rule?: string; page: number }) {

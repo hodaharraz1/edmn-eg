@@ -12,7 +12,6 @@ import {
   payments,
   sellerOrders,
   statusHistory,
-  withdrawalRequests,
 } from '@/server/db/schema';
 import { approveWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
 import { checkout, makeAdmin, makeCustomer, makeProduct, makeSeller, receiveAndRelease, shipIt, submitAndConfirm } from '../helpers/factory';
@@ -34,13 +33,16 @@ import { checkout, makeAdmin, makeCustomer, makeProduct, makeSeller, receiveAndR
  */
 
 /** Runs a forbidden statement and returns the error it must raise. */
-async function forbidden(label: string, statement: ReturnType<typeof sql>, sqlstate = '42501') {
+/** Drizzle wraps the PostgreSQL error: the SQLSTATE is on the error itself or on its cause. */
+const sqlstateOf = (e: unknown) => (e as { code?: string })?.code ?? (e as { cause?: { code?: string } })?.cause?.code;
+
+async function forbidden(label: string, statement: ReturnType<typeof sql>, sqlstate: string | string[] = '42501') {
   const err = await db.execute(statement).then(
     () => null,
     (e: unknown) => e,
   );
   expect(err, `${label}: the database accepted a forbidden mutation`).not.toBeNull();
-  expect((err as { code?: string })?.code, `${label}: unexpected SQLSTATE`).toBe(sqlstate); // insufficient_privilege from the 0001/0008 guards
+  expect([sqlstate].flat(), `${label}: unexpected SQLSTATE ${sqlstateOf(err)}`).toContain(sqlstateOf(err)); // insufficient_privilege from the 0001/0008 guards
   return err;
 }
 
@@ -89,11 +91,15 @@ describe('DB integrity triggers — append-only, no-delete, no-truncate on finan
     await forbidden('ledger_accounts DELETE', sql`delete from ledger_accounts where id = ${ledgerAccount.id}`);
 
     // ── No-TRUNCATE guards ──
-    await forbidden('journal_entries TRUNCATE', sql`truncate journal_entries`);
-    await forbidden('journal_lines TRUNCATE', sql`truncate journal_lines`);
-    await forbidden('audit_logs TRUNCATE', sql`truncate audit_logs`);
-    await forbidden('status_history TRUNCATE', sql`truncate status_history`);
-    await forbidden('financial_approvals TRUNCATE', sql`truncate financial_approvals`);
+    // PostgreSQL refuses TRUNCATE of a table referenced by foreign keys (0A000) BEFORE statement triggers run, so the
+    // refusal alone does not prove the guard: also assert the enabled BEFORE TRUNCATE trigger in the catalog. (A
+    // TRUNCATE ... CASCADE probe would wipe referencing tables if a guard were ever missing: not used.)
+    for (const table of ['journal_entries', 'journal_lines', 'audit_logs', 'status_history', 'financial_approvals']) {
+      await forbidden(`${table} TRUNCATE`, sql.raw(`truncate ${table}`), ['42501', '0A000']);
+      const trig = await db.execute(sql`select t.tgname from pg_trigger t join pg_class c on c.oid = t.tgrelid
+        where c.relname = ${table} and not t.tgisinternal and t.tgenabled = 'O' and (t.tgtype & 32) = 32`);
+      expect(trig.rows.length, `${table}: no enabled BEFORE TRUNCATE guard trigger`).toBeGreaterThan(0);
+    }
 
     // ── The forbidden attempts really did fail (nothing was tampered with) ──
     const [journalAfter] = await db.select().from(journalEntries).where(eq(journalEntries.id, journal.id));
