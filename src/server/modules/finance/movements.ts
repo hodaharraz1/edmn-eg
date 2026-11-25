@@ -57,6 +57,8 @@ export async function requestMovement(
   const reason = input.reason?.trim();
   if (!reason || reason.length < 10) throw validation('اكتب سبب الطلب (10 أحرف على الأقل)');
   if (!Number.isSafeInteger(input.amount) || input.amount < 0) throw validation('المبلغ غير صحيح');
+  // Writing a COD shortfall off turns courier money into a platform expense: BOTH people need finance.release.
+  if (kind === 'COD_SHORTAGE_RESOLUTION' && input.params?.mode === 'WRITTEN_OFF') requirePermission(actor, 'finance.release');
   return db.transaction(async (tx) => {
     const [open] = await tx
       .select()
@@ -119,6 +121,7 @@ export async function rejectMovementRequest(actor: Actor, requestId: string, rea
     const [req] = await tx.select().from(financialMovementRequests).where(eq(financialMovementRequests.id, requestId)).for('update');
     if (!req) throw notFound('الطلب');
     if (!CHECKER_PERMISSIONS[req.kind].some((p) => hasPermission(actor, p))) throw forbidden('رفض الطلب متاح لصاحب صلاحية الاعتماد لنفس نوع الحركة فقط');
+    if (req.kind === 'COD_SHORTAGE_RESOLUTION' && (req.params as Record<string, unknown> | null)?.mode === 'WRITTEN_OFF' && !hasPermission(actor, 'finance.release')) throw forbidden('شطب عجز التحصيل يحتاج صلاحية الإفراج المالي (finance.release)');
     if (req.status !== 'PENDING') throw invalidState('تم البت في الطلب بالفعل');
     if (req.requestedBy === actor.userId) throw forbidden('المنشئ يلغي طلبه ولا يرفضه');
     await tx.update(financialMovementRequests).set({ status: 'REJECTED', decidedBy: actor.userId, decidedAt: new Date(), decisionReason: reason.trim() }).where(eq(financialMovementRequests.id, req.id));

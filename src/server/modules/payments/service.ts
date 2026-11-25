@@ -333,6 +333,8 @@ export async function resolveCodShortfall(actor: Actor, shortfallId: string, inp
     const mreq = await takeMovementRequest(tx, actor, 'COD_SHORTAGE_RESOLUTION', sf.id, sf.shortfallAmount);
     const mode = (mreq.params as Record<string, unknown> | null)?.mode;
     if (mode !== 'RECOVERED' && mode !== 'WRITTEN_OFF') throw invalidState('طلب التسوية لا يحدد طريقة صحيحة (استرداد أو شطب)');
+    // Write-off (expense) needs finance.release on the approver too; the requester was checked in requestMovement.
+    if (mode === 'WRITTEN_OFF') requirePermission(actor, 'finance.release');
     const approval = await grantApproval(tx, actor, {
       dualControl: { requestedBy: mreq.requestedBy },
       action: 'COD_SHORTAGE_RESOLUTION',

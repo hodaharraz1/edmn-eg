@@ -97,7 +97,7 @@ describe('COD-02 — courier statement remittance and shortfall', () => {
     await recordCodRemittance(admin, pay.id, { reason: 'تسجيل كشف شركة الشحن رقم ١٠٠', actualAmount: actual, statementRef: 'ST-100' });
     const [sf] = await db.select().from(codRemittanceShortfalls).where(eq(codRemittanceShortfalls.paymentId, pay.id));
 
-    await makerRequest('COD_SHORTAGE_RESOLUTION', sf.id, 700, { maker: await makeAdmin(['FINANCE_OPERATOR', 'PAYMENT_REVIEWER']), params: { mode: 'WRITTEN_OFF' } });
+    await makerRequest('COD_SHORTAGE_RESOLUTION', sf.id, 700, { maker: await makeAdmin(['FINANCE_CHECKER']), params: { mode: 'WRITTEN_OFF' } }); // write-off: the maker needs finance.release
     const r = await resolveCodShortfall(admin, sf.id, { reason: 'شركة الشحن رفضت السداد — شطب معتمد' });
     expect(r).toMatchObject({ alreadyResolved: false, resolution: 'WRITTEN_OFF' });
     const [re] = await db.select().from(journalEntries).where(and(eq(journalEntries.sourceType, 'cod_remittance_shortfall'), eq(journalEntries.sourceId, sf.id)));

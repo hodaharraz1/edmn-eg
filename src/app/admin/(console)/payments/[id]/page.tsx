@@ -87,7 +87,7 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
                   <SubmitButton>تنفيذ تسوية العجز (حسب طريقة الطلب)</SubmitButton>
                 </ActionForm>
               </MovementPanel>
-              <p className="text-xs text-muted">المنشئ يختار الطريقة في طلبه: استرداد نقدي من شركة الشحن لاحقًا، أو شطب كمصروف تسوية. المعتمد ينفذ طريقة الطلب نفسها.</p>
+              <p className="text-xs text-muted">المنشئ يختار الطريقة في طلبه: استرداد نقدي من شركة الشحن لاحقًا، أو شطب كمصروف تسوية. المعتمد ينفذ طريقة الطلب نفسها. الشطب يحتاج صلاحية الإفراج المالي (finance.release) للمنشئ والمعتمد معًا.</p>
             </>
           )}
         </section>
