@@ -166,4 +166,14 @@ describe('PRIVACY-01 — marketing export', () => {
     await expect(executeMarketingExport(other, req.id)).rejects.toThrow();
     await expect(downloadMarketingExport(other, req.id)).rejects.toThrow();
   });
+  it('SEC-175: downloading the encrypted export needs a fresh step-up', async () => {
+    const requester = await makeAdmin();
+    const approver = await makeAdmin();
+    const { export: req } = await requestMarketingExport(requester, { reason: 'اختبار خطوة التحقق الإضافية', confirmed: true });
+    await executeMarketingExport(approver, req.id);
+    await expect(downloadMarketingExport({ ...approver, stepUpAt: null }, req.id)).rejects.toThrow();
+    await expect(downloadMarketingExport({ ...approver, stepUpAt: new Date(Date.now() - 24 * 3600_000) }, req.id)).rejects.toThrow();
+    const ok = await downloadMarketingExport(approver, req.id);
+    expect(ok.fileName).toBeTruthy();
+  });
 });

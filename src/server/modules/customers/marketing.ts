@@ -143,6 +143,7 @@ export async function executeMarketingExport(actor: Actor, exportId: string) {
 /** Encrypted file download (audited). Only the one-time passphrase opens it. */
 export async function downloadMarketingExport(actor: Actor, exportId: string) {
   requirePermission(actor, 'customers.exportMarketing');
+  requireStepUp(actor); // SEC-175: the file holds customer contact data, so a fresh step-up is needed to download it
   const [row] = await db.select().from(marketingExports).where(eq(marketingExports.id, exportId));
   if (!row || row.status !== 'EXECUTED' || !row.fileEnc || !row.fileName) throw notFound('الملف');
   await db.transaction(async (tx) => {
