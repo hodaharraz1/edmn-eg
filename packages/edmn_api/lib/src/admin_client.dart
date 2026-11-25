@@ -63,6 +63,26 @@ class AdminApi {
   Future<void> addDisputeNote(String disputeId, String body, {required String idempotencyKey}) => client.sendJson('POST', fillPath(AdminApiPaths.adminAddDisputeNote.path, {'disputeId': disputeId}),
       body: AdminAddDisputeNoteRequest(body: body).toJson(), idempotencyKey: idempotencyKey);
 
+  // Batch I02 (read-only mirrors of the console pages; permission enforced server-side on every call).
+  Future<AdminListReturnsResponse> returns({String tab = 'pending', String? q, int page = 1}) async => AdminListReturnsResponse.fromJson(
+      await client.getJson(AdminApiPaths.adminListReturns.path, query: {'tab': tab, if (q != null && q.trim().isNotEmpty) 'q': q.trim(), 'page': '$page'}));
+  Future<AdminReturnDetailResponse> returnDetail(String id) async =>
+      AdminReturnDetailResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminReturnDetail.path, {'returnId': id})));
+  Future<AdminListAlertsResponse> alerts({String? stage, String? rule, int page = 1}) async => AdminListAlertsResponse.fromJson(
+      await client.getJson(AdminApiPaths.adminListAlerts.path, query: {'stage': ?stage, 'rule': ?rule, 'page': '$page'}));
+  Future<AdminListCustomersResponse> customers({String? q, int page = 1}) async => AdminListCustomersResponse.fromJson(
+      await client.getJson(AdminApiPaths.adminListCustomers.path, query: {if (q != null && q.trim().isNotEmpty) 'q': q.trim(), 'page': '$page'}));
+  Future<AdminCustomerDetailResponse> customer(String userId) async =>
+      AdminCustomerDetailResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminCustomerDetail.path, {'userId': userId})));
+  Future<AdminListSupportTicketsResponse> supportTickets({String tab = 'open', int page = 1}) async =>
+      AdminListSupportTicketsResponse.fromJson(await client.getJson(AdminApiPaths.adminListSupportTickets.path, query: {'tab': tab, 'page': '$page'}));
+  Future<AdminSupportTicketDetailResponse> supportTicket(String id) async =>
+      AdminSupportTicketDetailResponse.fromJson(await client.getJson(fillPath(AdminApiPaths.adminSupportTicketDetail.path, {'ticketId': id})));
+
+  /// The one support write on mobile: a staff reply (never internal, never closes the ticket). One key per intent.
+  Future<void> replySupportTicket(String ticketId, String body, {required String idempotencyKey}) => client.sendJson('POST', fillPath(AdminApiPaths.adminReplySupportTicket.path, {'ticketId': ticketId}),
+      body: AdminReplySupportTicketRequest(body: body).toJson(), idempotencyKey: idempotencyKey);
+
   Future<Profile> me() async => Profile.fromJson(await client.getJson(AdminApiPaths.adminGetMe.path));
   Future<AdminListMySessionsResponse> mySessions() async => AdminListMySessionsResponse.fromJson(await client.getJson(AdminApiPaths.adminListMySessions.path));
   Future<void> revokeSession(String sessionId, {required String idempotencyKey}) =>

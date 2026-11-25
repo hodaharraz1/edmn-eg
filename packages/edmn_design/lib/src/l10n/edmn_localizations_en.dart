@@ -3481,4 +3481,213 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'This order was cancelled. Do not ship it.';
+
+  @override
+  String get adminReturns => 'Returns';
+
+  @override
+  String get adminAlertsInbox => 'Operational alerts';
+
+  @override
+  String get adminCustomers => 'Customers';
+
+  @override
+  String get adminSupportInbox => 'Support tickets';
+
+  @override
+  String get adminTabReturnsPending => 'Awaiting decision';
+
+  @override
+  String get adminTabReturnsActive => 'In progress';
+
+  @override
+  String get adminTabReturnsDone => 'Finished or escalated';
+
+  @override
+  String get adminSearchReturns => 'Search by return number';
+
+  @override
+  String get adminSearchCustomers => 'Search by name, email or phone';
+
+  @override
+  String get adminTabAllAlerts => 'All';
+
+  @override
+  String get adminStageDue => 'Due';
+
+  @override
+  String get adminStageOverdue => 'Overdue';
+
+  @override
+  String get adminStagePre => 'Before the deadline';
+
+  @override
+  String get adminTabAllCustomers => 'All customers';
+
+  @override
+  String get adminStatusReturnRequested => 'Return requested';
+
+  @override
+  String get adminStatusReturnInTransit => 'On its way back';
+
+  @override
+  String get adminStatusReturnReceived => 'Received by the seller';
+
+  @override
+  String get adminStatusReturnInspection => 'Being inspected';
+
+  @override
+  String get adminStatusRefundPending => 'Refund awaiting approval';
+
+  @override
+  String get adminStatusInProgress => 'In progress';
+
+  @override
+  String get adminStatusWaitingCustomer => 'Waiting for the customer';
+
+  @override
+  String get adminStatusWaitingSeller => 'Waiting for the seller';
+
+  @override
+  String get adminStatusEscalated => 'Escalated';
+
+  @override
+  String get adminStatusSuspended => 'Suspended';
+
+  @override
+  String get adminRetNextRequested =>
+      'Review and approve or reject (the seller in the app, or staff on the web console)';
+
+  @override
+  String get adminRetNextApproved =>
+      'Waiting for the customer to send the item back';
+
+  @override
+  String get adminRetNextInTransit => 'Record that the return arrived';
+
+  @override
+  String get adminRetNextReceived => 'Start the inspection';
+
+  @override
+  String get adminRetNextInspection =>
+      'Decide the refund (finance pays it with two-person approval)';
+
+  @override
+  String get adminRetNextRefundPending =>
+      'Finance approves and pays the refund (two people)';
+
+  @override
+  String get adminRetNextClosed => 'Nothing — closed';
+
+  @override
+  String get adminRetNextDisputed => 'Handled through the dispute';
+
+  @override
+  String get adminFieldNextStep => 'Next step';
+
+  @override
+  String get adminFieldRefund => 'Refund amount';
+
+  @override
+  String get adminFieldEvidenceCount => 'Evidence photos';
+
+  @override
+  String get adminFieldStatutory => 'Within the statutory window';
+
+  @override
+  String get adminFieldDecision => 'Decision reason';
+
+  @override
+  String get adminFieldInspection => 'Inspection note';
+
+  @override
+  String get adminFieldEmail => 'Email';
+
+  @override
+  String get adminFieldPhone => 'Mobile';
+
+  @override
+  String get adminVerified => 'verified';
+
+  @override
+  String get adminNotVerified => 'not verified';
+
+  @override
+  String get adminFieldLastLogin => 'Last sign-in';
+
+  @override
+  String get adminFieldJoined => 'Joined';
+
+  @override
+  String get adminSectionAddresses => 'Addresses (city and governorate only)';
+
+  @override
+  String get adminSectionActivity => 'Activity';
+
+  @override
+  String get adminSectionRecentOrders => 'Recent orders';
+
+  @override
+  String get adminCountOrders => 'Orders';
+
+  @override
+  String get adminCountReturns => 'Returns';
+
+  @override
+  String get adminCountDisputes => 'Disputes';
+
+  @override
+  String get adminCountTickets => 'Support tickets';
+
+  @override
+  String get adminCountDeals => 'Protected deals';
+
+  @override
+  String get adminCountReviews => 'Reviews';
+
+  @override
+  String get adminCustomerManageOnWeb =>
+      'Changing a customer\'s status is done on the web console only.';
+
+  @override
+  String get adminReturnsOnWeb =>
+      'Return and refund decisions are not made in this app: the seller decides in their app, and finance approves and pays refunds on the web console with two-person approval.';
+
+  @override
+  String get adminAlertsOnWeb =>
+      'Alert rules are tuned on the web console. This list is for follow-up only.';
+
+  @override
+  String get adminAlertRulesSection => 'Active rules';
+
+  @override
+  String adminAlertSent(int count) {
+    return 'Sent $count times';
+  }
+
+  @override
+  String get adminFieldPriority => 'Priority';
+
+  @override
+  String get adminFromSeller => 'From a seller';
+
+  @override
+  String get adminAttachment => 'Attachment';
+
+  @override
+  String get adminReply => 'Reply to the customer';
+
+  @override
+  String get adminReplyHint =>
+      'The customer sees the reply from the support team and is notified. A reply never closes the ticket and takes no attachments.';
+
+  @override
+  String get adminReplySend => 'Send reply';
+
+  @override
+  String get adminReplySent => 'Reply sent';
+
+  @override
+  String get adminSupportOnWeb =>
+      'Assignment, status changes and internal notes are done on the web console.';
 }

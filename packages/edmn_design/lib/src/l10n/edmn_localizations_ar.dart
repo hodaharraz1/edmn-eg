@@ -3446,4 +3446,212 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'تم إلغاء الطلب. لا تقم بشحنه.';
+
+  @override
+  String get adminReturns => 'المرتجعات';
+
+  @override
+  String get adminAlertsInbox => 'التنبيهات التشغيلية';
+
+  @override
+  String get adminCustomers => 'العملاء';
+
+  @override
+  String get adminSupportInbox => 'تذاكر الدعم';
+
+  @override
+  String get adminTabReturnsPending => 'بانتظار القرار';
+
+  @override
+  String get adminTabReturnsActive => 'قيد التنفيذ';
+
+  @override
+  String get adminTabReturnsDone => 'منتهية أو محوّلة';
+
+  @override
+  String get adminSearchReturns => 'ابحث برقم المرتجع';
+
+  @override
+  String get adminSearchCustomers => 'ابحث بالاسم أو البريد أو الموبايل';
+
+  @override
+  String get adminTabAllAlerts => 'الكل';
+
+  @override
+  String get adminStageDue => 'مستحق';
+
+  @override
+  String get adminStageOverdue => 'متأخر';
+
+  @override
+  String get adminStagePre => 'قبل الموعد';
+
+  @override
+  String get adminTabAllCustomers => 'كل العملاء';
+
+  @override
+  String get adminStatusReturnRequested => 'طلب إرجاع جديد';
+
+  @override
+  String get adminStatusReturnInTransit => 'في الطريق للبائع';
+
+  @override
+  String get adminStatusReturnReceived => 'استلمه البائع';
+
+  @override
+  String get adminStatusReturnInspection => 'قيد الفحص';
+
+  @override
+  String get adminStatusRefundPending => 'الاسترداد بانتظار الاعتماد';
+
+  @override
+  String get adminStatusInProgress => 'قيد المعالجة';
+
+  @override
+  String get adminStatusWaitingCustomer => 'بانتظار العميل';
+
+  @override
+  String get adminStatusWaitingSeller => 'بانتظار البائع';
+
+  @override
+  String get adminStatusEscalated => 'محوّلة لمستوى أعلى';
+
+  @override
+  String get adminStatusSuspended => 'موقوف';
+
+  @override
+  String get adminRetNextRequested =>
+      'مراجعة الطلب وقبوله أو رفضه (البائع في تطبيقه أو الإدارة من لوحة الويب)';
+
+  @override
+  String get adminRetNextApproved => 'بانتظار شحن المنتج من العميل';
+
+  @override
+  String get adminRetNextInTransit => 'تسجيل استلام المرتجع';
+
+  @override
+  String get adminRetNextReceived => 'بدء الفحص';
+
+  @override
+  String get adminRetNextInspection =>
+      'قرار الاسترداد (يصرفه فريق المالية بموافقة شخصين)';
+
+  @override
+  String get adminRetNextRefundPending =>
+      'اعتماد وصرف الاسترداد من فريق المالية (شخصان)';
+
+  @override
+  String get adminRetNextClosed => 'لا شيء — مغلق';
+
+  @override
+  String get adminRetNextDisputed => 'يُتابع من خلال النزاع';
+
+  @override
+  String get adminFieldNextStep => 'الخطوة التالية';
+
+  @override
+  String get adminFieldRefund => 'مبلغ الاسترداد';
+
+  @override
+  String get adminFieldEvidenceCount => 'صور الإثبات';
+
+  @override
+  String get adminFieldStatutory => 'ضمن المدة القانونية';
+
+  @override
+  String get adminFieldDecision => 'سبب القرار';
+
+  @override
+  String get adminFieldInspection => 'ملاحظة الفحص';
+
+  @override
+  String get adminFieldEmail => 'البريد الإلكتروني';
+
+  @override
+  String get adminFieldPhone => 'الموبايل';
+
+  @override
+  String get adminVerified => 'موثّق';
+
+  @override
+  String get adminNotVerified => 'غير موثّق';
+
+  @override
+  String get adminFieldLastLogin => 'آخر دخول';
+
+  @override
+  String get adminFieldJoined => 'تاريخ التسجيل';
+
+  @override
+  String get adminSectionAddresses => 'العناوين (المدينة والمحافظة فقط)';
+
+  @override
+  String get adminSectionActivity => 'النشاط';
+
+  @override
+  String get adminSectionRecentOrders => 'أحدث الطلبات';
+
+  @override
+  String get adminCountOrders => 'الطلبات';
+
+  @override
+  String get adminCountReturns => 'المرتجعات';
+
+  @override
+  String get adminCountDisputes => 'النزاعات';
+
+  @override
+  String get adminCountTickets => 'تذاكر الدعم';
+
+  @override
+  String get adminCountDeals => 'الصفقات المحمية';
+
+  @override
+  String get adminCountReviews => 'التقييمات';
+
+  @override
+  String get adminCustomerManageOnWeb =>
+      'تغيير حالة العميل يتم من لوحة الويب فقط.';
+
+  @override
+  String get adminReturnsOnWeb =>
+      'قرارات المرتجعات والاسترداد لا تتم من هذا التطبيق: البائع يقرر من تطبيقه، والاسترداد يعتمده ويصرفه فريق المالية من لوحة الويب بموافقة شخصين.';
+
+  @override
+  String get adminAlertsOnWeb =>
+      'قواعد التنبيهات تُضبط من لوحة الويب. هذه القائمة للمتابعة فقط.';
+
+  @override
+  String get adminAlertRulesSection => 'القواعد المفعّلة';
+
+  @override
+  String adminAlertSent(int count) {
+    return 'أُرسل $count مرة';
+  }
+
+  @override
+  String get adminFieldPriority => 'الأولوية';
+
+  @override
+  String get adminFromSeller => 'من بائع';
+
+  @override
+  String get adminAttachment => 'مرفق';
+
+  @override
+  String get adminReply => 'الرد على العميل';
+
+  @override
+  String get adminReplyHint =>
+      'يظهر الرد للعميل باسم فريق الدعم ويصله إشعار. الرد لا يغلق التذكرة ولا يقبل مرفقات.';
+
+  @override
+  String get adminReplySend => 'إرسال الرد';
+
+  @override
+  String get adminReplySent => 'تم إرسال الرد';
+
+  @override
+  String get adminSupportOnWeb =>
+      'الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.';
 }

@@ -54,13 +54,44 @@ typedef MonitorLoader = Future<MonitorPage> Function(AdminApi api, String tab, S
       'PARTIALLY_COMPLETED' => (t.statusPartiallyCompleted, EdmnTone.success),
       'CLOSED_UNFULFILLED' => (t.statusClosedUnfulfilled, EdmnTone.danger),
       'CANCELLED' => (t.statusCancelled, EdmnTone.danger),
+      // Returns
+      'REQUESTED' => (t.adminStatusReturnRequested, EdmnTone.warning),
+      'RETURN_IN_TRANSIT' => (t.adminStatusReturnInTransit, EdmnTone.info),
+      'RECEIVED' => (t.adminStatusReturnReceived, EdmnTone.info),
+      'INSPECTION' => (t.adminStatusReturnInspection, EdmnTone.info),
+      'REFUND_PENDING' => (t.adminStatusRefundPending, EdmnTone.warning),
+      // Support tickets and customers
+      'IN_PROGRESS' => (t.adminStatusInProgress, EdmnTone.info),
+      'WAITING_CUSTOMER' => (t.adminStatusWaitingCustomer, EdmnTone.warning),
+      'WAITING_SELLER' => (t.adminStatusWaitingSeller, EdmnTone.warning),
+      'ESCALATED' => (t.adminStatusEscalated, EdmnTone.danger),
+      'SUSPENDED' => (t.adminStatusSuspended, EdmnTone.danger),
+      // Alert stages
+      'PRE_DEADLINE' => (t.adminStagePre, EdmnTone.info),
+      'DUE' => (t.adminStageDue, EdmnTone.warning),
+      'OVERDUE' => (t.adminStageOverdue, EdmnTone.danger),
       _ => (s, EdmnTone.neutral),
+    };
+
+/// What happens next on a return, from its server status (the server's own text is English and is not shown).
+String adminReturnNextStep(EdmnLocalizations t, String status) => switch (status) {
+      'REQUESTED' || 'UNDER_REVIEW' => t.adminRetNextRequested,
+      'APPROVED' => t.adminRetNextApproved,
+      'RETURN_IN_TRANSIT' => t.adminRetNextInTransit,
+      'RECEIVED' => t.adminRetNextReceived,
+      'INSPECTION' => t.adminRetNextInspection,
+      'REFUND_PENDING' => t.adminRetNextRefundPending,
+      'DISPUTED' => t.adminRetNextDisputed,
+      _ => t.adminRetNextClosed,
     };
 
 /// The six screens: title, server permission (the home menu shows an entry only when the profile carries it; the server
 /// enforces it on every call regardless), tabs and the loader mapping the typed response to rows.
 class MonitorSpec {
-  const MonitorSpec({required this.path, required this.permission, required this.icon, required this.title, required this.tabs, required this.load, this.searchHint, this.hasDetail = true});
+  const MonitorSpec({required this.path, required this.permission, this.alsoPermission, required this.icon, required this.title, required this.tabs, required this.load, this.searchHint, this.hasDetail = true});
+  /// A second permission that also opens the screen (the console page accepts either).
+  final String? alsoPermission;
+  bool allowedFor(List<String> permissions) => permissions.contains(permission) || (alsoPermission != null && permissions.contains(alsoPermission));
   /// Shows a search field (server-side search) when set.
   final String Function(EdmnLocalizations)? searchHint;
   final bool hasDetail;
@@ -90,6 +121,42 @@ Future<MonitorPage> _audit(AdminApi api, String actorType, String action, {int? 
         MonitorRow(id: '${a.id}', title: a.action, subtitle: '${a.actor ?? a.actorType} · ${a.entityType}${a.channel == null ? '' : ' · ${a.channel}'}', status: a.actorType, at: a.at),
     ],
     next: r.nextBefore == null ? null : () => _audit(api, actorType, action, before: r.nextBefore),
+  );
+}
+
+Future<MonitorPage> _returns(AdminApi api, String tab, String q, {int page = 1}) async {
+  final r = await api.returns(tab: tab, q: q, page: page);
+  return MonitorPage(
+    [for (final x in r.items) MonitorRow(id: x.id, title: '#${x.number}', subtitle: [x.store, x.customer, x.reason].whereType<String>().join(' · '), status: x.status, amount: x.refundAmount, at: x.createdAt)],
+    next: r.hasMore ? () => _returns(api, tab, q, page: page + 1) : null,
+  );
+}
+
+Future<MonitorPage> _alerts(AdminApi api, String tab, {int page = 1}) async {
+  final r = await api.alerts(stage: tab == 'all' ? null : tab, page: page);
+  final titles = {for (final rule in r.rules) rule.code: rule.title};
+  return MonitorPage(
+    [for (final a in r.items) MonitorRow(id: a.id, title: titles[a.rule] ?? a.rule, subtitle: [a.ref, a.severity].whereType<String>().join(' · '), status: a.stage, badge: a.sentCount > 1 ? 'sent-${a.sentCount}' : null, at: a.lastSentAt ?? a.updatedAt)],
+    next: r.hasMore ? () => _alerts(api, tab, page: page + 1) : null,
+  );
+}
+
+Future<MonitorPage> _customers(AdminApi api, String q, {int page = 1}) async {
+  final r = await api.customers(q: q, page: page);
+  return MonitorPage(
+    [for (final c in r.items) MonitorRow(id: c.id, title: c.name, subtitle: [c.email, c.phone, '${c.orderCount}'].whereType<String>().join(' · '), status: c.status, at: c.createdAt)],
+    next: r.hasMore ? () => _customers(api, q, page: page + 1) : null,
+  );
+}
+
+Future<MonitorPage> _support(AdminApi api, String tab, {int page = 1}) async {
+  final r = await api.supportTickets(tab: tab, page: page);
+  return MonitorPage(
+    [
+      for (final x in r.items)
+        MonitorRow(id: x.id, title: '#${x.number} · ${x.subject}', subtitle: [x.requester, x.type, x.priority].whereType<String>().join(' · '), status: x.status, badge: x.assignedToMe ? 'mine' : null, at: x.updatedAt),
+    ],
+    next: r.hasMore ? () => _support(api, tab, page: page + 1) : null,
   );
 }
 
@@ -156,6 +223,42 @@ final monitorSpecs = <MonitorSpec>[
     searchHint: (t) => t.adminFilterAction,
     hasDetail: false,
     load: (api, tab, q) => _audit(api, tab, q),
+  ),
+  MonitorSpec(
+    path: '/monitor/returns',
+    permission: 'returns.manage',
+    icon: Icons.assignment_return_outlined,
+    title: (t) => t.adminReturns,
+    tabs: [('pending', (t) => t.adminTabReturnsPending), ('action', (t) => t.adminTabReturnsActive), ('done', (t) => t.adminTabReturnsDone)],
+    searchHint: (t) => t.adminSearchReturns,
+    load: (api, tab, q) => _returns(api, tab, q),
+  ),
+  MonitorSpec(
+    path: '/monitor/customers',
+    permission: 'customers.view',
+    icon: Icons.people_alt_outlined,
+    title: (t) => t.adminCustomers,
+    tabs: [('all', (t) => t.adminTabAllCustomers)],
+    searchHint: (t) => t.adminSearchCustomers,
+    load: (api, _, q) => _customers(api, q),
+  ),
+  MonitorSpec(
+    path: '/monitor/support',
+    permission: 'support.manage',
+    icon: Icons.support_agent_outlined,
+    title: (t) => t.adminSupportInbox,
+    tabs: [('open', (t) => t.adminTabOpen), ('mine', (t) => t.adminTabMine), ('closed', (t) => t.adminTabClosed)],
+    load: (api, tab, _) => _support(api, tab),
+  ),
+  MonitorSpec(
+    path: '/monitor/alerts',
+    permission: 'notifications.manage',
+    alsoPermission: 'settings.manage',
+    icon: Icons.notification_important_outlined,
+    title: (t) => t.adminAlertsInbox,
+    tabs: [('all', (t) => t.adminTabAllAlerts), ('OVERDUE', (t) => t.adminStageOverdue), ('DUE', (t) => t.adminStageDue), ('PRE_DEADLINE', (t) => t.adminStagePre)],
+    hasDetail: false,
+    load: (api, tab, _) => _alerts(api, tab),
   ),
 ];
 
@@ -325,6 +428,7 @@ class _RowTile extends StatelessWidget {
       'docs-missing' => t.adminDocsMissing,
       'seller-unconfirmed' => t.adminSellerUnconfirmed,
       'mine' => t.adminAssignedToMe,
+      final String b when b.startsWith('sent-') => t.adminAlertSent(int.tryParse(b.substring(5)) ?? 0),
       _ => null,
     };
     return Padding(

@@ -53,7 +53,7 @@ class AdminHomeScreen extends ConsumerWidget {
             ListTile(leading: const Icon(Icons.verified_user), title: Text(t.permissions), trailing: Text('${p.permissions.length}', key: const Key('permission-count'))),
             // Monitoring: an entry appears only when the server-issued profile carries that screen's permission.
             for (final spec in monitorSpecs)
-              if (p.permissions.contains(spec.permission))
+              if (spec.allowedFor(p.permissions))
                 ListTile(
                   key: Key('open-${spec.path}'),
                   leading: Icon(spec.icon),
