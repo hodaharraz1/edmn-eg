@@ -1,8 +1,8 @@
-# سجل الضوابط الأمنية — EDMN (160 ضابطًا)
+# سجل الضوابط الأمنية — EDMN (183 ضابطًا)
 
 **المشروع:** EDMN (أضمن ماركت): منصة الويب + Mobile API + تطبيقا العميل والإدارة
 **التصنيف:** Tier 1، عالي الخطورة (`SECURITY_INVENTORY.md` §6)
-**تاريخ آخر تحقق لكل البنود:** 19 نوفمبر 2026
+**تاريخ آخر تحقق لكل البنود:** 25 نوفمبر 2026 (PKG-SEC-02 على الرأس `9c3a411`، ثم روجع ما أضافه `f9e2e87` و`588e2ca` وهو ملفا workflow ووثيقة فقط). تفاصيل إعادة التحقق في `SECURITY_REVERIFICATION_2026-11-25.md`. الضوابط SEC-161 إلى SEC-183 أضيفت في هذا التحقق للميزات اللاحقة لـ 19 نوفمبر
 **التحقق:** من المستودع والاختبارات والفحوص المحلية. لا وصول لـ Vercel أو Neon أو DNS أو GitHub Settings.
 
 **الحالات:**
@@ -19,33 +19,34 @@
 
 **N/A و EXCEPTION تحتاج اعتماد المسؤول الأمني** (المبدأ 5). كلها هنا **مقترحة** حتى الاعتماد.
 
-**الـ FAIL الأربعة (تحديث المرحلة 2، 19/11):**
+**الـ FAIL الخمسة (الأربعة الأولى من تحديث المرحلة 2 في 19/11، والخامس من PKG-SEC-02 في 25/11):**
 - SEC-002: لا أدوار أمنية معيّنة.
 - SEC-111 / SEC-112: `main` غير محمي (تحقق عبر API)، ولا مراجعة أو فحوص إلزامية.
 - SEC-156: لا DAST (الخطة في `phase2/DAST_AND_PENTEST_PLAN.md`، تنتظر التصريح).
+- SEC-164: **ثغرة كود** (متوسطة). إتمام إغلاق حساب عميل من لوحة الإدارة بلا تأكيد هوية حديث (step-up) وبشخص واحد. الإصلاح مقترح كحزمة منفصلة PKG-SEC-FIX-01 ولا يُنفَّذ هنا.
 
 SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 لم تكن في Git.
 
-كلها تحتاج إجراءً من المالك، ولا يمكن إغلاقها من الكود.
+الأربعة الأولى تحتاج إجراءً من المالك ولا يمكن إغلاقها من الكود. SEC-164 يُغلق بإصلاح كود (PKG-SEC-FIX-01).
 
 ## الملخص
 
 | الحالة | العدد |
 |---|---|
-| PASS | 82 |
-| IN PROGRESS | 44 |
+| PASS | 98 |
+| IN PROGRESS | 51 |
 | NOT TESTED | 22 |
 | EXCEPTION (مقترح) | 4 |
-| N/A (مقترح) | 4 |
-| FAIL | 4 |
-| **المجموع** | **160** |
+| N/A (مقترح) | 3 |
+| FAIL | 5 |
+| **المجموع** | **183** |
 
 ## القسم 1: الحوكمة وإدارة المخاطر
 
 | ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
 |---|---|---|---|---|---|
 | SEC-001 | نعم | P1 | المالك | IN PROGRESS | `SECURITY_INVENTORY.md`: التطبيقات والـ API والبيانات والنطاقات من المستودع. حسابات السحابة والـ DNS يتحقق منها المالك |
-| SEC-002 | نعم | P1 | المالك | **FAIL** | لا يوجد مسؤول أمني ولا مالك بيانات معيَّن كتابةً |
+| SEC-002 | نعم | P1 | المالك | **FAIL** | لا يوجد مسؤول أمني ولا مالك بيانات معيَّن كتابةً. **إجراء المالك المطلوب (يبقى FAIL حتى يُنفَّذ):** تسمية كتابيًا (في `SECURITY_RELEASE_GATE.md` جدول التوقيعات) المسؤول الأمني ومالك البيانات وقائد الحوادث، بالاسم والتاريخ |
 | SEC-003 | نعم | P1 | المالك | PASS | التصنيف Tier 1 (`SECURITY_INVENTORY.md` §6) |
 | SEC-004 | نعم | P1 | المالك | PASS | `VULNERABILITY_REGISTER.md` §2 + `THREAT_MODEL.md` + `THREAT_MODEL_MOBILE_AND_AI.md` (الاحتمال والأثر والمعالجة) |
 | SEC-005 | نعم | P1 | المالك | IN PROGRESS | توجد سياسات: `SECURITY.md`، `SECRET_ROTATION.md`، `DATABASE_BACKUP.md`، `TESTING_POLICY.md`، وهذه السياسة. **ينقص:** سياسة إدارة الوصول مكتوبة ومعتمدة |
@@ -171,7 +172,7 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 | SEC-085 | نعم | P1 | المطور | PASS | معاملات ذرية + قيد مزدوج + مشغلات ثبات |
 | SEC-086 | نعم | P1 | المطور | PASS | الحالات النهائية في State Machines، ومشغلات ثبات القيود |
 | SEC-087 | نعم | P1 | المطور | PASS | `audit_logs` غير قابلة للتعديل (`0001_integrity_triggers.sql`) + `journal_entries` |
-| SEC-088 | نعم | P1 | المطور | PASS | `npm run ledger:check`: 0 فروقات، ميزان مراجعة سليم (19 نوفمبر) |
+| SEC-088 | نعم | P1 | المطور | PASS | `npm run ledger:check`: 0 فروقات، ميزان مراجعة سليم (19 نوفمبر). أُعيد التشغيل 25/11 على قاعدة الاختبار بعد تشغيل المجموعة: 0 فروقات والمدين = الدائن |
 | SEC-089 | نعم | P1 | المالك | N/A | لا بطاقات: الدفع بتحويل (InstaPay، Vodafone Cash، بنك) مع إثبات. Real Money OFF. يُعاد التقييم عند إضافة مزوّد بطاقات (PCI DSS) |
 | SEC-090 | نعم | P1 | المطور | PASS | اختبارات تكرار الاسترداد وحدود السحب وتغيير المستفيد (`FINANCIAL_SECURITY_AUDIT.md`، تكامل المحفظة) |
 
@@ -200,7 +201,7 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 | SEC-104 | نعم | P1 | المطور | PASS | `secret-scan.ts` للشجرة والتاريخ في CI |
 | SEC-105 | نعم | P1 | المطور | PASS | `npm audit --omit=dev --audit-level=high` في CI (`c6fdec7`) + OSV للـ Dart (يدوي) |
 | SEC-106 | نعم | P1 | المطور | PASS | ESLint + TypeScript + `flutter analyze` في CI |
-| SEC-107 | نعم | P1 | المطور | PASS | 808 اختبار، منها مصادقة وصلاحيات ومدخلات ومنطق أعمال (`SECURITY_TEST_MATRIX.md`) |
+| SEC-107 | نعم | P1 | المطور | PASS | 954 اختبارًا ناجحًا و13 متخطى (تشغيل كامل 25/11 على الرأس `9c3a411`، مع فشلين بيئيين معروفين على جهاز المراجعة: B7 وdeployment-safety)، منها مصادقة وصلاحيات ومدخلات ومنطق أعمال (`SECURITY_TEST_MATRIX.md`) |
 | SEC-108 | نعم | P1 | المالك | IN PROGRESS | CI يفشل على الاختبارات. **منع الدمج** يحتاج required status checks في branch protection (يتحقق المالك) |
 | SEC-109 | نعم | P2 | المطور | PASS | كل إصلاح في `VULNERABILITY_REGISTER.md` مع commit واختبار انحدار |
 | SEC-110 | نعم | P1 | المطور | IN PROGRESS | الكود المولَّد بالوكلاء يمر بنفس CI. المراجعة البشرية الإلزامية تعتمد على SEC-102 |
@@ -209,15 +210,15 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 
 | ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
 |---|---|---|---|---|---|
-| SEC-111 | نعم | P1 | المالك | **FAIL** | تحقق 19/11: GitHub API يعيد `protected: false` لـ `main` ولكل الفروع. الخطوات: `phase2/GOVERNANCE_STEPS.md` §1 |
-| SEC-112 | نعم | P1 | المالك | **FAIL** | لا فحوص مطلوبة ولا مراجعة مطلوبة قبل الدمج (نفس الدليل). CI موجود لكنه غير إلزامي |
+| SEC-111 | نعم | P1 | المالك | **FAIL** | تحقق 19/11: GitHub API يعيد `protected: false` لـ `main` ولكل الفروع. الخطوات: `phase2/GOVERNANCE_STEPS.md` §1. **إجراء المالك المطلوب (يبقى FAIL حتى يُنفَّذ):** GitHub ← Settings ← Branches ← Add rule على `main` وفق `phase2/GOVERNANCE_STEPS.md` §1 (مراجعة إلزامية، مراجعة أصحاب الكود، الفحوص `gates` و`mobile`، منع force-push والحذف، بلا استثناء للمديرين). التحقق: `GET /repos/hodaharraz1/edmn-eg/branches/main` يعيد `protected: true`. آخر فحص 25/11: `protected: false` |
+| SEC-112 | نعم | P1 | المالك | **FAIL** | لا فحوص مطلوبة ولا مراجعة مطلوبة قبل الدمج (نفس الدليل). CI موجود لكنه غير إلزامي. **إجراء المالك المطلوب (يبقى FAIL حتى يُنفَّذ):** نفس قاعدة SEC-111 (الفحوص المطلوبة والمراجعة الإلزامية قبل الدمج). آخر فحص 25/11: الفرع غير محمي |
 | SEC-113 | نعم | P1 | المطور | PASS | `permissions: contents: read` في كل الـ workflows |
 | SEC-114 | نعم | P2 | المالك | IN PROGRESS | CI بلا أسرار ثابتة (مفاتيح تجريبية عشوائية لكل تشغيل). ترحيل Staging يستخدم سرًا ثابتًا في بيئة GitHub (`STAGING_MIGRATION_DATABASE_URL`) |
 | SEC-115 | نعم | P1 | المطور | PASS | `package-lock.json` و`pubspec.lock`، وإجراءات CI مثبتة بـ SHA (`c6fdec7`) |
 | SEC-116 | نعم | P2 | المطور | IN PROGRESS | SBOM CycloneDX للتشغيل (`evidence/sbom-npm-production.cdx.json`). غير مولَّد تلقائيًا مع الإصدارات |
 | SEC-117 | نعم | P3 | المطور | NOT TESTED | لا provenance أو attestations للبناء |
 | SEC-118 | نعم | P1 | المالك | IN PROGRESS | ربط Vercel بالـ commit تلقائي، والنشر التلقائي معطّل لفروع الوكلاء. سياسة «لا نشر بلا CI ناجح» غير مفروضة تقنيًا |
-| SEC-119 | نعم | P1 | المالك | IN PROGRESS | بيئة GitHub `staging` للترحيل (يُفترض بمراجعين). صلاحيات Vercel يتحقق منها المالك |
+| SEC-119 | نعم | P1 | المالك | IN PROGRESS | بيئة GitHub `staging` للترحيل (يُفترض بمراجعين). صلاحيات Vercel يتحقق منها المالك. 25/11: commit `588e2ca` أضاف تشغيل الترحيل على `push` للفرع `claude/instinct-integration` لرسالة تبدأ بـ `[migrate-staging]` وعلى الـ commit نفسه (`github.sha`). السر في بيئة `staging` فتبقى موافقة المراجعين شرطًا **إن كانت مفعّلة فعلًا** (غير قابل للتحقق من المستودع، إجراء المالك) |
 | SEC-120 | نعم | P1 | المالك | PASS | فحص الشجرة + التاريخ الكامل (`scripts/secret-scan.ts` و`--history`) = 0 في 19/11 على `claude/security-integration`، وفي CI. **تصحيح:** S7–S10 لم تُرفع إلى Git قط، بل لُصقت في محادثة؛ خطرها مسجل في SEC-045/SEC-O01 |
 
 ## القسم 13: حماية تطبيقات الموبايل
@@ -228,7 +229,7 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 | SEC-122 | نعم | P1 | المطور | PASS | `flutter_secure_storage` (Keychain `first_unlock_this_device`، Keystore). رمز الوصول في الذاكرة. لا نسخ احتياطي (SEC-F04). مسح الجلسة عند أول تشغيل بعد التثبيت (Q-1، `session_store_test.dart`، commit `c4a16c8`). التحقق على iPhone معلّق |
 | SEC-123 | نعم | P1 | المطور | PASS | لا كلمات مرور ولا أسرار مخزنة. سر TOTP يُعرض مرة ولا يُخزن (`mfa_screen.dart`) |
 | SEC-124 | نعم | P1 | المطور | EXCEPTION | TLS بتحقق نظام التشغيل، والنسخ المستضافة HTTPS فقط. **لا pinning** (SEC-O07 مقترح قبوله) |
-| SEC-125 | نعم | P2 | المطور | N/A | لا App Links ولا Universal Links مفعّلة بعد. يصبح إلزاميًا عند تفعيلها |
+| SEC-125 | نعم | P2 | المطور | IN PROGRESS | PKG-LINKS-01 فعّل الإنشاء من جهة الخادم: `src/server/core/app-links.ts` و`src/app/.well-known/assetlinks.json/route.ts` و`src/app/.well-known/apple-app-site-association/route.ts`. الحمولة **فارغة عمدًا** حتى يوفّر المالك بصمة التوقيع ومعرّف فريق Apple (`tests/unit/app-links.test.ts`). التحقق على جهاز غير مُنفَّذ. كانت N/A قبل 25/11 (راجع SEC-180) |
 | SEC-126 | نعم | P1 | المطور | PASS | Android: INTERNET فقط. iOS: لا أذونات كاميرا أو صور أو موقع أو جهات اتصال |
 | SEC-127 | نعم | P2 | المطور | IN PROGRESS | `FLAG_SECURE` لتطبيق الإدارة على Android. iOS: `EdmnPrivacyShield` يغطي الواجهة خارج `resumed` (اختبار دورة حياة، commit `c4a16c8`). **لم يُتحقق على جهاز** (SEC-O03). لا Push بعد |
 | SEC-128 | نعم | P3 | المطور | EXCEPTION | لا كشف root/jailbreak. الحماية بقرارات الخادم (مقترح قبوله) |
@@ -276,8 +277,38 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 | SEC-153 | نعم | P1 | المالك | IN PROGRESS | RTO مقاس محليًا ≈ 1 ثانية للبيانات التجريبية. **RPO/RTO المستهدفان غير معتمدين** (`BACKUP_RECOVERY_EVIDENCE.md`) |
 | SEC-154 | نعم | P1 | المالك | IN PROGRESS | تمرين استعادة معزول **PASS** محليًا (الدفتر متوازن، 0 تكرار). **استعادة نسخة المزوّد لم تُختبر** |
 | SEC-155 | نعم | P1 | المطور | PASS | Rollback للكود عبر Vercel/commit، والترحيلات إضافية forward-only مع خطة (`DEPLOYMENT_SAFETY.md`، `FINAL_PREPRODUCTION_SECURITY_GATE.md`) |
-| SEC-156 | نعم | P1 | المالك | **FAIL** | لم يُنفذ DAST على بيئة مصرح بها (لا `HAWK_API_KEY` ولا تصريح لفحص Staging) |
+| SEC-156 | نعم | P1 | المالك | **FAIL** | لم يُنفذ DAST على بيئة مصرح بها (لا `HAWK_API_KEY` ولا تصريح لفحص Staging). **إجراء المالك المطلوب (يبقى FAIL حتى يُنفَّذ):** تصريح كتابي بفحص بيئة Staging وتوفير مفتاح الأداة المختارة وفق `phase2/DAST_AND_PENTEST_PLAN.md`، ثم تشغيل الفحص ومعالجة النتائج |
 | SEC-157 | نعم | P1 | المالك | NOT TESTED | لا اختبار اختراق يدوي مستقل |
 | SEC-158 | نعم | P2 | المطور | IN PROGRESS | اختبارات فشل المزوّدين والاستعادة (runbooks + تكامل). لا اختبار حمل أو استنزاف موارد |
 | SEC-159 | نعم | P1 | المطور | PASS | كل إصلاح له اختبار انحدار أعيد تشغيله (`REMEDIATION_REPORT.md`) |
 | SEC-160 | نعم | P1 | المالك | PASS | `SECURITY_RELEASE_GATE.md` بقرار NO-GO مسبَّب |
+
+## القسم 17: الميزات المضافة بعد 19 نوفمبر (PKG-SEC-02، 25 نوفمبر 2026، الرأس `9c3a411` ثم `588e2ca`)
+
+الأرقام بعد `:` هي أرقام الأسطر في الرأس المذكور. «اختبار» = ملف في `tests/` أُعيد تشغيله ضمن المجموعة الكاملة في 25/11. لا PASS بلا دليل في الكود وفي اختبار، إلا إذا ذُكر خلاف ذلك صراحة.
+
+| ID | ينطبق | الأولوية | المسؤول | الحالة | الدليل / السبب |
+|---|---|---|---|---|---|
+| SEC-161 | نعم | P1 | المطور | PASS | طلب حذف الحساب: `auth: 'customer'` وحده، `idempotency: 'required'`، فئة `sensitive`، ورفض 422 بأسباب عربية مع تسجيل المحاولة المرفوضة في التدقيق (`src/server/api/routes/account-closure.ts`، `closure.ts:35` و`closure.ts:63`). الطلب لا يحذف شيئًا. اختبار `account-deletion-api.test.ts` («request → PENDING → visible → withdrawn؛ idempotent and audited» و«open obligations refuse 422») |
+| SEC-162 | نعم | P2 | المطور | IN PROGRESS | سقف إضافي 5 طلبات/ساعة لكل حساب (`account-closure.ts:63`، `enforce('account-deletion:...')`). **لا يوجد اختبار يثبت السقف**: الكود موجود وغير مُختبَر |
+| SEC-163 | نعم | P1 | المطور | PASS | إتمام الإغلاق (`closure.ts:92`): صلاحية `customers.manage`، قفل الصف `for update`، رفض إغلاق حساب الموظف لنفسه (`closure.ts:98`)، قفل `pg_advisory_xact_lock` وإعادة فحص الموانع داخل المعاملة، وتدقيق `account.closed`. اختبارات `account-closure-monitor.test.ts` و`hardening-matrix.test.ts` |
+| SEC-164 | نعم | P1 | المطور | **FAIL** | **ثغرة (متوسطة):** `completeAccountClosure` (`closure.ts:92-94`) يتحقق من `customers.manage` فقط، **بلا `requireStepUp` وبلا موافقة شخص ثانٍ**، وهي عملية لا رجعة فيها (تجهيل الاسم والبريد والهاتف وإبطال الجلسات). مسار الإجراء `closureAdminAction` في `src/app/_actions/admin.ts` يمرّر عبر `adminRun` الذي يحوّل `STEP_UP_REQUIRED` فقط إن رُميت، ولا تُرمى هنا. المقارنة: كل عمليات الصرف والكشف الحساسة الأخرى تطلب step-up (SEC-028). **غير مُصلَح في هذه الحزمة.** الإصلاح المقترح PKG-SEC-FIX-01: `requireStepUp(actor)` في `completeAccountClosure` + اختبار يفشل قبل الإصلاح (جلسة بلا step-up تُرفض بـ `STEP_UP_REQUIRED` ولا يتغير المستخدم) وينجح بعده. قرار الشخصين للمالك |
+| SEC-165 | نعم | P2 | المطور | IN PROGRESS | نطاق التجهيل (`closure.ts:107-116`): الاسم والبريد والهاتف وسر TOTP ويُؤرشف العناوين وتُبطل الجلسات. **لا يُحذف** رمز الإشعارات للجهاز (`device_push_tokens`)، ولا تُبطل `mobile_devices`، ولا تُحذف صور الهوية أو الصور الشخصية. الفجوة التوثيقية موثقة في `docs/store/ACCOUNT_DELETION_PAGE.md:33` (النص المنشور يعد بحذف الصور). مقترح PKG-SEC-FIX-02 (خصوصية، ليس ثغرة وصول): حذف رموز الإشعارات وإبطال الأجهزة عند الإغلاق، وقرار المالك في الصور |
+| SEC-166 | نعم | P1 | المطور | PASS | تأكيد الدفع بشخصين: من بدأ المراجعة لا يؤكد (`src/server/modules/payments/service.ts:136-174`، `requireStepUp` عند `:156`) + قيد قاعدة بيانات `payments_two_person_chk` (`drizzle/0026_payment_confirmation_two_person.sql`). **تنبيه:** القيد `NOT VALID` فلا يفحص الصفوف القديمة قبل 0026 (مقصود، موثق في الترحيل). اختبار `pay01-two-person-daily-limit.test.ts` (مراجعة بلا بدء، نفس الشخص مرفوض خدميًا وبقيد القاعدة، شخص آخر ينجح) |
+| SEC-167 | نعم | P1 | المطور | PASS | Maker/Checker للحركات المالية: `requestMovement` بصلاحية `finance.movement.request` وstep-up (`movements.ts:55-56`)، ورفض نفس الشخص (`movements.ts:67`، `takeMovementRequest` عند `:83`)، ومشغّل `edmn_movement_requires_two_people` على كل الأنواع بما فيها `COD_REMITTANCE` و`COD_SHORTAGE_RESOLUTION` (`drizzle/0030_cod02_shortfalls.sql:36-42`). اختبارات `pay01-two-person-daily-limit.test.ts` (مشغّل القاعدة) و`cod02-courier-statement.test.ts` (رسالة «requires a maker and a different checker») |
+| SEC-168 | نعم | P1 | المطور | PASS | سقف يومي لإيصالات الدفع لكل عميل بتوقيت القاهرة (`payments/service.ts:72-87`، الإعداد `payments.dailyReceiptLimit` في `settings.ts:49`، افتراضي 25,000,000 قرش = 250,000 ج.م). تغييره حساس ويحتاج step-up. اختبار `pay01-two-person-daily-limit.test.ts` (الرفض فوق السقف وعدم احتساب الإيصال المرفوض، وstep-up للتغيير) |
+| SEC-169 | نعم | P1 | المطور | IN PROGRESS | تسوية عجز المندوب: عند 9c3a411 يكفي `payments.verify` للـ Maker والـ Checker معًا (`movements.ts:110`) حتى لو كانت التسوية **شطبًا إلى مصروف** (`payments/service.ts:324-361`). الشخصان مفروضان خدميًا وفي القاعدة، لكن الصلاحية أوسع من اللازم للشطب. التصحيح جاهز في PKG-COD-03 (يتطلب `finance.release` للطرفين في الشطب) ومنشور في Issue #7 (تعليق 7171780993) وينتظر الدمج. لا PASS قبل الدمج |
+| SEC-170 | نعم | P1 | المطور | PASS | التحصيل والعجز: `requirePermission('payments.verify')` وstep-up (`payments/service.ts:243-244`, `:325-326`)، قفل الصف `for update` (`:329`)، مفاتيح idempotency `cod-shortfall-resolve:<id>` للترحيل (`:344`, `:350`)، قيد مزدوج، وتدقيق `payment.cod_shortfall_resolved` (`:370`). اختبار `cod02-courier-statement.test.ts` |
+| SEC-171 | نعم | P1 | المطور | PASS | مسار موبايل الإدارة للتحصيل عند التسليم للقراءة فقط: مسار GET واحد (`src/server/api/routes/admin-cod.ts`)، بصلاحية `payments.view`. اختبار `admin-mobile-cod.test.ts` (رفض من بلا الصلاحية والمجهول، وعقد المسار GET واحد) |
+| SEC-172 | نعم | P1 | المطور | PASS | موافقة التسويق: الافتراضي OFF، وسجل أحداث مؤرَّخ لا يُعدَّل، وتسجيل الإجراء في التدقيق (`src/server/modules/customers/marketing.ts:20-28`). اختبار `privacy01-marketing.test.ts` (OFF افتراضيًا، حدث GRANT مؤرَّخ، السحب في أي وقت) |
+| SEC-173 | نعم | P1 | المطور | PASS | تصدير قائمة التسويق: صلاحية `customers.exportMarketing` وstep-up (`marketing.ts:35-36`)، إقرار صريح، طلب مفتوح واحد لكل طالب، التنفيذ بشخص مختلف (`marketing.ts:129`)، الرفض أيضًا بشخص ثانٍ، والقائمة للموافقين النشطين فقط وبـ 5 حقول. اختبار `privacy01-marketing.test.ts` (الأسطر 77 و82 و92 و111 و157) |
+| SEC-174 | نعم | P1 | المطور | PASS | الملف المصدَّر مشفّر (AES-256-GCM بمفتاح مشتق scrypt من عبارة سر تُعرض مرة واحدة للموافق ولا تُخزَّن) (`marketing.ts:121-142`). اختبار `privacy01-marketing.test.ts:111` (التشفير وفكّه) |
+| SEC-175 | نعم | P2 | المطور | IN PROGRESS | تنزيل الملف المشفّر (`marketing.ts:144`): صلاحية + تدقيق، **بلا step-up وبلا سقف معدل**. الخطر منخفض لأن الملف لا يُفتح بدون العبارة التي يملكها الموافق فقط. مقترح تحسين PKG-SEC-FIX-03 (step-up للتنزيل) وليس ثغرة مستقلة |
+| SEC-176 | نعم | P1 | المطور | PASS | رموز الإشعارات: مشفّرة في القاعدة (`tokenEnc`)، لا تُسجَّل (الطول والمنصة فقط، `device-push.ts:41`)، تُسجَّل لجهاز المستخدم نفسه فقط (`:63-75`)، وتدقيق التسجيل والإزالة. اختبار `push-tokens.test.ts` و`push02-live-senders.test.ts` |
+| SEC-177 | نعم | P1 | المطور | PASS | بيانات اعتماد Firebase وApple: `settings.manage` وstep-up (`device-push.ts:104-106`)، مشفّرة (`encryptJson`، `:118`)، العرض بيانات وصفية فقط، وتدقيق الحفظ. اختبار `push02-live-senders.test.ts:71` |
+| SEC-178 | نعم | P1 | المطور | PASS | الإشعارات الحية تفشل مغلقة: الإعداد `notifications.devicePushEnabled` افتراضيه OFF، والمشغّل الافتراضي `log`، والتشغيل الحي بلا بيانات اعتماد لا يرسل شيئًا. اختبار `push02-live-senders.test.ts:94` و`:177` |
+| SEC-179 | نعم | P3 | المطور | IN PROGRESS | مشغّل `log` يطبع **عنوان** الإشعار (`device-push.ts:43`) وليس الرمز. لم يُراجَع أن كل قوالب العناوين خالية من الأسماء والمبالغ. يُراجع قبل تشغيل مصرّف السجلات في الإنتاج |
+| SEC-180 | نعم | P2 | المطور | PASS | روابط التطبيق: الملفان `.well-known` يُنشآن من البيئة وقت النشر فقط، وفارغان ما لم تُضبط البصمة ومعرّف الفريق (آمن: تبقى الروابط على الموقع) (`src/server/core/app-links.ts`)، وبلا قيم ثابتة. اختبار `tests/unit/app-links.test.ts:32` و`:48`. بصمة التوقيع الحقيقية إجراء للمالك (SEC-130) |
+| SEC-181 | نعم | P1 | المطور | PASS | صفحات الإدارة الجديدة (الإغلاقات، قائمة التسويق، لوحة التحصيل في صفحة الدفع): الدخول بطبقة `requireAdmin` (جلسة موظف + TOTP، `src/server/web/session.ts:121-126`) على مستوى الـ layout لكل الصفحات (76 صفحة)، والصلاحية تُفرض في الخدمة (`closure.ts:135`، `marketing.ts:155`، `payments/service.ts:136`). **لا فحص صلاحية على مستوى الصفحة نفسها** (تعتمد على الخدمة، وهو التصميم المعتمد في SEC-031) |
+| SEC-182 | نعم | P1 | المطور | PASS | لا بيانات شخصية في السجلات أو التدقيق للميزات الجديدة: تدقيق الإغلاق يحفظ وجود البريد والهاتف كقيم منطقية لا قيمتها (`closure.ts:118-122`)، وتدقيق التصدير يحفظ العدد واسم الملف فقط (`marketing.ts:138`)، والرموز لا تُسجَّل (SEC-176). تنقيح عام عبر `logger` (SEC-047) |
+| SEC-183 | نعم | P1 | المالك + المطور | IN PROGRESS | سير عمل TestFlight (`.github/workflows/ios-testflight.yml`، commit `4e25ae805` و`f9e2e87`): ما تحقق: `permissions: contents: read`، الإجراءات مثبتة بـ SHA (SEC-113 وSEC-115 ما زالا PASS على الـ workflows الثلاثة)، لا أسرار في الكود، ومفتاح `.p8` يُكتب في مجلد مؤقت للمشغّل ويُحذف في `always()`. **الفجوة:** الأسرار على مستوى المستودع بلا `environment:` ذي مراجعين، والمشغّل `push` على `claude/instinct-integration` (غير محمي، SEC-111) يعني أن أي دافع بصلاحية كتابة يعدّل ملف الـ workflow نفسه ويقرأ مفتاح App Store Connect بصلاحية **Admin**. الأسرار لم تُضبط بعد (الوثيقة `docs/mobile/IOS_TESTFLIGHT.md` خطوات المالك)، فلا تعرّض حاليًا. مقترح PKG-SEC-FIX-04 قبل ضبط الأسرار: `environment: testflight` بمراجعين إلزاميين، وتمرير `APP_STORE_CONNECT_API_KEY_P8` عبر `env` لا بتعبير داخل نص `run`. إجراء المالك: تفعيل حماية الفرع (SEC-111) وتقييد دور المفتاح إن أمكن |
