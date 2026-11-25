@@ -32,6 +32,8 @@ export const ACCOUNTS = {
   DEAL_PAYOUTS_RESERVED: { type: 'LIABILITY', name: 'مستحقات صفقات محجوزة لطلبات سحب' },
   DEAL_FEE_REVENUE: { type: 'REVENUE', name: 'رسوم الصفقات المحمية' },
   ADJUSTMENTS_EXPENSE: { type: 'EXPENSE', name: 'مصروف التسويات' },
+  /** What the courier company still owes EDMN when its statement remits LESS than the COD amount it collected. */
+  COD_SHORTAGE_RECEIVABLE: { type: 'ASSET', name: 'عجز تحصيل مستحق على شركة الشحن' },
   /** Payout/refund transfer costs borne by EDMN (seller-borne costs reduce the amount sent instead). */
   TRANSFER_COST_EXPENSE: { type: 'EXPENSE', name: 'مصروف رسوم التحويل' },
   SELLER_PENDING: { type: 'LIABILITY', name: 'رصيد البائع المعلق' },

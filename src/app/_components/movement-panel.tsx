@@ -29,7 +29,7 @@ export const checkerMayExecute = (actor: Actor, open: OpenMovement) => !!open &&
  * Step 2 (Checker): a DIFFERENT person executes it with the page's own command (rendered by the caller only
  * when `checkerMayExecute`). The Maker can withdraw the request; a Checker can reject it.
  */
-export async function MovementPanel({ actor, kind, entityId, amount, back, mode, open, children }: { actor: Actor; kind: MovementKind; entityId: string; amount: number; back: string; mode?: string; open: OpenMovement; children?: React.ReactNode }) {
+export async function MovementPanel({ actor, kind, entityId, amount, back, mode, modes, open, children }: { actor: Actor; kind: MovementKind; entityId: string; amount: number; back: string; mode?: string; /** Let the Maker pick the mode instead of fixing it. */ modes?: readonly string[]; open: OpenMovement; children?: React.ReactNode }) {
   const canRequest = hasPermission(actor, 'finance.movement.request');
   const label = MOVEMENT_LABELS[kind];
   if (!open) {
@@ -41,6 +41,14 @@ export async function MovementPanel({ actor, kind, entityId, amount, back, mode,
           <ActionForm action={movementRequestAction} className="space-y-2">
             <input type="hidden" name="kind" value={kind} /><input type="hidden" name="entityId" value={entityId} /><input type="hidden" name="amount" value={amount} /><input type="hidden" name="back" value={back} />
             {mode && <input type="hidden" name="mode" value={mode} />}
+            {modes && (
+              <label className="block text-sm">
+                <span className="mb-1 block text-muted">طريقة التنفيذ</span>
+                <select name="mode" required className="w-full rounded-lg border border-line bg-surface px-3 py-2" aria-label="طريقة التنفيذ">
+                  {modes.map((m) => <option key={m} value={m}>{m === 'RECOVERED' ? 'استرداد نقدي من شركة الشحن لاحقًا' : m === 'WRITTEN_OFF' ? 'شطب كمصروف تسوية' : m}</option>)}
+                </select>
+              </label>
+            )}
             <Input name="reason" required minLength={10} placeholder="سبب الطلب (10 أحرف على الأقل)" aria-label="سبب طلب الحركة" />
             <SubmitButton variant="outline">طلب {label}</SubmitButton>
           </ActionForm>

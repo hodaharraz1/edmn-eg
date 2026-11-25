@@ -30,6 +30,7 @@ export const MOVEMENT_LABELS: Record<MovementKind, string> = {
   WITHDRAWAL_REVERSAL: 'فك حجز سحب (رفض / فشل قبل التحويل)',
   WITHDRAWAL_RETURN: 'تسجيل ارتداد تحويل',
   COD_REMITTANCE: 'تحصيل شركة الشحن نقدًا (دفع عند الاستلام)',
+  COD_SHORTAGE_RESOLUTION: 'تسوية عجز تحصيل شركة الشحن (استرداد أو شطب)',
 };
 
 const ENTITY: Record<MovementKind, string> = {
@@ -40,6 +41,7 @@ const ENTITY: Record<MovementKind, string> = {
   WITHDRAWAL_REVERSAL: 'withdrawal',
   WITHDRAWAL_RETURN: 'withdrawal',
   COD_REMITTANCE: 'payment',
+  COD_SHORTAGE_RESOLUTION: 'cod_remittance_shortfall',
 };
 
 export type MovementRequest = typeof financialMovementRequests.$inferSelect;
@@ -105,6 +107,7 @@ export const CHECKER_PERMISSIONS: Record<MovementKind, Permission[]> = {
   WITHDRAWAL_REVERSAL: ['withdrawals.approve'],
   WITHDRAWAL_RETURN: ['withdrawals.approve', 'withdrawals.pay'],
   COD_REMITTANCE: ['payments.verify'],
+  COD_SHORTAGE_RESOLUTION: ['payments.verify'],
 };
 
 /** Checker declines a request (nothing moves). Only someone who could be its Checker may decline it. */

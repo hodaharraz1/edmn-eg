@@ -111,7 +111,7 @@ export const reviewEvents = pgTable(
  * A Maker (authorized staff, fresh 2FA) proposes ONE movement on ONE entity for an exact amount; a DIFFERENT
  * authorized Checker executes it (the execution grants the operation-specific approval with requested_by =
  * Maker; the DB refuses any movement approval without a distinct requester). One open request per movement. */
-export const MOVEMENT_KINDS = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE'] as const;
+export const MOVEMENT_KINDS = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION'] as const;
 export type MovementKind = (typeof MOVEMENT_KINDS)[number];
 export const MOVEMENT_STATUSES = ['PENDING', 'EXECUTED', 'REJECTED', 'CANCELLED'] as const;
 

@@ -3,12 +3,12 @@ import { notFound } from 'next/navigation';
 import { eq, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { paymentDecisionAction } from '@/app/_actions/admin';
-import { codRemittanceAction } from '@/app/_actions/finance-movements';
+import { codRemittanceAction, codShortageResolveAction } from '@/app/_actions/finance-movements';
 import { MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { externalDeals, orders, payments, sellerOrders, users } from '@/server/db/schema';
+import { codRemittanceShortfalls, externalDeals, orders, payments, sellerOrders, users } from '@/server/db/schema';
 import { paymentReviewSignals, submissionsFor } from '@/server/modules/payments/service';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
@@ -32,6 +32,7 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
   // COD: the expected remittance is what the courier collected for the DELIVERED sub-orders (+ COD fee).
   const codSos = p.method === 'COD' && p.orderId ? await db.select().from(sellerOrders).where(eq(sellerOrders.orderId, p.orderId)) : [];
   const codExpected = codSos.filter((x) => x.status === 'DELIVERED' || x.status === 'COMPLETED').reduce((a, x) => a + x.grossTotal, 0) + (row.orderCodFee ?? 0);
+  const shortfall = p.method === 'COD' ? await db.select().from(codRemittanceShortfalls).where(eq(codRemittanceShortfalls.paymentId, p.id)).then((r) => r[0] ?? null) : null;
   const pendingCancels = p.orderId
     ? (await db.execute<{ n: string }>(sql`select count(*)::text n from cancellation_requests c join seller_orders so on so.id = c.seller_order_id where so.order_id = ${p.orderId} and c.status = 'PENDING'`)).rows[0].n
     : '0';
@@ -55,10 +56,41 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
           <ActionForm action={codRemittanceAction} className="space-y-2">
             <input type="hidden" name="paymentId" value={p.id} />
             <input type="hidden" name="back" value={`/admin/payments/${p.id}`} />
-            <Input name="reason" required minLength={10} placeholder="مرجع كشف تحصيل شركة الشحن (10 أحرف على الأقل)" aria-label="مرجع التحصيل" />
-            <SubmitButton>تسجيل تحصيل {formatEGP(codExpected, { fixed: true })}</SubmitButton>
+            <Field label="المبلغ الفعلي المحوَّل من شركة الشحن (جنيه، كما في كشفها)" htmlFor="actualAmount">
+              <Input id="actualAmount" name="actualAmount" required inputMode="decimal" dir="ltr" defaultValue={(codExpected / 100).toFixed(2)} />
+            </Field>
+            <Field label="مرجع كشف شركة الشحن" htmlFor="statementRef">
+              <Input id="statementRef" name="statementRef" required minLength={3} placeholder="رقم/تاريخ الكشف" />
+            </Field>
+            <Input name="reason" required minLength={10} placeholder="سبب التسجيل (10 أحرف على الأقل)" aria-label="سبب التسجيل" />
+            <p className="text-xs text-muted">المستحق: {formatEGP(codExpected, { fixed: true })}. لو الكشف أقل، يظهر الفرق كعجز للمراجعة؛ لو أكبر يُرفض التسجيل.</p>
+            <SubmitButton>تسجيل التحصيل من الكشف</SubmitButton>
           </ActionForm>
         </MovementPanel>
+      )}
+      {shortfall && (
+        <section className="card space-y-3 p-4" data-testid="cod-shortfall">
+          <h3 className="font-bold">عجز تحصيل شركة الشحن</h3>
+          <DefinitionList items={[
+            { label: 'المستحق', value: formatEGP(shortfall.expectedAmount, { fixed: true }) },
+            { label: 'المحوَّل فعليًا (كشف ' + shortfall.statementRef + ')', value: formatEGP(shortfall.actualAmount, { fixed: true }) },
+            { label: 'العجز', value: <b className="text-red-700">{formatEGP(shortfall.shortfallAmount, { fixed: true })}</b> },
+            { label: 'الحالة', value: shortfall.status === 'OPEN' ? 'مفتوح — بانتظار التسوية' : shortfall.resolution === 'RECOVERED' ? `مسوّى بالاسترداد · ${shortfall.resolvedAt ? formatDate(shortfall.resolvedAt, true) : ''}` : `مسوّى بالشطب كمصروف · ${shortfall.resolvedAt ? formatDate(shortfall.resolvedAt, true) : ''}` },
+          ]} />
+          {shortfall.status === 'OPEN' && can && (
+            <>
+              <MovementPanel actor={actor} kind="COD_SHORTAGE_RESOLUTION" entityId={shortfall.id} amount={shortfall.shortfallAmount} back={`/admin/payments/${p.id}`} modes={['RECOVERED', 'WRITTEN_OFF']} open={await openMovementFor('COD_SHORTAGE_RESOLUTION', shortfall.id)}>
+                <ActionForm action={codShortageResolveAction} className="space-y-2">
+                  <input type="hidden" name="shortfallId" value={shortfall.id} />
+                  <input type="hidden" name="back" value={`/admin/payments/${p.id}`} />
+                  <Input name="reason" required minLength={10} placeholder="سبب/مرجع التسوية (10 أحرف على الأقل)" aria-label="سبب التسوية" />
+                  <SubmitButton>تنفيذ تسوية العجز (حسب طريقة الطلب)</SubmitButton>
+                </ActionForm>
+              </MovementPanel>
+              <p className="text-xs text-muted">المنشئ يختار الطريقة في طلبه: استرداد نقدي من شركة الشحن لاحقًا، أو شطب كمصروف تسوية. المعتمد ينفذ طريقة الطلب نفسها.</p>
+            </>
+          )}
+        </section>
       )}
       {signals.length > 0 && (
         <Alert tone="warning" title="إشارات مراجعة (لا تعني رفضًا تلقائيًا)">

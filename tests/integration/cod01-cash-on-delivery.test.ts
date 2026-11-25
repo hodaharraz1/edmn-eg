@@ -130,13 +130,13 @@ describe('COD-01 — delivery, remittance (two-person), refusal', () => {
     await confirmReceipt(c.actor, so.id);
     const pay = await paymentOf(order.id);
     // No open movement request → refused.
-    await expect(recordCodRemittance(admin, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي' })).rejects.toThrow();
+    await expect(recordCodRemittance(admin, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي', actualAmount: pay.amountDue, statementRef: 'ST-1' })).rejects.toThrow();
     // The maker cannot execute their own request.
     const maker = await makeAdmin(['FINANCE_OPERATOR', 'PAYMENT_REVIEWER']);
     await makerRequest('COD_REMITTANCE', pay.id, pay.amountDue, { maker });
-    await expect(recordCodRemittance(maker, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي' })).rejects.toThrow(/شخصين|نفس الشخص/);
+    await expect(recordCodRemittance(maker, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي', actualAmount: pay.amountDue, statementRef: 'ST-1' })).rejects.toThrow(/شخصين|نفس الشخص/);
     // A different checker records it.
-    const res = await recordCodRemittance(admin, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي رقم ٤٤' });
+    const res = await recordCodRemittance(admin, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي رقم ٤٤', actualAmount: pay.amountDue, statementRef: 'ST-44' });
     expect(res.alreadyConfirmed).toBe(false);
     const pay2 = await paymentOf(order.id);
     expect(pay2.status).toBe('CONFIRMED');
@@ -152,7 +152,7 @@ describe('COD-01 — delivery, remittance (two-person), refusal', () => {
     expect(pending?.sellerId).toBe(so.sellerId);
     expect((deferred?.credit ?? 0) + (pending?.credit ?? 0)).toBe(pay.amountDue);
     // Idempotent: a second record is a no-op.
-    expect((await recordCodRemittance(admin, pay.id, { reason: 'تكرار نفس كشف التحصيل' })).alreadyConfirmed).toBe(true);
+    expect((await recordCodRemittance(admin, pay.id, { reason: 'تكرار نفس كشف التحصيل', actualAmount: pay.amountDue, statementRef: 'ST-44' })).alreadyConfirmed).toBe(true);
     await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الإعداد الافتراضي');
   });
 

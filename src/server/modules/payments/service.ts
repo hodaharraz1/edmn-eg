@@ -6,7 +6,7 @@ import { requirePermission, requireUser, type Actor, requireStepUp } from '@/ser
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import {
+import { codRemittanceShortfalls,
   externalDeals,
   inventoryReservations,
   orderItems,
@@ -239,15 +239,19 @@ export async function cancelCodPaymentIfUncollected(tx: DbOrTx, actor: Actor, or
  * deferred. The seller payout afterwards is the existing release-after-return-period flow, unchanged.
  * A sub-order the customer refused contributes nothing (no cash was collected for it).
  */
-export async function recordCodRemittance(actor: Actor, paymentId: string, input: { reason: string }) {
+export async function recordCodRemittance(actor: Actor, paymentId: string, input: { reason: string; actualAmount: number; statementRef: string }) {
   requirePermission(actor, 'payments.verify');
   requireStepUp(actor);
   const why = requireReason(input.reason);
+  // COD-02: the actual amount is read from the courier company's statement, not assumed.
+  if (!Number.isSafeInteger(input.actualAmount) || input.actualAmount < 0) throw validation('مبلغ الكشف غير صحيح');
+  const statementRef = input.statementRef?.trim();
+  if (!statementRef || statementRef.length < 3) throw validation('اكتب مرجع كشف شركة الشحن');
   return db.transaction(async (tx) => {
     const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
     if (!p) throw notFound('الدفعة');
     if (p.method !== 'COD') throw validation('تحصيل شركة الشحن خاص بطلبات الدفع عند الاستلام فقط');
-    if (p.status === 'CONFIRMED') return { alreadyConfirmed: true };
+    if (p.status === 'CONFIRMED') return { alreadyConfirmed: true, shortfall: 0 };
     if (p.status !== 'COD_COLLECTED') throw invalidState('التحصيل يُسجَّل بعد تسليم الطلب وتحصيل المندوب للمبلغ');
     if (!p.orderId) throw invalidState('الدفعة غير مرتبطة بطلب');
     const [order] = await tx.select().from(orders).where(eq(orders.id, p.orderId)).for('update');
@@ -259,6 +263,9 @@ export async function recordCodRemittance(actor: Actor, paymentId: string, input
     const delivered = sos.filter((x) => x.status === 'DELIVERED' || x.status === 'COMPLETED');
     if (!delivered.length) throw invalidState('مفيش شحنة اتسلمت — مفيش تحصيل مستحق');
     const expected = delivered.reduce((a, x) => a + x.grossTotal, 0) + (order.codFee ?? 0);
+    // COD-02: the statement may remit LESS than collected. More than expected is a statement/entry mismatch — reject it.
+    if (input.actualAmount > expected) throw validation('مبلغ الكشف أكبر من المستحق — راجع كشف شركة الشحن قبل التسجيل');
+    const shortfall = expected - input.actualAmount;
     const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
     const mreq = await takeMovementRequest(tx, actor, 'COD_REMITTANCE', p.id, expected);
     const approval = await grantApproval(tx, actor, {
@@ -281,7 +288,8 @@ export async function recordCodRemittance(actor: Actor, paymentId: string, input
       description: `تحصيل شركة الشحن نقدًا لطلب الدفع عند الاستلام ${order.number}`,
       approvalId: approval.id,
       lines: [
-        { account: { code: 'PLATFORM_CASH' }, debit: expected, memo: 'cash remitted by the courier company' },
+        { account: { code: 'PLATFORM_CASH' }, debit: input.actualAmount, memo: `cash actually remitted per courier statement ${statementRef}` },
+        ...(shortfall > 0 ? [{ account: { code: 'COD_SHORTAGE_RECEIVABLE' as const }, debit: shortfall, memo: `courier shortfall still owed, statement ${statementRef}` }] : []),
         ...delivered.map((x) => ({ account: { code: 'SELLER_PENDING' as const, sellerId: x.sellerId }, credit: x.sellerNet, memo: `seller payable (pending) ${order.number}-${x.suffix}` })),
         ...(deferred > 0 ? [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: deferred, memo: 'EDMN fees + COD fee (deferred)' }] : []),
       ],
@@ -290,17 +298,83 @@ export async function recordCodRemittance(actor: Actor, paymentId: string, input
     // The two-person rule for COD is the movement request: the Maker stands in reviewStartedBy so the
     // DB CHECK (confirmer ≠ reviewer) keeps its teeth without any special case.
     await tx.update(payments).set({ status: 'CONFIRMED', reviewStartedBy: mreq.requestedBy, confirmedBy: actor.userId, confirmedAt: new Date() }).where(eq(payments.id, p.id));
+    if (shortfall > 0) {
+      // The platform (not the sellers) carries the courier's shortfall; it stays OPEN for review until recovered or written off.
+      await tx.insert(codRemittanceShortfalls).values({ paymentId: p.id, expectedAmount: expected, actualAmount: input.actualAmount, shortfallAmount: shortfall, statementRef, createdBy: actor.userId });
+    }
     await completeMovementRequest(tx, actor, mreq, approval.id);
     await audit(tx, actor, {
       action: 'payment.cod_remittance_recorded',
       entityType: 'payment',
       entityId: p.id,
       oldValues: { status: p.status },
-      newValues: { status: 'CONFIRMED', amount: expected, approvalId: approval.id, deliveredSellerOrders: delivered.map((x) => x.id) },
+      newValues: { status: 'CONFIRMED', amount: expected, actualAmount: input.actualAmount, shortfall, statementRef, approvalId: approval.id, deliveredSellerOrders: delivered.map((x) => x.id) },
       reason: why,
     });
     await notify(tx, { event: 'PAYMENT_CONFIRMED', userIds: [p.payerUserId], vars: { order: order.number }, link: `/account/orders/${order.id}`, dedupeKey: `payment:${p.id}:confirmed` });
-    return { alreadyConfirmed: false, approvalId: approval.id, amount: expected };
+    return { alreadyConfirmed: false, approvalId: approval.id, amount: expected, actualAmount: input.actualAmount, shortfall };
+  });
+}
+
+/**
+ * COD-02 — settle an OPEN courier shortfall. The resolution comes from the Maker's movement request
+ * (params.mode): RECOVERED = the courier paid the gap later (cash in), WRITTEN_OFF = expense. Two-person,
+ * like every financial movement.
+ */
+export async function resolveCodShortfall(actor: Actor, shortfallId: string, input: { reason: string }) {
+  requirePermission(actor, 'payments.verify');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  return db.transaction(async (tx) => {
+    const [sf] = await tx.select().from(codRemittanceShortfalls).where(eq(codRemittanceShortfalls.id, shortfallId)).for('update');
+    if (!sf) throw notFound('العجز');
+    if (sf.status === 'RESOLVED') return { alreadyResolved: true };
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'COD_SHORTAGE_RESOLUTION', sf.id, sf.shortfallAmount);
+    const mode = (mreq.params as Record<string, unknown> | null)?.mode;
+    if (mode !== 'RECOVERED' && mode !== 'WRITTEN_OFF') throw invalidState('طلب التسوية لا يحدد طريقة صحيحة (استرداد أو شطب)');
+    const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
+      action: 'COD_SHORTAGE_RESOLUTION',
+      entityType: 'cod_remittance_shortfall',
+      entityId: sf.id,
+      amount: sf.shortfallAmount,
+      economicVersion: `cod-shortfall:${sf.id}:${sf.status}`,
+      reason: why,
+      idempotencyKey: `cod-shortfall-resolve:${sf.id}`,
+    });
+    await postEntry(tx, actor, {
+      entryType: 'COD_SHORTAGE_RESOLUTION',
+      sourceType: 'cod_remittance_shortfall',
+      sourceId: sf.id,
+      idempotencyKey: `cod-shortfall-resolve:${sf.id}`,
+      description: mode === 'RECOVERED' ? `استرداد عجز تحصيل شركة الشحن (كشف ${sf.statementRef})` : `شطب عجز تحصيل شركة الشحن كمصروف (كشف ${sf.statementRef})`,
+      approvalId: approval.id,
+      lines:
+        mode === 'RECOVERED'
+          ? [
+              { account: { code: 'PLATFORM_CASH' }, debit: sf.shortfallAmount, memo: 'courier paid the shortfall later' },
+              { account: { code: 'COD_SHORTAGE_RECEIVABLE' }, credit: sf.shortfallAmount, memo: 'shortfall settled' },
+            ]
+          : [
+              { account: { code: 'ADJUSTMENTS_EXPENSE' }, debit: sf.shortfallAmount, memo: 'shortfall written off' },
+              { account: { code: 'COD_SHORTAGE_RECEIVABLE' }, credit: sf.shortfallAmount, memo: 'shortfall settled' },
+            ],
+    });
+    await tx
+      .update(codRemittanceShortfalls)
+      .set({ status: 'RESOLVED', resolution: mode, resolutionReason: why, resolvedBy: actor.userId, resolvedAt: new Date() })
+      .where(eq(codRemittanceShortfalls.id, sf.id));
+    await completeMovementRequest(tx, actor, mreq, approval.id);
+    await audit(tx, actor, {
+      action: 'payment.cod_shortfall_resolved',
+      entityType: 'cod_remittance_shortfall',
+      entityId: sf.id,
+      oldValues: { status: sf.status },
+      newValues: { status: 'RESOLVED', resolution: mode, amount: sf.shortfallAmount, approvalId: approval.id },
+      reason: why,
+    });
+    return { alreadyResolved: false, resolution: mode, approvalId: approval.id };
   });
 }
 
