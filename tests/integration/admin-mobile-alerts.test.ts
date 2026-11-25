@@ -72,7 +72,9 @@ describe('Admin App — alerts inbox (read-only)', () => {
     // stage filter: OVERDUE hides a DUE alert
     const filtered = await call(adminAlertsRoute, '/admin/alerts?stage=OVERDUE', { token: officer.token });
     expect(filtered.status).toBe(200);
-    expect(filtered.body.items.find((x: { rule: string }) => x.rule === 'MKT_PAYMENT_DUE')).toBeFalsy();
+    // Other files' OVERDUE alerts of the same rule may exist: this test's DUE row must be absent, every row OVERDUE.
+    expect(filtered.body.items.find((x: { ref: string | null }) => x.ref === '100234')).toBeFalsy();
+    expect(filtered.body.items.every((x: { stage: string }) => x.stage === 'OVERDUE')).toBe(true);
   });
 
   it('refuses staff holding neither notifications.manage nor settings.manage, and anonymous callers', async () => {
