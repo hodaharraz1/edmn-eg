@@ -151,9 +151,9 @@ export const saveMyPushToken = defineRoute({
   rate: 'write',
   idempotency: 'required',
   errors: ['validation_failed'],
-  body: z.object({ token: z.string().trim().min(16).max(512) }),
+  body: z.object({ token: z.string().trim().min(16).max(512), provider: z.enum(['FCM', 'APNS']).optional() }),
   response: z.object({ registered: z.literal(true), platform: z.string() }),
-  handler: async ({ actor, body }) => registerPushToken(actor!, body.token),
+  handler: async ({ actor, body }) => registerPushToken(actor!, body.token, body.provider),
 });
 
 export const deleteMyPushToken = defineRoute({

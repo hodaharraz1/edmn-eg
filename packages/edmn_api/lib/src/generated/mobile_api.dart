@@ -4806,13 +4806,16 @@ class RunStoreReturnStepRequest {
 }
 
 class SaveMyPushTokenRequest {
-  const SaveMyPushTokenRequest({required this.token});
+  const SaveMyPushTokenRequest({required this.token, this.provider});
 
-  factory SaveMyPushTokenRequest.fromJson(Map<String, dynamic> json) => SaveMyPushTokenRequest(token: json['token'] as String);
+  factory SaveMyPushTokenRequest.fromJson(Map<String, dynamic> json) => SaveMyPushTokenRequest(token: json['token'] as String, provider: json['provider'] == null ? null : json['provider'] as String);
 
   final String token;
 
-  Map<String, dynamic> toJson() => {'token': token};
+  /// One of: FCM, APNS (kept as String for forward compatibility).
+  final String? provider;
+
+  Map<String, dynamic> toJson() => {'token': token, if (provider != null) 'provider': provider};
 }
 
 class SaveMyPushTokenResponse {

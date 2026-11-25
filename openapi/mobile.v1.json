@@ -10789,6 +10789,13 @@
                     "type": "string",
                     "minLength": 16,
                     "maxLength": 512
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "FCM",
+                      "APNS"
+                    ]
                   }
                 },
                 "required": [

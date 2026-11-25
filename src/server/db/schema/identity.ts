@@ -375,6 +375,11 @@ export const devicePushTokens = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     /** The device push token, AES-GCM encrypted at rest (core/crypto `encrypt`) like web-push secrets; only the sender decrypts it. */
     tokenEnc: text().notNull(),
+    /**
+     * Which provider issued this token: FCM (firebase_messaging default on both platforms) or APNS (raw Apple token).
+     * NULL = the app did not say; the sender routes NULL as FCM (PKG-PUSH-02).
+     */
+    provider: text(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

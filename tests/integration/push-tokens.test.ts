@@ -117,7 +117,7 @@ describe('device push tokens (PKG-PUSH-01)', () => {
 
     // Flag OFF (default): a no-op, nothing logged.
     const off = await sendPushToUser(db, c.user.id, { title: 'اختبار', body: 'جسم' });
-    expect(off).toEqual({ sent: 0, disabled: true });
+    expect(off).toEqual({ sent: 0, failed: 0, disabled: true });
     expect(spy.sent).toHaveLength(0);
 
     // Flag ON requires the SENSITIVE_SETTINGS step-up; then the log driver records the intent WITHOUT the token.
@@ -127,7 +127,7 @@ describe('device push tokens (PKG-PUSH-01)', () => {
     const admin = await makeAdmin();
     await updateSetting(admin, 'notifications.devicePushEnabled', true, 'تشغيل تجريبي');
     const on = await sendPushToUser(db, c.user.id, { title: 'اختبار', body: 'جسم' });
-    expect(on).toEqual({ sent: 1, disabled: false });
+    expect(on).toEqual({ sent: 1, failed: 0, disabled: false });
     expect(spy.sent).toHaveLength(1);
     expect(JSON.stringify(spy.sent)).not.toContain(TOKEN);
     expect(spy.sent[0].platform).toBe('ANDROID');

@@ -91,8 +91,9 @@ class MobileApi {
       CancelAccountDeletionRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.cancelAccountDeletionRequest.path, idempotencyKey: idempotencyKey));
 
   // ── Device push token (PKG-PUSH-01): registration only; the server sends nothing while the flag is OFF ──────
-  Future<SaveMyPushTokenResponse> registerPushToken({required String token, required String idempotencyKey}) async =>
-      SaveMyPushTokenResponse.fromJson(await client.sendJson('POST', MobileApiPaths.saveMyPushToken.path, body: SaveMyPushTokenRequest(token: token).toJson(), idempotencyKey: idempotencyKey));
+  /// [provider] tells the server which SDK issued the token (firebase_messaging = FCM on both platforms — the default).
+  Future<SaveMyPushTokenResponse> registerPushToken({required String token, String? provider, required String idempotencyKey}) async =>
+      SaveMyPushTokenResponse.fromJson(await client.sendJson('POST', MobileApiPaths.saveMyPushToken.path, body: SaveMyPushTokenRequest(token: token, provider: provider).toJson(), idempotencyKey: idempotencyKey));
   Future<DeleteMyPushTokenResponse> unregisterPushToken({required String idempotencyKey}) async =>
       DeleteMyPushTokenResponse.fromJson(await client.sendJson('DELETE', MobileApiPaths.deleteMyPushToken.path, idempotencyKey: idempotencyKey));
   Future<MyPushTokenStatusResponse> pushTokenStatus() async => MyPushTokenStatusResponse.fromJson(await client.getJson(MobileApiPaths.myPushTokenStatus.path));

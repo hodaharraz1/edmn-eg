@@ -176,6 +176,12 @@ export const SETTINGS_SCHEMA = {
    * SENSITIVE: toggling goes through the settings step-up confirmation.
    */
   'notifications.devicePushEnabled': z.boolean().default(false),
+  /**
+   * Device push sender driver (PKG-PUSH-02). 'log' (default): send intents are logged, nothing leaves the server.
+   * 'live': real FCM/APNs sending using the ENCRYPTED credentials from the admin notifications screen; a provider
+   * without valid credentials fails closed. Keys are never in code or env — server settings only.
+   */
+  'notifications.devicePushDriver': z.enum(['log', 'live']).default('log'),
   /** Mobile apps (Phase 1): builds below these versions are told to update (GET /api/v1/app/config). */
   'mobile.minVersion.customer': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   'mobile.minVersion.admin': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
@@ -204,6 +210,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payout.changeHoldHours',
   'deals.feeBps',
   'deals.feePayer',
+  'notifications.devicePushDriver',
   'settlement.mode',
   'settlement.daysOfMonth',
   'settlement.minimumAmount',
