@@ -21,7 +21,9 @@
 - developer.apple.com ← **Membership details** ← **Team ID** (10 حروف/أرقام).
 
 ### 4) حطّهم في GitHub (مش في الشات ولا في الكود)
-GitHub ← المستودع ← **Settings** ← **Secrets and variables** ← **Actions**:
+GitHub ← المستودع ← **Settings** ← **Environments** ← **New environment** باسم **`testflight`**
+(يفضّل تضيف نفسك في **Required reviewers**)، وبعدين جوّه البيئة دي ضيف الأسرار والمتغير (مش في Repository secrets،
+علشان مفتاح Apple بصلاحية Admin ما يبقاش متاح لأي workflow تاني — SEC-183):
 
 | النوع | الاسم | القيمة |
 |---|---|---|
