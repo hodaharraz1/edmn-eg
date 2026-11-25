@@ -62,10 +62,17 @@ describe('Admin App — alerts inbox (read-only)', () => {
     expect(rule).toBeTruthy();
     expect(rule.enabled).toBe(true);
     expect(rule.openCount).toBeGreaterThanOrEqual(1);
-    // Other files' open alerts share the database: pick this test's row by its reference.
-    const mine = res.body.items.find((x: { rule: string; ref: string | null }) => x.rule === 'MKT_PAYMENT_DUE' && x.ref === '100234');
+    // Other files' open alerts share the database (some with later updated_at from sweeps run with a future clock):
+    // page through the feed and pick this test's row by its reference.
+    type Item = { rule: string; ref: string | null };
+    let mine: Item | undefined;
+    for (let page = 1, more = true; !mine && more && page <= 50; page++) {
+      const p = page === 1 ? res : await call(adminAlertsRoute, `/admin/alerts?page=${page}`, { token: officer.token });
+      mine = p.body.items.find((x: Item) => x.rule === 'MKT_PAYMENT_DUE' && x.ref === '100234');
+      more = p.body.hasMore;
+    }
     expect(mine).toBeTruthy();
-    expect(mine.ref).toBe('100234');
+    expect(mine!.ref).toBe('100234');
     expect(mine).not.toHaveProperty('recipientUserId');
     expect(mine).not.toHaveProperty('entityId');
     expect(mine).not.toHaveProperty('metadata');
