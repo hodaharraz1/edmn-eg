@@ -25,6 +25,7 @@ import 'features/seller/seller_screens.dart';
 import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
 import 'features/wallet/wallet_screens.dart';
+import 'deep_links.dart';
 import 'providers.dart';
 import 'features/wishlist/wishlist_screens.dart';
 
@@ -38,6 +39,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // PKG-LINKS-01: a shared web link (App Links / Universal Links) lands on its app route first.
+      final mapped = appLocationForWebUri(state.uri);
+      if (mapped != null && mapped != state.uri.toString()) return mapped;
       final loc = state.matchedLocation;
       final needsAuth = _protected.any((p) => loc.startsWith(p));
       if (needsAuth && !ref.read(signedInProvider)) return '/sign-in?next=${Uri.encodeComponent(state.uri.toString())}';

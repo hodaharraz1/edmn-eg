@@ -44,6 +44,14 @@ const schema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
+  /**
+   * PKG-LINKS-01: App Links / Universal Links verification files. Real values are injected at publish time
+   * (never committed): empty fails safe — the platforms keep opening the website. docs/mobile/DEEP_LINKS.md.
+   */
+  APP_LINKS_ANDROID_PACKAGE: z.string().default('com.edmneg.edmn_customer'),
+  APP_LINKS_ANDROID_SHA256: z.string().default(''),
+  APP_LINKS_IOS_TEAM_ID: z.string().default(''),
+  APP_LINKS_IOS_BUNDLE_ID: z.string().default('com.edmneg.edmnCustomer'),
   SMS_DRIVER: z.enum(['log', 'http']).default('log'),
   SMS_HTTP_URL: z.string().optional(),
   SMS_HTTP_TOKEN: z.string().optional(),

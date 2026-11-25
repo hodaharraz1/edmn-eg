@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- PKG-LINKS-01: Universal Links for shared https://www.edmneg.com links (docs/mobile/DEEP_LINKS.md). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.edmneg.com</string>
+	</array>
+</dict>
+</plist>
