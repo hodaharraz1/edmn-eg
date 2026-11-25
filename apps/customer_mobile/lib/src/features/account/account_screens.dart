@@ -78,6 +78,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-identity'), icon: Icons.badge_outlined, title: t.identityTitle, onTap: () => context.push('/account/identity')),
                   EdmnMenuItem(key: const Key('menu-security'), icon: Icons.lock_outline_rounded, title: t.security, onTap: () => context.push('/account/security')),
                   EdmnMenuItem(icon: Icons.gavel_rounded, title: t.legal, onTap: () => context.push('/legal/terms')),
+                  EdmnMenuItem(key: const Key('menu-account-deletion'), icon: Icons.delete_forever_outlined, title: t.accountDeletion, destructive: true, onTap: () => context.push('/account/deletion')),
                   EdmnMenuItem(
                     key: const Key('menu-sign-out'),
                     icon: Icons.logout_rounded,

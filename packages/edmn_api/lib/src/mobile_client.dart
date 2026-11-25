@@ -78,6 +78,16 @@ class MobileApi {
     await client.adoptTokens(SessionTokens.fromJson(tokens));
   }
 
+  // ── Account deletion request (C30) ───────────────────────────────────────────────────────────────────────────
+  /// Asks EDMN to close the account. While anything is open (orders, deals, disputes, wallet balance, payouts) the
+  /// server refuses with validation_failed; the Arabic reasons are in the failure's fieldErrors['blockers'].
+  Future<RequestAccountDeletionResponse> requestAccountDeletion({String? reason, required String idempotencyKey}) async => RequestAccountDeletionResponse.fromJson(
+      await client.sendJson('POST', MobileApiPaths.requestAccountDeletion.path, body: RequestAccountDeletionRequest(reason: reason).toJson(), idempotencyKey: idempotencyKey));
+  Future<GetAccountDeletionRequestResponse> accountDeletionRequest() async =>
+      GetAccountDeletionRequestResponse.fromJson(await client.getJson(MobileApiPaths.getAccountDeletionRequest.path));
+  Future<CancelAccountDeletionRequestResponse> cancelAccountDeletionRequest({required String idempotencyKey}) async =>
+      CancelAccountDeletionRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.cancelAccountDeletionRequest.path, idempotencyKey: idempotencyKey));
+
   Future<void> sendVerificationCode(String channel) => client.sendJson('POST', MobileApiPaths.sendVerificationCode.path, body: {'channel': channel});
   Future<Profile> confirmVerificationCode(String channel, String code) async =>
       Profile.fromJson(await client.sendJson('POST', MobileApiPaths.confirmVerificationCode.path, body: {'channel': channel, 'code': code}));

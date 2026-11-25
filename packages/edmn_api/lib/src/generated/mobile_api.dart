@@ -12,6 +12,7 @@ abstract final class MobileApiPaths {
   static const addWishlistItem = (method: 'PUT', path: '/api/v1/wishlist/{productId}');
   static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
   static const archiveSellerProduct = (method: 'POST', path: '/api/v1/seller/products/{productId}/archive');
+  static const cancelAccountDeletionRequest = (method: 'POST', path: '/api/v1/me/deletion-request/cancel');
   static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
@@ -33,6 +34,7 @@ abstract final class MobileApiPaths {
   static const escalateMyReturn = (method: 'POST', path: '/api/v1/returns/{returnId}/escalate');
   static const escalateStoreReturn = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/escalate');
   static const forgotPassword = (method: 'POST', path: '/api/v1/auth/password/forgot');
+  static const getAccountDeletionRequest = (method: 'GET', path: '/api/v1/me/deletion-request');
   static const getAppConfig = (method: 'GET', path: '/api/v1/app/config');
   static const getCart = (method: 'GET', path: '/api/v1/cart');
   static const getCategoryAttributes = (method: 'GET', path: '/api/v1/catalog/categories/{categoryId}/attributes');
@@ -125,6 +127,7 @@ abstract final class MobileApiPaths {
   static const reportMessage = (method: 'POST', path: '/api/v1/conversations/messages/{messageId}/report');
   static const reportOrderProblem = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/problem');
   static const reportStoreMessage = (method: 'POST', path: '/api/v1/seller/conversations/messages/{messageId}/report');
+  static const requestAccountDeletion = (method: 'POST', path: '/api/v1/me/deletion-request');
   static const requestCancellation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/cancellation-request');
   static const resetPassword = (method: 'POST', path: '/api/v1/auth/password/reset');
   static const respondDealChangeRequest = (method: 'POST', path: '/api/v1/deals/{dealId}/change-response');
@@ -346,6 +349,53 @@ class ArchiveReceivingAccountResponseItemsItem {
   final String createdAt;
 
   Map<String, dynamic> toJson() => {'id': id, 'type': type, 'label': label, 'holderName': holderName, 'status': status, 'reviewNote': reviewNote, 'createdAt': createdAt};
+}
+
+class CancelAccountDeletionRequestResponse {
+  const CancelAccountDeletionRequestResponse({required this.request});
+
+  factory CancelAccountDeletionRequestResponse.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponse(request: json['request'] == null ? null : CancelAccountDeletionRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final CancelAccountDeletionRequestResponseRequest? request;
+
+  Map<String, dynamic> toJson() => {'request': request?.toJson()};
+}
+
+class CancelAccountDeletionRequestResponseRequest {
+  const CancelAccountDeletionRequestResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory CancelAccountDeletionRequestResponseRequest.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => CancelAccountDeletionRequestResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<CancelAccountDeletionRequestResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class CancelAccountDeletionRequestResponseRequestBlockersItem {
+  const CancelAccountDeletionRequestResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory CancelAccountDeletionRequestResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
 }
 
 class CancelAccountPayoutRequestResponse {
@@ -1189,6 +1239,53 @@ class ForgotPasswordRequest {
   final String identifier;
 
   Map<String, dynamic> toJson() => {'identifier': identifier};
+}
+
+class GetAccountDeletionRequestResponse {
+  const GetAccountDeletionRequestResponse({required this.request});
+
+  factory GetAccountDeletionRequestResponse.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponse(request: json['request'] == null ? null : GetAccountDeletionRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final GetAccountDeletionRequestResponseRequest? request;
+
+  Map<String, dynamic> toJson() => {'request': request?.toJson()};
+}
+
+class GetAccountDeletionRequestResponseRequest {
+  const GetAccountDeletionRequestResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory GetAccountDeletionRequestResponseRequest.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => GetAccountDeletionRequestResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<GetAccountDeletionRequestResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class GetAccountDeletionRequestResponseRequestBlockersItem {
+  const GetAccountDeletionRequestResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory GetAccountDeletionRequestResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
 }
 
 class GetCategoryAttributesResponse {
@@ -4271,6 +4368,63 @@ class ReportStoreMessageResponse {
   final bool ok;
 
   Map<String, dynamic> toJson() => {'ok': ok};
+}
+
+class RequestAccountDeletionRequest {
+  const RequestAccountDeletionRequest({this.reason});
+
+  factory RequestAccountDeletionRequest.fromJson(Map<String, dynamic> json) => RequestAccountDeletionRequest(reason: json['reason'] == null ? null : json['reason'] as String);
+
+  final String? reason;
+
+  Map<String, dynamic> toJson() => {if (reason != null) 'reason': reason};
+}
+
+class RequestAccountDeletionResponse {
+  const RequestAccountDeletionResponse({required this.request});
+
+  factory RequestAccountDeletionResponse.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponse(request: RequestAccountDeletionResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final RequestAccountDeletionResponseRequest request;
+
+  Map<String, dynamic> toJson() => {'request': request.toJson()};
+}
+
+class RequestAccountDeletionResponseRequest {
+  const RequestAccountDeletionResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory RequestAccountDeletionResponseRequest.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => RequestAccountDeletionResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<RequestAccountDeletionResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class RequestAccountDeletionResponseRequestBlockersItem {
+  const RequestAccountDeletionResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory RequestAccountDeletionResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
 }
 
 class RequestCancellationRequest {

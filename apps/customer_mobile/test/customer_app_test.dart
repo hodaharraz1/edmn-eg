@@ -598,6 +598,30 @@ class FakeMobileApi extends MobileApi {
     revokeCalls++;
     return 1;
   }
+
+  // ── Account deletion request (C30) ──
+  GetAccountDeletionRequestResponseRequest? deletionState;
+  ApiFailure? deletionError;
+  final deletionCalls = <(String?, String)>[];
+  final deletionCancelKeys = <String>[];
+
+  @override
+  Future<GetAccountDeletionRequestResponse> accountDeletionRequest() async => GetAccountDeletionRequestResponse(request: deletionState);
+
+  @override
+  Future<RequestAccountDeletionResponse> requestAccountDeletion({String? reason, required String idempotencyKey}) async {
+    deletionCalls.add((reason, idempotencyKey));
+    if (deletionError != null) throw deletionError!;
+    deletionState = GetAccountDeletionRequestResponseRequest(id: 'r1', status: 'PENDING', reason: reason, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null);
+    return RequestAccountDeletionResponse(request: RequestAccountDeletionResponseRequest(id: 'r1', status: 'PENDING', reason: reason, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null));
+  }
+
+  @override
+  Future<CancelAccountDeletionRequestResponse> cancelAccountDeletionRequest({required String idempotencyKey}) async {
+    deletionCancelKeys.add(idempotencyKey);
+    deletionState = GetAccountDeletionRequestResponseRequest(id: 'r1', status: 'WITHDRAWN', reason: null, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null);
+    return CancelAccountDeletionRequestResponse(request: CancelAccountDeletionRequestResponseRequest(id: 'r1', status: 'WITHDRAWN', reason: null, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null));
+  }
 }
 
 class _FakePicker implements FilePickerService {
@@ -912,6 +936,61 @@ void main() {
     await t.tap(find.byKey(const Key('revoke-others')));
     await t.pumpAndSettle();
     expect(api.revokeCalls, 1);
+  });
+
+  testWidgets('account deletion: request with a reason, then cancel the pending request', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    expect(find.byKey(const Key('deletion-reason')), findsOneWidget);
+    await t.enterText(find.byKey(const Key('deletion-reason')), 'مش محتاج الحساب');
+    await t.tap(find.byKey(const Key('deletion-submit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCalls, [('مش محتاج الحساب', api.deletionCalls.single.$2)]);
+    expect(find.byKey(const Key('deletion-pending')), findsOneWidget);
+    expect(find.byKey(const Key('deletion-submit')), findsNothing);
+    await t.tap(find.byKey(const Key('deletion-cancel')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCancelKeys, hasLength(1));
+    expect(find.byKey(const Key('deletion-submit')), findsOneWidget);
+  });
+
+  testWidgets('account deletion: a blocked request shows the Arabic reasons from the server', (t) async {
+    final api = FakeMobileApi()
+      ..deletionState = GetAccountDeletionRequestResponseRequest(id: 'r9', status: 'BLOCKED', reason: null, createdAt: '2030-01-01T10:00:00Z', completedAt: null, blockers: [
+        GetAccountDeletionRequestResponseRequestBlockersItem(code: 'OPEN_ORDERS', label: 'طلبات شراء لسه مفتوحة', count: 2),
+        GetAccountDeletionRequestResponseRequestBlockersItem(code: 'NON_ZERO_BALANCE', label: 'رصيد (معلق/متاح/محجوز/مديونية) لا يساوي صفر', count: 1),
+      ]);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    expect(find.byKey(const Key('deletion-blocked')), findsOneWidget);
+    expect(find.text('طلبات شراء لسه مفتوحة'), findsOneWidget);
+    expect(find.byKey(const Key('blocker-NON_ZERO_BALANCE')), findsOneWidget);
+    expect(find.byKey(const Key('deletion-submit')), findsOneWidget);
+  });
+
+  testWidgets('account deletion: a refusal refreshes into the recorded BLOCKED state', (t) async {
+    final api = FakeMobileApi()..deletionError = const ApiFailure(code: ApiErrorCode.validationFailed, status: 422);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    await t.tap(find.byKey(const Key('deletion-submit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCalls, hasLength(1));
+  });
+
+  testWidgets('account menu carries the deletion entry under security', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/account');
+    await _reveal(t, find.byKey(const Key('menu-account-deletion')));
+    await t.tap(find.byKey(const Key('menu-account-deletion')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('deletion-reason')), findsOneWidget);
   });
 
   testWidgets('seller center: a buyer without a store sees an honest status, not a dashboard', (t) async {

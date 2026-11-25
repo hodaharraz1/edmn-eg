@@ -65,6 +65,8 @@ const BUYER_WRITES = new Set([
   'placeOrder', 'cancelUnpaidOrder', 'confirmReceipt', 'requestCancellation', 'reportOrderProblem',
   'submitPaymentProof',
   'addWishlistItem', 'removeWishlistItem',
+  // Account deletion REQUEST (C30): records a PENDING request for EDMN to complete; deletes/anonymizes nothing.
+  'requestAccountDeletion', 'cancelAccountDeletionRequest',
 ]);
 
 describe('mobile API contract (OpenAPI 3.1)', () => {

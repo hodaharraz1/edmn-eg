@@ -6991,6 +6991,90 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.'**
   String get adminSupportOnWeb;
+
+  /// No description provided for @accountDeletion.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف الحساب'**
+  String get accountDeletion;
+
+  /// No description provided for @accountDeletionBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب حذف الحساب بيسجّل طلب عند فريق اضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.'**
+  String get accountDeletionBody;
+
+  /// No description provided for @accountDeletionReasonHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الحذف (اختياري)'**
+  String get accountDeletionReasonHint;
+
+  /// No description provided for @accountDeletionSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال طلب حذف الحساب'**
+  String get accountDeletionSubmit;
+
+  /// No description provided for @accountDeletionConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.'**
+  String get accountDeletionConfirm;
+
+  /// No description provided for @accountDeletionSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتسجّل طلبك، وفريق اضمن هيكمّله بعد مراجعة الحساب'**
+  String get accountDeletionSent;
+
+  /// No description provided for @accountDeletionPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب حذف الحساب قيد التنفيذ'**
+  String get accountDeletionPending;
+
+  /// No description provided for @accountDeletionPendingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'فريق اضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.'**
+  String get accountDeletionPendingBody;
+
+  /// No description provided for @accountDeletionBlockedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش هينفع تقفل حسابك دلوقتي'**
+  String get accountDeletionBlockedTitle;
+
+  /// No description provided for @accountDeletionBlockedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:'**
+  String get accountDeletionBlockedBody;
+
+  /// No description provided for @accountDeletionCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء طلب الحذف'**
+  String get accountDeletionCancel;
+
+  /// No description provided for @accountDeletionCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتلغى طلب حذف الحساب'**
+  String get accountDeletionCancelled;
+
+  /// No description provided for @accountDeletionRequestedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الطلب'**
+  String get accountDeletionRequestedAt;
+
+  /// No description provided for @accountDeletionCancelConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.'**
+  String get accountDeletionCancelConfirm;
 }
 
 class _EdmnLocalizationsDelegate

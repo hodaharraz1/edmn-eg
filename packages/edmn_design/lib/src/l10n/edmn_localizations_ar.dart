@@ -3654,4 +3654,52 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get adminSupportOnWeb =>
       'الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.';
+
+  @override
+  String get accountDeletion => 'حذف الحساب';
+
+  @override
+  String get accountDeletionBody =>
+      'طلب حذف الحساب بيسجّل طلب عند فريق اضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.';
+
+  @override
+  String get accountDeletionReasonHint => 'سبب الحذف (اختياري)';
+
+  @override
+  String get accountDeletionSubmit => 'إرسال طلب حذف الحساب';
+
+  @override
+  String get accountDeletionConfirm =>
+      'متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.';
+
+  @override
+  String get accountDeletionSent =>
+      'اتسجّل طلبك، وفريق اضمن هيكمّله بعد مراجعة الحساب';
+
+  @override
+  String get accountDeletionPending => 'طلب حذف الحساب قيد التنفيذ';
+
+  @override
+  String get accountDeletionPendingBody =>
+      'فريق اضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.';
+
+  @override
+  String get accountDeletionBlockedTitle => 'مش هينفع تقفل حسابك دلوقتي';
+
+  @override
+  String get accountDeletionBlockedBody =>
+      'خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:';
+
+  @override
+  String get accountDeletionCancel => 'إلغاء طلب الحذف';
+
+  @override
+  String get accountDeletionCancelled => 'اتلغى طلب حذف الحساب';
+
+  @override
+  String get accountDeletionRequestedAt => 'تاريخ الطلب';
+
+  @override
+  String get accountDeletionCancelConfirm =>
+      'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.';
 }

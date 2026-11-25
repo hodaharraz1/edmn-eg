@@ -3690,4 +3690,53 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get adminSupportOnWeb =>
       'Assignment, status changes and internal notes are done on the web console.';
+
+  @override
+  String get accountDeletion => 'Delete account';
+
+  @override
+  String get accountDeletionBody =>
+      'A deletion request is recorded with the EDMN team and deletes nothing immediately. If you still have open activity or balances we will tell you what must be closed first. Order and payment records are kept under the retention policy.';
+
+  @override
+  String get accountDeletionReasonHint => 'Reason (optional)';
+
+  @override
+  String get accountDeletionSubmit => 'Send deletion request';
+
+  @override
+  String get accountDeletionConfirm =>
+      'Are you sure you want to request account deletion? You can cancel the request any time before it is completed.';
+
+  @override
+  String get accountDeletionSent =>
+      'Your request was recorded. The EDMN team will complete it after reviewing the account.';
+
+  @override
+  String get accountDeletionPending => 'Account deletion in progress';
+
+  @override
+  String get accountDeletionPendingBody =>
+      'The EDMN team completes the closure once all activity is settled. You can cancel the request at any time.';
+
+  @override
+  String get accountDeletionBlockedTitle =>
+      'Your account cannot be closed right now';
+
+  @override
+  String get accountDeletionBlockedBody =>
+      'Finish the items below first, then request deletion again:';
+
+  @override
+  String get accountDeletionCancel => 'Cancel deletion request';
+
+  @override
+  String get accountDeletionCancelled => 'Deletion request cancelled';
+
+  @override
+  String get accountDeletionRequestedAt => 'Requested at';
+
+  @override
+  String get accountDeletionCancelConfirm =>
+      'Are you sure you want to cancel the deletion request? Your account stays active.';
 }

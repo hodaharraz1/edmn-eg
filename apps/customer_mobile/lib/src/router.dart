@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/account/account_screens.dart';
+import 'features/account/deletion_screen.dart';
 import 'features/account/devices_screen.dart';
 import 'features/auth/reset_password_screen.dart';
 import 'features/auth/sign_in_screen.dart';
@@ -74,6 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/account/profile', builder: (c, s) => const ProfileScreen()),
       GoRoute(path: '/account/security', builder: (c, s) => const SecurityScreen()),
       GoRoute(path: '/account/devices', builder: (c, s) => const DevicesScreen()),
+      GoRoute(path: '/account/deletion', builder: (c, s) => const AccountDeletionScreen()),
       GoRoute(path: '/account/payment-methods', builder: (c, s) => const PaymentMethodsScreen()),
       GoRoute(path: '/account/addresses', builder: (c, s) => const AddressesScreen()),
       GoRoute(path: '/account/addresses/new', builder: (c, s) => const AddressFormScreen()),

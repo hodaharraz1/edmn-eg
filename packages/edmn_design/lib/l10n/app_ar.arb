@@ -1454,5 +1454,19 @@
   "adminReplyHint": "يظهر الرد للعميل باسم فريق الدعم ويصله إشعار. الرد لا يغلق التذكرة ولا يقبل مرفقات.",
   "adminReplySend": "إرسال الرد",
   "adminReplySent": "تم إرسال الرد",
-  "adminSupportOnWeb": "الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب."
+  "adminSupportOnWeb": "الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.",
+  "accountDeletion": "حذف الحساب",
+  "accountDeletionBody": "طلب حذف الحساب بيسجّل طلب عند فريق اضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.",
+  "accountDeletionReasonHint": "سبب الحذف (اختياري)",
+  "accountDeletionSubmit": "إرسال طلب حذف الحساب",
+  "accountDeletionConfirm": "متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.",
+  "accountDeletionSent": "اتسجّل طلبك، وفريق اضمن هيكمّله بعد مراجعة الحساب",
+  "accountDeletionPending": "طلب حذف الحساب قيد التنفيذ",
+  "accountDeletionPendingBody": "فريق اضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.",
+  "accountDeletionBlockedTitle": "مش هينفع تقفل حسابك دلوقتي",
+  "accountDeletionBlockedBody": "خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:",
+  "accountDeletionCancel": "إلغاء طلب الحذف",
+  "accountDeletionCancelled": "اتلغى طلب حذف الحساب",
+  "accountDeletionRequestedAt": "تاريخ الطلب",
+  "accountDeletionCancelConfirm": "متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي."
 }

@@ -1289,5 +1289,19 @@
   "adminReplyHint": "The customer sees the reply from the support team and is notified. A reply never closes the ticket and takes no attachments.",
   "adminReplySend": "Send reply",
   "adminReplySent": "Reply sent",
-  "adminSupportOnWeb": "Assignment, status changes and internal notes are done on the web console."
+  "adminSupportOnWeb": "Assignment, status changes and internal notes are done on the web console.",
+  "accountDeletion": "Delete account",
+  "accountDeletionBody": "A deletion request is recorded with the EDMN team and deletes nothing immediately. If you still have open activity or balances we will tell you what must be closed first. Order and payment records are kept under the retention policy.",
+  "accountDeletionReasonHint": "Reason (optional)",
+  "accountDeletionSubmit": "Send deletion request",
+  "accountDeletionConfirm": "Are you sure you want to request account deletion? You can cancel the request any time before it is completed.",
+  "accountDeletionSent": "Your request was recorded. The EDMN team will complete it after reviewing the account.",
+  "accountDeletionPending": "Account deletion in progress",
+  "accountDeletionPendingBody": "The EDMN team completes the closure once all activity is settled. You can cancel the request at any time.",
+  "accountDeletionBlockedTitle": "Your account cannot be closed right now",
+  "accountDeletionBlockedBody": "Finish the items below first, then request deletion again:",
+  "accountDeletionCancel": "Cancel deletion request",
+  "accountDeletionCancelled": "Deletion request cancelled",
+  "accountDeletionRequestedAt": "Requested at",
+  "accountDeletionCancelConfirm": "Are you sure you want to cancel the deletion request? Your account stays active."
 }
