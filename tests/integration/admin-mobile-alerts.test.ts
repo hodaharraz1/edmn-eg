@@ -62,7 +62,8 @@ describe('Admin App — alerts inbox (read-only)', () => {
     expect(rule).toBeTruthy();
     expect(rule.enabled).toBe(true);
     expect(rule.openCount).toBeGreaterThanOrEqual(1);
-    const mine = res.body.items.find((x: { rule: string }) => x.rule === 'MKT_PAYMENT_DUE');
+    // Other files' open alerts share the database: pick this test's row by its reference.
+    const mine = res.body.items.find((x: { rule: string; ref: string | null }) => x.rule === 'MKT_PAYMENT_DUE' && x.ref === '100234');
     expect(mine).toBeTruthy();
     expect(mine.ref).toBe('100234');
     expect(mine).not.toHaveProperty('recipientUserId');

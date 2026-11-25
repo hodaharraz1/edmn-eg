@@ -137,11 +137,14 @@ describe('SEC_ADMIN_ACTION_BURST — an admin audit-row burst alerts security re
       Array.from({ length: ADMIN_BURST_MIN_ACTIONS }, () => ({ actorUserId: actorId, actorType: 'ADMIN', action: 'test.pkgsecops.burst', entityType: 'test' })),
     );
     await runAlertSweep({ only: ['SEC_ADMIN_ACTION_BURST'] });
+    // audit_logs is append-only: other files' admin bursts in the shared test database also alert. Check THIS actor's
+    // alert (its fingerprinted state) and that no alert to the reviewer carries a raw actor id.
     const mine = await alertsTo(s.userId);
-    expect(mine).toHaveLength(1);
-    expect(`${mine[0].title} ${mine[0].body}`).not.toContain(actorId);
-    const [st] = await statesOf('SEC_ADMIN_ACTION_BURST');
-    expect(st.entityId).toBe(spikeEntityId('admin', actorId));
+    expect(mine.length).toBeGreaterThanOrEqual(1);
+    for (const n of mine) expect(`${n.title} ${n.body}`).not.toContain(actorId);
+    const st = (await statesOf('SEC_ADMIN_ACTION_BURST')).find((x) => x.entityId === spikeEntityId('admin', actorId));
+    expect(st, 'no alert state for this burst').toBeTruthy();
+    expect(st!.sentCount).toBeGreaterThanOrEqual(1);
   });
 });
 
