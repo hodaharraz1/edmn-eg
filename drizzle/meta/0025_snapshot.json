@@ -1,5 +1,5 @@
 {
-  "id": "6b5774eb-80ce-477f-ba3a-63d602087e1e",
+  "id": "44ba4c8e-7af8-4eb5-a1f7-f37d01c78a32",
   "prevId": "379067eb-95d6-45da-9de5-d79bf287aba0",
   "version": "7",
   "dialect": "postgresql",
@@ -528,8 +528,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token": {
-          "name": "token",
+        "token_enc": {
+          "name": "token_enc",
           "type": "text",
           "primaryKey": false,
           "notNull": true

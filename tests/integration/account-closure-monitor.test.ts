@@ -7,7 +7,7 @@ import { POST as adminMfaVerifyRoute } from '@/app/api/v1/admin/auth/mfa/verify/
 import { GET as adminClosuresRoute } from '@/app/api/v1/admin/closure-requests/route';
 import { totpCode } from '@/server/auth/totp';
 import { db } from '@/server/db/client';
-import { notifications, users } from '@/server/db/schema';
+import { notifications, outboundMessages, users } from '@/server/db/schema';
 import { closureMonitor } from '@/server/modules/admin-mobile/monitoring';
 import { completeAccountClosure, requestAccountClosure } from '@/server/modules/customers/closure';
 import { customerActor } from '@/server/auth/actors';
@@ -58,6 +58,9 @@ describe('account closure execution notification + admin app monitor', () => {
     expect(notes).toHaveLength(1);
     expect(notes[0].body).toContain('تم إغلاق حسابك بناءً على طلبك');
     expect(notes[0].title).toBe('طلب إغلاق الحساب');
+    // ...and the email really reaches the outbox, addressed to the address the account had before pseudonymisation.
+    const mails = await db.select().from(outboundMessages).where(and(eq(outboundMessages.event, 'ACCOUNT_CLOSURE'), eq(outboundMessages.channel, 'EMAIL'), eq(outboundMessages.recipient, c.user.email!)));
+    expect(mails).toHaveLength(1);
 
     // The account itself was closed and pseudonymised (existing behavior, unchanged).
     const [u] = await db.select().from(users).where(eq(users.id, c.user.id));

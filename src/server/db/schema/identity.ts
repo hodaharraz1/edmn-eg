@@ -320,7 +320,8 @@ export const devicePushTokens = pgTable(
     userId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    token: text().notNull(),
+    /** The device push token, AES-GCM encrypted at rest (core/crypto `encrypt`) like web-push secrets; only the sender decrypts it. */
+    tokenEnc: text().notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

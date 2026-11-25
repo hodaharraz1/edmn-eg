@@ -1,6 +1,7 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireUser, type Actor } from '@/server/core/actor';
+import { decrypt, encrypt } from '@/server/core/crypto';
 import { validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { devicePushTokens, mobileDevices } from '@/server/db/schema';
@@ -63,8 +64,8 @@ export async function registerPushToken(actor: Actor, token: string) {
     if (!device) throw validation('الجهاز غير مسجل أو تم إلغاؤه — سجّل الدخول من التطبيق مرة أخرى');
     await tx
       .insert(devicePushTokens)
-      .values({ deviceId, userId, token: trimmed })
-      .onConflictDoUpdate({ target: devicePushTokens.deviceId, set: { token: trimmed, updatedAt: new Date() } });
+      .values({ deviceId, userId, tokenEnc: encrypt(trimmed) })
+      .onConflictDoUpdate({ target: devicePushTokens.deviceId, set: { tokenEnc: encrypt(trimmed), updatedAt: new Date() } });
     await audit(tx, actor, { action: 'device.push_token_registered', entityType: 'user', entityId: userId, newValues: { deviceId, platform: device.platform } });
     return { registered: true as const, platform: device.platform as string };
   });
@@ -94,11 +95,11 @@ export async function pushTokenStatus(actor: Actor) {
 export async function sendPushToUser(conn: DbOrTx, userId: string, message: DevicePushMessage) {
   if (!(await getSetting('notifications.devicePushEnabled', conn))) return { sent: 0, disabled: true as const };
   const rows = await conn
-    .select({ token: devicePushTokens.token, platform: mobileDevices.platform })
+    .select({ tokenEnc: devicePushTokens.tokenEnc, platform: mobileDevices.platform })
     .from(devicePushTokens)
     .innerJoin(mobileDevices, and(eq(mobileDevices.id, devicePushTokens.deviceId), isNull(mobileDevices.revokedAt)))
     .where(eq(devicePushTokens.userId, userId));
-  for (const r of rows) await sender.send({ token: r.token, platform: r.platform }, message);
+  for (const r of rows) await sender.send({ token: decrypt(r.tokenEnc), platform: r.platform }, message);
   return { sent: rows.length, disabled: false as const };
 }
 

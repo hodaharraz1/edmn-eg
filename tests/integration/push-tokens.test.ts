@@ -8,6 +8,7 @@ import { DELETE as adminDeletePush, GET as adminGetPush, POST as adminPostPush }
 import { POST as loginRoute } from '@/app/api/v1/auth/login/route';
 import { DELETE as deletePush, GET as getPush, POST as postPush } from '@/app/api/v1/me/devices/push-token/route';
 import { totpCode } from '@/server/auth/totp';
+import { decrypt } from '@/server/core/crypto';
 import { customerActor } from '@/server/auth/actors';
 import { db } from '@/server/db/client';
 import { devicePushTokens, mobileDevices, systemSettings } from '@/server/db/schema';
@@ -76,7 +77,9 @@ describe('device push tokens (PKG-PUSH-01)', () => {
     expect(reg2.status).toBe(200);
     const rows = await db.select().from(devicePushTokens).where(eq(devicePushTokens.userId, c.user.id));
     expect(rows).toHaveLength(1);
-    expect(rows[0].token).toBe(TOKEN + 'b');
+    // Stored encrypted at rest (never the plaintext token), and it decrypts to the latest registration.
+    expect(rows[0].tokenEnc).not.toContain(TOKEN);
+    expect(decrypt(rows[0].tokenEnc)).toBe(TOKEN + 'b');
 
     // Status reflects registration; sending is OFF by default.
     const st = await call(getPush as Handler, '/me/devices/push-token', { token });

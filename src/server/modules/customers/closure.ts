@@ -105,6 +105,9 @@ export async function completeAccountClosure(actor: Actor, requestId: string) {
     }
     const now = new Date();
     const [u] = await tx.select().from(users).where(eq(users.id, req.userId)).for('update');
+    // Notify BEFORE pseudonymising: notify() reads the email address from the users row, which is nulled below.
+    // The customer hears that the request was executed (in-app + email via the outbox, same transaction).
+    await notifyClosure(tx, req.userId, 'تم إغلاق حسابك بناءً على طلبك. بيانات الطلبات والمدفوعات محفوظة حسب سياسة الاحتفاظ.');
     await tx
       .update(users)
       .set({ status: 'CLOSED', closedAt: now, anonymizedAt: now, fullName: 'حساب مغلق', email: null, phone: null, totpSecretEnc: null })
@@ -119,8 +122,6 @@ export async function completeAccountClosure(actor: Actor, requestId: string) {
       oldValues: { status: u.status, hadEmail: !!u.email, hadPhone: !!u.phone },
       newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
     });
-    // The customer hears that the request was executed (in-app + email via the outbox, same transaction).
-    await notifyClosure(tx, req.userId, 'تم إغلاق حسابك بناءً على طلبك. بيانات الطلبات والمدفوعات محفوظة حسب سياسة الاحتفاظ.');
     return { closed: true, blockers: [] };
   });
 }
