@@ -37,7 +37,7 @@ async function codJourney(browser: Browser, shortBy: number) {
   await expect.poll(async () => (await q(`select ci.id from cart_items ci join carts c on c.id = ci.cart_id join users u on u.id = c.user_id where u.email = $1`, [BUYER])).length).toBeGreaterThan(0);
   await buyer.goto('/checkout');
   await buyer.locator('input[name=paymentMethod][value=COD]').check();
-  await expect(buyer.getByText(/نقدًا للمندوب عند الاستلام/)).toBeVisible();
+  await expect(buyer.getByText(/هتدفع .*نقدًا للمندوب عند الاستلام/)).toBeVisible();
   await buyer.getByRole('button', { name: /أكّد الطلب/ }).click();
   await buyer.waitForURL(/\/account\/orders\/[0-9a-f-]{36}/);
   const orderId = buyer.url().match(/\/account\/orders\/([0-9a-f-]{36})/)![1];

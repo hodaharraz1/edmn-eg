@@ -26,7 +26,7 @@ test('grant then withdraw marketing consent from the profile, each change record
   }
   await box.check();
   await save();
-  await expect(page.getByText('اتحفظ اختيارك').first()).toBeVisible();
+  await expect(page.getByText(/هتوصلك عروضنا وأخبارنا/).first()).toBeVisible();
   await expect.poll(optIn).toBe(true);
   await page.reload();
   await expect(page.locator('input[name=marketing]')).toBeChecked();
@@ -40,6 +40,6 @@ test('grant then withdraw marketing consent from the profile, each change record
   const log = await events();
   expect(log.length).toBeGreaterThanOrEqual(before + 2);
   expect(log.slice(-2).map((e) => e.action)).toEqual(['GRANT', 'WITHDRAW']);
-  const audits = await q<{ action: string }>(`select a.action from audit_logs a join users u on u.id = a.entity_id where u.email = $1 and a.action like 'account.marketing_consent_%'`, [EMAIL]);
+  const audits = await q<{ action: string }>(`select a.action from audit_logs a join users u on u.id::text = a.entity_id where u.email = $1 and a.action like 'account.marketing_consent_%'`, [EMAIL]);
   expect(audits.map((a) => a.action)).toEqual(expect.arrayContaining(['account.marketing_consent_granted', 'account.marketing_consent_withdrawn']));
 });

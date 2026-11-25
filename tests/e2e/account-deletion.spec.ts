@@ -54,7 +54,7 @@ test('a fresh customer with no obligations: request accepted (PENDING), then wit
   // The account is intact: still active, can still sign in; the request and its withdrawal are audited.
   expect((await q<{ status: string; closed_at: Date | null }>(`select status, closed_at from users where email = $1`, [email]))[0]).toMatchObject({ status: 'ACTIVE', closed_at: null });
   await apiLogin(request, email, password);
-  const audits = await q<{ action: string }>(`select a.action from audit_logs a join users u on u.id = a.entity_id where u.email = $1 and a.action like 'account.closure_%'`, [email]);
+  const audits = await q<{ action: string }>(`select a.action from audit_logs a join users u on u.id::text = a.entity_id where u.email = $1 and a.action like 'account.closure_%'`, [email]);
   expect(audits.map((a) => a.action)).toEqual(expect.arrayContaining(['account.closure_requested', 'account.closure_withdrawn']));
 });
 
