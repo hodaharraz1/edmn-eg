@@ -21,6 +21,7 @@ class _State extends ConsumerState<RevokeUserSessionsScreen> {
   String? _idempotencyKey;
   String? _result;
   Object? _error;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -32,7 +33,10 @@ class _State extends ConsumerState<RevokeUserSessionsScreen> {
   Future<void> _submit({bool afterStepUp = false}) async {
     // One key per intent: a retry after a dropped response replays instead of acting twice.
     _idempotencyKey ??= newIdempotencyKey();
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _busy = true;
+    });
     try {
       final n = await ref.read(adminApiProvider).revokeUserSessions(_userId.text.trim(), reason: _reason.text.trim(), idempotencyKey: _idempotencyKey!);
       setState(() {
@@ -45,6 +49,8 @@ class _State extends ConsumerState<RevokeUserSessionsScreen> {
         if (await promptStepUp(context, ref)) return _submit(afterStepUp: true);
       }
       if (mounted) setState(() => _error = e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -58,7 +64,7 @@ class _State extends ConsumerState<RevokeUserSessionsScreen> {
         const SizedBox(height: 12),
         TextField(key: const Key('reason'), controller: _reason, decoration: const InputDecoration(labelText: 'السبب / Reason'), maxLines: 2),
         const SizedBox(height: 16),
-        FilledButton(key: const Key('submit'), onPressed: _submit, child: Text(t.confirm)),
+        FilledButton(key: const Key('submit'), onPressed: _busy ? null : _submit, child: Text(_busy ? t.loading : t.confirm)),
         if (_result != null) Padding(padding: const EdgeInsetsDirectional.only(top: 12), child: Text(_result!, key: const Key('result'))),
         if (_error != null) Padding(padding: const EdgeInsetsDirectional.only(top: 12), child: Text(apiErrorMessage(context, _error!), key: const Key('error'))),
       ]),

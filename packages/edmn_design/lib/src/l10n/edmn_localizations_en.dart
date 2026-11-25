@@ -2780,6 +2780,11 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   }
 
   @override
+  String starRatingLabel(int count) {
+    return '$count of 5 stars';
+  }
+
+  @override
   String evidenceLabel(int max) {
     return 'Photos or documents (up to $max)';
   }

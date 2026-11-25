@@ -2750,6 +2750,11 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   }
 
   @override
+  String starRatingLabel(int count) {
+    return '$count من 5 نجوم';
+  }
+
+  @override
   String evidenceLabel(int max) {
     return 'صور أو مستندات (حتى $max)';
   }

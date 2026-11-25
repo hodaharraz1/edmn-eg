@@ -1119,6 +1119,14 @@
     }
   },
   "rateStore": "قيّم المتجر {store}",
+  "starRatingLabel": "{count} من 5 نجوم",
+  "@starRatingLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@rateStore": {
     "placeholders": {
       "store": {

@@ -954,6 +954,14 @@
     }
   },
   "rateStore": "Rate the store {store}",
+  "starRatingLabel": "{count} of 5 stars",
+  "@starRatingLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@rateStore": {
     "placeholders": {
       "store": {

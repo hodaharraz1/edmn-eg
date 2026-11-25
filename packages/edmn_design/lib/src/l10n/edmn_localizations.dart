@@ -5264,6 +5264,12 @@ abstract class EdmnLocalizations {
   /// **'قيّم المتجر {store}'**
   String rateStore(String store);
 
+  /// No description provided for @starRatingLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} من 5 نجوم'**
+  String starRatingLabel(int count);
+
   /// No description provided for @evidenceLabel.
   ///
   /// In ar, this message translates to:
