@@ -5744,6 +5744,12 @@ abstract class EdmnLocalizations {
   /// **'النزاعات والشكاوى'**
   String get adminDisputes;
 
+  /// No description provided for @adminAccountClosures.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات إغلاق الحسابات'**
+  String get adminAccountClosures;
+
   /// No description provided for @adminAuditLog.
   ///
   /// In ar, this message translates to:

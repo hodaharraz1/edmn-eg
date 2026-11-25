@@ -214,6 +214,19 @@ final monitorSpecs = <MonitorSpec>[
     ]),
   ),
   MonitorSpec(
+    path: '/monitor/closures',
+    // Same permission as the web /admin/closures page.
+    permission: 'customers.view',
+    alsoPermission: 'customers.manage',
+    icon: Icons.person_off_outlined,
+    title: (t) => t.adminAccountClosures,
+    tabs: [('open', (t) => t.adminTabOpen), ('closed', (t) => t.adminTabClosed)],
+    hasDetail: false,
+    load: (api, tab, _) async => MonitorPage([
+      for (final c in (await api.closureRequests(tab: tab)).items) MonitorRow(id: c.id, title: c.customer ?? '—', status: c.status, at: c.createdAt),
+    ]),
+  ),
+  MonitorSpec(
     path: '/monitor/audit',
     permission: 'audit.view',
     icon: Icons.history_rounded,

@@ -119,6 +119,8 @@ export async function completeAccountClosure(actor: Actor, requestId: string) {
       oldValues: { status: u.status, hadEmail: !!u.email, hadPhone: !!u.phone },
       newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
     });
+    // The customer hears that the request was executed (in-app + email via the outbox, same transaction).
+    await notifyClosure(tx, req.userId, 'تم إغلاق حسابك بناءً على طلبك. بيانات الطلبات والمدفوعات محفوظة حسب سياسة الاحتفاظ.');
     return { closed: true, blockers: [] };
   });
 }

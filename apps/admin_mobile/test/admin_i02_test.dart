@@ -86,6 +86,14 @@ class _Api extends AdminApi {
   }
 
   @override
+  Future<AdminListClosureRequestsResponse> closureRequests({String tab = 'open'}) async {
+    calls.add('closures:$tab');
+    return AdminListClosureRequestsResponse(items: [
+      if (tab == 'open') const AdminListClosureRequestsResponseItemsItem(id: 'c1', customer: 'عميل ا.', status: 'PENDING', createdAt: '2026-11-25T09:00:00Z'),
+    ]);
+  }
+
+  @override
   Future<AdminListAlertsResponse> alerts({String? stage, String? rule, int page = 1}) async {
     calls.add('alerts:${stage ?? 'all'}');
     return const AdminListAlertsResponse(rules: [
@@ -142,6 +150,21 @@ void main() {
     expect(find.byKey(const Key('open-/monitor/alerts')), findsOneWidget);
     expect(find.byKey(const Key('open-/monitor/customers')), findsOneWidget);
     expect(find.byKey(const Key('open-/monitor/returns')), findsNothing);
+  });
+
+  testWidgets('closures: entry follows the web page permission (customers.view or customers.manage); list is masked and read-only', (t) async {
+    final api = _Api(const ['customers.view']);
+    await _ready(t, api);
+    expect(find.byKey(const Key('open-/monitor/closures')), findsOneWidget);
+    await _open(t, '/monitor/closures');
+    expect(api.calls, contains('closures:open'));
+    expect(find.text('عميل ا.'), findsOneWidget);
+    expect(find.text('PENDING'), findsOneWidget);
+  });
+
+  testWidgets('closures: hidden without either customer permission', (t) async {
+    await _ready(t, _Api(const ['returns.manage']));
+    expect(find.byKey(const Key('open-/monitor/closures')), findsNothing);
   });
 
   testWidgets('returns: list → detail shows the Arabic next step from the status, no decision button, the web-console notice', (t) async {

@@ -162,6 +162,12 @@ export const SETTINGS_SCHEMA = {
    * Rules without an override use their documented operational default (see alerts/rules.ts).
    */
   'alerts.rules': z.record(z.string(), z.object({ preHours: z.number().min(0).max(720).optional(), cooldownHours: z.number().min(1).max(720).optional(), agingHours: z.number().min(0).max(2160).optional(), enabled: z.boolean().optional() })).default({}),
+  /**
+   * Device push notifications master switch (PKG-PUSH-01). OFF by default: while false, no push is sent to any
+   * registered device (the sender short-circuits). Token registration itself stays available so apps can enroll.
+   * SENSITIVE: toggling goes through the settings step-up confirmation.
+   */
+  'notifications.devicePushEnabled': z.boolean().default(false),
   /** Mobile apps (Phase 1): builds below these versions are told to update (GET /api/v1/app/config). */
   'mobile.minVersion.customer': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   'mobile.minVersion.admin': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
@@ -195,6 +201,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'legal.policiesApproved',
   'used.safetyScore',
   'notifications.circuitBreaker',
+  'notifications.devicePushEnabled',
 ];
 
 /** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */

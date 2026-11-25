@@ -28,6 +28,13 @@ class AdminApi {
     }
   }
 
+  /// Push token of THIS staff installation (PKG-PUSH-01): registration only; the server sends nothing while the flag is OFF.
+  Future<AdminSaveMyPushTokenResponse> registerPushToken({required String token, required String idempotencyKey}) async =>
+      AdminSaveMyPushTokenResponse.fromJson(await client.sendJson('POST', AdminApiPaths.adminSaveMyPushToken.path, body: AdminSaveMyPushTokenRequest(token: token).toJson(), idempotencyKey: idempotencyKey));
+  Future<AdminDeleteMyPushTokenResponse> unregisterPushToken({required String idempotencyKey}) async =>
+      AdminDeleteMyPushTokenResponse.fromJson(await client.sendJson('DELETE', AdminApiPaths.adminDeleteMyPushToken.path, idempotencyKey: idempotencyKey));
+  Future<AdminMyPushTokenStatusResponse> pushTokenStatus() async => AdminMyPushTokenStatusResponse.fromJson(await client.getJson(AdminApiPaths.adminMyPushTokenStatus.path));
+
   /// Read-only operational dashboard (dashboard.view). [range]: today, 7d, 30d, 90d or 365d.
   Future<AdminGetDashboardResponse> dashboard({String range = '30d'}) async =>
       AdminGetDashboardResponse.fromJson(await client.getJson(AdminApiPaths.adminGetDashboard.path, query: {'range': range}));
@@ -42,6 +49,9 @@ class AdminApi {
   Future<AdminListDealsResponse> deals({String tab = 'active'}) async => AdminListDealsResponse.fromJson(await client.getJson(AdminApiPaths.adminListDeals.path, query: {'tab': tab}));
   Future<AdminListDisputesResponse> disputes({String tab = 'open'}) async =>
       AdminListDisputesResponse.fromJson(await client.getJson(AdminApiPaths.adminListDisputes.path, query: {'tab': tab}));
+  /// Account-closure requests, read-only (same permission as the web /admin/closures page). [tab]: open or closed.
+  Future<AdminListClosureRequestsResponse> closureRequests({String tab = 'open'}) async =>
+      AdminListClosureRequestsResponse.fromJson(await client.getJson(AdminApiPaths.adminListClosureRequests.path, query: {'tab': tab}));
   Future<AdminListAuditLogResponse> auditLog({int? before, String? action, String? actorType}) async => AdminListAuditLogResponse.fromJson(await client.getJson(AdminApiPaths.adminListAuditLog.path, query: {
         if (before != null) 'before': '$before',
         if (action != null && action.trim().isNotEmpty) 'action': action.trim(),

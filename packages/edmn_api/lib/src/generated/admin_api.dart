@@ -6,6 +6,7 @@ abstract final class AdminApiPaths {
   static const adminAddDisputeNote = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/notes');
   static const adminAssignDispute = (method: 'POST', path: '/api/v1/admin/disputes/{disputeId}/assign');
   static const adminCustomerDetail = (method: 'GET', path: '/api/v1/admin/customers/{userId}');
+  static const adminDeleteMyPushToken = (method: 'DELETE', path: '/api/v1/admin/me/devices/push-token');
   static const adminGetDashboard = (method: 'GET', path: '/api/v1/admin/dashboard');
   static const adminGetDeal = (method: 'GET', path: '/api/v1/admin/deals/{dealId}');
   static const adminGetDispute = (method: 'GET', path: '/api/v1/admin/disputes/{disputeId}');
@@ -15,6 +16,7 @@ abstract final class AdminApiPaths {
   static const adminGetSeller = (method: 'GET', path: '/api/v1/admin/sellers/{sellerId}');
   static const adminListAlerts = (method: 'GET', path: '/api/v1/admin/alerts');
   static const adminListAuditLog = (method: 'GET', path: '/api/v1/admin/audit');
+  static const adminListClosureRequests = (method: 'GET', path: '/api/v1/admin/closure-requests');
   static const adminListCustomers = (method: 'GET', path: '/api/v1/admin/customers');
   static const adminListDeals = (method: 'GET', path: '/api/v1/admin/deals');
   static const adminListDisputeAssignees = (method: 'GET', path: '/api/v1/admin/disputes/assignees');
@@ -29,12 +31,14 @@ abstract final class AdminApiPaths {
   static const adminLogout = (method: 'POST', path: '/api/v1/admin/auth/logout');
   static const adminMfaEnroll = (method: 'POST', path: '/api/v1/admin/auth/mfa/enroll');
   static const adminMfaVerify = (method: 'POST', path: '/api/v1/admin/auth/mfa/verify');
+  static const adminMyPushTokenStatus = (method: 'GET', path: '/api/v1/admin/me/devices/push-token');
   static const adminRefreshToken = (method: 'POST', path: '/api/v1/admin/auth/token/refresh');
   static const adminReplySupportTicket = (method: 'POST', path: '/api/v1/admin/support/tickets/{ticketId}/reply');
   static const adminReturnDetail = (method: 'GET', path: '/api/v1/admin/returns/{returnId}');
   static const adminRevokeMyOtherSessions = (method: 'POST', path: '/api/v1/admin/me/sessions/revoke-others');
   static const adminRevokeMySession = (method: 'DELETE', path: '/api/v1/admin/me/sessions/{sessionId}');
   static const adminRevokeUserSessions = (method: 'POST', path: '/api/v1/admin/users/{userId}/sessions/revoke');
+  static const adminSaveMyPushToken = (method: 'POST', path: '/api/v1/admin/me/devices/push-token');
   static const adminStepUp = (method: 'POST', path: '/api/v1/admin/auth/step-up');
   static const adminSupportTicketDetail = (method: 'GET', path: '/api/v1/admin/support/tickets/{ticketId}');
 }
@@ -127,6 +131,16 @@ class AdminCustomerDetailResponseRecentOrdersItem {
   final String? placedAt;
 
   Map<String, dynamic> toJson() => {'id': id, 'number': number, 'status': status, 'grandTotal': grandTotal, 'placedAt': placedAt};
+}
+
+class AdminDeleteMyPushTokenResponse {
+  const AdminDeleteMyPushTokenResponse({required this.registered});
+
+  factory AdminDeleteMyPushTokenResponse.fromJson(Map<String, dynamic> json) => AdminDeleteMyPushTokenResponse(registered: json['registered'] as bool);
+
+  final bool registered;
+
+  Map<String, dynamic> toJson() => {'registered': registered};
 }
 
 class AdminGetDashboardResponse {
@@ -863,6 +877,32 @@ class AdminListAuditLogResponseItemsItem {
   Map<String, dynamic> toJson() => {'id': id, 'at': at, 'actorType': actorType, 'actor': actor, 'action': action, 'entityType': entityType, 'entityId': entityId, 'channel': channel, 'hasReason': hasReason};
 }
 
+class AdminListClosureRequestsResponse {
+  const AdminListClosureRequestsResponse({required this.items});
+
+  factory AdminListClosureRequestsResponse.fromJson(Map<String, dynamic> json) => AdminListClosureRequestsResponse(items: (json['items'] as List).map((e) => AdminListClosureRequestsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  final List<AdminListClosureRequestsResponseItemsItem> items;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList()};
+}
+
+class AdminListClosureRequestsResponseItemsItem {
+  const AdminListClosureRequestsResponseItemsItem({required this.id, required this.customer, required this.status, required this.createdAt});
+
+  factory AdminListClosureRequestsResponseItemsItem.fromJson(Map<String, dynamic> json) => AdminListClosureRequestsResponseItemsItem(id: json['id'] as String, customer: json['customer'] as String?, status: json['status'] as String, createdAt: json['createdAt'] as String?);
+
+  final String id;
+
+  final String? customer;
+
+  final String status;
+
+  final String? createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'customer': customer, 'status': status, 'createdAt': createdAt};
+}
+
 class AdminListCustomersResponse {
   const AdminListCustomersResponse({required this.items, required this.page, required this.hasMore});
 
@@ -1236,6 +1276,18 @@ class AdminMfaVerifyResponse {
   Map<String, dynamic> toJson() => {'mfaVerifiedAt': mfaVerifiedAt};
 }
 
+class AdminMyPushTokenStatusResponse {
+  const AdminMyPushTokenStatusResponse({required this.registered, required this.enabled});
+
+  factory AdminMyPushTokenStatusResponse.fromJson(Map<String, dynamic> json) => AdminMyPushTokenStatusResponse(registered: json['registered'] as bool, enabled: json['enabled'] as bool);
+
+  final bool registered;
+
+  final bool enabled;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'enabled': enabled};
+}
+
 class AdminRefreshTokenRequest {
   const AdminRefreshTokenRequest({required this.refreshToken, required this.installationId});
 
@@ -1343,6 +1395,28 @@ class AdminRevokeUserSessionsResponse {
   final int revoked;
 
   Map<String, dynamic> toJson() => {'revoked': revoked};
+}
+
+class AdminSaveMyPushTokenRequest {
+  const AdminSaveMyPushTokenRequest({required this.token});
+
+  factory AdminSaveMyPushTokenRequest.fromJson(Map<String, dynamic> json) => AdminSaveMyPushTokenRequest(token: json['token'] as String);
+
+  final String token;
+
+  Map<String, dynamic> toJson() => {'token': token};
+}
+
+class AdminSaveMyPushTokenResponse {
+  const AdminSaveMyPushTokenResponse({required this.registered, required this.platform});
+
+  factory AdminSaveMyPushTokenResponse.fromJson(Map<String, dynamic> json) => AdminSaveMyPushTokenResponse(registered: json['registered'] as bool, platform: json['platform'] as String);
+
+  final bool registered;
+
+  final String platform;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'platform': platform};
 }
 
 class AdminStepUpRequest {

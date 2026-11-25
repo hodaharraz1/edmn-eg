@@ -9,6 +9,7 @@ import { db } from '@/server/db/client';
 import { notificationTemplates, outboundMessages } from '@/server/db/schema';
 import { EVENT_TEMPLATES, type EventName } from '@/server/modules/notifications/events';
 import { deliveryHealth } from '@/server/modules/notifications/message-alerts';
+import { pushDeviceCounts } from '@/server/modules/notifications/device-push';
 import { env } from '@/server/core/env';
 import { formatDate } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -19,8 +20,9 @@ import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 export const metadata = { title: 'الإشعارات' };
 
 export default async function Notifications(props: PageProps<'/admin/notifications'>) {
-  const { allowed } = await adminWith('notifications.manage');
+  const { actor, allowed } = await adminWith('notifications.manage');
   if (!allowed) return <Forbidden />;
+  const pushCounts = await pushDeviceCounts(actor!);
   const tab = String((await props.searchParams).tab ?? 'templates');
   const overrides = await db.select().from(notificationTemplates);
   const outbox = tab === 'outbox' ? await db.select().from(outboundMessages).orderBy(desc(outboundMessages.createdAt)).limit(150) : [];
@@ -31,6 +33,11 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
     <div className="space-y-4">
       <PageHeader title="الإشعارات" description="قوالب الرسائل داخل المنصة والبريد والرسائل النصية، وسجل الرسائل الصادرة." />
       <Alert tone={E.MAIL_DRIVER === 'smtp' && E.SMS_DRIVER === 'http' ? 'success' : 'warning'}>البريد: {E.MAIL_DRIVER === 'smtp' ? `SMTP (${E.SMTP_HOST})` : 'وضع السجل فقط — لم يُعد مزود SMTP'} · SMS: {E.SMS_DRIVER === 'http' ? 'HTTP مُعد' : 'وضع السجل فقط — لم يُعد مزود رسائل'}</Alert>
+      <Alert tone={pushCounts.enabled ? 'info' : 'warning'}>
+        الإشعارات الفورية للأجهزة: <b>{pushCounts.enabled ? 'مفعّلة' : 'متوقفة (الوضع الافتراضي)'}</b> — الأجهزة المسجلة:{' '}
+        {pushCounts.total === 0 ? 'لا يوجد' : pushCounts.byPlatform.map((p) => `${p.platform === 'ANDROID' ? 'أندرويد' : p.platform} · ${p.app === 'CUSTOMER' ? 'تطبيق العميل' : 'تطبيق الإدارة'}: ${p.count}`).join('، ')}. تُعرض الأعداد فقط —
+        لا تظهر أي رموز أجهزة. التفعيل والتعطيل من إعدادات النظام (notifications.devicePushEnabled) بتأكيد الهوية.
+      </Alert>
       <Tabs active={tab} tabs={[{ key: 'templates', label: 'القوالب', href: '/admin/notifications' }, { key: 'outbox', label: 'الرسائل الصادرة', href: '/admin/notifications?tab=outbox' }, { key: 'health', label: 'صحة التوصيل', href: '/admin/notifications?tab=health' }]} />
       {health && <DeliveryHealth h={health} />}
       {tab === 'templates' && (

@@ -37,9 +37,9 @@ No row is graded on a physical device. Native iOS simulator evidence is limited 
 | Chat (buyer and seller) and notifications | COMPLETE ✓UI | `e2e-flow.mjs`: the conversation is opened from the order page, a message is sent and persisted; notifications marked read. Batch 5 **G**: double-tapped send stores one message; the store's reply reaches the buyer (`MESSAGE_RECEIVED` both ways) |
 | Returns, refunds, disputes | **COMPLETE ✓UI** (batch 5) | **BD** return requested from the order with PRIVATE evidence; **BE** the seller rejects with a reason, the buyer is notified, sees it and escalates → one OPEN dispute, no refund record. Refund approval and payment stay staff-only (web, Maker/Checker) |
 | Support tickets, ratings, reviews | COMPLETE ✓UI (ticket) | Ticket created through the UI and the row checked |
-| Account deletion (C30) | MISSING | No deletion API on the server. Needs an owner and legal decision on data retention |
+| Account deletion (C30) | COMPLETE | `POST/GET /me/deletion-request` + `/cancel` (PKG-ACCOUNT-01): 422 with Arabic blocker reasons while anything is open; the request deletes/anonymizes nothing. Console `/admin/closures` executes (anonymizes, retains financial records) and the customer is NOTIFIED on execution (PKG-ACCOUNT-02). Admin App read-only list `/api/v1/admin/closure-requests` behind the web page's permission. Tests: `account-deletion-api.test.ts`, `account-closure-monitor.test.ts`, widget tests |
 | Deposits, wallet top-up, transfer (D28–D31, D34) | BLOCKED | Business decisions (no deposit service) |
-| Device push (FCM/APNs), deep links | BLOCKED | Needs signing and store configuration (owner) |
+| Device push token registration | COMPLETE (registration) / BLOCKED (sending) | `POST/DELETE/GET /me/devices/push-token` on both apps (PKG-PUSH-01), bound to the session's installation; `device_push_tokens` + migration; sender interface with log driver only; `notifications.devicePushEnabled` default OFF (SENSITIVE_SETTINGS step-up); console shows counts per platform, no tokens. Tests: `push-tokens.test.ts`, `push_registrar_test.dart`. Sending stays BLOCKED: needs FCM/APNs keys (owner). Deep links unchanged (store configuration, owner) |
 
 ## Seller (inside the Customer App)
 

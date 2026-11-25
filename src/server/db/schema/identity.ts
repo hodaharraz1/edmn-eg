@@ -306,6 +306,28 @@ export const mobileDevices = pgTable(
 );
 
 /**
+ * A push-notification token for a registered mobile device (PKG-PUSH-01). One row per device; the token is write-only
+ * from the app and never shown to staff (console shows counts only). Sending stays off while
+ * notifications.devicePushEnabled is false, and the only sender driver is the log driver — no FCM/APNs keys exist.
+ */
+export const devicePushTokens = pgTable(
+  'device_push_tokens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    deviceId: uuid()
+      .notNull()
+      .references(() => mobileDevices.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('device_push_tokens_device_uq').on(t.deviceId), index('device_push_tokens_user_idx').on(t.userId)],
+);
+
+/**
  * Rotating refresh tokens (only the SHA-256 is stored). The family is the session: presenting a refresh token that was
  * already rotated revokes the whole session (token theft detection).
  */

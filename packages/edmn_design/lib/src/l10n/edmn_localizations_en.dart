@@ -3040,6 +3040,9 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get adminDisputes => 'Disputes and complaints';
 
   @override
+  String get adminAccountClosures => 'Account closure requests';
+
+  @override
   String get adminAuditLog => 'Audit log';
 
   @override

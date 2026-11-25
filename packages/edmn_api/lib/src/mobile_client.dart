@@ -88,6 +88,13 @@ class MobileApi {
   Future<CancelAccountDeletionRequestResponse> cancelAccountDeletionRequest({required String idempotencyKey}) async =>
       CancelAccountDeletionRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.cancelAccountDeletionRequest.path, idempotencyKey: idempotencyKey));
 
+  // ── Device push token (PKG-PUSH-01): registration only; the server sends nothing while the flag is OFF ──────
+  Future<SaveMyPushTokenResponse> registerPushToken({required String token, required String idempotencyKey}) async =>
+      SaveMyPushTokenResponse.fromJson(await client.sendJson('POST', MobileApiPaths.saveMyPushToken.path, body: SaveMyPushTokenRequest(token: token).toJson(), idempotencyKey: idempotencyKey));
+  Future<DeleteMyPushTokenResponse> unregisterPushToken({required String idempotencyKey}) async =>
+      DeleteMyPushTokenResponse.fromJson(await client.sendJson('DELETE', MobileApiPaths.deleteMyPushToken.path, idempotencyKey: idempotencyKey));
+  Future<MyPushTokenStatusResponse> pushTokenStatus() async => MyPushTokenStatusResponse.fromJson(await client.getJson(MobileApiPaths.myPushTokenStatus.path));
+
   Future<void> sendVerificationCode(String channel) => client.sendJson('POST', MobileApiPaths.sendVerificationCode.path, body: {'channel': channel});
   Future<Profile> confirmVerificationCode(String channel, String code) async =>
       Profile.fromJson(await client.sendJson('POST', MobileApiPaths.confirmVerificationCode.path, body: {'channel': channel, 'code': code}));

@@ -3009,6 +3009,9 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get adminDisputes => 'النزاعات والشكاوى';
 
   @override
+  String get adminAccountClosures => 'طلبات إغلاق الحسابات';
+
+  @override
   String get adminAuditLog => 'سجل العمليات';
 
   @override

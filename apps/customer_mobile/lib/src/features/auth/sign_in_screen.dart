@@ -112,6 +112,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await ref.read(mobileApiProvider).login(identifier: _identifier.text.trim(), password: _password.text, device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion));
       ref.read(signedInProvider.notifier).set(true);
       ref.invalidate(profileProvider);
+      // Push token registration (PKG-PUSH-01): no-op until a push SDK is wired — the default provider has no token.
+      final api = ref.read(mobileApiProvider);
+      await PushTokenRegistrar(register: (t, k) => api.registerPushToken(token: t, idempotencyKey: k), unregister: (k) => api.unregisterPushToken(idempotencyKey: k)).registerIfAvailable(newIdempotencyKey);
       if (mounted) context.go(widget.next ?? '/');
     } catch (e) {
       setState(() => _error = e);

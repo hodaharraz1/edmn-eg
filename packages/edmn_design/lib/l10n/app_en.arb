@@ -1075,6 +1075,7 @@
   "adminOrders": "Orders and shipping",
   "adminDeals": "Protected deals",
   "adminDisputes": "Disputes and complaints",
+  "adminAccountClosures": "Account closure requests",
   "adminAuditLog": "Audit log",
   "adminTabPending": "Under review",
   "adminTabNeedsInfo": "Awaiting info",

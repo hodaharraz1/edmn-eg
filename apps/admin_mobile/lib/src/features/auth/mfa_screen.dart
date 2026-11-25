@@ -1,3 +1,5 @@
+import 'package:edmn_api/mobile.dart' show PushTokenRegistrar;
+import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,6 +48,9 @@ class _MfaState extends ConsumerState<MfaScreen> {
     try {
       await ref.read(adminApiProvider).verifyTotp(_code.text.trim());
       ref.read(adminSessionProvider.notifier).set(AdminSessionState.ready);
+      // Push token registration (PKG-PUSH-01): no-op until a push SDK is wired — the default provider has no token.
+      final api = ref.read(adminApiProvider);
+      await PushTokenRegistrar(register: (t, k) => api.registerPushToken(token: t, idempotencyKey: k), unregister: (k) => api.unregisterPushToken(idempotencyKey: k)).registerIfAvailable(newIdempotencyKey);
     } catch (e) {
       if (mounted) setState(() => _error = e);
     } finally {

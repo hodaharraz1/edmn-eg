@@ -1240,6 +1240,7 @@
   "adminOrders": "الطلبات والشحن",
   "adminDeals": "الصفقات المضمونة",
   "adminDisputes": "النزاعات والشكاوى",
+  "adminAccountClosures": "طلبات إغلاق الحسابات",
   "adminAuditLog": "سجل العمليات",
   "adminTabPending": "قيد المراجعة",
   "adminTabNeedsInfo": "بانتظار معلومات",

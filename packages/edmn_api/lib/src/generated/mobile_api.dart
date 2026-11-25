@@ -30,6 +30,7 @@ abstract final class MobileApiPaths {
   static const createSellerProduct = (method: 'POST', path: '/api/v1/seller/products');
   static const declineDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/decline');
   static const deleteAddress = (method: 'DELETE', path: '/api/v1/me/addresses/{addressId}');
+  static const deleteMyPushToken = (method: 'DELETE', path: '/api/v1/me/devices/push-token');
   static const deleteSellerProductImage = (method: 'DELETE', path: '/api/v1/seller/products/{productId}/images/{fileId}');
   static const escalateMyReturn = (method: 'POST', path: '/api/v1/returns/{returnId}/escalate');
   static const escalateStoreReturn = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/escalate');
@@ -105,6 +106,7 @@ abstract final class MobileApiPaths {
   static const markNotificationsRead = (method: 'POST', path: '/api/v1/notifications/read');
   static const markSellerProductOutOfStock = (method: 'POST', path: '/api/v1/seller/products/{productId}/out-of-stock');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
+  static const myPushTokenStatus = (method: 'GET', path: '/api/v1/me/devices/push-token');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
   static const openDispute = (method: 'POST', path: '/api/v1/disputes');
   static const openOrderConversation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/conversation');
@@ -140,6 +142,7 @@ abstract final class MobileApiPaths {
   static const runSellerOrderStep = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/steps');
   static const runStoreReturnStep = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/steps');
   static const saveDealStep = (method: 'PUT', path: '/api/v1/deals/{dealId}/steps/{step}');
+  static const saveMyPushToken = (method: 'POST', path: '/api/v1/me/devices/push-token');
   static const saveNotificationPreferences = (method: 'PUT', path: '/api/v1/notifications/preferences');
   static const saveSellerApplicationBusiness = (method: 'PUT', path: '/api/v1/seller/application/business');
   static const saveSellerApplicationIdentity = (method: 'PUT', path: '/api/v1/seller/application/identity');
@@ -983,6 +986,16 @@ class DeclineDealInvitationResponseItemsItem {
   final String createdAt;
 
   Map<String, dynamic> toJson() => {'id': id, 'ref': ref, 'title': title, 'status': status, 'role': role, 'counterparty': counterparty, 'totalPiastres': totalPiastres, 'createdAt': createdAt};
+}
+
+class DeleteMyPushTokenResponse {
+  const DeleteMyPushTokenResponse({required this.registered});
+
+  factory DeleteMyPushTokenResponse.fromJson(Map<String, dynamic> json) => DeleteMyPushTokenResponse(registered: json['registered'] as bool);
+
+  final bool registered;
+
+  Map<String, dynamic> toJson() => {'registered': registered};
 }
 
 class DeviceInfo {
@@ -3027,6 +3040,18 @@ class MarkStoreConversationSeenResponse {
   Map<String, dynamic> toJson() => {'unread': unread};
 }
 
+class MyPushTokenStatusResponse {
+  const MyPushTokenStatusResponse({required this.registered, required this.enabled});
+
+  factory MyPushTokenStatusResponse.fromJson(Map<String, dynamic> json) => MyPushTokenStatusResponse(registered: json['registered'] as bool, enabled: json['enabled'] as bool);
+
+  final bool registered;
+
+  final bool enabled;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'enabled': enabled};
+}
+
 class NotificationPreferences {
   const NotificationPreferences({required this.messagesInApp, required this.messagesSound, required this.messagesPush, required this.messagesEmail, required this.pushPreview});
 
@@ -4772,6 +4797,28 @@ class RunStoreReturnStepRequest {
   final bool? restock;
 
   Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note, if (reason != null) 'reason': reason, if (includeShipping != null) 'includeShipping': includeShipping, if (restock != null) 'restock': restock};
+}
+
+class SaveMyPushTokenRequest {
+  const SaveMyPushTokenRequest({required this.token});
+
+  factory SaveMyPushTokenRequest.fromJson(Map<String, dynamic> json) => SaveMyPushTokenRequest(token: json['token'] as String);
+
+  final String token;
+
+  Map<String, dynamic> toJson() => {'token': token};
+}
+
+class SaveMyPushTokenResponse {
+  const SaveMyPushTokenResponse({required this.registered, required this.platform});
+
+  factory SaveMyPushTokenResponse.fromJson(Map<String, dynamic> json) => SaveMyPushTokenResponse(registered: json['registered'] as bool, platform: json['platform'] as String);
+
+  final bool registered;
+
+  final String platform;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'platform': platform};
 }
 
 class SaveNotificationPreferencesRequest {
