@@ -1,0 +1,99 @@
+# Builds the iOS apps on a macOS runner and uploads them to TestFlight (internal testing), pointing at STAGING.
+#
+# Runs only when a commit on the integration branch carries "[testflight]" in its message (macOS minutes are
+# costly), or manually once this file is on the default branch. Real Money stays OFF: the apps talk to staging.
+#
+# Owner setup (once), all in GitHub → Settings → Secrets and variables → Actions — never in code or chat:
+#   secrets  APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID, APP_STORE_CONNECT_API_KEY_P8 (.p8 contents)
+#   variable APPLE_TEAM_ID
+# The API key needs the Admin role so Xcode can create the distribution certificate and profiles (cloud signing).
+# The app records must exist in App Store Connect (bundle IDs below). Steps: docs/mobile/IOS_TESTFLIGHT.md.
+name: iOS TestFlight (staging)
+
+on:
+  push:
+    branches: [claude/instinct-integration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer_mobile
+          - app: admin_mobile
+    env:
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+      TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
+      - name: Check owner setup
+        run: |
+          missing=0
+          for v in KEY_ID ISSUER_ID TEAM_ID; do [ -n "${!v}" ] || { echo "::error::$v is not configured (see docs/mobile/IOS_TESTFLIGHT.md)"; missing=1; }; done
+          [ -n "${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_P8 is not configured"; missing=1; }
+          exit $missing
+      - name: Install the App Store Connect API key (runner-local, deleted with the runner)
+        env:
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/asc/AuthKey_${KEY_ID}.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey_${KEY_ID}.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/asc/AuthKey_${KEY_ID}.p8" >> "$GITHUB_ENV"
+      - name: Configure the Flutter build (staging API, run-numbered build)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          flutter pub get
+          flutter build ios --release --config-only \
+            --build-number=${{ github.run_number }} \
+            --dart-define=EDMN_ENV=staging \
+            --dart-define=EDMN_API_BASE_URL=https://edmn-staging.vercel.app \
+            --dart-define=EDMN_APP_VERSION=1.0.0-${GITHUB_SHA::7}
+      - name: Archive (automatic signing with the API key)
+        working-directory: apps/${{ matrix.app }}/ios
+        run: |
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            archive | tail -n 40
+          test -d "$RUNNER_TEMP/Runner.xcarchive"
+      - name: Export and upload to TestFlight
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" | tail -n 40
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"
