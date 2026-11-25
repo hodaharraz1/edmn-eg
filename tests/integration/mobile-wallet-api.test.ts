@@ -19,7 +19,7 @@ import { db } from '@/server/db/client';
 import { dealPayouts, externalDeals, journalEntries, sellerMembers, withdrawalRequests, orders, payments, refunds } from '@/server/db/schema';
 import { claimInvitation, confirmDealReceipt, createDeal, deliveryOtpForBuyer, inviteSeller, markDealDelivered, releaseDeal, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, verifyDeliveryOtp } from '@/server/modules/deals/service';
 import { reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { financialInvariants } from '@/server/modules/finance/controls';
 import { approveWithdrawal, markWithdrawalProcessing, markWithdrawalTransferUncertain } from '@/server/modules/finance/withdrawals';
 import { identityStatus } from '@/server/modules/identity/service';
@@ -254,6 +254,7 @@ async function payableDeal(seller: Actor, price = '1000') {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(), p.id);
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(seller, deal.id, 'تم التسليم', [{ data: pdf(), name: 'w.pdf' }]);
   const view = await deliveryOtpForBuyer(buyer, deal.id);

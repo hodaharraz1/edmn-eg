@@ -20,7 +20,7 @@ import { POST as proofRoute } from '@/app/api/v1/payments/[paymentId]/proof/rout
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
 import { dealEvidence, files, externalDeals, journalEntries, paymentSubmissions } from '@/server/db/schema';
-import { confirmPayment } from '@/server/modules/payments/service';
+import { confirmPayment, startReview } from '@/server/modules/payments/service';
 import { ensurePaymentSetup, makeAdmin, makeUser, pdf, png } from '../helpers/factory';
 
 /**
@@ -209,6 +209,7 @@ describe('Flow C — Protected Deal between two app users', () => {
     const pending = await call(dealRoute, `/deals/${id}`, { token: st, params: p });
     expect(pending.body.allowedActions).not.toContain('MARK_SHIPPED'); // not paid yet
     const [sub] = await db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, paymentId));
+    await startReview(await makeAdmin(), paymentId);
     await confirmPayment(admin, paymentId, sub.id);
 
     const active = await call(dealRoute, `/deals/${id}`, { token: st, params: p });

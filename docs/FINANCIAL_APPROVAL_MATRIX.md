@@ -29,8 +29,8 @@ approvals are rejected.
 
 | Operation | Approval action | Journal entry type | Permission | 2FA | Dual control | Kill switch |
 |---|---|---|---|---|---|---|
-| Confirm manual marketplace payment | PAYMENT_CONFIRMATION | ORDER_PAYMENT | payments.verify | yes | — | killswitch.paymentConfirmation |
-| Confirm protected-deal payment | DEAL_PAYMENT_CONFIRMATION | DEAL_PAYMENT | payments.verify | yes | — | killswitch.paymentConfirmation |
+| Confirm manual marketplace payment | PAYMENT_CONFIRMATION | ORDER_PAYMENT | payments.verify | yes | maker/checker: reviewer (بدء المراجعة) ≠ confirmer, DB-enforced | killswitch.paymentConfirmation |
+| Confirm protected-deal payment | DEAL_PAYMENT_CONFIRMATION | DEAL_PAYMENT | payments.verify | yes | maker/checker: reviewer (بدء المراجعة) ≠ confirmer, DB-enforced | killswitch.paymentConfirmation |
 | Seller release (pending → available + fee recognition) | SELLER_RELEASE | SELLER_RELEASE | finance.release | yes | — | killswitch.sellerRelease |
 | Approve marketplace refund (reversal to refunds payable) | REFUND_APPROVAL | REFUND | refunds.approve | yes | — | killswitch.refunds |
 | Record refund payout | REFUND_PAYOUT | REFUND_PAID | refunds.pay | yes | ≥ threshold: payer ≠ approver | killswitch.payouts |

@@ -45,6 +45,8 @@ export const SETTINGS_SCHEMA = {
    */
   'payments.realMoneyEnabled': z.boolean().default(false),
   'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
+  /** Max total of receipts one customer may upload in one Cairo day (piasters; 250,000 EGP). SENSITIVE: changing it needs step-up. */
+  'payments.dailyReceiptLimit': z.number().int().min(0).default(25_000_000),
   'withdrawals.minimumAmount': z.number().int().min(0).default(10000), // 100 EGP in piasters
   'withdrawals.slaBusinessHours': z.number().int().min(1).max(240).default(48),
   /** Withdrawals at/above this amount require approver ≠ payer (maker/checker). */
@@ -180,6 +182,7 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA
 
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payments.realMoneyEnabled',
+  'payments.dailyReceiptLimit',
   'pilot.enabled',
   'pilot.allowedUserIds',
   'pilot.maxOrderAmount',

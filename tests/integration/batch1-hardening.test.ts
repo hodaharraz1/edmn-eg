@@ -46,7 +46,7 @@ import {
   rejectWithdrawal,
   requestWithdrawal,
 } from '@/server/modules/finance/withdrawals';
-import { confirmPayment, saveDestination, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, saveDestination, startReview, submitProof } from '@/server/modules/payments/service';
 import { closeDispute, openDispute, resolveDispute, setDisputeStatus } from '@/server/modules/postpurchase/disputes';
 import { activePayoutMethod, addPayoutMethod, assertVerifiedDestination, decideSeller, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument, verifyPayoutMethod } from '@/server/modules/sellers/service';
 import { effectiveDualControlThreshold, realMoneyEnabled, updateSetting } from '@/server/modules/settings';
@@ -359,6 +359,7 @@ describe('C4 — refund destination is frozen at approval', () => {
     await respondToOffer(buyer, deal.id, version, 'ACCEPT');
     const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
     const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    await startReview(await makeAdmin(), p.id);
     await confirmPayment(admin, p.id, submission.id);
     const d = await openDispute(buyer, { dealId: deal.id, reasonCode: 'NOT_RECEIVED', description: 'لم يتم تسليم المنتج حتى الآن رغم الدفع' });
     await resolveDispute(admin, d.id, { decision: 'FULL_REFUND', reasonCode: 'NOT_DELIVERED', note: 'لم يثبت التسليم — استرداد كامل' });

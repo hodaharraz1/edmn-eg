@@ -183,6 +183,13 @@
       "when": 1795609989769,
       "tag": "0025_device_push_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795611832784,
+      "tag": "0026_payment_confirmation_two_person",
+      "breakpoints": true
     }
   ]
 }

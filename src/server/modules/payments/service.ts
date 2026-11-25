@@ -69,6 +69,23 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
     if (p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('مينفعش ترفع إثبات دفع للطلب ده دلوقتي');
     if (p.dueAt < new Date() && p.status === 'AWAITING_PAYMENT') throw invalidState('مهلة الدفع للطلب ده خلصت');
     if (!proof) throw validation('ارفع صورة أو ملف إثبات الدفع', { proof: ['مطلوب'] });
+    // Daily cap per customer (Cairo calendar day) over receipts uploaded (SUBMITTED) or confirmed (ACCEPTED).
+    // Rejected proofs stop counting, so a refused upload never blocks a corrected one.
+    const dailyLimit = await getSetting('payments.dailyReceiptLimit', tx);
+    const [{ total }] = await tx
+      .select({ total: sql<string>`coalesce(sum(${paymentSubmissions.claimedAmount}), 0)::text` })
+      .from(paymentSubmissions)
+      .innerJoin(payments, eq(payments.id, paymentSubmissions.paymentId))
+      .where(
+        and(
+          eq(payments.payerUserId, userId),
+          inArray(paymentSubmissions.status, ['SUBMITTED', 'ACCEPTED']),
+          sql`(${paymentSubmissions.createdAt} at time zone 'Africa/Cairo')::date = (now() at time zone 'Africa/Cairo')::date`,
+        ),
+      );
+    if (Number(total) + claimed > dailyLimit) {
+      throw validation(`وصلت للحد الأقصى اليومي لإيصالات الدفع (${formatEGP(dailyLimit)}). مينفعش ترفع إيصال جديد قبل بكرة بتوقيت القاهرة`);
+    }
     const file = await storeUpload(tx, actor, { purpose: 'PAYMENT_PROOF', data: proof.data, originalName: proof.name });
     const [sub] = await tx
       .insert(paymentSubmissions)
@@ -120,9 +137,11 @@ export async function startReview(actor: Actor, paymentId: string) {
   await db.transaction(async (tx) => {
     const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
     if (!p) throw notFound('عملية الدفع');
-    if (p.status !== 'PAYMENT_SUBMITTED') return;
-    await transition(tx, actor, paymentMachine, p.id, p.status, 'UNDER_REVIEW');
-    await tx.update(payments).set({ status: 'UNDER_REVIEW' }).where(eq(payments.id, p.id));
+    // The reviewer is the Maker of the later confirmation: it can never be confirmed by the same person.
+    if (p.status === 'UNDER_REVIEW' && p.reviewStartedBy) return;
+    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') return;
+    if (p.status === 'PAYMENT_SUBMITTED') await transition(tx, actor, paymentMachine, p.id, p.status, 'UNDER_REVIEW');
+    await tx.update(payments).set({ status: 'UNDER_REVIEW', reviewStartedBy: actor.userId }).where(eq(payments.id, p.id));
     await audit(tx, actor, { action: 'payment.review_started', entityType: 'payment', entityId: p.id });
   });
 }
@@ -142,13 +161,17 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
     await assertNotPaused(tx, 'killswitch.paymentConfirmation');
     if (p.currency !== 'EGP') throw invalidState('عملة غير مدعومة');
     if (expectedAmount !== undefined && expectedAmount !== p.amountDue) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
-    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') throw invalidState('لا يوجد إثبات دفع قيد المراجعة لهذه العملية');
+    // Two-person rule: a staff reviewer must have started the review first…
+    if (p.status !== 'UNDER_REVIEW') throw invalidState('تأكيد الدفع يتطلب أن يبدأ المراجعة موظف آخر أولاً (بدء المراجعة)');
+    if (!p.reviewStartedBy) throw invalidState('تأكيد الدفع يتطلب أن يبدأ المراجعة موظف آخر أولاً (بدء المراجعة)');
     const [sub] = await tx.select().from(paymentSubmissions).where(eq(paymentSubmissions.id, submissionId)).for('update');
     if (!sub || sub.paymentId !== p.id || sub.status !== 'SUBMITTED') throw invalidState('إثبات الدفع المحدد غير صالح للتأكيد');
     // The amount the buyer declares must equal the amount due; a different transfer needs a new proof.
     if (sub.claimedAmount !== p.amountDue) throw invalidState('المبلغ المحوَّل المعلن لا يطابق المبلغ المطلوب. اطلب إثباتاً جديداً بالمبلغ الصحيح');
     // Separation of duties: staff can never confirm a payment they made or one that pays their own store.
     if (p.payerUserId === actor.userId) throw forbidden('لا يمكنك تأكيد دفعة قمت بها بنفسك');
+    // …and the confirmer can never be the reviewer who started the review (also enforced by DB CHECK).
+    if (p.reviewStartedBy === actor.userId) throw forbidden('تأكيد الدفع يتطلب شخصين: من بدأ المراجعة لا يمكنه تأكيد الدفع');
     await assertNotSelfDealingOnPayment(tx, actor, p);
     // Pilot safety: a payment made while real money was off can never be confirmed after go-live.
     if (p.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذه دفعة تجريبية (TEST) ولا يمكن تأكيدها بعد تفعيل الأموال الحقيقية');
@@ -162,6 +185,8 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
       economicVersion: `amount:${p.amountDue}:submission:${sub.id}`,
       reason: note?.trim() || 'تأكيد استلام التحويل بعد مراجعة الإثبات',
       idempotencyKey: `payment-confirmation:${p.id}`,
+      // Maker = the reviewer who started the review; the Checker is this confirmer (DB-enforced different).
+      dualControl: { requestedBy: p.reviewStartedBy },
     });
     await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', note);
     await tx.update(payments).set({ status: 'CONFIRMED', confirmedAt: new Date(), confirmedBy: actor.userId, confirmedAmount: p.amountDue }).where(eq(payments.id, p.id));

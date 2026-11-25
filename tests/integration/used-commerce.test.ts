@@ -31,7 +31,7 @@ import {
   submitSellerOffer,
   verifyDeliveryOtp,
 } from '@/server/modules/deals/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { canReadPrivateFile } from '@/server/storage/access';
 import { addReportEvidence, declareReport, ensureDealReport, ensureProductReport, recordInspection, removeReportEvidence, reportFor, saveReportAnswers, verifyPassport } from '@/server/modules/used/reports';
@@ -141,6 +141,7 @@ async function paidUsedDeal() {
   const d = await agreedUsedDeal();
   const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
   const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return d;
 }

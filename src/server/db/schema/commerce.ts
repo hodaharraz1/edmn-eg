@@ -358,6 +358,8 @@ export const payments = pgTable(
     /** Snapshot: created while real money was disabled (pilot/staging) — never a real receipt. */
     isTest: boolean().notNull().default(true),
     dueAt: ts().notNull(),
+    /** Staff member who started the review; the confirmer must be a DIFFERENT person (DB CHECK below). */
+    reviewStartedBy: uuid().references(() => users.id),
     confirmedAt: ts(),
     confirmedBy: uuid().references(() => users.id),
     confirmedAmount: money(),
@@ -371,6 +373,8 @@ export const payments = pgTable(
     enumCheck('payments_status_chk', t.status, PAYMENT_STATUSES),
     check('payments_target_chk', sql`(${t.orderId} is null) <> (${t.dealId} is null)`),
     check('payments_amount_chk', sql`${t.amountDue} > 0`),
+    // Two-person confirmation: a payment can only be confirmed after a review started by someone else.
+    check('payments_two_person_chk', sql`${t.confirmedBy} is null or (${t.reviewStartedBy} is not null and ${t.confirmedBy} <> ${t.reviewStartedBy})`),
   ],
 );
 

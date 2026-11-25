@@ -33,7 +33,7 @@ import {
 import { pendingClosures } from '@/server/modules/customers/closure';
 import { recentApprovals } from '@/server/modules/finance/approvals';
 import { withdrawalQueue } from '@/server/modules/finance/withdrawals';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { addRiskFlag, resolveRiskFlag } from '@/server/modules/risk/service';
 import { adminSettingsView } from '@/server/modules/settings';
 import { ticketQueue } from '@/server/modules/support/service';
@@ -87,6 +87,7 @@ async function shippedDeal() {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(), p.id);
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(seller, deal.id, 'تم الشحن', [{ data: pdf(), name: 'waybill.pdf' }]);
   const view = await deliveryOtpForBuyer(buyer, deal.id);

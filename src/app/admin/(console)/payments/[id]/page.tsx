@@ -1,6 +1,7 @@
 import Link from '@/ui/link';
 import { notFound } from 'next/navigation';
 import { eq, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { paymentDecisionAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
@@ -18,7 +19,8 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
   const { actor, allowed } = await adminWith('payments.view');
   if (!allowed) return <Forbidden />;
   const { id } = await props.params;
-  const [row] = await db.select({ p: payments, payer: users, orderNumber: orders.number, deal: externalDeals }).from(payments).innerJoin(users, eq(users.id, payments.payerUserId)).leftJoin(orders, eq(orders.id, payments.orderId)).leftJoin(externalDeals, eq(externalDeals.id, payments.dealId)).where(eq(payments.id, id));
+  const reviewerUsers = alias(users, 'reviewer_users');
+  const [row] = await db.select({ p: payments, payer: users, reviewerName: reviewerUsers.fullName, orderNumber: orders.number, deal: externalDeals }).from(payments).innerJoin(users, eq(users.id, payments.payerUserId)).leftJoin(reviewerUsers, eq(reviewerUsers.id, payments.reviewStartedBy)).leftJoin(orders, eq(orders.id, payments.orderId)).leftJoin(externalDeals, eq(externalDeals.id, payments.dealId)).where(eq(payments.id, id));
   if (!row) notFound();
   const p = row.p;
   const subs = await submissionsFor(p.id);
@@ -38,8 +40,10 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
         { label: 'المبلغ المطلوب', value: <b>{formatEGP(p.amountDue, { fixed: true })}</b> },
         { label: 'الطريقة', value: label('paymentMethod', p.method) },
         { label: 'مهلة الدفع', value: formatDate(p.dueAt, true) },
+        { label: 'بدأ المراجعة', value: row.reviewerName ?? '—' },
         { label: 'التأكيد', value: p.confirmedAt ? `${formatDate(p.confirmedAt, true)} · ${formatEGP(p.confirmedAmount)}` : '—' },
       ]} /></section>
+      {p.status === 'UNDER_REVIEW' && <Alert tone="info">تأكيد الدفع يتطلب شخصين: من بدأ المراجعة لا يمكنه تأكيد الدفع — يؤكد موظف آخر بعد التحقق من الحساب.</Alert>}
       {signals.length > 0 && (
         <Alert tone="warning" title="إشارات مراجعة (لا تعني رفضًا تلقائيًا)">
           <ul className="list-disc ps-5">{signals.map((sg) => <li key={sg.code + sg.label} data-testid="payment-signal">{sg.label}{sg.refs.length ? ` — ${sg.refs.map((r) => r.slice(0, 8)).join('، ')}` : ''}</li>)}</ul>
@@ -66,11 +70,14 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
             {can && s.id === open?.id && (
               <div className="space-y-3 border-t border-line pt-3">
                 {p.status === 'PAYMENT_SUBMITTED' && <ActionForm action={paymentDecisionAction}><input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="op" value="review" /><SubmitButton size="sm" variant="outline">بدء المراجعة</SubmitButton></ActionForm>}
+                {p.status === 'UNDER_REVIEW' && p.reviewStartedBy !== actor.userId && (
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
                   <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} /><input type="hidden" name="op" value="confirm" /><input type="hidden" name="expectedAmount" value={p.amountDue} />
                   <Field label="ملاحظة داخلية (اختياري)" htmlFor="note"><Input id="note" name="note" /></Field>
                   <ConfirmSubmit confirm={`تأكيد استلام ${formatEGP(p.amountDue)} فعلياً في حساب اضمن؟ يُسجل قيد دفع واحد بموافقتك. لا يمكن التراجع.`} variant="success">تأكيد دفع {formatEGP(p.amountDue)} (تم التحقق من الحساب)</ConfirmSubmit>
                 </ActionForm>
+                )}
+                {p.status === 'UNDER_REVIEW' && p.reviewStartedBy === actor.userId && <Alert tone="info">أنت من بدأ مراجعة هذه الدفعة — التأكيد ينتظر موظفاً آخر.</Alert>}
                 <ActionForm action={paymentDecisionAction} className="space-y-2">
                   <input type="hidden" name="paymentId" value={p.id} /><input type="hidden" name="back" value={`/admin/payments/${p.id}`} /><input type="hidden" name="submissionId" value={s.id} />
                   <Field label="سبب الرفض (يظهر للعميل)" htmlFor="reason" required><Textarea id="reason" name="reason" rows={2} required /></Field>

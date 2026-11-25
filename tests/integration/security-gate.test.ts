@@ -13,7 +13,7 @@ import { addToCart, mergeGuestCart } from '@/server/modules/commerce/cart';
 import { setListingActive, moderateProduct } from '@/server/modules/catalog/products';
 import { accountBalance, postEntry, reconcile } from '@/server/modules/finance/ledger';
 import { approveWithdrawal, markWithdrawalFailedBeforeTransfer, markWithdrawalPaid, markWithdrawalProcessing, rejectWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { blockDataSchemas } from '@/server/modules/cms/service';
 import { redactExpiredSecrets, REDACTED_BODY } from '@/server/jobs/worker';
@@ -52,6 +52,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: '1', clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(), pay.id);
     await expect(confirmPayment(admin, pay.id, submission.id)).rejects.toThrow(/لا يطابق/);
     expect((await paymentOf(order.id)).status).not.toBe('CONFIRMED');
   });
@@ -75,6 +76,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: String(pay.amountDue / 100), clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(), pay.id);
     await expect(confirmPayment(insider, pay.id, submission.id)).rejects.toThrow(/طرف فيها/);
   });
 
@@ -97,6 +99,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: String(pay.amountDue / 100), clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(), pay.id);
     await Promise.allSettled([confirmPayment(admin, pay.id, submission.id), confirmPayment(admin, pay.id, submission.id)]);
     expect(await confirmPayment(admin, pay.id, submission.id)).toEqual({ alreadyConfirmed: true });
     const entries = await db.select().from(journalEntries).where(sql`${journalEntries.idempotencyKey} like ${`payment:${pay.id}:%`}`);
