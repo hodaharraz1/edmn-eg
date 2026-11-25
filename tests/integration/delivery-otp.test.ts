@@ -66,7 +66,7 @@ async function activeDeal(opts: { seller?: Actor } = {}) {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-  await startReview(await makeAdmin(), p.id);
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return { buyer, buyerUser, seller, dealId: deal.id };
 }

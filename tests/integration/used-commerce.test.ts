@@ -141,7 +141,7 @@ async function paidUsedDeal() {
   const d = await agreedUsedDeal();
   const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
   const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-  await startReview(await makeAdmin(), p.id);
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return d;
 }

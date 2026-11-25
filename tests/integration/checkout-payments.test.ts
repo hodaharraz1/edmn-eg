@@ -114,7 +114,7 @@ describe('multi-seller checkout', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: String(pay.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-    await startReview(await makeAdmin(), pay.id);
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), pay.id);
     await confirmPayment(admin, pay.id, submission.id);
     await decideSeller(admin, s.actor.sellerId!, 'SUSPEND', 'مخالفة سياسة الشحن');
     const c2 = await makeCustomer();
@@ -155,7 +155,7 @@ describe('manual payments', () => {
   it('EDGE 3/4 — double-click and retried confirmation post money exactly once', async () => {
     const { c, payment, order } = await freshOrder();
     const { submission } = await submitProof(c.actor, payment.id, { claimedAmount: String(payment.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-    await startReview(await makeAdmin(), payment.id);
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), payment.id);
     const results = await Promise.allSettled([confirmPayment(admin, payment.id, submission.id), confirmPayment(admin, payment.id, submission.id)]);
     expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
     const flags = results.map((r) => (r as PromiseFulfilledResult<{ alreadyConfirmed: boolean }>).value.alreadyConfirmed).sort();
@@ -177,7 +177,7 @@ describe('manual payments', () => {
     const [o] = await db.select().from(orders).where(eq(orders.id, order.id));
     expect(o.status).toBe('PENDING_PAYMENT');
     const second = await submitProof(c.actor, payment.id, { claimedAmount: String(payment.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p2.png' });
-    await startReview(await makeAdmin(), payment.id);
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), payment.id);
     await confirmPayment(admin, payment.id, second.submission.id);
     [p] = await db.select().from(payments).where(eq(payments.id, payment.id));
     expect(p.status).toBe('CONFIRMED');

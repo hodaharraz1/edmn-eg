@@ -209,7 +209,7 @@ describe('Flow C — Protected Deal between two app users', () => {
     const pending = await call(dealRoute, `/deals/${id}`, { token: st, params: p });
     expect(pending.body.allowedActions).not.toContain('MARK_SHIPPED'); // not paid yet
     const [sub] = await db.select().from(paymentSubmissions).where(eq(paymentSubmissions.paymentId, paymentId));
-    await startReview(await makeAdmin(), paymentId);
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), paymentId);
     await confirmPayment(admin, paymentId, sub.id);
 
     const active = await call(dealRoute, `/deals/${id}`, { token: st, params: p });

@@ -169,7 +169,7 @@ describe('external protected deals', () => {
     const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
     const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
     await expect(markDealDelivered(seller, deal.id, 'تم')).rejects.toThrow(); // not active yet
-    await startReview(await makeAdmin(), p.id); // two-person rule: a different staff member reviews first
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id); // two-person rule: a different staff member reviews first
     await confirmPayment(admin, p.id, submission.id);
     let [d] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     expect(d.status).toBe('ACTIVE');

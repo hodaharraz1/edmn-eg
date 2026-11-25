@@ -69,7 +69,7 @@ async function verifiedHandover() {
   const d = await agreed();
   const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
   const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-  await startReview(await makeAdmin(), p.id); // two-person rule: a different staff member reviews first
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id); // two-person rule: a different staff member reviews first
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(d.seller, d.dealId, 'شحن');
   await verifyDeliveryOtp(d.seller, d.dealId, (await deliveryOtpForBuyer(d.buyer, d.dealId))!.testCode!);
@@ -135,7 +135,7 @@ describe('pre-acceptance audit — protected deal fixes', () => {
     const d = await agreed();
     const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
     const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
-    await startReview(await makeAdmin(), p.id); // two-person rule: a different staff member reviews first
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id); // two-person rule: a different staff member reviews first
     await confirmPayment(admin, p.id, submission.id);
     await markDealDelivered(d.seller, d.dealId, 'شحن');
     await flushOutbound(500);

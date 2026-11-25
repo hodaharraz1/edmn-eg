@@ -202,7 +202,7 @@ export async function submitAndConfirm(c: { actor: Actor }, orderId: string, adm
   const p = await paymentOf(orderId);
   const { submission } = await submitProof(c.actor, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png('proof'), name: 'proof.png' });
   // Two-person rule: a different staff member reviews before `admin` confirms.
-  await startReview(await makeAdmin(), p.id);
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return { payment: p, submission };
 }

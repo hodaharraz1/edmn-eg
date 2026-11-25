@@ -37,7 +37,7 @@ describe('PAY-01 — payment confirmation is two-person (reviewer ≠ confirmer)
   });
 
   it('the reviewer who started the review can never confirm (service + DB CHECK)', async () => {
-    const reviewer = await makeAdmin();
+    const reviewer = await makeAdmin(['PAYMENT_REVIEWER']);
     const { pay, submission } = await freshSubmittedProof();
     await startReview(reviewer, pay.id);
     await expect(confirmPayment(reviewer, pay.id, submission.id)).rejects.toThrow(/شخصين/);
@@ -46,7 +46,7 @@ describe('PAY-01 — payment confirmation is two-person (reviewer ≠ confirmer)
   });
 
   it('a different staff member confirms; the approval records maker=reviewer, checker=confirmer', async () => {
-    const reviewer = await makeAdmin();
+    const reviewer = await makeAdmin(['PAYMENT_REVIEWER']);
     const { pay, submission } = await freshSubmittedProof();
     await startReview(reviewer, pay.id);
     expect((await confirmPayment(admin, pay.id, submission.id)).alreadyConfirmed).toBe(false);
@@ -85,7 +85,7 @@ describe('PAY-01 — daily receipt limit per customer (Cairo day)', () => {
       const p2 = await paymentOf(o2.id);
       await expect(submitProof(c.actor, p2.id, { claimedAmount: '300', clientKey: randomUUID() }, { data: await png('b'), name: 'b.png' })).rejects.toThrow(/للحد الأقصى اليومي/);
       // Rejecting the first proof frees the allowance: the refused receipt no longer counts.
-      const reviewer = await makeAdmin();
+      const reviewer = await makeAdmin(['PAYMENT_REVIEWER']);
       await startReview(reviewer, p1.id);
       await rejectPayment(reviewer, p1.id, first.submission.id, 'إيصال غير صحيح', true);
       const third = await submitProof(c.actor, p2.id, { claimedAmount: '300', clientKey: randomUUID() }, { data: await png('c'), name: 'c.png' });
