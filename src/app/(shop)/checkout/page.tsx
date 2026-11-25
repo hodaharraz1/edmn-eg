@@ -6,7 +6,7 @@ import { placeOrderAction } from '@/app/_actions/checkout';
 import { AddressForm } from '@/app/_components/address-form';
 import { cartView } from '@/server/modules/commerce/cart';
 import { myAddresses } from '@/server/modules/customers/addresses';
-import { enabledPaymentMethods } from '@/server/modules/payments/service';
+import { codCheckoutConfig, enabledPaymentMethods } from '@/server/modules/payments/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 import { allGovernorates, deliveryGovernorate } from '@/server/web/context';
 import { requireUser, requireCustomer } from '@/server/web/session';
@@ -18,10 +18,11 @@ import { mediaUrl } from '@/ui/commerce';
 import { PageHeader } from '@/ui/data';
 import { Alert, EmptyState } from '@/ui/feedback';
 import { TestMoneyNotice } from '@/app/_components/test-money';
-import { Radio, Textarea } from '@/ui/form';
+import { Textarea } from '@/ui/form';
 import { ProtectionPanel } from '@/ui/protection';
 import { SafeImg } from '@/ui/safe-img';
 import { cn } from '@/lib/cn';
+import { PaymentMethodPicker } from './payment-method-picker';
 
 export const metadata: Metadata = { title: 'إتمام الشراء', robots: { index: false } };
 
@@ -37,6 +38,11 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
   const chosenGov = chosen ? govs.find((g) => g.id === chosen.governorateId) : undefined;
   const cart = await cartView({ userId: user.id }, chosen?.governorateId ?? null);
   const methods = await enabledPaymentMethods();
+  const cod = await codCheckoutConfig();
+  const methodList: { code: string; nameAr: string; instructionsAr: string | null }[] = methods.map((m) => ({ code: m.code, nameAr: m.nameAr, instructionsAr: m.instructionsAr ?? null }));
+  // COD has no transfer destination, so it is never in enabledPaymentMethods; appended when the
+  // feature is on. The server re-checks the cap and fee at placement.
+  if (cod.enabled) methodList.push({ code: 'COD', nameAr: 'الدفع عند الاستلام', instructionsAr: 'تدفع نقدًا للمندوب عند الاستلام' });
   const windowHours = await getSetting('payments.paymentWindowHours');
   const live = await realMoneyEnabled();
   const mandatoryNotice = await getSetting('returns.mandatoryRightsNotice');
@@ -131,23 +137,15 @@ export default async function CheckoutPage(props: PageProps<'/checkout'>) {
               <ActionForm action={placeOrderAction} className="space-y-4">
                 <input type="hidden" name="addressId" value={chosen!.id} />
                 <input type="hidden" name="checkoutKey" value={randomUUID()} />
-                <input type="hidden" name="expectedTotal" value={cart.grandTotal} />
                 <input type="hidden" name="expectedPricingVersionId" value={cart.pricingVersionId ?? ''} />
                 <section className="card p-5">
                   <StepTitle n={3} icon={Wallet}>طريقة الدفع</StepTitle>
                   {!live && <TestMoneyNotice className="mb-3" />}
-                  {methods.length === 0 ? (
+                  {methodList.length === 0 ? (
                     <Alert tone="warning">مفيش طرق دفع متاحة دلوقتي. جرّب تاني بعد شوية.</Alert>
                   ) : (
-                    <div className="grid gap-2">
-                      {methods.map((m, i) => (
-                        <Radio key={m.code} name="paymentMethod" value={m.code} defaultChecked={i === 0} required label={m.nameAr} description={m.instructionsAr ?? undefined} />
-                      ))}
-                    </div>
+                    <PaymentMethodPicker methods={methodList} grandTotal={cart.grandTotal} codFee={cod.enabled ? cod.fee : 0} windowHours={windowHours} />
                   )}
-                  <p className="mt-3 text-xs text-muted">
-                    الدفع دلوقتي بالتحويل اليدوي: بعد ما تأكّد الطلب هتظهرلك بيانات التحويل، وبعدها ترفع إثبات الدفع خلال {windowHours} ساعة عشان فريق اضمن يراجعه. الكميات محجوزة لك طول المدة دي.
-                  </p>
                 </section>
                 <section className="card p-5">
                   <StepTitle n={4} icon={StickyNote}>ملاحظات للبائع (اختياري)</StepTitle>

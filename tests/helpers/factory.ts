@@ -231,7 +231,7 @@ let movementMaker: Actor | null = null;
  * Universal Maker/Checker (Batch 1.5): the Maker step for one financial movement, by a finance operator who is
  * NOT the Checker that will execute it. Returns the open request.
  */
-export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
+export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN' | 'COD_REMITTANCE', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
   const { requestMovement } = await import('@/server/modules/finance/movements');
   movementMaker ??= await makeAdmin(['FINANCE_OPERATOR']);
   return requestMovement(opts.maker ?? movementMaker, kind, { entityId, amount, reason: 'طلب حركة مالية في الاختبار', params: opts.params });

@@ -120,6 +120,8 @@ export const orders = pgTable(
     discountTotal: money().notNull().default(0),
     /** Buyer share of the transparent EDMN fee (Fb). Legacy orders: 0 (the fee was fully seller-borne). */
     buyerFeeTotal: money().notNull().default(0),
+    /** Cash-on-delivery fee charged to the customer on collection (0 for prepaid methods). */
+    codFee: money().notNull().default(0),
     grandTotal: money().notNull(),
     /** Immutable economic snapshot (fee config/version, rounding, shipping payer/payee, terms version). */
     economicSnapshot: jsonb(),
@@ -143,7 +145,7 @@ export const orders = pgTable(
     enumCheck('orders_status_chk', t.status, ORDER_STATUSES),
     check(
       'orders_totals_chk',
-      sql`${t.grandTotal} = ${t.merchandiseTotal} + ${t.shippingTotal} + ${t.buyerFeeTotal} - ${t.discountTotal} and ${t.grandTotal} >= 0 and ${t.buyerFeeTotal} >= 0`,
+      sql`${t.grandTotal} = ${t.merchandiseTotal} + ${t.shippingTotal} + ${t.buyerFeeTotal} + ${t.codFee} - ${t.discountTotal} and ${t.grandTotal} >= 0 and ${t.buyerFeeTotal} >= 0`,
     ),
   ],
 );

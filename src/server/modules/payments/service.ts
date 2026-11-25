@@ -117,7 +117,7 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
   });
 }
 
-async function moveOrderTo(tx: DbOrTx, actor: Actor, orderId: string, to: 'PAYMENT_UNDER_REVIEW' | 'PENDING_PAYMENT' | 'PAID', reason?: string) {
+export async function moveOrderTo(tx: DbOrTx, actor: Actor, orderId: string, to: 'PAYMENT_UNDER_REVIEW' | 'PENDING_PAYMENT' | 'PAID', reason?: string) {
   const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
   if (o.status !== to) {
     await transition(tx, actor, orderMachine, o.id, o.status, to, reason);
@@ -201,6 +201,106 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
       reason: note ?? null,
     });
     return { alreadyConfirmed: false };
+  });
+}
+
+/** COD order's payment row (locked in the caller's transaction), or null for prepaid orders. */
+export async function codPaymentOf(tx: DbOrTx, orderId: string) {
+  const [p] = await tx.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.method, 'COD'))).for('update');
+  return p ?? null;
+}
+
+/**
+ * Cash collected at handover: the COD payment moves COD_PENDING → COD_COLLECTED (idempotent).
+ * Called wherever a sub-order reaches DELIVERED (buyer confirmation or entitlement timeout).
+ */
+export async function markCodCollected(tx: DbOrTx, actor: Actor, orderId: string) {
+  const p = await codPaymentOf(tx, orderId);
+  if (!p || p.status !== 'COD_PENDING') return;
+  await transition(tx, actor, paymentMachine, p.id, 'COD_PENDING', 'COD_COLLECTED', 'حصّل المندوب المبلغ نقدًا عند التسليم');
+  await tx.update(payments).set({ status: 'COD_COLLECTED' }).where(eq(payments.id, p.id));
+  await audit(tx, actor, { action: 'payment.cod_collected', entityType: 'payment', entityId: p.id, newValues: { status: 'COD_COLLECTED', amountDue: p.amountDue } });
+}
+
+/** COD refusal/cancellation before any collection: void the pending COD payment (idempotent). */
+export async function cancelCodPaymentIfUncollected(tx: DbOrTx, actor: Actor, orderId: string, why: string) {
+  const p = await codPaymentOf(tx, orderId);
+  if (!p || p.status !== 'COD_PENDING') return;
+  await transition(tx, actor, paymentMachine, p.id, 'COD_PENDING', 'CANCELLED', why);
+  await tx.update(payments).set({ status: 'CANCELLED' }).where(eq(payments.id, p.id));
+  await audit(tx, actor, { action: 'payment.cod_cancelled', entityType: 'payment', entityId: p.id, newValues: { status: 'CANCELLED' }, reason: why });
+}
+
+/**
+ * Staff record the courier company's cash remittance for a COD order (Checker step of the universal
+ * two-person rule): a Maker opens a COD_REMITTANCE movement request for the exact expected amount, a
+ * DIFFERENT staff member (payments.verify + fresh 2FA) executes this. One journal entry per order:
+ * cash in, each delivered sub-order's seller pending (minus EDMN commission, deferred), fees + COD fee
+ * deferred. The seller payout afterwards is the existing release-after-return-period flow, unchanged.
+ * A sub-order the customer refused contributes nothing (no cash was collected for it).
+ */
+export async function recordCodRemittance(actor: Actor, paymentId: string, input: { reason: string }) {
+  requirePermission(actor, 'payments.verify');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  return db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('الدفعة');
+    if (p.method !== 'COD') throw validation('تحصيل شركة الشحن خاص بطلبات الدفع عند الاستلام فقط');
+    if (p.status === 'CONFIRMED') return { alreadyConfirmed: true };
+    if (p.status !== 'COD_COLLECTED') throw invalidState('التحصيل يُسجَّل بعد تسليم الطلب وتحصيل المندوب للمبلغ');
+    if (!p.orderId) throw invalidState('الدفعة غير مرتبطة بطلب');
+    const [order] = await tx.select().from(orders).where(eq(orders.id, p.orderId)).for('update');
+    if (!order) throw notFound('الطلب');
+    const sos = await tx.select().from(sellerOrders).where(eq(sellerOrders.orderId, order.id)).for('update');
+    if (!sos.length) throw invalidState('لا توجد طلبات فرعية');
+    if (!sos.every((x) => ['DELIVERED', 'COMPLETED', 'DELIVERY_FAILED', 'CANCELLED'].includes(x.status)))
+      throw invalidState('لا يمكن تسجيل التحصيل قبل ما كل شحنات الطلب تتسلّم أو تترفض');
+    const delivered = sos.filter((x) => x.status === 'DELIVERED' || x.status === 'COMPLETED');
+    if (!delivered.length) throw invalidState('مفيش شحنة اتسلمت — مفيش تحصيل مستحق');
+    const expected = delivered.reduce((a, x) => a + x.grossTotal, 0) + (order.codFee ?? 0);
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'COD_REMITTANCE', p.id, expected);
+    const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
+      action: 'COD_REMITTANCE',
+      entityType: 'payment',
+      entityId: p.id,
+      amount: expected,
+      economicVersion: `cod-remit:${p.id}:${expected}`,
+      reason: why,
+      idempotencyKey: `cod-remit:${p.id}`,
+    });
+    const sellerSum = delivered.reduce((a, x) => a + x.sellerNet, 0);
+    const deferred = expected - sellerSum;
+    await postEntry(tx, actor, {
+      entryType: 'COD_REMITTANCE',
+      sourceType: 'payment',
+      sourceId: p.id,
+      idempotencyKey: `cod-remit:${p.id}`,
+      description: `تحصيل شركة الشحن نقدًا لطلب الدفع عند الاستلام ${order.number}`,
+      approvalId: approval.id,
+      lines: [
+        { account: { code: 'PLATFORM_CASH' }, debit: expected, memo: 'cash remitted by the courier company' },
+        ...delivered.map((x) => ({ account: { code: 'SELLER_PENDING' as const, sellerId: x.sellerId }, credit: x.sellerNet, memo: `seller payable (pending) ${order.number}-${x.suffix}` })),
+        ...(deferred > 0 ? [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: deferred, memo: 'EDMN fees + COD fee (deferred)' }] : []),
+      ],
+    });
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', why);
+    // The two-person rule for COD is the movement request: the Maker stands in reviewStartedBy so the
+    // DB CHECK (confirmer ≠ reviewer) keeps its teeth without any special case.
+    await tx.update(payments).set({ status: 'CONFIRMED', reviewStartedBy: mreq.requestedBy, confirmedBy: actor.userId, confirmedAt: new Date() }).where(eq(payments.id, p.id));
+    await completeMovementRequest(tx, actor, mreq, approval.id);
+    await audit(tx, actor, {
+      action: 'payment.cod_remittance_recorded',
+      entityType: 'payment',
+      entityId: p.id,
+      oldValues: { status: p.status },
+      newValues: { status: 'CONFIRMED', amount: expected, approvalId: approval.id, deliveredSellerOrders: delivered.map((x) => x.id) },
+      reason: why,
+    });
+    await notify(tx, { event: 'PAYMENT_CONFIRMED', userIds: [p.payerUserId], vars: { order: order.number }, link: `/account/orders/${order.id}`, dedupeKey: `payment:${p.id}:confirmed` });
+    return { alreadyConfirmed: false, approvalId: approval.id, amount: expected };
   });
 }
 
@@ -356,6 +456,12 @@ export async function updatePaymentMethod(actor: Actor, code: 'BANK_TRANSFER' | 
   });
 }
 
+/** Cash-on-delivery availability + pricing for checkout surfaces (app and web). */
+export async function codCheckoutConfig(conn: DbOrTx = db) {
+  const [enabled, fee, max] = await Promise.all([getSetting('orders.codEnabled', conn), getSetting('orders.codFee', conn), getSetting('orders.codMaxAmount', conn)]);
+  return { enabled, fee, max };
+}
+
 export async function enabledPaymentMethods(conn: DbOrTx = db) {
   const methods = await conn.select().from(paymentMethods).where(eq(paymentMethods.isEnabled, true)).orderBy(asc(paymentMethods.sortOrder));
   const dests = methods.length
@@ -368,7 +474,7 @@ export async function enabledPaymentMethods(conn: DbOrTx = db) {
   return methods.map((m) => ({ ...m, destinations: dests.filter((d) => d.methodCode === m.code) })).filter((m) => m.destinations.length);
 }
 
-export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'REJECTED')[], limit = 50, offset = 0) {
+export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'REJECTED' | 'COD_PENDING' | 'COD_COLLECTED')[], limit = 50, offset = 0) {
   return db
     .select({ payment: payments, payer: { id: users.id, fullName: users.fullName, phone: users.phone }, orderNumber: orders.number, dealNumber: externalDeals.number })
     .from(payments)

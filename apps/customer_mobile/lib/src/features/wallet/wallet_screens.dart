@@ -359,6 +359,7 @@ String methodLabel(EdmnLocalizations t, String m) => switch (m) {
       'INSTAPAY' => t.methodInstapay,
       'VODAFONE_CASH' || 'ORANGE_CASH' || 'ETISALAT_CASH' || 'WE_PAY' || 'BM_WALLET' || 'MOBILE_WALLET' => t.methodWallet,
       'BANK_TRANSFER' || 'BANK_ACCOUNT' => t.methodBank,
+      'COD' => 'الدفع عند الاستلام',
       _ => m,
     };
 

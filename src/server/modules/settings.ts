@@ -47,6 +47,12 @@ export const SETTINGS_SCHEMA = {
   'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
   /** Max total of receipts one customer may upload in one Cairo day (piasters; 250,000 EGP). SENSITIVE: changing it needs step-up. */
   'payments.dailyReceiptLimit': z.number().int().min(0).default(25_000_000),
+  /** Cash on delivery (market orders only, never protected deals). OFF by default. SENSITIVE. */
+  'orders.codEnabled': z.boolean().default(false),
+  /** Max order value payable cash on delivery (piasters; 5,000 EGP). SENSITIVE. */
+  'orders.codMaxAmount': z.number().int().min(0).default(500_000),
+  /** Optional COD fee charged to the customer on collection (piasters; starts at zero). SENSITIVE. */
+  'orders.codFee': z.number().int().min(0).default(0),
   'withdrawals.minimumAmount': z.number().int().min(0).default(10000), // 100 EGP in piasters
   'withdrawals.slaBusinessHours': z.number().int().min(1).max(240).default(48),
   /** Withdrawals at/above this amount require approver ≠ payer (maker/checker). */
@@ -183,6 +189,9 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payments.realMoneyEnabled',
   'payments.dailyReceiptLimit',
+  'orders.codEnabled',
+  'orders.codMaxAmount',
+  'orders.codFee',
   'pilot.enabled',
   'pilot.allowedUserIds',
   'pilot.maxOrderAmount',

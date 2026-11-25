@@ -7418,7 +7418,8 @@
                       "ORANGE_CASH",
                       "ETISALAT_CASH",
                       "WE_PAY",
-                      "BM_WALLET"
+                      "BM_WALLET",
+                      "COD"
                     ]
                   }
                 },
@@ -13307,7 +13308,8 @@
                       "ORANGE_CASH",
                       "ETISALAT_CASH",
                       "WE_PAY",
-                      "BM_WALLET"
+                      "BM_WALLET",
+                      "COD"
                     ]
                   },
                   "checkoutKey": {
@@ -14025,7 +14027,8 @@
                         "ORANGE_CASH",
                         "ETISALAT_CASH",
                         "WE_PAY",
-                        "BM_WALLET"
+                        "BM_WALLET",
+                        "COD"
                       ]
                     },
                     "status": {
@@ -33055,7 +33058,8 @@
                     "ORANGE_CASH",
                     "ETISALAT_CASH",
                     "WE_PAY",
-                    "BM_WALLET"
+                    "BM_WALLET",
+                    "COD"
                   ]
                 },
                 "nameAr": {
@@ -33079,6 +33083,11 @@
               ]
             }
           },
+          "codFeePiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
           "paymentWindowHours": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -33096,6 +33105,7 @@
           "addresses",
           "cart",
           "paymentMethods",
+          "codFeePiastres",
           "paymentWindowHours",
           "realMoneyEnabled",
           "mandatoryRightsNoticeAr"
@@ -34290,7 +34300,8 @@
               "ORANGE_CASH",
               "ETISALAT_CASH",
               "WE_PAY",
-              "BM_WALLET"
+              "BM_WALLET",
+              "COD"
             ]
           },
           "status": {

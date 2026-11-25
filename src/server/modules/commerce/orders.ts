@@ -14,6 +14,7 @@ import {
   paymentMethods,
   payments,
   sellerOrders,
+  sellers,
   stores,
   users,
   products,
@@ -95,14 +96,22 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     if (!address || address.userId !== customerId || address.archivedAt) throw validation('عنوان التوصيل ده غير صالح. اختار عنوان تاني');
     const [gov] = await tx.select().from(governorates).where(eq(governorates.id, address.governorateId));
 
-    const [method] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, d.paymentMethod));
-    if (!method?.isEnabled) throw validation('طريقة الدفع دي مش متاحة دلوقتي');
-    const destinations = await tx
-      .select()
-      .from(paymentDestinations)
-      .where(and(eq(paymentDestinations.methodCode, d.paymentMethod), offeredDestinations(await realMoneyEnabled(tx))))
-      .orderBy(asc(paymentDestinations.sortOrder));
-    if (!destinations.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي. اختار طريقة تانية');
+    // Cash on delivery has no company destination: the courier collects at the door. Every other
+    // method still needs an enabled method row with at least one offered destination.
+    const isCod = d.paymentMethod === 'COD';
+    let destinations: (typeof paymentDestinations.$inferSelect)[] = [];
+    if (isCod) {
+      if (!(await getSetting('orders.codEnabled', tx))) throw validation('الدفع عند الاستلام مش متاح دلوقتي');
+    } else {
+      const [method] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, d.paymentMethod));
+      if (!method?.isEnabled) throw validation('طريقة الدفع دي مش متاحة دلوقتي');
+      destinations = await tx
+        .select()
+        .from(paymentDestinations)
+        .where(and(eq(paymentDestinations.methodCode, d.paymentMethod), offeredDestinations(await realMoneyEnabled(tx))))
+        .orderBy(asc(paymentDestinations.sortOrder));
+      if (!destinations.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي. اختار طريقة تانية');
+    }
 
     const lines = await cartLines(tx, { userId: customerId });
     if (!lines.length) throw validation('السلة فاضية');
@@ -137,10 +146,16 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     const changedPrices = priced.groups.flatMap((g) => g.lines.filter((l) => l.issues.includes('PRICE_CHANGED')).map((l) => l.title));
     if (changedPrices.length) throw new DomainError('CONFLICT', `السعر اتغير: ${changedPrices.join('، ')}. راجع الإجمالي الجديد وأكّد تاني`);
     const { assertPilotAllowed } = await import('@/server/ops/pilot');
-    await assertPilotAllowed(tx, customerId, 'ORDER', priced.grandTotal);
-    if (priced.grandTotal !== d.expectedTotal) {
+    const codFee = isCod ? await getSetting('orders.codFee', tx) : 0;
+    const grandTotal = priced.grandTotal + codFee;
+    if (isCod) {
+      const codMax = await getSetting('orders.codMaxAmount', tx);
+      if (grandTotal > codMax) throw validation(`الدفع عند الاستلام متاح للطلبات حتى ${formatEGP(codMax)} بس. اختار طريقة دفع تانية`);
+    }
+    await assertPilotAllowed(tx, customerId, 'ORDER', grandTotal);
+    if (grandTotal !== d.expectedTotal) {
       // Never silently charge an old or new amount: the buyer must see and confirm the changed total.
-      throw new DomainError('CONFLICT', `الإجمالي اتغير من ${formatEGP(d.expectedTotal)} إلى ${formatEGP(priced.grandTotal)} (الشحن أو رسوم الخدمة اتغيرت). راجع وأكّد تاني`);
+      throw new DomainError('CONFLICT', `الإجمالي اتغير من ${formatEGP(d.expectedTotal)} إلى ${formatEGP(grandTotal)} (الشحن أو رسوم الخدمة اتغيرت). راجع وأكّد تاني`);
     }
 
     const windowHours = await getSetting('payments.paymentWindowHours', tx);
@@ -169,7 +184,8 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         shippingTotal: priced.shippingTotal,
         discountTotal: priced.discountTotal,
         buyerFeeTotal: priced.buyerFeeTotal,
-        grandTotal: priced.grandTotal,
+        codFee,
+        grandTotal,
         economicSnapshot: {
           version: 2,
           currency: 'EGP',
@@ -178,6 +194,7 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
           feeRounding: 'TOTAL_HALF_UP__BUYER_HALF_UP__SELLER_REMAINDER',
           buyerFeeTotal: priced.buyerFeeTotal,
           sellerFeeTotal: priced.sellerFeeTotal,
+          codFee,
           shippingPayer: 'BUYER',
           shippingPayee: 'SELLER_FULFILMENT',
           shippingInputs: { governorateId: address.governorateId, perSeller: priced.groups.map((g) => ({ sellerId: g.sellerId, fee: g.shippingFee, free: g.freeShippingApplied })) },
@@ -261,9 +278,10 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         })
         .returning();
       await transitionNew(tx, actor, 'seller_order', so.id, 'PENDING_PAYMENT');
+      const reservationDueAt = isCod ? new Date(Date.now() + 14 * 86400_000) : dueAt;
       for (const row of itemRows) {
         const [item] = await tx.insert(orderItems).values({ ...row, sellerOrderId: so.id }).returning({ id: orderItems.id });
-        await reserve(tx, row.variantId, row.quantity, item.id, dueAt);
+        await reserve(tx, row.variantId, row.quantity, item.id, reservationDueAt);
       }
     }
 
@@ -278,16 +296,35 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         payerUserId: customerId,
         isTest: !(await realMoneyEnabled(tx)),
         method: d.paymentMethod,
-        destinationId: destinations[0].id,
-        destinationSnapshot: destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
+        status: isCod ? 'COD_PENDING' : 'AWAITING_PAYMENT',
+        destinationId: isCod ? null : destinations[0].id,
+        destinationSnapshot: isCod ? [] : destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: order.grandTotal,
         dueAt,
       })
       .returning();
-    await transitionNew(tx, actor, 'payment', payment.id, 'AWAITING_PAYMENT');
+    await transitionNew(tx, actor, 'payment', payment.id, isCod ? 'COD_PENDING' : 'AWAITING_PAYMENT');
     await clearVariants(tx, customerId, lines.map((l) => l.variantId));
-    await enqueueJob(tx, 'orders.expire', { orderId: order.id }, { runAt: new Date(dueAt.getTime() + 60_000) });
-    await audit(tx, actor, { action: 'order.placed', entityType: 'order', entityId: order.id, newValues: { number: order.number, grandTotal: order.grandTotal, sellers: priced.groups.length } });
+    // Cash-on-delivery orders cannot expire unpaid — fulfilment starts at once, below.
+    if (!isCod) await enqueueJob(tx, 'orders.expire', { orderId: order.id }, { runAt: new Date(dueAt.getTime() + 60_000) });
+    if (isCod) {
+      // No money has moved and no ledger entry exists yet: the courier company's cash is a receivable
+      // recorded only when staff confirm the remittance (two people). Stock stays RESERVED until delivery.
+      const { moveOrderTo } = await import('@/server/modules/payments/service');
+      const { sellerOrders: sos } = await moveOrderTo(tx, actor, order.id, 'PAID');
+      const confirmHours = await getSetting('sla.sellerConfirmHours', tx);
+      const grace = await getSetting('sla.shipGraceDays', tx);
+      const nowMs = Date.now();
+      for (const so of sos) {
+        await tx
+          .update(sellerOrders)
+          .set({ sellerResponseDueAt: new Date(nowMs + confirmHours * 3600_000), shipByDueAt: new Date(nowMs + ((so.processingDays ?? 2) + grace) * 86400_000) })
+          .where(eq(sellerOrders.id, so.id));
+        const [st] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));
+        await notify(tx, { event: 'SELLER_NEW_ORDER', userIds: [st.ownerUserId], vars: { order: `${order.number}-${so.suffix}`, amount: formatEGP(so.grossTotal) }, link: `/seller/orders/${so.id}`, dedupeKey: `so:${so.id}:paid` });
+      }
+    }
+    await audit(tx, actor, { action: 'order.placed', entityType: 'order', entityId: order.id, newValues: { number: order.number, grandTotal: order.grandTotal, sellers: priced.groups.length, cod: isCod } });
     await notify(tx, {
       event: 'ORDER_CREATED',
       userIds: [customerId],

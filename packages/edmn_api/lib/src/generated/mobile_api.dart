@@ -665,9 +665,9 @@ class ChangePasswordRequest {
 }
 
 class Checkout {
-  const Checkout({required this.selectedAddressId, required this.addresses, required this.cart, required this.paymentMethods, required this.paymentWindowHours, required this.realMoneyEnabled, required this.mandatoryRightsNoticeAr});
+  const Checkout({required this.selectedAddressId, required this.addresses, required this.cart, required this.paymentMethods, required this.codFeePiastres, required this.paymentWindowHours, required this.realMoneyEnabled, required this.mandatoryRightsNoticeAr});
 
-  factory Checkout.fromJson(Map<String, dynamic> json) => Checkout(selectedAddressId: json['selectedAddressId'] as String?, addresses: (json['addresses'] as List).map((e) => Address.fromJson(e as Map<String, dynamic>)).toList(), cart: Cart.fromJson(json['cart'] as Map<String, dynamic>), paymentMethods: (json['paymentMethods'] as List).map((e) => CheckoutPaymentMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), paymentWindowHours: (json['paymentWindowHours'] as num).toInt(), realMoneyEnabled: json['realMoneyEnabled'] as bool, mandatoryRightsNoticeAr: json['mandatoryRightsNoticeAr'] as String);
+  factory Checkout.fromJson(Map<String, dynamic> json) => Checkout(selectedAddressId: json['selectedAddressId'] as String?, addresses: (json['addresses'] as List).map((e) => Address.fromJson(e as Map<String, dynamic>)).toList(), cart: Cart.fromJson(json['cart'] as Map<String, dynamic>), paymentMethods: (json['paymentMethods'] as List).map((e) => CheckoutPaymentMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), codFeePiastres: (json['codFeePiastres'] as num).toInt(), paymentWindowHours: (json['paymentWindowHours'] as num).toInt(), realMoneyEnabled: json['realMoneyEnabled'] as bool, mandatoryRightsNoticeAr: json['mandatoryRightsNoticeAr'] as String);
 
   final String? selectedAddressId;
 
@@ -677,13 +677,15 @@ class Checkout {
 
   final List<CheckoutPaymentMethodsItem> paymentMethods;
 
+  final int codFeePiastres;
+
   final int paymentWindowHours;
 
   final bool realMoneyEnabled;
 
   final String mandatoryRightsNoticeAr;
 
-  Map<String, dynamic> toJson() => {'selectedAddressId': selectedAddressId, 'addresses': addresses.map((e) => e.toJson()).toList(), 'cart': cart.toJson(), 'paymentMethods': paymentMethods.map((e) => e.toJson()).toList(), 'paymentWindowHours': paymentWindowHours, 'realMoneyEnabled': realMoneyEnabled, 'mandatoryRightsNoticeAr': mandatoryRightsNoticeAr};
+  Map<String, dynamic> toJson() => {'selectedAddressId': selectedAddressId, 'addresses': addresses.map((e) => e.toJson()).toList(), 'cart': cart.toJson(), 'paymentMethods': paymentMethods.map((e) => e.toJson()).toList(), 'codFeePiastres': codFeePiastres, 'paymentWindowHours': paymentWindowHours, 'realMoneyEnabled': realMoneyEnabled, 'mandatoryRightsNoticeAr': mandatoryRightsNoticeAr};
 }
 
 class CheckoutPaymentMethodsItem {
@@ -691,7 +693,7 @@ class CheckoutPaymentMethodsItem {
 
   factory CheckoutPaymentMethodsItem.fromJson(Map<String, dynamic> json) => CheckoutPaymentMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD (kept as String for forward compatibility).
   final String code;
 
   final String nameAr;
@@ -1507,7 +1509,7 @@ class GetPaymentResponse {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -3407,7 +3409,7 @@ class Payment {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -3479,7 +3481,7 @@ class PlaceOrderRequest {
 
   final String addressId;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD (kept as String for forward compatibility).
   final String paymentMethod;
 
   final String checkoutKey;
@@ -5624,7 +5626,7 @@ class StartDealPaymentRequest {
 
   factory StartDealPaymentRequest.fromJson(Map<String, dynamic> json) => StartDealPaymentRequest(method: json['method'] as String);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD (kept as String for forward compatibility).
   final String method;
 
   Map<String, dynamic> toJson() => {'method': method};

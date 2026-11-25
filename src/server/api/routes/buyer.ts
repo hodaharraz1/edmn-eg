@@ -449,6 +449,8 @@ export const getCheckout = defineRoute({
       addresses: z.array(address),
       cart,
       paymentMethods: z.array(z.object({ code: z.enum(PAYMENT_METHOD_CODES), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable() })),
+      /** COD collection fee (piasters) added to the total when the buyer chooses COD; 0 when COD is off. */
+      codFeePiastres: z.number().int(),
       paymentWindowHours: z.number().int(),
       realMoneyEnabled: z.boolean(),
       mandatoryRightsNoticeAr: z.string(),

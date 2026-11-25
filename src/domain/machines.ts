@@ -153,6 +153,10 @@ export const PAYMENT_STATUSES = [
   'REJECTED',
   'EXPIRED',
   'CANCELLED',
+  /** Cash on delivery: the order is being fulfilled; the courier collects cash at handover. */
+  'COD_PENDING',
+  /** Cash collected by the courier company; awaiting the two-person remittance record. */
+  'COD_COLLECTED',
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const paymentMachine = defineMachine<PaymentStatus>('payment', PAYMENT_STATUSES, {
@@ -163,6 +167,8 @@ export const paymentMachine = defineMachine<PaymentStatus>('payment', PAYMENT_ST
   CONFIRMED: [],
   EXPIRED: [],
   CANCELLED: [],
+  COD_PENDING: ['COD_COLLECTED', 'CANCELLED'],
+  COD_COLLECTED: ['CONFIRMED', 'CANCELLED'],
 });
 export const PAYMENT_SUBMISSION_STATUSES = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'NEW_PROOF_REQUESTED', 'SUPERSEDED'] as const;
 export type PaymentSubmissionStatus = (typeof PAYMENT_SUBMISSION_STATUSES)[number];
@@ -412,7 +418,7 @@ export const PRODUCT_CONDITIONS = ['NEW', 'USED'] as const;
 export type ProductCondition = (typeof PRODUCT_CONDITIONS)[number];
 export const USED_GRADES = ['LIKE_NEW', 'VERY_GOOD', 'GOOD', 'ACCEPTABLE'] as const;
 export type UsedGrade = (typeof USED_GRADES)[number];
-export const PAYMENT_METHOD_CODES = ['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH', 'ORANGE_CASH', 'ETISALAT_CASH', 'WE_PAY', 'BM_WALLET'] as const;
+export const PAYMENT_METHOD_CODES = ['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH', 'ORANGE_CASH', 'ETISALAT_CASH', 'WE_PAY', 'BM_WALLET', 'COD'] as const;
 export type PaymentMethodCode = (typeof PAYMENT_METHOD_CODES)[number];
 export const PAYOUT_TYPES = ['BANK_ACCOUNT', 'INSTAPAY', 'MOBILE_WALLET'] as const;
 export type PayoutType = (typeof PAYOUT_TYPES)[number];

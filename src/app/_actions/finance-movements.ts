@@ -7,7 +7,7 @@ import type { MovementKind } from '@/server/db/schema';
 import { runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin } from '@/server/web/session';
 
-const KINDS: MovementKind[] = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN'];
+const KINDS: MovementKind[] = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE'];
 
 async function run(fd: FormData, fn: (a: Awaited<ReturnType<typeof requireAdmin>>) => Promise<ActionState | void>) {
   const actor = await requireAdmin();
@@ -26,6 +26,15 @@ export async function movementRequestAction(_p: ActionState, fd: FormData): Prom
     const mode = str(fd, 'mode');
     await requestMovement(a, kind, { entityId: str(fd, 'entityId'), amount: Number(str(fd, 'amount')), reason: str(fd, 'reason'), params: mode ? { mode } : undefined });
     return { message: 'تم تسجيل طلب الحركة. التنفيذ يحتاج معتمدًا آخر — لم يتحرك أي مبلغ بعد.' };
+  });
+}
+
+/** Checker step for COD: record the courier company's cash remittance (post the journal entry). */
+export async function codRemittanceAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  return run(fd, async (a) => {
+    const { recordCodRemittance } = await import('@/server/modules/payments/service');
+    await recordCodRemittance(a, str(fd, 'paymentId'), { reason: str(fd, 'reason') });
+    return { message: 'تم تسجيل تحصيل شركة الشحن. مستحقات البائعين معلقة وتُتاح بعملية الإتاحة المعتادة بعد فترة الإرجاع.' };
   });
 }
 

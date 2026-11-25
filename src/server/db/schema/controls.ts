@@ -23,6 +23,8 @@ export const FINANCIAL_ACTIONS = [
   'DEAL_PAYOUT',
   'WITHDRAWAL_PAYOUT_RETURN',
   'REFUND_REVOCATION',
+  /** Recording the courier company's cash remittance for COD orders. */
+  'COD_REMITTANCE',
 ] as const;
 export type FinancialAction = (typeof FINANCIAL_ACTIONS)[number];
 export const APPROVAL_STATUSES = ['PENDING_CHECKER', 'APPROVED', 'CONSUMED', 'REVOKED', 'REJECTED'] as const;

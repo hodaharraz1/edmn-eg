@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { eq, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { paymentDecisionAction } from '@/app/_actions/admin';
+import { codRemittanceAction } from '@/app/_actions/finance-movements';
+import { MovementPanel, openMovementFor } from '@/app/_components/movement-panel';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { externalDeals, orders, payments, users } from '@/server/db/schema';
+import { externalDeals, orders, payments, sellerOrders, users } from '@/server/db/schema';
 import { paymentReviewSignals, submissionsFor } from '@/server/modules/payments/service';
 import { formatDate, formatEGP } from '@/lib/format';
 import { label } from '@/lib/i18n/labels';
@@ -20,13 +22,16 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
   if (!allowed) return <Forbidden />;
   const { id } = await props.params;
   const reviewerUsers = alias(users, 'reviewer_users');
-  const [row] = await db.select({ p: payments, payer: users, reviewerName: reviewerUsers.fullName, orderNumber: orders.number, deal: externalDeals }).from(payments).innerJoin(users, eq(users.id, payments.payerUserId)).leftJoin(reviewerUsers, eq(reviewerUsers.id, payments.reviewStartedBy)).leftJoin(orders, eq(orders.id, payments.orderId)).leftJoin(externalDeals, eq(externalDeals.id, payments.dealId)).where(eq(payments.id, id));
+  const [row] = await db.select({ p: payments, payer: users, reviewerName: reviewerUsers.fullName, orderNumber: orders.number, orderCodFee: orders.codFee, deal: externalDeals }).from(payments).innerJoin(users, eq(users.id, payments.payerUserId)).leftJoin(reviewerUsers, eq(reviewerUsers.id, payments.reviewStartedBy)).leftJoin(orders, eq(orders.id, payments.orderId)).leftJoin(externalDeals, eq(externalDeals.id, payments.dealId)).where(eq(payments.id, id));
   if (!row) notFound();
   const p = row.p;
   const subs = await submissionsFor(p.id);
   const open = subs.find((s) => s.status === 'SUBMITTED');
   const can = hasPermission(actor, 'payments.verify');
   const signals = await paymentReviewSignals(p.id);
+  // COD: the expected remittance is what the courier collected for the DELIVERED sub-orders (+ COD fee).
+  const codSos = p.method === 'COD' && p.orderId ? await db.select().from(sellerOrders).where(eq(sellerOrders.orderId, p.orderId)) : [];
+  const codExpected = codSos.filter((x) => x.status === 'DELIVERED' || x.status === 'COMPLETED').reduce((a, x) => a + x.grossTotal, 0) + (row.orderCodFee ?? 0);
   const pendingCancels = p.orderId
     ? (await db.execute<{ n: string }>(sql`select count(*)::text n from cancellation_requests c join seller_orders so on so.id = c.seller_order_id where so.order_id = ${p.orderId} and c.status = 'PENDING'`)).rows[0].n
     : '0';
@@ -44,6 +49,17 @@ export default async function PaymentReview(props: PageProps<'/admin/payments/[i
         { label: 'التأكيد', value: p.confirmedAt ? `${formatDate(p.confirmedAt, true)} · ${formatEGP(p.confirmedAmount)}` : '—' },
       ]} /></section>
       {p.status === 'UNDER_REVIEW' && <Alert tone="info">تأكيد الدفع يتطلب شخصين: من بدأ المراجعة لا يمكنه تأكيد الدفع — يؤكد موظف آخر بعد التحقق من الحساب.</Alert>}
+      {p.method === 'COD' && p.status === 'COD_PENDING' && <Alert tone="info">دفع عند الاستلام: الطلب قيد التنفيذ لدى البائع/شركة الشحن. يُسجَّل التحصيل هنا بعد تسليم الطلب وتحصيل المندوب للمبلغ.</Alert>}
+      {p.method === 'COD' && p.status === 'COD_COLLECTED' && can && (
+        <MovementPanel actor={actor} kind="COD_REMITTANCE" entityId={p.id} amount={codExpected} back={`/admin/payments/${p.id}`} open={await openMovementFor('COD_REMITTANCE', p.id)}>
+          <ActionForm action={codRemittanceAction} className="space-y-2">
+            <input type="hidden" name="paymentId" value={p.id} />
+            <input type="hidden" name="back" value={`/admin/payments/${p.id}`} />
+            <Input name="reason" required minLength={10} placeholder="مرجع كشف تحصيل شركة الشحن (10 أحرف على الأقل)" aria-label="مرجع التحصيل" />
+            <SubmitButton>تسجيل تحصيل {formatEGP(codExpected, { fixed: true })}</SubmitButton>
+          </ActionForm>
+        </MovementPanel>
+      )}
       {signals.length > 0 && (
         <Alert tone="warning" title="إشارات مراجعة (لا تعني رفضًا تلقائيًا)">
           <ul className="list-disc ps-5">{signals.map((sg) => <li key={sg.code + sg.label} data-testid="payment-signal">{sg.label}{sg.refs.length ? ` — ${sg.refs.map((r) => r.slice(0, 8)).join('، ')}` : ''}</li>)}</ul>

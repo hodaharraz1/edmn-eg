@@ -308,6 +308,7 @@ export async function seedReference(opts: { mode?: ReferenceMode } = {}) {
     ['ETISALAT_CASH', 'إي آند كاش (اتصالات)', 'e& cash (Etisalat)', 5],
     ['WE_PAY', 'وي باي', 'WE Pay', 6],
     ['BM_WALLET', 'محفظة بنك مصر', 'Banque Misr wallet', 7],
+    ['COD', 'الدفع عند الاستلام', 'Cash on delivery', 8],
   ];
   for (const [code, ar, en, sort] of methods) {
     await db

@@ -493,7 +493,7 @@ class FakeMobileApi extends MobileApi {
           {'code': 'INSTAPAY', 'nameAr': 'إنستاباي', 'nameEn': 'InstaPay', 'instructionsAr': null},
           {'code': 'BANK_TRANSFER', 'nameAr': 'تحويل بنكي', 'nameEn': 'Bank transfer', 'instructionsAr': null},
         ],
-        'paymentWindowHours': 48, 'realMoneyEnabled': false, 'mandatoryRightsNoticeAr': 'حقوقك كمستهلك محفوظة',
+        'codFeePiastres': 0, 'paymentWindowHours': 48, 'realMoneyEnabled': false, 'mandatoryRightsNoticeAr': 'حقوقك كمستهلك محفوظة',
       });
 
   @override

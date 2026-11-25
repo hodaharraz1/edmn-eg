@@ -13,12 +13,12 @@ export default async function PaymentsQueue(props: PageProps<'/admin/payments'>)
   const { allowed } = await adminWith('payments.view');
   if (!allowed) return <Forbidden />;
   const tab = String((await props.searchParams).tab ?? 'pending');
-  const statuses = tab === 'confirmed' ? (['CONFIRMED'] as const) : tab === 'rejected' ? (['REJECTED'] as const) : (['PAYMENT_SUBMITTED', 'UNDER_REVIEW'] as const);
+  const statuses = tab === 'confirmed' ? (['CONFIRMED'] as const) : tab === 'rejected' ? (['REJECTED'] as const) : tab === 'cod' ? (['COD_PENDING', 'COD_COLLECTED'] as const) : (['PAYMENT_SUBMITTED', 'UNDER_REVIEW'] as const);
   const rows = await paymentQueue([...statuses], 100);
   return (
     <div>
       <PageHeader title="مركز التحقق من المدفوعات" description="لا يُعتبر أي طلب مدفوعاً إلا بعد تأكيد موظف مختص من هنا. التأكيد غير قابل للتكرار ومُسجّل." />
-      <Tabs active={tab} tabs={[{ key: 'pending', label: 'بانتظار التحقق', href: '/admin/payments' }, { key: 'confirmed', label: 'مؤكدة', href: '/admin/payments?tab=confirmed' }, { key: 'rejected', label: 'مرفوضة', href: '/admin/payments?tab=rejected' }]} />
+      <Tabs active={tab} tabs={[{ key: 'pending', label: 'بانتظار التحقق', href: '/admin/payments' }, { key: 'confirmed', label: 'مؤكدة', href: '/admin/payments?tab=confirmed' }, { key: 'rejected', label: 'مرفوضة', href: '/admin/payments?tab=rejected' }, { key: 'cod', label: 'دفع عند الاستلام', href: '/admin/payments?tab=cod' }]} />
       <DataTable rows={rows} rowKey={(r) => r.payment.id} empty={<EmptyState icon={CreditCard} title="لا توجد مدفوعات هنا" />} columns={[
         { key: 'ref', header: 'المرجع', cell: (r) => <Link href={`/admin/payments/${r.payment.id}`} className="font-semibold text-brand-700">{r.orderNumber ? `طلب #${r.orderNumber}` : `صفقة #${r.dealNumber}`}</Link> },
         { key: 'c', header: 'العميل', cell: (r) => r.payer.fullName },
