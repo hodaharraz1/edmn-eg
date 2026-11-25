@@ -13,7 +13,7 @@ import {
   resolveShipmentException,
 } from '@/server/modules/commerce/fulfilment';
 import { cancelUnpaidOrder, expireOverdueOrders } from '@/server/modules/commerce/orders';
-import { completeAccountClosure, requestAccountClosure } from '@/server/modules/customers/closure';
+import { completeAccountClosure, requestAccountClosure, requestClosureExecution } from '@/server/modules/customers/closure';
 import { sellerOrderPosition } from '@/server/modules/finance/postings';
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { approveRefund, requestRefundTx } from '@/server/modules/finance/refunds';
@@ -267,6 +267,7 @@ describe('account closure (74, 77, 89, 90)', () => {
     const req = await requestAccountClosure(c.actor, 'مش محتاج الحساب');
     expect(req.status).toBe('PENDING');
     const support = await makeAdmin();
+    await requestClosureExecution(await makeAdmin(), req.requestId); // SEC-164: Maker, then a different Checker
     const done = await completeAccountClosure(support, req.requestId);
     expect(done.closed).toBe(true);
     const [u] = await db.select().from(users).where(eq(users.id, c.user.id));

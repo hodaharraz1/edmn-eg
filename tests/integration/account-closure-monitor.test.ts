@@ -9,7 +9,7 @@ import { totpCode } from '@/server/auth/totp';
 import { db } from '@/server/db/client';
 import { notifications, outboundMessages, users } from '@/server/db/schema';
 import { closureMonitor } from '@/server/modules/admin-mobile/monitoring';
-import { completeAccountClosure, requestAccountClosure } from '@/server/modules/customers/closure';
+import { completeAccountClosure, requestAccountClosure, requestClosureExecution } from '@/server/modules/customers/closure';
 import { customerActor } from '@/server/auth/actors';
 import { makeAdmin, makeCustomer, makeUser } from '../helpers/factory';
 
@@ -50,6 +50,7 @@ describe('account closure execution notification + admin app monitor', () => {
     const r = await requestAccountClosure(customerActor(c.user.id), 'مش محتاج الحساب');
     expect(r.status).toBe('PENDING');
 
+    await requestClosureExecution(await makeAdmin(), r.requestId!); // SEC-164: Maker, then a different Checker
     const done = await completeAccountClosure(admin, r.requestId!);
     expect(done.closed).toBe(true);
 
@@ -87,6 +88,7 @@ describe('account closure execution notification + admin app monitor', () => {
     await expect(closureMonitor(denied, 'open')).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
     // After execution the request moves to the closed tab.
+    await requestClosureExecution(await makeAdmin(), r.requestId!);
     await completeAccountClosure(admin, r.requestId!);
     const stillOpen = await closureMonitor(admin, 'open');
     expect(stillOpen.some((i) => i.id === r.requestId)).toBe(false);

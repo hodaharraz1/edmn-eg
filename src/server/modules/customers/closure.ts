@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
+import { requirePermission, requireStepUp, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
 import { accountClosureRequests, addresses, sessions, users } from '@/server/db/schema';
@@ -89,13 +89,40 @@ export async function withdrawAccountClosure(actor: Actor) {
  * ledger, refunds, withdrawals, disputes, messages, audit and evidence are kept (retention conflicts are
  * escalated for legal review — nothing financial is deleted).
  */
-export async function completeAccountClosure(actor: Actor, requestId: string) {
+/**
+ * Step 1 (Maker): a staff member asks for a PENDING closure to be executed. Nothing is changed on the account.
+ * Needs the same permission and a fresh step-up as the execution. A repeat by the same person is a no-op; a request already
+ * made by someone else stays theirs (the Checker is whoever is not the Maker).
+ */
+export async function requestClosureExecution(actor: Actor, requestId: string) {
   requirePermission(actor, 'customers.manage');
+  requireStepUp(actor);
   return db.transaction(async (tx) => {
     const [req] = await tx.select().from(accountClosureRequests).where(eq(accountClosureRequests.id, requestId)).for('update');
     if (!req) throw notFound('طلب الإغلاق');
     if (req.status !== 'PENDING') throw invalidState('الطلب ده مش قيد التنفيذ');
     if (req.userId === actor.userId) throw forbidden('لا يمكنك إغلاق حسابك من لوحة الإدارة');
+    if (req.executionRequestedBy) return { requested: false as const, makerId: req.executionRequestedBy };
+    await tx.update(accountClosureRequests).set({ executionRequestedBy: actor.userId!, executionRequestedAt: new Date() }).where(eq(accountClosureRequests.id, req.id));
+    await audit(tx, actor, { action: 'account.closure_execution_requested', entityType: 'user', entityId: req.userId, newValues: { requestId: req.id } });
+    return { requested: true as const, makerId: actor.userId! };
+  });
+}
+
+/**
+ * Step 2 (Checker): a DIFFERENT staff member completes the closure. Irreversible, so it needs a fresh step-up (SEC-164) and
+ * two people: the Maker from requestClosureExecution can never be the Checker (service rule + account_closure_two_person_chk).
+ */
+export async function completeAccountClosure(actor: Actor, requestId: string) {
+  requirePermission(actor, 'customers.manage');
+  requireStepUp(actor);
+  return db.transaction(async (tx) => {
+    const [req] = await tx.select().from(accountClosureRequests).where(eq(accountClosureRequests.id, requestId)).for('update');
+    if (!req) throw notFound('طلب الإغلاق');
+    if (req.status !== 'PENDING') throw invalidState('الطلب ده مش قيد التنفيذ');
+    if (req.userId === actor.userId) throw forbidden('لا يمكنك إغلاق حسابك من لوحة الإدارة');
+    if (!req.executionRequestedBy) throw invalidState('الإغلاق يتطلب شخصين: لازم موظف يطلب التنفيذ الأول، وبعدين موظف تاني يعتمده');
+    if (req.executionRequestedBy === actor.userId) throw forbidden('الإغلاق يتطلب شخصين: لا يمكنك اعتماد طلب تنفيذ أنشأته بنفسك');
     await lockAccount(tx, req.userId);
     const blockers = await closureBlockers(tx, req.userId);
     if (blockers.length) {

@@ -154,6 +154,9 @@ export const accountClosureRequests = pgTable(
     blockers: jsonb().$type<{ code: string; count: number }[]>().notNull().default([]),
     reason: text(),
     decidedBy: uuid().references(() => users.id),
+    /** SEC-164: the staff member (Maker) who asked for execution; a DIFFERENT staff member (Checker, decidedBy) completes it. */
+    executionRequestedBy: uuid().references(() => users.id),
+    executionRequestedAt: ts(),
     completedAt: ts(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

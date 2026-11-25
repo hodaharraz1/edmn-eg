@@ -453,6 +453,16 @@ export async function reconciliationAction(_p: ActionState, fd: FormData) {
   }, ['/admin/reconciliation']);
 }
 
+/** Step 1 (Maker): ask for the closure to be executed. A DIFFERENT staff member approves it (SEC-164). */
+export async function closureRequestExecutionAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { requestClosureExecution } = await import('@/server/modules/customers/closure');
+    const r = await requestClosureExecution(a, str(fd, 'requestId'));
+    return done(r.requested ? 'تم طلب تنفيذ الإغلاق. لازم موظف تاني يعتمده' : 'فيه طلب تنفيذ موجود بالفعل وبانتظار موظف تاني');
+  }, ['/admin/closures']);
+}
+
+/** Step 2 (Checker, a different person): complete the closure. */
 export async function closureAdminAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const { completeAccountClosure } = await import('@/server/modules/customers/closure');
