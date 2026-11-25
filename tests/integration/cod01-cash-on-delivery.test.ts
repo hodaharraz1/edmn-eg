@@ -11,6 +11,7 @@ import { recordCodRemittance } from '@/server/modules/payments/service';
 import { startDealPayment } from '@/server/modules/deals/service';
 import { updateSetting } from '@/server/modules/settings';
 import type { Actor } from '@/server/core/actor';
+import { financialInvariants } from '@/server/modules/finance/controls';
 import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makerRequest, paymentOf, sellerOrdersOf, shipIt } from '../helpers/factory';
 
 let admin: Actor;
@@ -35,6 +36,14 @@ async function journalOf(sourceType: string, sourceId: string) {
 async function variantStock(variantId: string) {
   const [v] = await db.select().from(productVariants).where(eq(productVariants.id, variantId));
   return v;
+}
+
+
+/** The ledger health check must understand COD: these rows are healthy, so they never appear under these codes. */
+async function invariantRowsFor(code: string, ids: string[]) {
+  const inv = await financialInvariants(db);
+  const rows = (inv.checks.find((c) => c.code === code)?.sample ?? []) as Record<string, unknown>[];
+  return rows.filter((r) => Object.values(r).some((v) => ids.includes(String(v))));
 }
 
 describe('COD-01 — placement guards', () => {
@@ -68,6 +77,10 @@ describe('COD-01 — placement guards', () => {
     // No money: zero journal entries for the order and its payment.
     expect(await journalOf('seller_order', sos[0].id)).toHaveLength(0);
     expect(await journalOf('payment', pay.id)).toHaveLength(0);
+    // The active reservation on a PAID COD order is expected until delivery, not an integrity finding.
+    const rids = (await db.select({ id: inventoryReservations.id }).from(inventoryReservations).innerJoin(orderItems, eq(orderItems.id, inventoryReservations.orderItemId)).where(eq(orderItems.sellerOrderId, sos[0].id))).map((r) => r.id);
+    expect(rids.length).toBeGreaterThan(0);
+    expect(await invariantRowsFor('INVALID_RESERVATION', rids)).toEqual([]);
     await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الإعداد الافتراضي');
   });
 
@@ -137,6 +150,8 @@ describe('COD-01 — delivery, remittance (two-person), refusal', () => {
     await expect(recordCodRemittance(maker, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي', actualAmount: pay.amountDue, statementRef: 'ST-1' })).rejects.toThrow(/شخصين|نفس الشخص/);
     // A different checker records it.
     const res = await recordCodRemittance(admin, pay.id, { reason: 'كشف تحصيل شركة الشحن اليومي رقم ٤٤', actualAmount: pay.amountDue, statementRef: 'ST-44' });
+    // A confirmed COD payment is journaled as COD_REMITTANCE on the payment, so the health check must not flag it.
+    expect(await invariantRowsFor('MISSING_PAYMENT_JOURNAL', [pay.id])).toEqual([]);
     expect(res.alreadyConfirmed).toBe(false);
     const pay2 = await paymentOf(order.id);
     expect(pay2.status).toBe('CONFIRMED');

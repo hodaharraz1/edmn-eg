@@ -30,3 +30,17 @@ CREATE UNIQUE INDEX "cod_shortfall_payment_uq" ON "cod_remittance_shortfalls" US
 CREATE INDEX "cod_shortfall_status_idx" ON "cod_remittance_shortfalls" USING btree ("status") WHERE "cod_remittance_shortfalls"."status" = 'OPEN';--> statement-breakpoint
 ALTER TABLE "financial_approvals" ADD CONSTRAINT "financial_approvals_action_chk" CHECK ("financial_approvals"."action" in ('PAYMENT_CONFIRMATION', 'SELLER_RELEASE', 'REFUND_APPROVAL', 'REFUND_PAYOUT', 'WITHDRAWAL_RESERVATION', 'WITHDRAWAL_RELEASE_RESERVATION', 'WITHDRAWAL_PAYOUT', 'MANUAL_ADJUSTMENT', 'DEAL_PAYMENT_CONFIRMATION', 'DEAL_RELEASE', 'DEAL_REFUND', 'DEAL_PAYOUT', 'WITHDRAWAL_PAYOUT_RETURN', 'REFUND_REVOCATION', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION'));--> statement-breakpoint
 ALTER TABLE "financial_movement_requests" ADD CONSTRAINT "financial_movement_requests_kind_chk" CHECK ("financial_movement_requests"."kind" in ('SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION'));
+--> statement-breakpoint
+-- Settling a COD shortfall moves money (cash recovered or written off to expense): it joins the DB-level
+-- two-person rule like COD_REMITTANCE (exact superset of the 0027 definition).
+CREATE OR REPLACE FUNCTION edmn_movement_requires_two_people() RETURNS trigger AS $$
+BEGIN
+  IF NEW.action IN ('PAYMENT_CONFIRMATION', 'DEAL_PAYMENT_CONFIRMATION', 'SELLER_RELEASE', 'REFUND_APPROVAL', 'REFUND_PAYOUT', 'REFUND_REVOCATION', 'WITHDRAWAL_RELEASE_RESERVATION',
+                    'WITHDRAWAL_PAYOUT', 'WITHDRAWAL_PAYOUT_RETURN', 'MANUAL_ADJUSTMENT', 'DEAL_RELEASE', 'DEAL_REFUND', 'DEAL_PAYOUT', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION')
+     AND NEW.status IN ('APPROVED', 'CONSUMED')
+     AND (NOT NEW.dual_control OR NEW.requested_by IS NULL OR NEW.approved_by IS NULL OR NEW.approved_by = NEW.requested_by) THEN
+    RAISE EXCEPTION 'financial movement % requires a maker and a different checker', NEW.action USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;

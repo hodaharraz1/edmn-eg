@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { codRemittanceShortfalls, journalEntries, journalLines, ledgerAccounts } from '@/server/db/schema';
 import { addToCart, cartLines } from '@/server/modules/commerce/cart';
@@ -115,5 +115,16 @@ describe('COD-02 — courier statement remittance and shortfall', () => {
     const [entry] = await db.select().from(journalEntries).where(and(eq(journalEntries.sourceType, 'payment'), eq(journalEntries.sourceId, pay.id)));
     expect((await linesOf(entry.id)).find((l) => l.code === 'COD_SHORTAGE_RECEIVABLE')).toBeUndefined();
     await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الإعداد الافتراضي');
+  });
+});
+
+describe('COD-02 — shortfall settlement is two-person at the database too', () => {
+  it('a single-person COD_SHORTAGE_RESOLUTION approval can never be inserted (trigger)', async () => {
+    const admin = await makeAdmin(['PAYMENT_REVIEWER']);
+    const err = await db
+      .execute(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, status, dual_control, requested_by, approved_by, idempotency_key)
+        values ('COD_SHORTAGE_RESOLUTION', 'cod_shortfall', ${randomUUID()}, 100, 'v1', array['COD_SHORTAGE_RESOLUTION'], 'اختبار اختراق', 'APPROVED', false, ${admin.userId!}, ${admin.userId!}, ${`pentest-${randomUUID()}`})`)
+      .then(() => null, (e: { message?: string; cause?: { message?: string } }) => e);
+    expect(err?.cause?.message ?? err?.message).toMatch(/requires a maker and a different checker/);
   });
 });

@@ -207,9 +207,15 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'دفعة مؤكدة بدون قيد دفع',
     await rows(
       conn,
+      // Prepaid: one ORDER_PAYMENT entry per paid seller order. Cash on delivery (COD-01): one COD_REMITTANCE entry
+      // on the payment itself, posted when staff record the courier's remittance (seller orders are PAID at placement).
       sql`select p.id payment_id, so.id seller_order_id from payments p join seller_orders so on so.order_id = p.order_id
-        where p.status = 'CONFIRMED' and so.paid_at is not null
-          and not exists (select 1 from journal_entries e where e.entry_type = 'ORDER_PAYMENT' and e.source_id = so.id::text)`,
+        where p.status = 'CONFIRMED' and p.method <> 'COD' and so.paid_at is not null
+          and not exists (select 1 from journal_entries e where e.entry_type = 'ORDER_PAYMENT' and e.source_id = so.id::text)
+        union all
+        select p.id payment_id, null seller_order_id from payments p
+        where p.status = 'CONFIRMED' and p.method = 'COD'
+          and not exists (select 1 from journal_entries e where e.entry_type = 'COD_REMITTANCE' and e.source_id = p.id::text)`,
     ),
   );
   add(
@@ -264,8 +270,11 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'حجز نشط لطلب ملغي أو مدفوع',
     await rows(
       conn,
+      // A cash-on-delivery order is PAID at placement but keeps its reservation until delivery commits it (COD-01).
       sql`select r.id, so.status from inventory_reservations r join order_items oi on oi.id = r.order_item_id join seller_orders so on so.id = oi.seller_order_id
-        where r.status = 'ACTIVE' and so.status not in ('PENDING_PAYMENT','PAYMENT_UNDER_REVIEW')`,
+        where r.status = 'ACTIVE' and so.status not in ('PENDING_PAYMENT','PAYMENT_UNDER_REVIEW')
+          and not (so.status in ('PAID','SELLER_CONFIRMED','PROCESSING','READY_TO_SHIP','SHIPPED','AWAITING_BUYER_RESPONSE')
+                   and exists (select 1 from payments cp where cp.order_id = so.order_id and cp.method = 'COD'))`,
     ),
   );
   add(
