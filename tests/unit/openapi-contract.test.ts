@@ -54,7 +54,7 @@ const STORE_POSTPURCHASE_WRITES = new Set(['runStoreReturnStep', 'escalateStoreR
 /** Notification center writes: mark my notifications read, change my own preferences. Naturally idempotent. */
 const NOTIFICATION_WRITES = new Set(['markNotificationsRead', 'saveNotificationPreferences']);
 /** Admin App (Batch 3): the only staff actions on mobile. Workflow-only, audited, no financial or KYC decision. */
-const ADMIN_SAFE_WRITES = new Set(['adminAssignDispute', 'adminAddDisputeNote']);
+const ADMIN_SAFE_WRITES = new Set(['adminAssignDispute', 'adminAddDisputeNote', 'adminReplySupportTicket']); // PKG-I02-06: owner-approved support reply added after review — body carries only `body`, no amount/decision/status
 const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */

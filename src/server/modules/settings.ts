@@ -25,6 +25,19 @@ export const SETTINGS_SCHEMA = {
   'company.socialLinks': z.array(z.object({ label: z.string().max(40), href: z.string().url().startsWith('https://') })).max(8).default([]),
   /** true = new orders / deal invitations / deal payments are refused (site, accounts, support and history stay up). */
   'marketplace.maintenanceMode': z.boolean().default(false),
+  /**
+   * Notification circuit breaker (PKG-SEC-069). DISABLED by default: with enabled=false the outbox behaves exactly
+   * as before. failureThreshold = consecutive provider send failures that open a channel; cooldownSeconds = time
+   * OPEN before one probe send is allowed (HALF_OPEN); probeLeaseSeconds = how long a probe may hold the HALF_OPEN slot.
+   */
+  'notifications.circuitBreaker': z
+    .object({
+      enabled: z.boolean().default(false),
+      failureThreshold: z.number().int().min(2).max(50).default(5),
+      cooldownSeconds: z.number().int().min(30).max(3600).default(300),
+      probeLeaseSeconds: z.number().int().min(30).max(600).default(60),
+    })
+    .default({ enabled: false, failureThreshold: 5, cooldownSeconds: 300, probeLeaseSeconds: 60 }),
   /** Hours a customer has to pay (or submit proof) before an unpaid order expires and stock is released. */
   /**
    * REAL MONEY switch. Off by default: payment destinations and seller withdrawals are TEST only and
@@ -181,6 +194,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'fees.ownerApproved',
   'legal.policiesApproved',
   'used.safetyScore',
+  'notifications.circuitBreaker',
 ];
 
 /** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */

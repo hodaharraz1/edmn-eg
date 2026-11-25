@@ -169,6 +169,13 @@
       "when": 1794652217839,
       "tag": "0023_preview_database_marker",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794739000000,
+      "tag": "0024_notification_circuit_breaker",
+      "breakpoints": true
     }
   ]
 }

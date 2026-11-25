@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import type { DbOrTx } from '@/server/db/client';
+import { SECURITY_ALERT_RULES } from './security-rules';
 
 /**
  * PROACTIVE ALERT RULES (Batch 1.5). One rule = one meaningful deadline / SLA / aging / threshold. Each rule
@@ -25,7 +26,7 @@ export interface AlertCandidate {
 
 export interface AlertRule {
   code: string;
-  category: 'MARKETPLACE' | 'PROTECTED_DEAL' | 'INVENTORY' | 'IDENTITY' | 'REFUND' | 'SELLER_FINANCE' | 'DISPUTE' | 'SUPPORT' | 'PAYMENT_REVIEW';
+  category: 'MARKETPLACE' | 'PROTECTED_DEAL' | 'INVENTORY' | 'IDENTITY' | 'REFUND' | 'SELLER_FINANCE' | 'DISPUTE' | 'SUPPORT' | 'PAYMENT_REVIEW' | 'SECURITY';
   title: string;
   /** Body template: {{ref}} only. */
   body: string;
@@ -441,3 +442,7 @@ export const ALERT_RULES: AlertRule[] = [
     },
   },
 ];
+
+/* Security & ops rules (PKG-SEC-OPS-01) live in ./security-rules; appended here so the engine, the
+   `alerts.rules` settings overrides and the admin alerts page all keep working from one list. */
+ALERT_RULES.push(...SECURITY_ALERT_RULES);
