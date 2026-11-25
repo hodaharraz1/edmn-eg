@@ -1,6 +1,6 @@
 # Builds the iOS apps on a macOS runner and uploads them to TestFlight (internal testing), pointing at STAGING.
 #
-# Runs only when a commit on the integration branch carries "[testflight]" in its message (macOS minutes are
+# Runs only when a commit on the integration branch has a message STARTING with "[testflight]" (macOS minutes are
 # costly), or manually once this file is on the default branch. Real Money stays OFF: the apps talk to staging.
 #
 # Owner setup (once), all in GitHub → Settings → Secrets and variables → Actions — never in code or chat:
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   testflight:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[testflight]')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[testflight]')
     runs-on: macos-15
     timeout-minutes: 60
     strategy:
@@ -38,18 +38,18 @@ jobs:
       ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
       TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
-        with:
-          flutter-version: '3.47.8'
-          channel: stable
-          cache: true
       - name: Check owner setup
         run: |
           missing=0
           for v in KEY_ID ISSUER_ID TEAM_ID; do [ -n "${!v}" ] || { echo "::error::$v is not configured (see docs/mobile/IOS_TESTFLIGHT.md)"; missing=1; }; done
           [ -n "${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_P8 is not configured"; missing=1; }
           exit $missing
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.8'
+          channel: stable
+          cache: true
       - name: Install the App Store Connect API key (runner-local, deleted with the runner)
         env:
           KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
