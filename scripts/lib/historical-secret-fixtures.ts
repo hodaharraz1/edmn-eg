@@ -14,6 +14,10 @@ const REVIEWED = [
   { commit: 'aeb657b2afd63a5c1feebf1867b2d75eac96770e', file: 'tests/integration/infra-adapters.test.ts',
     lineHash: 'c1a79577d90c66abe688e5b8daeda5e918a0dc2ef5d8231f2b8fdd7cb2be571c',
     rules: ['postgres-url-with-password'] },
+  // PKG-PUSH-02: a textarea PLACEHOLDER showing the PEM header only (no key material); replaced in the next commit.
+  { commit: 'f351571957fa5cf9934e581cf20cf3cc216ba61a', file: 'src/app/admin/(console)/notifications/page.tsx',
+    lineHash: 'f09d525604f86d548bdb7387bc515690cba35903fab706d448c4819d36945e70',
+    rules: ['private-key-block'] },
 ];
 
 export function reviewedHistoricalFixture(commit: string, file: string, line: string, rule: string): boolean {

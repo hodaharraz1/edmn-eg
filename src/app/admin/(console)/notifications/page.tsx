@@ -83,7 +83,7 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
                 <Field label="Key ID"><Input name="keyId" required dir="ltr" /></Field>
                 <Field label="Bundle ID"><Input name="bundleId" required dir="ltr" placeholder="com.edmn.customer" /></Field>
                 <Checkbox name="sandbox" label="بيئة Sandbox (للاختبار فقط)" />
-                <Field label="مفتاح .p8 (محتوى الملف)" className="md:col-span-2"><Textarea name="privateKeyP8" rows={5} required dir="ltr" placeholder="-----BEGIN PRIVATE KEY-----" /></Field>
+                <Field label="مفتاح .p8 (محتوى الملف)" className="md:col-span-2"><Textarea name="privateKeyP8" rows={5} required dir="ltr" placeholder="الصق محتوى ملف AuthKey_XXXXXXXXXX.p8 كاملًا" /></Field>
                 <SubmitButton variant="outline">حفظ مشفّرًا</SubmitButton>
               </ActionForm>
             </details>
