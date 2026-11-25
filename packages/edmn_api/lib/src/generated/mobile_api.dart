@@ -3877,9 +3877,9 @@ class ProductDetailVariantsItemSpecsItem {
 }
 
 class Profile {
-  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.permissions});
+  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.marketingOptIn, required this.permissions});
 
-  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
+  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, marketingOptIn: json['marketingOptIn'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
 
   final String id;
 
@@ -3900,9 +3900,11 @@ class Profile {
 
   final bool totpEnrolled;
 
+  final bool marketingOptIn;
+
   final List<String> permissions;
 
-  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'permissions': permissions.map((e) => e).toList()};
+  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'marketingOptIn': marketingOptIn, 'permissions': permissions.map((e) => e).toList()};
 }
 
 class ProtectedDeal {
@@ -4197,9 +4199,9 @@ class RefreshTokenRequest {
 }
 
 class RegisterRequest {
-  const RegisterRequest({required this.fullName, required this.email, required this.phone, required this.password, required this.device});
+  const RegisterRequest({required this.fullName, required this.email, required this.phone, required this.password, this.marketingConsent, required this.device});
 
-  factory RegisterRequest.fromJson(Map<String, dynamic> json) => RegisterRequest(fullName: json['fullName'] as String, email: json['email'] as String, phone: json['phone'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
+  factory RegisterRequest.fromJson(Map<String, dynamic> json) => RegisterRequest(fullName: json['fullName'] as String, email: json['email'] as String, phone: json['phone'] as String, password: json['password'] as String, marketingConsent: json['marketingConsent'] == null ? null : json['marketingConsent'] as bool, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
 
   final String fullName;
 
@@ -4209,9 +4211,11 @@ class RegisterRequest {
 
   final String password;
 
+  final bool? marketingConsent;
+
   final DeviceInfo device;
 
-  Map<String, dynamic> toJson() => {'fullName': fullName, 'email': email, 'phone': phone, 'password': password, 'device': device.toJson()};
+  Map<String, dynamic> toJson() => {'fullName': fullName, 'email': email, 'phone': phone, 'password': password, if (marketingConsent != null) 'marketingConsent': marketingConsent, 'device': device.toJson()};
 }
 
 class ReopenSupportTicketRequest {
@@ -5809,13 +5813,15 @@ class UpdateAddressResponse {
 }
 
 class UpdateMeRequest {
-  const UpdateMeRequest({required this.fullName});
+  const UpdateMeRequest({required this.fullName, this.marketingOptIn});
 
-  factory UpdateMeRequest.fromJson(Map<String, dynamic> json) => UpdateMeRequest(fullName: json['fullName'] as String);
+  factory UpdateMeRequest.fromJson(Map<String, dynamic> json) => UpdateMeRequest(fullName: json['fullName'] as String, marketingOptIn: json['marketingOptIn'] == null ? null : json['marketingOptIn'] as bool);
 
   final String fullName;
 
-  Map<String, dynamic> toJson() => {'fullName': fullName};
+  final bool? marketingOptIn;
+
+  Map<String, dynamic> toJson() => {'fullName': fullName, if (marketingOptIn != null) 'marketingOptIn': marketingOptIn};
 }
 
 class VerifyDealDeliveryCodeRequest {

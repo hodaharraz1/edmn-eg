@@ -470,7 +470,7 @@ class FakeMobileApi extends MobileApi {
 
   @override
   Future<Profile> me() async => const Profile(
-      id: 'u', fullName: 'منى السيد', email: 'mona@test.local', phone: '+201012345678', locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: false, totpEnrolled: false, permissions: []);
+      id: 'u', fullName: 'منى السيد', email: 'mona@test.local', phone: '+201012345678', locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: false, totpEnrolled: false, marketingOptIn: false, permissions: []);
 
   @override
   Future<Cart> cart({int? governorateId}) async => Cart.fromJson(cartQty == 0

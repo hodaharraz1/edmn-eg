@@ -632,6 +632,10 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "marketingConsent": {
+                    "default": false,
+                    "type": "boolean"
+                  },
                   "device": {
                     "$ref": "#/components/schemas/DeviceInfo"
                   }
@@ -9285,6 +9289,9 @@
                     "type": "string",
                     "minLength": 3,
                     "maxLength": 120
+                  },
+                  "marketingOptIn": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -35090,6 +35097,9 @@
           "totpEnrolled": {
             "type": "boolean"
           },
+          "marketingOptIn": {
+            "type": "boolean"
+          },
           "permissions": {
             "type": "array",
             "items": {
@@ -35107,6 +35117,7 @@
           "phoneVerified",
           "isStaff",
           "totpEnrolled",
+          "marketingOptIn",
           "permissions"
         ]
       },

@@ -3747,4 +3747,15 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get accountDeletionCancelConfirm =>
       'Are you sure you want to cancel the deletion request? Your account stays active.';
+
+  @override
+  String get marketingConsentLabel =>
+      'I agree to receive offers and marketing messages from EDMN (optional - you can withdraw anytime from Settings)';
+
+  @override
+  String get marketingConsentTitle => 'Marketing messages';
+
+  @override
+  String get marketingConsentSubtitle =>
+      'Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.';
 }

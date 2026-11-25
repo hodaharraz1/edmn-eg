@@ -1599,9 +1599,9 @@ class ProblemIssuesItem {
 }
 
 class Profile {
-  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.permissions});
+  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.marketingOptIn, required this.permissions});
 
-  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
+  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, marketingOptIn: json['marketingOptIn'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
 
   final String id;
 
@@ -1622,9 +1622,11 @@ class Profile {
 
   final bool totpEnrolled;
 
+  final bool marketingOptIn;
+
   final List<String> permissions;
 
-  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'permissions': permissions.map((e) => e).toList()};
+  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'marketingOptIn': marketingOptIn, 'permissions': permissions.map((e) => e).toList()};
 }
 
 class SessionResult {

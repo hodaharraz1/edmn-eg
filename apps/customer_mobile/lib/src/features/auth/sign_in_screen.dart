@@ -202,6 +202,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _marketingConsent = false; // marketing consent is OFF by default (PKG-PRIVACY-01)
   bool _busy = false;
   Object? _error;
 
@@ -226,6 +227,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             phone: _phone.text.trim(),
             email: _email.text.trim(),
             password: _password.text,
+            marketingConsent: _marketingConsent,
             device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion),
           );
       ref.read(signedInProvider.notifier).set(true);
@@ -273,6 +275,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: EdmnSpacing.sm),
             EdmnTextField(key: const Key('reg-password'), controller: _password, hint: t.newPasswordHint, icon: Icons.lock_outline_rounded, obscure: true, validator: (v) => (v ?? '').length < 8 ? t.passwordTooShort : null),
+            CheckboxListTile(
+              key: const Key('reg-marketing-consent'),
+              contentPadding: EdgeInsets.zero,
+              value: _marketingConsent,
+              onChanged: (v) => setState(() => _marketingConsent = v ?? false),
+              title: Text(t.marketingConsentLabel, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+            ),
           ]),
         ),
         const SizedBox(height: EdmnSpacing.sm),

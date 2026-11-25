@@ -166,6 +166,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (p.phone != null) verifyRow(Icons.phone_outlined, p.phone!, p.phoneVerified, 'PHONE'),
             if (p.email != null) verifyRow(Icons.mail_outline_rounded, p.email!, p.emailVerified, 'EMAIL'),
+            // Marketing consent: OFF by default, withdrawable anytime; every change is logged server-side (PKG-PRIVACY-01).
+            EdmnCard(
+              margin: const EdgeInsetsDirectional.only(top: EdmnSpacing.sm),
+              padding: const EdgeInsetsDirectional.all(EdmnSpacing.sm),
+              child: SwitchListTile(
+                key: const Key('marketing-consent-toggle'),
+                contentPadding: EdgeInsets.zero,
+                value: p.marketingOptIn,
+                title: Text(t.marketingConsentTitle, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary)),
+                subtitle: Text(t.marketingConsentSubtitle, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+                onChanged: (v) async {
+                  final ok = await runAction(context, () => ref.read(mobileApiProvider).updateMe(fullName: p.fullName, marketingOptIn: v), success: t.saved);
+                  if (ok) ref.invalidate(profileProvider);
+                },
+              ),
+            ),
           ]);
         },
       ),

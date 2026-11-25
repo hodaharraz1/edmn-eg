@@ -7087,6 +7087,24 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.'**
   String get accountDeletionCancelConfirm;
+
+  /// No description provided for @marketingConsentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أوافق على استقبال عروض ورسائل تسويق من اضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)'**
+  String get marketingConsentLabel;
+
+  /// No description provided for @marketingConsentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل وعروض التسويق'**
+  String get marketingConsentTitle;
+
+  /// No description provided for @marketingConsentSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.'**
+  String get marketingConsentSubtitle;
 }
 
 class _EdmnLocalizationsDelegate

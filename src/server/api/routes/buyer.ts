@@ -220,7 +220,7 @@ export const updateProfile = defineRoute({
   summary: 'Update my display name',
   tags: ['Account'],
   rate: 'write',
-  body: z.object({ fullName: z.string().trim().min(3).max(120) }),
+  body: z.object({ fullName: z.string().trim().min(3).max(120), marketingOptIn: z.boolean().optional() }),
   response: profile,
   handler: ({ actor, body }) => updateMyProfile(actor!, body),
 });

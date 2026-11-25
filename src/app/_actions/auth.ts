@@ -31,7 +31,7 @@ export async function registerAction(_p: ActionState, fd: FormData): Promise<Act
   const next = safeNext(str(fd, 'next'), '/');
   if (str(fd, 'terms') !== 'on') return { ok: false, error: 'لازم توافق على شروط الاستخدام وسياسة الخصوصية', at: Date.now() };
   const res = await runAction(async () => {
-    const { token, user } = await register({ fullName: str(fd, 'fullName'), email: str(fd, 'email'), phone: str(fd, 'phone'), password: str(fd, 'password') }, await requestMeta());
+    const { token, user } = await register({ fullName: str(fd, 'fullName'), email: str(fd, 'email'), phone: str(fd, 'phone'), password: str(fd, 'password'), marketingConsent: str(fd, 'marketing') === 'on' }, await requestMeta());
     await afterLogin(token, user.id);
   });
   if (res.ok) redirect(next);

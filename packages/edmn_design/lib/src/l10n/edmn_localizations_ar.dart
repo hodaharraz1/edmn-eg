@@ -3710,4 +3710,15 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get accountDeletionCancelConfirm =>
       'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.';
+
+  @override
+  String get marketingConsentLabel =>
+      'أوافق على استقبال عروض ورسائل تسويق من اضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)';
+
+  @override
+  String get marketingConsentTitle => 'رسائل وعروض التسويق';
+
+  @override
+  String get marketingConsentSubtitle =>
+      'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.';
 }

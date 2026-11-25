@@ -59,9 +59,9 @@ class MobileApi {
   Future<int> revokeOtherSessions({required String idempotencyKey}) async =>
       RevokeMyOtherSessionsResponse.fromJson(await client.sendJson('POST', MobileApiPaths.revokeMyOtherSessions.path, idempotencyKey: idempotencyKey)).revoked;
 
-  Future<SessionResult> register({required String fullName, required String phone, required String email, required String password, required DeviceInfo device}) async {
+  Future<SessionResult> register({required String fullName, required String phone, required String email, required String password, bool marketingConsent = false, required DeviceInfo device}) async {
     final r = SessionResult.fromJson(await client.sendJson('POST', MobileApiPaths.register.path,
-        body: RegisterRequest(fullName: fullName, email: email, phone: phone, password: password, device: device).toJson(), skipAuth: true));
+        body: RegisterRequest(fullName: fullName, email: email, phone: phone, password: password, marketingConsent: marketingConsent, device: device).toJson(), skipAuth: true));
     await client.adoptTokens(SessionTokens.fromJson(r.tokens.toJson()));
     return r;
   }
@@ -70,7 +70,9 @@ class MobileApi {
   Future<void> forgotPassword(String identifier) => client.sendJson('POST', MobileApiPaths.forgotPassword.path, body: {'identifier': identifier}, skipAuth: true);
 
   // ── Account ────────────────────────────────────────────────────────────────────────────────────────────────
-  Future<Profile> updateMe({required String fullName}) async => Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName}));
+  /// Marketing consent is OFF by default; changeable anytime here (a dated consent event is logged server-side).
+  Future<Profile> updateMe({required String fullName, bool? marketingOptIn}) async =>
+      Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName, if (marketingOptIn != null) 'marketingOptIn': marketingOptIn}));
 
   /// Every other device is signed out; this device receives new tokens.
   Future<void> changePassword({required String current, required String next}) async {

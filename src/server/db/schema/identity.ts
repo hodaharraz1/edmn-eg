@@ -28,6 +28,8 @@ export const users = pgTable(
     lockedUntil: ts(),
     closedAt: ts(),
     anonymizedAt: ts(),
+    /** Marketing messages consent. OFF by default; the customer can withdraw it anytime. Every change is in marketing_consent_events. */
+    marketingOptIn: boolean().notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -36,6 +38,57 @@ export const users = pgTable(
     uniqueIndex('users_phone_uq').on(t.phone).where(sql`${t.phone} is not null`),
     enumCheck('users_status_chk', t.status, USER_STATUSES),
     index('users_staff_idx').on(t.isStaff),
+  ],
+);
+
+export const MARKETING_CONSENT_ACTIONS = ['GRANT', 'WITHDRAW'] as const;
+
+/** Dated marketing-consent log: every grant and withdrawal, never edited or deleted. */
+export const marketingConsentEvents = pgTable(
+  'marketing_consent_events',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: text({ enum: MARKETING_CONSENT_ACTIONS }).notNull(),
+    channel: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('marketing_consent_events_user_idx').on(t.userId, t.createdAt)],
+);
+
+export const MARKETING_EXPORT_STATUSES = ['REQUESTED', 'EXECUTED', 'REJECTED'] as const;
+
+/**
+ * Marketing audience exports — three controls together: the dedicated permission, the requester's explicit
+ * confirmation, and a DIFFERENT staff member's approval (DB-enforced). The file stays encrypted at rest
+ * (AES-256-GCM, one-time passphrase shown once at execution); every request, execution, rejection and
+ * download is audit-logged.
+ */
+export const marketingExports = pgTable(
+  'marketing_exports',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    requestedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    requestReason: text().notNull(),
+    status: text({ enum: MARKETING_EXPORT_STATUSES }).notNull().default('REQUESTED'),
+    approvedBy: uuid().references(() => users.id),
+    rowCount: integer(),
+    /** Encrypted export file (base64 of the documented JSON envelope). Only the one-time passphrase opens it. */
+    fileEnc: text(),
+    fileName: text(),
+    requestedAt: ts().notNull().defaultNow(),
+    executedAt: ts(),
+    rejectedAt: ts(),
+    rejectReason: text(),
+  },
+  (t) => [
+    enumCheck('marketing_exports_status_chk', t.status, MARKETING_EXPORT_STATUSES),
+    check('marketing_exports_two_person_chk', sql`${t.approvedBy} is null or ${t.approvedBy} <> ${t.requestedBy}`),
+    index('marketing_exports_status_idx').on(t.status, t.requestedAt),
   ],
 );
 

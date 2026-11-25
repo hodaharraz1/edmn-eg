@@ -1312,5 +1312,11 @@
   "accountDeletionCancel": "Cancel deletion request",
   "accountDeletionCancelled": "Deletion request cancelled",
   "accountDeletionRequestedAt": "Requested at",
-  "accountDeletionCancelConfirm": "Are you sure you want to cancel the deletion request? Your account stays active."
+  "accountDeletionCancelConfirm": "Are you sure you want to cancel the deletion request? Your account stays active.",
+  "marketingConsentLabel": "I agree to receive offers and marketing messages from EDMN (optional - you can withdraw anytime from Settings)",
+  "@marketingConsentLabel": {},
+  "marketingConsentTitle": "Marketing messages",
+  "@marketingConsentTitle": {},
+  "marketingConsentSubtitle": "Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.",
+  "@marketingConsentSubtitle": {}
 }

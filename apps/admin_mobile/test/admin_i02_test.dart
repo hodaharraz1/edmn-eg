@@ -26,7 +26,7 @@ class _Api extends AdminApi {
   @override
   Future<void> verifyTotp(String code) async {}
   @override
-  Future<Profile> me() async => Profile(id: 'a', fullName: 'مسؤول الدعم', email: 'ops@test.local', phone: null, locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: true, totpEnrolled: true, permissions: permissions);
+  Future<Profile> me() async => Profile(id: 'a', fullName: 'مسؤول الدعم', email: 'ops@test.local', phone: null, locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: true, totpEnrolled: true, marketingOptIn: false, permissions: permissions);
   @override
   Future<AdminListMySessionsResponse> mySessions() async => const AdminListMySessionsResponse(items: []);
 

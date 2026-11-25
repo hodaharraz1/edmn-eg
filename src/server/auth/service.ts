@@ -11,7 +11,7 @@ import { smsAvailable } from '@/server/core/runtime-env';
 import { DomainError, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db } from '@/server/db/client';
-import { authTokens, sellers, sessions, users } from '@/server/db/schema';
+import { marketingConsentEvents, authTokens, sellers, sessions, users } from '@/server/db/schema';
 import { sendDirect } from '@/server/modules/notifications/notify';
 import { CUSTOMER_POLICY, STAFF_POLICY, dummyVerify, hashPassword, passwordProblems, verifyPassword } from './password';
 import { enforce, hit } from './rate-limit';
@@ -35,12 +35,14 @@ export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email('البريد الإلكتروني غير صحيح').max(200),
   phone: z.string().trim().min(8, 'رقم الموبايل غير صحيح'),
   password: z.string().min(1),
+  /** Marketing messages consent — OFF unless the customer explicitly asks for it. */
+  marketingConsent: z.boolean().optional().default(false),
 });
 
 export async function register(input: z.input<typeof registerSchema>, meta: RequestMeta, scope: 'WEB' | 'MOBILE' = 'WEB') {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) throw validation('راجع البيانات اللي كتبتها', z.flattenError(parsed.error).fieldErrors as Record<string, string[]>);
-  const { fullName, email, password } = parsed.data;
+  const { fullName, email, password, marketingConsent } = parsed.data;
   const phone = normalizeEgyptMobile(parsed.data.phone);
   if (!phone) throw validation('رقم الموبايل المصري غير صحيح', { phone: ['رقم الموبايل المصري غير صحيح'] });
   const pwProblem = passwordProblems(password, CUSTOMER_POLICY, { email, phone });
@@ -55,8 +57,9 @@ export async function register(input: z.input<typeof registerSchema>, meta: Requ
 
   const passwordHash = await hashPassword(password);
   return db.transaction(async (tx) => {
-    const [user] = await tx.insert(users).values({ fullName, email, phone, passwordHash }).returning();
-    await audit(tx, { ...anon(meta), userId: user.id, type: 'CUSTOMER' }, { action: 'auth.register', entityType: 'user', entityId: user.id });
+    const [user] = await tx.insert(users).values({ fullName, email, phone, passwordHash, marketingOptIn: marketingConsent }).returning();
+    if (marketingConsent) await tx.insert(marketingConsentEvents).values({ userId: user.id, action: 'GRANT', channel: meta.channel ?? scope });
+    await audit(tx, { ...anon(meta), userId: user.id, type: 'CUSTOMER' }, { action: 'auth.register', entityType: 'user', entityId: user.id, newValues: { marketingConsent } });
     const token = await createSession(tx, user.id, scope, meta);
     return { user, token };
   });

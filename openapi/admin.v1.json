@@ -8342,6 +8342,9 @@
           "totpEnrolled": {
             "type": "boolean"
           },
+          "marketingOptIn": {
+            "type": "boolean"
+          },
           "permissions": {
             "type": "array",
             "items": {
@@ -8359,6 +8362,7 @@
           "phoneVerified",
           "isStaff",
           "totpEnrolled",
+          "marketingOptIn",
           "permissions"
         ]
       },

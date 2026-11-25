@@ -1477,5 +1477,11 @@
   "accountDeletionCancel": "إلغاء طلب الحذف",
   "accountDeletionCancelled": "اتلغى طلب حذف الحساب",
   "accountDeletionRequestedAt": "تاريخ الطلب",
-  "accountDeletionCancelConfirm": "متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي."
+  "accountDeletionCancelConfirm": "متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.",
+  "marketingConsentLabel": "أوافق على استقبال عروض ورسائل تسويق من اضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)",
+  "@marketingConsentLabel": {},
+  "marketingConsentTitle": "رسائل وعروض التسويق",
+  "@marketingConsentTitle": {},
+  "marketingConsentSubtitle": "استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.",
+  "@marketingConsentSubtitle": {}
 }
