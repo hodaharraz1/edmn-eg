@@ -7,6 +7,11 @@
 name: Migrate staging database
 
 on:
+  # Also from the integration branch (this file is not on the default branch, where workflow_dispatch lives):
+  # only for a commit whose message STARTS with "[migrate-staging]", and always for exactly that commit.
+  # The "staging" environment (secret + required reviewers) is unchanged for both triggers.
+  push:
+    branches: [claude/instinct-integration]
   workflow_dispatch:
     inputs:
       commit:
@@ -26,6 +31,7 @@ concurrency:
 
 jobs:
   migrate:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[migrate-staging]')
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 20
@@ -33,11 +39,11 @@ jobs:
       EDMN_ENVIRONMENT: staging
       DATABASE_URL: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
       DATABASE_URL_UNPOOLED: ${{ secrets.STAGING_MIGRATION_DATABASE_URL }}
-      EDMN_DB_CHANGE_AUTHORIZATION: staging:${{ inputs.commit }}
+      EDMN_DB_CHANGE_AUTHORIZATION: staging:${{ inputs.commit || github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.commit }}
+          ref: ${{ inputs.commit || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -46,7 +52,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Preflight (read-only)
         run: npx tsx scripts/migrate.ts --preflight
-      - name: Migrate (schema${{ inputs.reference_seed && ' + reference insert-missing' || ' only' }})
-        run: npx tsx scripts/migrate.ts --authorize=staging ${{ !inputs.reference_seed && '--schema-only' || '' }}
+      - name: Migrate (schema${{ (github.event_name == 'push' || inputs.reference_seed) && ' + reference insert-missing' || ' only' }})
+        run: npx tsx scripts/migrate.ts --authorize=staging ${{ github.event_name != 'push' && !inputs.reference_seed && '--schema-only' || '' }}
       - name: Ledger invariants (read-only)
         run: npm run -s ledger:check
