@@ -1,11 +1,9 @@
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireStepUp, requireUser, SYSTEM_ACTOR, type Actor, requireAnyPermission } from '@/server/core/actor';
+import { requirePermission, requireStepUp, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound } from '@/server/core/errors';
-import { logger } from '@/server/core/logger';
 import { db, type DbOrTx } from '@/server/db/client';
 import { accountClosureRequests, addresses, devicePushTokens, files, mobileDevices, pushSubscriptions, sellers, sessions, users } from '@/server/db/schema';
-import { storage } from '@/server/storage/storage';
 import { notify } from '@/server/modules/notifications/notify';
 
 export const CLOSURE_BLOCKED_MESSAGE =
@@ -115,9 +113,9 @@ export async function requestClosureExecution(actor: Actor, requestId: string) {
  * SEC-165: what a closed account must not keep, as the published deletion page promises (docs/store/ACCOUNT_DELETION_PAGE.md).
  * Runs inside the closure transaction.
  *  - device push tokens, web-push subscriptions: deleted. Mobile devices: revoked.
- *  - the account's own national-ID photos (IDENTITY_DOCUMENT): LOCKED (soft-deleted, so nothing can open them) and kept for
- *    IDENTITY_RETENTION_AFTER_CLOSURE (owner decision 2026-11-25: 6 months, for fraud and disputes), then removed for good by
- *    purgeClosedAccountIdentityFiles. Accounts that ever owned a store keep their verification documents.
+ *  - the account's own national-ID photos (IDENTITY_DOCUMENT): LOCKED (soft-deleted, so /api/files refuses them) and KEPT.
+ *    Owner decision 2026-11-25: nothing is deleted automatically; the bytes stay until the owner decides otherwise.
+ *    Accounts that ever owned a store keep their verification documents, unlocked.
  * Financial records, evidence files and receipts are untouched.
  */
 async function releasePersonalData(tx: DbOrTx, userId: string, now: Date) {
@@ -135,49 +133,6 @@ async function releasePersonalData(tx: DbOrTx, userId: string, now: Date) {
     photos = docs.length;
   }
   return { pushTokens: tokens.length, webPushSubscriptions: subs.length, identityPhotosLocked: photos };
-}
-
-/** Owner decision 2026-11-25: ID photos of a closed account are kept (locked) this long after closure, then removed. */
-export const IDENTITY_RETENTION_AFTER_CLOSURE = '6 months';
-
-/**
- * Scheduled (privacy.purge_closed_identity_files): removes for good the national-ID photos of accounts whose closure completed
- * more than IDENTITY_RETENTION_AFTER_CLOSURE ago. Only files locked by a closure (soft-deleted, owner CLOSED, never a store
- * owner); each file is audited. The row stays, with purged_at set, as a record that a file existed. A storage failure leaves
- * the file locked and it is retried on the next run.
- */
-export async function purgeClosedAccountIdentityFiles(now = new Date(), limit = 200) {
-  const due = await db
-    .select({ id: files.id, ownerUserId: files.ownerUserId, visibility: files.visibility, storageKey: files.storageKey, variantKeys: files.variantKeys })
-    .from(files)
-    .innerJoin(users, eq(users.id, files.ownerUserId))
-    .innerJoin(accountClosureRequests, and(eq(accountClosureRequests.userId, files.ownerUserId), eq(accountClosureRequests.status, 'COMPLETED')))
-    .where(
-      and(
-        eq(files.purpose, 'IDENTITY_DOCUMENT'),
-        isNotNull(files.deletedAt),
-        isNull(files.purgedAt),
-        eq(users.status, 'CLOSED'),
-        sql`${accountClosureRequests.completedAt} <= ${now}::timestamptz - ${IDENTITY_RETENTION_AFTER_CLOSURE}::interval`,
-        sql`not exists (select 1 from ${sellers} where ${sellers.ownerUserId} = ${files.ownerUserId})`,
-      ),
-    )
-    .limit(limit);
-  let processed = 0;
-  for (const f of due) {
-    try {
-      for (const key of [f.storageKey, ...(f.variantKeys ?? [])]) await storage().remove(f.visibility, key);
-    } catch (e) {
-      logger.warn('closure.identity_purge_failed', { error: e instanceof Error ? e.message.slice(0, 40) : 'unknown' });
-      continue;
-    }
-    await db.transaction(async (tx) => {
-      await tx.update(files).set({ purgedAt: now }).where(and(eq(files.id, f.id), isNull(files.purgedAt)));
-      await audit(tx, SYSTEM_ACTOR, { action: 'account.identity_files_purged', entityType: 'user', entityId: f.ownerUserId!, newValues: { fileId: f.id, retention: IDENTITY_RETENTION_AFTER_CLOSURE } });
-    });
-    processed++;
-  }
-  return { processed };
 }
 
 /**

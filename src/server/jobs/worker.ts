@@ -58,8 +58,6 @@ export const SCHEDULE: ScheduledJob[] = [
   { name: 'files.scan', everyMs: 5 * 60_000, run: () => scanPendingFiles() },
   // Enable only after all local-disk upload writers have the reconciliation locks and the grace period has elapsed.
   { name: 'files.reconcile_private_orphans', everyMs: 60 * 60_000, run: () => process.env.PRIVATE_UPLOAD_RECONCILE_ENABLED === 'true' ? reconcilePrivateOrphans() : Promise.resolve() },
-  // SEC-165: national-ID photos of closed accounts, locked at closure, are removed 6 months later (owner decision 2026-11-25).
-  { name: 'privacy.purge_closed_identity_files', everyMs: 24 * 60 * 60_000, run: async () => { const { purgeClosedAccountIdentityFiles } = await import('@/server/modules/customers/closure'); return purgeClosedAccountIdentityFiles(); } },
   // Operational telemetry retention (job runs, resolved error groups) — see docs/runbooks retention policy.
   { name: 'ops.prune_telemetry', everyMs: 24 * 60 * 60_000, run: () => pruneTelemetry() },
 ];
