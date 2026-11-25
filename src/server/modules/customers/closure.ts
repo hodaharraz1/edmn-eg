@@ -1,9 +1,11 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireStepUp, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound } from '@/server/core/errors';
+import { logger } from '@/server/core/logger';
 import { db, type DbOrTx } from '@/server/db/client';
-import { accountClosureRequests, addresses, sessions, users } from '@/server/db/schema';
+import { accountClosureRequests, addresses, devicePushTokens, files, mobileDevices, pushSubscriptions, sellers, sessions, users } from '@/server/db/schema';
+import { storage } from '@/server/storage/storage';
 import { notify } from '@/server/modules/notifications/notify';
 
 export const CLOSURE_BLOCKED_MESSAGE =
@@ -109,6 +111,48 @@ export async function requestClosureExecution(actor: Actor, requestId: string) {
   });
 }
 
+type PurgedObject = { visibility: 'PUBLIC' | 'PRIVATE'; keys: string[] };
+
+/**
+ * SEC-165: what a closed account must not keep, as the published deletion page promises (docs/store/ACCOUNT_DELETION_PAGE.md).
+ * Runs inside the closure transaction. Returns the stored objects to remove once the transaction has committed.
+ *  - device push tokens, web-push subscriptions: deleted. Mobile devices: revoked.
+ *  - the account's own national-ID photos (IDENTITY_DOCUMENT): soft-deleted (the file row stays as a record that a file existed,
+ *    nothing can open it), unless the account ever owned a store. Seller verification documents are kept, as the page says.
+ * Financial records, evidence files and receipts are untouched.
+ */
+async function releasePersonalData(tx: DbOrTx, userId: string, now: Date) {
+  await tx.update(mobileDevices).set({ revokedAt: now }).where(and(eq(mobileDevices.userId, userId), isNull(mobileDevices.revokedAt)));
+  const tokens = await tx.delete(devicePushTokens).where(eq(devicePushTokens.userId, userId)).returning({ id: devicePushTokens.id });
+  const subs = await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).returning({ id: pushSubscriptions.id });
+  const purged: PurgedObject[] = [];
+  const [store] = await tx.select({ id: sellers.id }).from(sellers).where(eq(sellers.ownerUserId, userId)).limit(1);
+  let photos = 0;
+  if (!store) {
+    const docs = await tx
+      .update(files)
+      .set({ deletedAt: now })
+      .where(and(eq(files.ownerUserId, userId), eq(files.purpose, 'IDENTITY_DOCUMENT'), isNull(files.deletedAt)))
+      .returning({ visibility: files.visibility, storageKey: files.storageKey, variantKeys: files.variantKeys });
+    photos = docs.length;
+    for (const d of docs) purged.push({ visibility: d.visibility, keys: [d.storageKey, ...(d.variantKeys ?? [])] });
+  }
+  return { purged, counts: { pushTokens: tokens.length, webPushSubscriptions: subs.length, identityPhotos: photos } };
+}
+
+/** After commit: remove the bytes. A failure leaves an unreachable (soft-deleted) file, never a half-closed account. */
+async function removeStoredObjects(purged: PurgedObject[]) {
+  for (const o of purged) {
+    for (const key of o.keys) {
+      try {
+        await storage().remove(o.visibility, key);
+      } catch (e) {
+        logger.warn('closure.object_remove_failed', { error: e instanceof Error ? e.message.slice(0, 40) : 'unknown' });
+      }
+    }
+  }
+}
+
 /**
  * Step 2 (Checker): a DIFFERENT staff member completes the closure. Irreversible, so it needs a fresh step-up (SEC-164) and
  * two people: the Maker from requestClosureExecution can never be the Checker (service rule + account_closure_two_person_chk).
@@ -116,7 +160,8 @@ export async function requestClosureExecution(actor: Actor, requestId: string) {
 export async function completeAccountClosure(actor: Actor, requestId: string) {
   requirePermission(actor, 'customers.manage');
   requireStepUp(actor);
-  return db.transaction(async (tx) => {
+  let purged: PurgedObject[] = [];
+  const result = await db.transaction(async (tx) => {
     const [req] = await tx.select().from(accountClosureRequests).where(eq(accountClosureRequests.id, requestId)).for('update');
     if (!req) throw notFound('طلب الإغلاق');
     if (req.status !== 'PENDING') throw invalidState('الطلب ده مش قيد التنفيذ');
@@ -141,16 +186,20 @@ export async function completeAccountClosure(actor: Actor, requestId: string) {
       .where(eq(users.id, req.userId));
     await tx.update(addresses).set({ archivedAt: now }).where(eq(addresses.userId, req.userId));
     await tx.update(sessions).set({ revokedAt: now }).where(eq(sessions.userId, req.userId));
+    const released = await releasePersonalData(tx, req.userId, now);
+    purged = released.purged;
     await tx.update(accountClosureRequests).set({ status: 'COMPLETED', completedAt: now, decidedBy: actor.userId }).where(eq(accountClosureRequests.id, req.id));
     await audit(tx, actor, {
       action: 'account.closed',
       entityType: 'user',
       entityId: req.userId,
       oldValues: { status: u.status, hadEmail: !!u.email, hadPhone: !!u.phone },
-      newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
+      newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], released: released.counts, retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
     });
     return { closed: true, blockers: [] };
   });
+  await removeStoredObjects(purged);
+  return result;
 }
 
 export async function latestClosureRequest(userId: string) {
