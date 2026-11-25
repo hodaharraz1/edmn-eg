@@ -103,7 +103,7 @@ async function marketingAudience(tx: DbOrTx): Promise<AudienceRow[]> {
 function toCsv(rows: AudienceRow[]): string {
   const esc = (v: string | null) => `"${(v ?? '').replaceAll('"', '""')}"`;
   const header = 'الاسم,الموبايل,البريد الإلكتروني,المحافظة,فئات المشتريات';
-  return '' + [header, ...rows.map((r) => [r.fullName, r.phone, r.email, r.governorate, r.categories].map(esc).join(','))].join('\n');
+  return '\uFEFF' + [header, ...rows.map((r) => [r.fullName, r.phone, r.email, r.governorate, r.categories].map(esc).join(','))].join('\n');
 }
 
 /** AES-256-GCM with a one-time passphrase (scrypt). Envelope format documented in scripts/decrypt-marketing-export.mjs. */

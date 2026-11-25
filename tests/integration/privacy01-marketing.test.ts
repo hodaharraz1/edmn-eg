@@ -133,7 +133,7 @@ describe('PRIVACY-01 — marketing export', () => {
     const { export: req } = await requestMarketingExport(requester, { reason: 'اختبار محتوى الملف المصدَّر', confirmed: true });
     const res = await executeMarketingExport(approver, req.id);
     const csv = decryptExport((await downloadMarketingExport(approver, req.id)).contentBase64, res.passphrase!);
-    const csvLines = csv.replace(/^/, '').trim().split('\n');
+    const csvLines = csv.replace(/^\uFEFF/, '').trim().split('\n');
     expect(csvLines[0]).toBe('الاسم,الموبايل,البريد الإلكتروني,المحافظة,فئات المشتريات');
     const dataLines = csvLines.slice(1);
     expect(dataLines.some((l) => l.includes(consenting.user.phone!))).toBe(true);
