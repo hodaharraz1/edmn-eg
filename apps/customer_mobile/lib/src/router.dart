@@ -64,7 +64,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [GoRoute(path: '/categories', builder: (c, s) => const CategoriesScreen())]),
           // Wallet is a main tab (owner request); signed-out users are sent to sign-in by the redirect.
           StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (c, s) => const OrdersScreen())]),
         ],
       ),
@@ -74,6 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/stores/:slug', builder: (c, s) => StoreScreen(slug: s.pathParameters['slug']!)),
       GoRoute(path: '/cart', builder: (c, s) => const CartScreen()),
       GoRoute(path: '/checkout', builder: (c, s) => const CheckoutScreen()),
+      GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen()),
       GoRoute(path: '/orders/:id', builder: (c, s) => OrderScreen(orderId: s.pathParameters['id']!, justPlaced: s.uri.queryParameters['placed'] == '1')),
       GoRoute(path: '/payments/:id', builder: (c, s) => PaymentScreen(paymentId: s.pathParameters['id']!)),
       GoRoute(path: '/account', builder: (c, s) => const AccountScreen()),
@@ -155,7 +155,6 @@ class MainShell extends ConsumerWidget {
           EdmnNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
           EdmnNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
           EdmnNavItem(icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet_rounded, label: t.wallet),
-          EdmnNavItem(icon: Icons.replay_rounded, activeIcon: Icons.replay_rounded, label: t.reorder),
           EdmnNavItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag_rounded, label: t.myOrders),
         ],
       ),

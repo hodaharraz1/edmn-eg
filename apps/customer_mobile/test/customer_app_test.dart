@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
-import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton, EdmnThumb;
+import 'package:edmn_design/edmn_design.dart' show EdmnBackButton, EdmnBottomNavigation, EdmnSaveButton, EdmnThumb;
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
@@ -749,7 +749,7 @@ void main() {
     // Real Money is OFF, but the TEST notice belongs to money steps only — never app-wide.
     expect(find.textContaining('وضع تجريبي'), findsNothing);
     expect(find.byKey(const Key('test-money-notice')), findsNothing);
-    for (final tab in ['الرئيسية', 'الأقسام', 'إعادة الطلب', 'طلباتي']) {
+    for (final tab in ['الرئيسية', 'الأقسام', 'المحفظة', 'طلباتي']) {
       expect(find.text(tab), findsOneWidget);
     }
   });
@@ -1263,6 +1263,17 @@ void main() {
     await _reveal(t, find.byKey(const Key('balance-breakdown')));
     expect(find.text('300 ج.م'), findsWidgets); // held, listed apart from available
     await _reveal(t, find.byKey(const Key('no-topup')));
+  });
+
+  testWidgets('reorder lives inside طلباتي, not in the bottom bar; its page has a back arrow', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    expect(find.descendant(of: find.byType(EdmnBottomNavigation), matching: find.text('إعادة الطلب')), findsNothing);
+    await _go(t, '/orders');
+    await t.tap(find.byKey(const Key('open-reorder')));
+    await t.pumpAndSettle();
+    expect(find.text('إعادة الطلب'), findsWidgets);
+    expect(find.byType(EdmnBottomNavigation), findsNothing);
+    expect(find.byType(EdmnBackButton), findsOneWidget);
   });
 
   testWidgets('wallet deposit: button and balance card are hidden while the server says topUp.enabled is false', (t) async {

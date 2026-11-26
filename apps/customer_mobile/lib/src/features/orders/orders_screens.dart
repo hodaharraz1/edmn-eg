@@ -38,6 +38,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 padding: const EdgeInsetsDirectional.fromSTEB(EdmnSpacing.screen, EdmnSpacing.md, EdmnSpacing.screen, EdmnSpacing.sm),
                 child: EdmnSearchBar(hint: t.searchOrdersHint, onChanged: (v) => setState(() => _q = v.trim().toUpperCase())),
               ),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(EdmnSpacing.screen, 0, EdmnSpacing.screen, EdmnSpacing.sm),
+                child: EdmnSecondaryButton(key: const Key('open-reorder'), label: t.reorder, icon: Icons.replay_rounded, onPressed: () => context.push('/reorder')),
+              ),
               EdmnFilterPills<OrderFilter>(
                 options: [(OrderFilter.all, t.all), (OrderFilter.inProgress, t.filterInProgress), (OrderFilter.delivered, t.filterDelivered), (OrderFilter.cancelled, t.filterCancelled)],
                 selected: _filter,
@@ -475,7 +479,6 @@ class ReorderScreen extends ConsumerWidget {
     final orders = ref.watch(ordersProvider);
     return EdmnAppScaffold(
       title: t.reorder,
-      showBack: false,
       body: !signedIn
           ? EdmnEmptyState(icon: Icons.replay_rounded, title: t.signInPromptTitle, message: t.signInPromptBody, actionLabel: t.signIn, onAction: () => context.push('/sign-in?next=/reorder'))
           : AsyncView(
