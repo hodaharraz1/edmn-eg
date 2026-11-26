@@ -27,8 +27,8 @@ GitHub ← المستودع ← **Settings** ← **Environments** ← **New envi
 
 | النوع | الاسم | القيمة |
 |---|---|---|
-| Secret | `APP_STORE_CONNECT_API_KEY_ID` | Key ID |
-| Secret | `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID |
+| Secret أو Variable | `APP_STORE_CONNECT_API_KEY_ID` | Key ID (مش سر، رقم تعريف بس) |
+| Secret أو Variable | `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID (مش سر، رقم تعريف بس) |
 | Secret | `APP_STORE_CONNECT_API_KEY_P8` | محتوى ملف `.p8` كامل (افتحه بأي محرر نصوص وانسخه كله) |
 | Variable | `APPLE_TEAM_ID` | Team ID |
 

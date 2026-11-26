@@ -4,7 +4,8 @@
 # costly), or manually once this file is on the default branch. Real Money stays OFF: the apps talk to staging.
 #
 # Owner setup (once), all in GitHub → Settings → Secrets and variables → Actions — never in code or chat:
-#   secrets  APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID, APP_STORE_CONNECT_API_KEY_P8 (.p8 contents)
+#   secret   APP_STORE_CONNECT_API_KEY_P8 (.p8 contents), in the protected 'testflight' environment
+#   secret or variable  APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID (identifiers, not credentials)
 #   variable APPLE_TEAM_ID
 # The API key needs the Admin role so Xcode can create the distribution certificate and profiles (cloud signing).
 # The app records must exist in App Store Connect (bundle IDs below). Steps: docs/mobile/IOS_TESTFLIGHT.md.
@@ -36,15 +37,18 @@ jobs:
           - app: customer_mobile
           - app: admin_mobile
     env:
-      KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+      # Identifiers, not credentials: accepted as an environment secret or variable. Only the .p8 is a secret.
+      KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID || vars.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID || vars.APP_STORE_CONNECT_API_ISSUER_ID }}
       TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
     steps:
       - name: Check owner setup
+        env:
+          HAS_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 != '' }}
         run: |
           missing=0
           for v in KEY_ID ISSUER_ID TEAM_ID; do [ -n "${!v}" ] || { echo "::error::$v is not configured (see docs/mobile/IOS_TESTFLIGHT.md)"; missing=1; }; done
-          [ -n "${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_P8 is not configured"; missing=1; }
+          [ "$HAS_P8" = "true" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_P8 is not configured"; missing=1; }
           exit $missing
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
