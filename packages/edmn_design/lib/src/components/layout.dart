@@ -63,7 +63,7 @@ class EdmnAppScaffold extends StatelessWidget {
           (canPop || onBack != null
               ? EdmnBackButton(
                   onPressed: onBack,
-                  color: sunburst ? EdmnColors.sunburstText : null,
+                  color: null,
                 )
               : null),
       actions: actions,
@@ -71,7 +71,7 @@ class EdmnAppScaffold extends StatelessWidget {
       child: headerChild,
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: sunburst ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor:
             sunburst ? EdmnColors.sunburstDeep : EdmnColors.primaryDark,
@@ -164,9 +164,7 @@ class EdmnHeader extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: EdmnType.headerTitle.copyWith(
-                        color: sunburst
-                            ? EdmnColors.sunburstText
-                            : EdmnColors.onPrimary,
+                        color: EdmnColors.onPrimary,
                       ),
                     ),
                   ),

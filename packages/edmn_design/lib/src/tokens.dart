@@ -45,13 +45,12 @@ abstract final class EdmnColors {
     colors: [primaryDeep, primaryDark, primary],
   );
 
-  /* ── PKG-UI-01 sunburst home (reference video, 2026-11-26) ──
-     The reference home is a bright yellow sunburst. These tokens are the ONLY place that palette is defined; the
-     dark navy keeps text contrast on the yellow (navy on sunburst ≈ 13:1, well above the 4.5:1 minimum). */
-  static const sunburst = Color(0xFFFFF38A); // ray yellow
-  static const sunburstCore = Color(0xFFFFFBE0); // lighter center
-  static const sunburstDeep = Color(0xFFFFDE33); // outer rays
-  static const sunburstText = Color(0xFF1B2436); // text on yellow
+  /* ── PKG-UI-01 sunburst header, in EDMN blue (owner decision 2026-11-27: the yellow of the reference video is
+     replaced by the brand blue). These tokens are the ONLY place the header palette is defined; text on it is white. */
+  static const sunburst = primary; // ray blue
+  static const sunburstCore = Color(0xFF2F7BD0); // lighter center
+  static const sunburstDeep = primaryDark; // outer rays
+  static const sunburstText = Color(0xFF1B2436); // navy text on light surfaces (pills, cards, page body)
 
   /// The green accent circle of the floating nav (reference center slot).
   static const accentGreen = Color(0xFF3AE24A);
@@ -62,7 +61,7 @@ abstract final class EdmnColors {
   static const promoYellow = Color(0xFFFFE135);
 
   /// Warm off-white screen background under the sunburst header.
-  static const warmBackground = Color(0xFFFFFDF4);
+  static const warmBackground = subtle;
 }
 
 /// 4px spacing scale. Allowed values: 4 / 8 / 12 / 16 / 20 / 24 / 32.

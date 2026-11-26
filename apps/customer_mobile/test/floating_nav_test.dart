@@ -2,8 +2,8 @@ import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// PKG-UI-01: the floating frosted-glass nav pill — the reference's bar, pinned while scrolling, with the active
-/// tab highlighted green (owner decision: no centre button). These tests pin the behaviour, not the pixels.
+/// PKG-UI-01: the floating frosted-glass nav pill. It hides while scrolling down and returns on scrolling up (owner
+/// decision 2026-11-27); the active tab is highlighted in brand blue (no centre button). Behaviour, not pixels.
 Widget _host({required int currentIndex, required ValueChanged<int> onTap, bool disableAnimations = false, int? badge}) {
   final items = [
     const EdmnFloatingNavItem(key: Key('nav-home'), icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'الرئيسية'),
@@ -18,15 +18,17 @@ Widget _host({required int currentIndex, required ValueChanged<int> onTap, bool 
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
-          body: Stack(children: [
-            ListView(key: const Key('content'), children: [for (var i = 0; i < 40; i++) ListTile(title: Text('صف $i'))]),
-            PositionedDirectional(
-              start: 0,
-              end: 0,
-              bottom: 0,
-              child: EdmnFloatingNavigation(items: items, currentIndex: currentIndex, onTap: onTap),
-            ),
-          ]),
+          body: EdmnFloatingNavShell(
+            index: currentIndex,
+            body: Column(children: [
+              SizedBox(
+                height: 80,
+                child: ListView(key: const Key('carousel'), scrollDirection: Axis.horizontal, children: [for (var i = 0; i < 20; i++) SizedBox(width: 120, child: Text('بطاقة $i'))]),
+              ),
+              Expanded(child: ListView(key: const Key('content'), children: [for (var i = 0; i < 40; i++) ListTile(title: Text('صف $i'))])),
+            ]),
+            navigation: EdmnFloatingNavigation(items: items, currentIndex: currentIndex, onTap: onTap),
+          ),
         ),
       ),
     ),
@@ -62,7 +64,7 @@ void main() {
     expect(tapped, [2, 3]);
   });
 
-  testWidgets('the active tab carries the green accent circle; the others stay transparent', (t) async {
+  testWidgets('the active tab carries the blue accent circle; the others stay transparent', (t) async {
     await t.pumpWidget(_host(currentIndex: 2, onTap: (_) {}));
     final circles = t
         .widgetList<AnimatedContainer>(
@@ -70,7 +72,7 @@ void main() {
         )
         .map((c) => (c.decoration as BoxDecoration).color)
         .toList();
-    expect(circles, [Colors.transparent, Colors.transparent, EdmnColors.accentGreen, Colors.transparent]);
+    expect(circles, [Colors.transparent, Colors.transparent, EdmnColors.primary, Colors.transparent]);
   });
 
   testWidgets('every tab meets the 48px touch-target minimum', (t) async {
@@ -103,12 +105,35 @@ void main() {
     expect(find.text('5'), findsNothing);
   });
 
-  testWidgets('the bar stays pinned while the content scrolls (no hide/show behaviour exists)', (t) async {
+  Offset slide(WidgetTester t) => t.widget<AnimatedSlide>(find.byKey(const Key('floating-nav-slide'))).offset;
+
+  testWidgets('scrolling down hides the bar, scrolling back up shows it again', (t) async {
     await t.pumpWidget(_host(currentIndex: 0, onTap: (_) {}));
-    final before = t.getBottomLeft(find.byType(EdmnFloatingNavigation));
+    expect(slide(t), Offset.zero);
     await t.drag(find.byKey(const Key('content')), const Offset(0, -600));
     await t.pumpAndSettle();
-    expect(find.byType(EdmnFloatingNavigation), findsOneWidget);
-    expect(t.getBottomLeft(find.byType(EdmnFloatingNavigation)), before);
+    expect(slide(t), isNot(Offset.zero));
+    expect(t.widget<IgnorePointer>(find.ancestor(of: find.byKey(const Key('floating-nav-slide')), matching: find.byType(IgnorePointer)).first).ignoring, isTrue);
+    await t.drag(find.byKey(const Key('content')), const Offset(0, 200));
+    await t.pumpAndSettle();
+    expect(slide(t), Offset.zero);
+  });
+
+  testWidgets('horizontal carousels never hide the bar', (t) async {
+    await t.pumpWidget(_host(currentIndex: 0, onTap: (_) {}));
+    await t.drag(find.byKey(const Key('carousel')), const Offset(-400, 0));
+    await t.pumpAndSettle();
+    expect(slide(t), Offset.zero);
+  });
+
+  testWidgets('switching tab brings a hidden bar back; تقليل الحركة makes the slide instant', (t) async {
+    await t.pumpWidget(_host(currentIndex: 0, onTap: (_) {}, disableAnimations: true));
+    expect(t.widget<AnimatedSlide>(find.byKey(const Key('floating-nav-slide'))).duration, Duration.zero);
+    await t.drag(find.byKey(const Key('content')), const Offset(0, -600));
+    await t.pumpAndSettle();
+    expect(slide(t), isNot(Offset.zero));
+    await t.pumpWidget(_host(currentIndex: 1, onTap: (_) {}, disableAnimations: true));
+    await t.pumpAndSettle();
+    expect(slide(t), Offset.zero);
   });
 }

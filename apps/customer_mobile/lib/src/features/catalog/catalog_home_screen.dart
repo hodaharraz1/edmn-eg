@@ -29,15 +29,15 @@ class CatalogHomeScreen extends ConsumerWidget {
     final latest = ref.watch(latestProductsProvider);
     final clearance = EdmnFloatingNavigation.clearanceOf(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: ColoredBox(
         color: EdmnColors.warmBackground,
         child: Column(children: [
           const _SunburstHeader(),
           Expanded(
             child: RefreshIndicator(
-              color: EdmnColors.sunburstText,
-              backgroundColor: EdmnColors.promoYellow,
+              color: EdmnColors.primary,
+              backgroundColor: EdmnColors.surface,
               onRefresh: () async {
                 ref.invalidate(featuredProductsProvider);
                 ref.invalidate(latestProductsProvider);
@@ -377,8 +377,8 @@ class _Chip extends StatelessWidget {
               Container(
                 width: 56,
                 height: 56,
-                decoration: const BoxDecoration(color: EdmnColors.promoYellow, shape: BoxShape.circle, boxShadow: EdmnShadows.card),
-                child: Icon(icon, color: EdmnColors.sunburstText, size: EdmnSizes.icon),
+                decoration: const BoxDecoration(color: EdmnColors.primaryLight, shape: BoxShape.circle, boxShadow: EdmnShadows.card),
+                child: Icon(icon, color: EdmnColors.primary, size: EdmnSizes.icon),
               ),
               const SizedBox(height: EdmnSpacing.xxs),
               Text(

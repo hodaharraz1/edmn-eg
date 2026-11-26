@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 
-/// The reference sunburst (PKG-UI-01): a light-yellow radial glow with subtle rays fanning from the top.
+/// The reference sunburst (PKG-UI-01): a brand-blue radial glow with subtle rays fanning from the top.
 /// Used by the home header and by [EdmnHeader] when `sunburst` is on, so the whole app shares one system.
 class EdmnSunburstBackground extends StatelessWidget {
   const EdmnSunburstBackground({super.key, required this.child});

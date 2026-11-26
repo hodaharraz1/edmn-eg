@@ -1,17 +1,17 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../tokens.dart';
 
-/// PKG-UI-01: the floating navigation bar from the reference video — a frosted-glass pill floating above the bottom
-/// edge instead of the old docked bar. The reference keeps the bar visible while scrolling, so the bar is pinned and
-/// does not auto-hide; the press feedback and the active-tab accent animate (and stop animating under
-/// MediaQuery.disableAnimations / "تقليل الحركة").
+/// PKG-UI-01: the floating navigation bar — a frosted-glass pill floating above the bottom edge instead of the old
+/// docked bar. Wrapped in [EdmnFloatingNavShell] it hides while the user scrolls down and comes back on scrolling up
+/// (owner decision 2026-11-27). The press feedback, the active-tab accent and the hide/show slide stop animating under
+/// MediaQuery.disableAnimations / "تقليل الحركة".
 ///
-/// The tab set is the app's own four tabs (الرئيسية، الأقسام، المحفظة، طلباتي) in the existing order. The reference
-/// video's center slot is a green brand circle; per the owner's decision (2026-11-26, no centre button), the ACTIVE
-/// tab gets the green accent circle instead, whatever tab it is.
+/// The tab set is the app's own four tabs (الرئيسية، الأقسام، المحفظة، طلباتي) in the existing order. There is no
+/// centre button (owner decision 2026-11-26): the ACTIVE tab gets the brand-blue accent circle, whatever tab it is.
 class EdmnFloatingNavigation extends StatelessWidget {
   const EdmnFloatingNavigation({
     super.key,
@@ -102,7 +102,7 @@ class _FloatingNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBg = EdmnColors.accentGreen;
+    const accentBg = EdmnColors.primary;
     final icon = Icon(
       selected ? item.activeIcon : item.icon,
       size: EdmnSizes.icon,
@@ -119,7 +119,7 @@ class _FloatingNavButton extends StatelessWidget {
         shape: BoxShape.circle,
         color: selected ? accentBg : Colors.transparent,
         boxShadow: selected
-            ? [BoxShadow(color: EdmnColors.accentGreen.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(0, 4))]
+            ? [BoxShadow(color: EdmnColors.primary.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(0, 4))]
             : null,
       ),
       child: Center(
@@ -159,6 +159,68 @@ class _FloatingNavButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Body + floating bar. The bar slides away while the user scrolls the page DOWN and slides back when they scroll UP,
+/// reach the top, or switch tab. Only vertical scrolling counts (horizontal carousels and chips never hide it).
+class EdmnFloatingNavShell extends StatefulWidget {
+  const EdmnFloatingNavShell({super.key, required this.body, required this.navigation, this.index = 0});
+  final Widget body;
+  final Widget navigation;
+
+  /// The current tab: changing it always shows the bar again.
+  final int index;
+
+  @override
+  State<EdmnFloatingNavShell> createState() => _EdmnFloatingNavShellState();
+}
+
+class _EdmnFloatingNavShellState extends State<EdmnFloatingNavShell> {
+  bool _visible = true;
+
+  @override
+  void didUpdateWidget(EdmnFloatingNavShell old) {
+    super.didUpdateWidget(old);
+    if (old.index != widget.index) _visible = true;
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    bool? next;
+    if (n is UserScrollNotification) {
+      if (n.direction == ScrollDirection.reverse) next = false; // reading further down the page
+      if (n.direction == ScrollDirection.forward) next = true; // scrolling back up
+    }
+    // Back at the very top (after the scroll settles) the bar is always there.
+    if (n is ScrollEndNotification && n.metrics.pixels <= n.metrics.minScrollExtent) next = true;
+    if (next != null && next != _visible) setState(() => _visible = next!);
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : EdmnMotion.normal;
+    return Stack(
+      children: [
+        Positioned.fill(child: NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.body)),
+        PositionedDirectional(
+          start: 0,
+          end: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: !_visible,
+            child: AnimatedSlide(
+              key: const Key('floating-nav-slide'),
+              offset: _visible ? Offset.zero : const Offset(0, 1.6),
+              duration: duration,
+              curve: Curves.easeOutCubic,
+              child: AnimatedOpacity(opacity: _visible ? 1 : 0, duration: duration, child: widget.navigation),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
