@@ -44,6 +44,25 @@ abstract final class EdmnColors {
     end: AlignmentDirectional.bottomEnd,
     colors: [primaryDeep, primaryDark, primary],
   );
+
+  /* ── PKG-UI-01 sunburst home (reference video, 2026-11-26) ──
+     The reference home is a bright yellow sunburst. These tokens are the ONLY place that palette is defined; the
+     dark navy keeps text contrast on the yellow (navy on sunburst ≈ 13:1, well above the 4.5:1 minimum). */
+  static const sunburst = Color(0xFFFFF38A); // ray yellow
+  static const sunburstCore = Color(0xFFFFFBE0); // lighter center
+  static const sunburstDeep = Color(0xFFFFDE33); // outer rays
+  static const sunburstText = Color(0xFF1B2436); // text on yellow
+
+  /// The green accent circle of the floating nav (reference center slot).
+  static const accentGreen = Color(0xFF3AE24A);
+  static const accentGreenDark = Color(0xFF12961F); // small green text/percent on white
+
+  /// Promo red of the reference banners (هتبط فلال / الجمعة الصفراء).
+  static const promoRed = Color(0xFFD40E14);
+  static const promoYellow = Color(0xFFFFE135);
+
+  /// Warm off-white screen background under the sunburst header.
+  static const warmBackground = Color(0xFFFFFDF4);
 }
 
 /// 4px spacing scale. Allowed values: 4 / 8 / 12 / 16 / 20 / 24 / 32.

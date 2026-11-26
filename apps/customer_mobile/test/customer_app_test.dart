@@ -776,10 +776,12 @@ void main() {
   testWidgets('a guest who taps "أضف" is sent to sign-in (the mobile cart belongs to an account)', (t) async {
     final api = FakeMobileApi();
     await _start(t, api);
-    final add = find.text('أضف').first;
-    await t.ensureVisible(add);
+    // PKG-UI-01: the video home puts the hero carousel first, so the product cards start below the fold —
+    // scroll the first card into view before tapping "أضف" (same behaviour, new layout).
+    await t.scrollUntilVisible(find.text('أضف'), 300, scrollable: _mainList);
+    await t.ensureVisible(find.text('أضف').first);
     await t.pumpAndSettle();
-    await t.tap(add);
+    await t.tap(find.text('أضف').first);
     await t.pumpAndSettle();
     expect(find.byKey(const Key('sign-in')), findsOneWidget);
     expect(api.cartQty, 0);
@@ -1497,6 +1499,10 @@ void main() {
     final api = FakeMobileApi();
     await _start(t, api, signedIn: true);
     // Home card: not saved → tap → saved (filled heart), announced, one ADD with its own key.
+    // PKG-UI-01: cards start below the fold on the new home; scroll the card into view first.
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
     expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
     await t.tap(heart);
@@ -1527,6 +1533,9 @@ void main() {
   testWidgets('wishlist (B22): signed-out heart goes to sign-in; a server refusal is shown and nothing changes', (t) async {
     final api = FakeMobileApi();
     await _start(t, api);
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     await t.tap(find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton)));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('sign-in')), findsOneWidget);
@@ -1536,6 +1545,9 @@ void main() {
   testWidgets('wishlist (B22): a server refusal (product no longer available) is shown and the heart stays empty', (t) async {
     final api = FakeMobileApi()..wishlistError = const ApiFailure(code: ApiErrorCode.notFound, status: 404);
     await _start(t, api, signedIn: true);
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
     await t.tap(heart);
     await t.pumpAndSettle();

@@ -3853,4 +3853,30 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String depositPendingCount(String count) {
     return 'Deposits under review: $count';
   }
+
+  @override
+  String get shopByCategory => 'Shop by category';
+
+  @override
+  String get offersLabel => 'Offers';
+
+  @override
+  String get homeLabel => 'Home';
+
+  @override
+  String discountPercentLabel(int percent) {
+    return '$percent% off';
+  }
+
+  @override
+  String get searchHintPhones => 'iPhone 15';
+
+  @override
+  String get searchHintWatches => 'Casio watch';
+
+  @override
+  String get searchHintConsoles => 'PlayStation 5';
+
+  @override
+  String get searchHintAppliances => 'Tornado washer';
 }

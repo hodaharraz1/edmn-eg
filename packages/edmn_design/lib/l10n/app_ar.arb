@@ -1539,5 +1539,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "shopByCategory": "اشترى حسب الفئة",
+  "offersLabel": "عروض",
+  "homeLabel": "المنزل",
+  "discountPercentLabel": "خصم {percent}%",
+  "@discountPercentLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHintPhones": "آيفون 15",
+  "searchHintWatches": "ساعة كاسيو",
+  "searchHintConsoles": "بلايستيشن 5",
+  "searchHintAppliances": "غسالة تورنيدو"
 }

@@ -1374,5 +1374,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "shopByCategory": "Shop by category",
+  "offersLabel": "Offers",
+  "homeLabel": "Home",
+  "discountPercentLabel": "{percent}% off",
+  "@discountPercentLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHintPhones": "iPhone 15",
+  "searchHintWatches": "Casio watch",
+  "searchHintConsoles": "PlayStation 5",
+  "searchHintAppliances": "Tornado washer"
 }

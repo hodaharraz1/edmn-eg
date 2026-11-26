@@ -7273,6 +7273,54 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'إيداعات قيد المراجعة: {count}'**
   String depositPendingCount(String count);
+
+  /// No description provided for @shopByCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشترى حسب الفئة'**
+  String get shopByCategory;
+
+  /// No description provided for @offersLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'عروض'**
+  String get offersLabel;
+
+  /// No description provided for @homeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنزل'**
+  String get homeLabel;
+
+  /// No description provided for @discountPercentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'خصم {percent}%'**
+  String discountPercentLabel(int percent);
+
+  /// No description provided for @searchHintPhones.
+  ///
+  /// In ar, this message translates to:
+  /// **'آيفون 15'**
+  String get searchHintPhones;
+
+  /// No description provided for @searchHintWatches.
+  ///
+  /// In ar, this message translates to:
+  /// **'ساعة كاسيو'**
+  String get searchHintWatches;
+
+  /// No description provided for @searchHintConsoles.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلايستيشن 5'**
+  String get searchHintConsoles;
+
+  /// No description provided for @searchHintAppliances.
+  ///
+  /// In ar, this message translates to:
+  /// **'غسالة تورنيدو'**
+  String get searchHintAppliances;
 }
 
 class _EdmnLocalizationsDelegate

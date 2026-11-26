@@ -3816,4 +3816,30 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String depositPendingCount(String count) {
     return 'إيداعات قيد المراجعة: $count';
   }
+
+  @override
+  String get shopByCategory => 'اشترى حسب الفئة';
+
+  @override
+  String get offersLabel => 'عروض';
+
+  @override
+  String get homeLabel => 'المنزل';
+
+  @override
+  String discountPercentLabel(int percent) {
+    return 'خصم $percent%';
+  }
+
+  @override
+  String get searchHintPhones => 'آيفون 15';
+
+  @override
+  String get searchHintWatches => 'ساعة كاسيو';
+
+  @override
+  String get searchHintConsoles => 'بلايستيشن 5';
+
+  @override
+  String get searchHintAppliances => 'غسالة تورنيدو';
 }

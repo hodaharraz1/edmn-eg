@@ -6,6 +6,8 @@ library;
 export 'src/components/brand.dart';
 export 'src/components/cards.dart';
 export 'src/components/controls.dart';
+export 'src/components/floating_nav.dart';
+export 'src/components/sunburst.dart';
 export 'src/components/layout.dart';
 export 'src/components/media.dart';
 export 'src/components/states.dart';

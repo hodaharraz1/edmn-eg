@@ -29,6 +29,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final signedIn = ref.watch(signedInProvider);
     final orders = ref.watch(ordersProvider);
     return EdmnAppScaffold(
+      sunburst: true,
       title: t.myOrders,
       showBack: false,
       body: !signedIn
@@ -62,7 +63,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       onRefresh: () => ref.refresh(ordersProvider.future),
                       child: ListView.builder(
                         key: const PageStorageKey('orders'),
-                        padding: const EdgeInsetsDirectional.symmetric(horizontal: EdmnSpacing.screen),
+                        // Bottom clearance keeps the last order above the floating nav pill (PKG-UI-01).
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          EdmnSpacing.screen,
+                          0,
+                          EdmnSpacing.screen,
+                          EdmnFloatingNavigation.clearanceOf(context),
+                        ),
                         itemCount: shown.length + 1,
                         itemBuilder: (_, i) {
                           if (i == shown.length) {

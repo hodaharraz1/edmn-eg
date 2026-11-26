@@ -145,17 +145,43 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = EdmnLocalizations.of(context);
-    ref.watch(cartCountProvider);
+    final cartCount = ref.watch(cartCountProvider);
+    // PKG-UI-01: the reference's floating frosted-glass nav pill replaces the docked bar. Same four tabs, same
+    // order: الرئيسية، الأقسام، المحفظة، طلباتي; the ACTIVE tab gets the green accent circle (owner decision:
+    // no centre button). The bar stays visible while scrolling, as in the video; screens pad their scroll views
+    // with EdmnFloatingNavigation.clearanceOf.
     return Scaffold(
-      body: shell,
-      bottomNavigationBar: EdmnBottomNavigation(
-        currentIndex: shell.currentIndex,
-        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        items: [
-          EdmnNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
-          EdmnNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
-          EdmnNavItem(icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet_rounded, label: t.wallet),
-          EdmnNavItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag_rounded, label: t.myOrders),
+      extendBody: true,
+      body: Stack(
+        children: [
+          Positioned.fill(child: shell),
+          PositionedDirectional(
+            start: 0,
+            end: 0,
+            bottom: 0,
+            child: EdmnFloatingNavigation(
+              key: const Key('floating-nav'),
+              currentIndex: shell.currentIndex,
+              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              items: [
+                EdmnFloatingNavItem(key: const Key('nav-home'), icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
+                EdmnFloatingNavItem(key: const Key('nav-categories'), icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
+                EdmnFloatingNavItem(
+                  key: const Key('nav-wallet'),
+                  icon: Icons.account_balance_wallet_outlined,
+                  activeIcon: Icons.account_balance_wallet_rounded,
+                  label: t.wallet,
+                ),
+                EdmnFloatingNavItem(
+                  key: const Key('nav-orders'),
+                  icon: Icons.shopping_bag_outlined,
+                  activeIcon: Icons.shopping_bag_rounded,
+                  label: t.myOrders,
+                  badge: cartCount > 0 ? cartCount : null,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

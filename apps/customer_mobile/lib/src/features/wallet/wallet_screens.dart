@@ -292,6 +292,7 @@ class WalletScreen extends ConsumerWidget {
     final t = EdmnLocalizations.of(context);
     final wallet = ref.watch(walletProvider);
     return EdmnAppScaffold(
+      sunburst: true,
       title: t.wallet,
       body: AsyncView(
         value: wallet,
@@ -301,7 +302,15 @@ class WalletScreen extends ConsumerWidget {
           final canRequest = w.payout.blockReason == null;
           return RefreshIndicator(
             onRefresh: () => ref.refresh(walletProvider.future),
-            child: ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
+            // Bottom clearance keeps the last card above the floating nav pill (PKG-UI-01).
+            child: ListView(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                EdmnSpacing.screen,
+                EdmnSpacing.screen,
+                EdmnSpacing.screen,
+                EdmnSpacing.screen + EdmnFloatingNavigation.clearanceOf(context),
+              ),
+              children: [
               EdmnWalletCard(
                 key: const Key('wallet-card'),
                 label: t.availableToWithdraw,

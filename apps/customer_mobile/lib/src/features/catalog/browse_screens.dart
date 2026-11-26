@@ -26,6 +26,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     final cats = ref.watch(categoriesProvider);
     final en = languageOf(context) == 'en';
     return EdmnAppScaffold(
+      sunburst: true,
       title: t.categories,
       showBack: false,
       body: Column(children: [
@@ -47,7 +48,13 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               if (shown.isEmpty) return EdmnEmptyState(icon: Icons.category_outlined, title: t.noResults);
               return GridView.builder(
                 key: const PageStorageKey('categories'),
-                padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen),
+                // Bottom clearance keeps the last row above the floating nav pill (PKG-UI-01).
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  EdmnSpacing.screen,
+                  EdmnSpacing.screen,
+                  EdmnSpacing.screen,
+                  EdmnSpacing.screen + EdmnFloatingNavigation.clearanceOf(context),
+                ),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: EdmnSpacing.sm, crossAxisSpacing: EdmnSpacing.sm, childAspectRatio: 0.82),
                 itemCount: shown.length,
                 itemBuilder: (_, i) => EdmnCategoryItem(
