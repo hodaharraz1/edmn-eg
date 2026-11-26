@@ -69,7 +69,8 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: |
           flutter pub get
-          flutter build ios --release --config-only \
+          # --no-codesign: this step only generates the Xcode configuration; the archive step signs with the API key.
+          flutter build ios --release --config-only --no-codesign \
             --build-number=${{ github.run_number }} \
             --dart-define=EDMN_ENV=staging \
             --dart-define=EDMN_API_BASE_URL=https://edmn-staging.vercel.app \
@@ -77,6 +78,7 @@ jobs:
       - name: Archive (automatic signing with the API key)
         working-directory: apps/${{ matrix.app }}/ios
         run: |
+          set -o pipefail
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
             DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
@@ -86,6 +88,7 @@ jobs:
           test -d "$RUNNER_TEMP/Runner.xcarchive"
       - name: Export and upload to TestFlight
         run: |
+          set -o pipefail
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
