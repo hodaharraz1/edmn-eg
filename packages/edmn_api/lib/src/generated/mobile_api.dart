@@ -520,7 +520,7 @@ class CancelWalletTopupResponse {
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int amountPiastres;
 
-  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
   final String method;
 
   /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
@@ -998,7 +998,7 @@ class CreateWalletTopupResponseTopup {
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int amountPiastres;
 
-  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
   final String method;
 
   /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
@@ -3071,7 +3071,7 @@ class ListWalletTopupsResponseItemsItem {
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int amountPiastres;
 
-  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
   final String method;
 
   /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
@@ -3095,7 +3095,7 @@ class ListWalletTopupsResponseMethodsItem {
 
   factory ListWalletTopupsResponseMethodsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?, destinations: (json['destinations'] as List).map((e) => ListWalletTopupsResponseMethodsItemDestinationsItem.fromJson(e as Map<String, dynamic>)).toList());
 
-  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
   final String code;
 
   final String nameAr;
@@ -6026,7 +6026,7 @@ class WalletTopUpSummaryPendingItem {
   /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
   final int amountPiastres;
 
-  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
   final String method;
 
   final String createdAt;

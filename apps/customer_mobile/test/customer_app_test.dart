@@ -268,6 +268,7 @@ class FakeMobileApi extends MobileApi {
         'methods': [
           {'code': 'INSTAPAY', 'nameAr': 'إنستاباي', 'nameEn': 'InstaPay', 'instructionsAr': null, 'destinations': [{'label': 'حساب أضمن', 'details': {'instapayAddress': 'edmn@instapay'}, 'instructionsAr': null, 'isTest': true}]},
           {'code': 'BANK_TRANSFER', 'nameAr': 'تحويل بنكي', 'nameEn': 'Bank transfer', 'instructionsAr': null, 'destinations': [{'label': 'بنك مصر', 'details': {'bankName': 'بنك مصر', 'accountNumber': '123456'}, 'instructionsAr': null, 'isTest': true}]},
+          {'code': 'VODAFONE_CASH', 'nameAr': 'فودافون كاش', 'nameEn': 'Vodafone Cash', 'instructionsAr': null, 'destinations': [{'label': 'محفظة أضمن', 'details': {'walletNumber': '01000000000'}, 'instructionsAr': null, 'isTest': true}]},
         ],
         'balancePiastres': 120000, 'dailyLimitPiastres': 25000000, 'usedTodayPiastres': 24900000,
       });
@@ -1336,6 +1337,18 @@ void main() {
     expect(find.byKey(const Key('deposit-tp-new')), findsOneWidget);
     await _reveal(t, find.text('اتضاف لرصيدك'));
     expect(find.text('اتضاف لرصيدك'), findsOneWidget); // only the already-credited one; the new one is pending
+  });
+
+  testWidgets('wallet deposit: the mobile wallet option (Vodafone Cash and every wallet) shows EDMN\'s wallet number with a copy button', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    expect(find.text('محفظة إلكترونية'), findsOneWidget);
+    expect(find.textContaining('فودافون كاش، أورانج كاش'), findsOneWidget);
+    await t.tap(find.text('محفظة إلكترونية'));
+    await t.pumpAndSettle();
+    await _reveal(t, find.byKey(const Key('copy-walletNumber')));
+    expect(find.text('01000000000'), findsOneWidget);
   });
 
   testWidgets('wallet deposit list: every status has its own chip, the rejection reason is shown, and only pending can be cancelled', (t) async {

@@ -7172,6 +7172,18 @@ abstract class EdmnLocalizations {
   /// **'تحويل بنكي'**
   String get depositMethodBank;
 
+  /// No description provided for @depositMethodWallet.
+  ///
+  /// In ar, this message translates to:
+  /// **'محفظة إلكترونية'**
+  String get depositMethodWallet;
+
+  /// No description provided for @depositMethodWalletHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة'**
+  String get depositMethodWalletHint;
+
   /// No description provided for @depositTransferTo.
   ///
   /// In ar, this message translates to:

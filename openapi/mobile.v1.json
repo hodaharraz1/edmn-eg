@@ -32099,7 +32099,8 @@
                             "type": "string",
                             "enum": [
                               "BANK_TRANSFER",
-                              "INSTAPAY"
+                              "INSTAPAY",
+                              "VODAFONE_CASH"
                             ]
                           },
                           "status": {
@@ -32164,7 +32165,8 @@
                             "type": "string",
                             "enum": [
                               "BANK_TRANSFER",
-                              "INSTAPAY"
+                              "INSTAPAY",
+                              "VODAFONE_CASH"
                             ]
                           },
                           "nameAr": {
@@ -32400,7 +32402,8 @@
                     "type": "string",
                     "enum": [
                       "BANK_TRANSFER",
-                      "INSTAPAY"
+                      "INSTAPAY",
+                      "VODAFONE_CASH"
                     ]
                   },
                   "payerReference": {
@@ -32455,7 +32458,8 @@
                           "type": "string",
                           "enum": [
                             "BANK_TRANSFER",
-                            "INSTAPAY"
+                            "INSTAPAY",
+                            "VODAFONE_CASH"
                           ]
                         },
                         "status": {
@@ -32695,7 +32699,8 @@
                       "type": "string",
                       "enum": [
                         "BANK_TRANSFER",
-                        "INSTAPAY"
+                        "INSTAPAY",
+                        "VODAFONE_CASH"
                       ]
                     },
                     "status": {
@@ -38103,7 +38108,8 @@
                   "type": "string",
                   "enum": [
                     "BANK_TRANSFER",
-                    "INSTAPAY"
+                    "INSTAPAY",
+                    "VODAFONE_CASH"
                   ]
                 },
                 "createdAt": {

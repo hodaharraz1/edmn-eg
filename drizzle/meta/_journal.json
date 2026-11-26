@@ -239,6 +239,13 @@
       "when": 1795880217676,
       "tag": "0033_wallet_topups",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795966617676,
+      "tag": "0034_wallet_topup_mobile_wallet",
+      "breakpoints": true
     }
   ]
 }

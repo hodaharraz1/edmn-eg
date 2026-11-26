@@ -1330,6 +1330,8 @@
   "depositMethodLabel": "Deposit method",
   "depositMethodInstapay": "InstaPay",
   "depositMethodBank": "Bank transfer",
+  "depositMethodWallet": "Mobile wallet",
+  "depositMethodWalletHint": "Vodafone Cash, Orange Cash, Etisalat Cash, WE Pay or any wallet",
   "depositTransferTo": "Transfer the amount to this account, then upload the receipt",
   "depositRemainingToday": "Available to deposit today: {amount} (the daily limit is shared with payment receipts)",
   "@depositRemainingToday": {

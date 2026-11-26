@@ -3793,6 +3793,13 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get depositMethodBank => 'Bank transfer';
 
   @override
+  String get depositMethodWallet => 'Mobile wallet';
+
+  @override
+  String get depositMethodWalletHint =>
+      'Vodafone Cash, Orange Cash, Etisalat Cash, WE Pay or any wallet';
+
+  @override
   String get depositTransferTo =>
       'Transfer the amount to this account, then upload the receipt';
 

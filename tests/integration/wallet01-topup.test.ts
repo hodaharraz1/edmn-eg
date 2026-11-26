@@ -32,7 +32,7 @@ afterAll(async () => {
   await flag(false);
 });
 
-async function deposit(c: Awaited<ReturnType<typeof makeCustomer>>, egp = '500', method: 'INSTAPAY' | 'BANK_TRANSFER' = 'INSTAPAY') {
+async function deposit(c: Awaited<ReturnType<typeof makeCustomer>>, egp = '500', method: 'INSTAPAY' | 'BANK_TRANSFER' | 'VODAFONE_CASH' = 'INSTAPAY') {
   const r = await submitTopup(c.actor, { amount: egp, method, clientKey: randomUUID(), payerReference: 'REF-1' }, { data: await png('receipt'), name: 'r.png' });
   return r.topup;
 }
@@ -89,6 +89,12 @@ describe('PKG-WALLET-01 — submit, idempotency, daily cap shared with receipts'
     for (const amount of ['0', '-5', 'abc']) {
       await expect(submitTopup(c.actor, { amount, method: 'INSTAPAY', clientKey: randomUUID() }, { data: await png('x'), name: 'x.png' })).rejects.toThrow(/المبلغ/);
     }
+  });
+
+  it('a mobile wallet deposit (Vodafone Cash / any Egyptian wallet) is accepted and offered with its destination', async () => {
+    const c = await makeCustomer();
+    expect((await deposit(c, '75', 'VODAFONE_CASH')).method).toBe('VODAFONE_CASH');
+    expect((await myTopups(c.actor)).methods.map((m) => m.code)).toContain('VODAFONE_CASH');
   });
 
   it('there is no minimum: 1 EGP is accepted', async () => {

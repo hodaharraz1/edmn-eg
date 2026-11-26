@@ -134,8 +134,9 @@ class _WalletDepositScreenState extends ConsumerState<WalletDepositScreen> {
                       for (final m in d.methods)
                         EdmnRadioOption(
                           value: m.code,
-                          label: m.code == 'INSTAPAY' ? t.depositMethodInstapay : t.depositMethodBank,
-                          icon: m.code == 'INSTAPAY' ? Icons.bolt_rounded : Icons.account_balance_outlined,
+                          label: switch (m.code) { 'INSTAPAY' => t.depositMethodInstapay, 'VODAFONE_CASH' => t.depositMethodWallet, _ => t.depositMethodBank },
+                          subtitle: m.code == 'VODAFONE_CASH' ? t.depositMethodWalletHint : null,
+                          icon: switch (m.code) { 'INSTAPAY' => Icons.bolt_rounded, 'VODAFONE_CASH' => Icons.phone_iphone_rounded, _ => Icons.account_balance_outlined },
                         ),
                     ],
                   ),

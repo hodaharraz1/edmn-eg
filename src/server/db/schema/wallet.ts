@@ -6,10 +6,10 @@ import { users } from './identity';
 import { journalEntries } from './finance';
 
 /**
- * PKG-WALLET-01 (phase 1): customer wallet top-up. A deposit is money the customer transferred (InstaPay / bank) with a
- * receipt; nothing is credited until two different staff approve it (maker requests, checker executes).
+ * PKG-WALLET-01 (phase 1): customer wallet top-up. A deposit is money the customer transferred with a
+ * receipt (InstaPay, bank, or a mobile wallet: Vodafone Cash and every Egyptian wallet can send to it); nothing is credited until two different staff approve it (maker requests, checker executes).
  */
-export const WALLET_TOPUP_METHODS = ['BANK_TRANSFER', 'INSTAPAY'] as const;
+export const WALLET_TOPUP_METHODS = ['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'] as const;
 export const WALLET_TOPUP_STATUSES = ['PENDING_REVIEW', 'CREDITED', 'REJECTED', 'CANCELLED'] as const;
 export type WalletTopupStatus = (typeof WALLET_TOPUP_STATUSES)[number];
 

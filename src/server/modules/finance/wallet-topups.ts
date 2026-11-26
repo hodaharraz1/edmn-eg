@@ -249,3 +249,5 @@ export async function topupQueue(statuses: ('PENDING_REVIEW' | 'CREDITED' | 'REJ
     .limit(limit);
 }
 
+
+export { WALLET_TOPUP_METHODS };

@@ -1495,6 +1495,8 @@
   "depositMethodLabel": "طريقة الإيداع",
   "depositMethodInstapay": "إنستاباي",
   "depositMethodBank": "تحويل بنكي",
+  "depositMethodWallet": "محفظة إلكترونية",
+  "depositMethodWalletHint": "فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة",
   "depositTransferTo": "حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال",
   "depositRemainingToday": "المتاح للإيداع النهاردة: {amount} (الحد اليومي مشترك مع إيصالات الدفع)",
   "@depositRemainingToday": {

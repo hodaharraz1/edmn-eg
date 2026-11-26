@@ -3756,6 +3756,13 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get depositMethodBank => 'تحويل بنكي';
 
   @override
+  String get depositMethodWallet => 'محفظة إلكترونية';
+
+  @override
+  String get depositMethodWalletHint =>
+      'فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة';
+
+  @override
   String get depositTransferTo =>
       'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال';
 

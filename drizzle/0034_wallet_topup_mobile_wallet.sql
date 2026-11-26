@@ -1,0 +1,2 @@
+ALTER TABLE "wallet_topups" DROP CONSTRAINT "wallet_topups_method_chk";--> statement-breakpoint
+ALTER TABLE "wallet_topups" ADD CONSTRAINT "wallet_topups_method_chk" CHECK ("wallet_topups"."method" in ('BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH'));

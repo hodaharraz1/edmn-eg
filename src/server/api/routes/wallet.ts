@@ -14,7 +14,7 @@ import {
   walletActivityDetail,
   walletView,
 } from '@/server/modules/mobile/wallet';
-import { cancelTopup, myTopups, submitTopup } from '@/server/modules/finance/wallet-topups';
+import { cancelTopup, myTopups, submitTopup, WALLET_TOPUP_METHODS } from '@/server/modules/finance/wallet-topups';
 import { defineRoute } from '../http';
 import { isoDateTime, piastres, uuid } from '../schemas';
 
@@ -53,7 +53,7 @@ const walletOut = z.object({
     .object({
       enabled: z.boolean().meta({ description: 'wallet.topUpEnabled. false = hide every deposit control; the top-up endpoints answer feature_disabled.' }),
       balancePiastres: piastres,
-      pending: z.array(z.object({ id: uuid, amountPiastres: piastres, method: z.enum(['BANK_TRANSFER', 'INSTAPAY']), createdAt: isoDateTime })),
+      pending: z.array(z.object({ id: uuid, amountPiastres: piastres, method: z.enum(WALLET_TOPUP_METHODS), createdAt: isoDateTime })),
       dailyLimitPiastres: piastres,
       usedTodayPiastres: piastres.meta({ description: 'Deposits plus order/deal receipts counted today (Africa/Cairo) against the one shared daily cap.' }),
     })
@@ -223,7 +223,7 @@ export const getStorePayoutAccount = defineRoute({
 const topupOut = z.object({
   id: uuid,
   amountPiastres: piastres,
-  method: z.enum(['BANK_TRANSFER', 'INSTAPAY']),
+  method: z.enum(WALLET_TOPUP_METHODS),
   status: z.enum(['PENDING_REVIEW', 'CREDITED', 'REJECTED', 'CANCELLED']),
   payerReference: z.string().nullable(),
   rejectReasonAr: z.string().nullable(),
@@ -255,7 +255,7 @@ export const listWalletTopups = defineRoute({
   errors: topupErrors,
   response: z.object({
     items: z.array(topupOut),
-    methods: z.array(z.object({ code: z.enum(['BANK_TRANSFER', 'INSTAPAY']), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable(), destinations: z.array(z.object({ label: z.string(), details: z.record(z.string(), z.string()), instructionsAr: z.string().nullable(), isTest: z.boolean() })) })),
+    methods: z.array(z.object({ code: z.enum(WALLET_TOPUP_METHODS), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable(), destinations: z.array(z.object({ label: z.string(), details: z.record(z.string(), z.string()), instructionsAr: z.string().nullable(), isTest: z.boolean() })) })),
     balancePiastres: piastres,
     dailyLimitPiastres: piastres,
     usedTodayPiastres: piastres,
@@ -279,7 +279,7 @@ export const createWalletTopup = defineRoute({
   multipart: { files: { proof: { max: 1, required: true } } },
   body: z.object({
     amount: z.string().trim().min(1).max(20).meta({ description: 'Amount transferred in EGP as typed by the customer, e.g. "1250.50".' }),
-    method: z.enum(['BANK_TRANSFER', 'INSTAPAY']),
+    method: z.enum(WALLET_TOPUP_METHODS),
     payerReference: z.string().trim().max(100).optional(),
     clientKey: z.string().regex(/^[A-Za-z0-9_-]{16,100}$/),
   }),
