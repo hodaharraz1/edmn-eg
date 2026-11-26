@@ -1,7 +1,6 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../tokens.dart';
 
@@ -186,12 +185,25 @@ class _EdmnFloatingNavShellState extends State<EdmnFloatingNavShell> {
     if (old.index != widget.index) _visible = true;
   }
 
+  /// Hide/show slide: slow and smooth on purpose (owner feedback 2026-11-27: the 250 ms slide felt too fast).
+  static const slideDuration = Duration(milliseconds: 550);
+
+  /// Scroll distance (px) in one direction before the bar reacts, so small finger jitter never toggles it.
+  static const _hideAfter = 48.0;
+  static const _showAfter = 24.0;
+  double _travel = 0;
+
   bool _onScroll(ScrollNotification n) {
     if (n.metrics.axis != Axis.vertical) return false;
     bool? next;
-    if (n is UserScrollNotification) {
-      if (n.direction == ScrollDirection.reverse) next = false; // reading further down the page
-      if (n.direction == ScrollDirection.forward) next = true; // scrolling back up
+    if (n is ScrollUpdateNotification) {
+      final d = n.scrollDelta ?? 0;
+      if (d != 0) {
+        if (d.sign != _travel.sign) _travel = 0; // direction changed: start counting again
+        _travel += d;
+        if (_travel > _hideAfter) next = false; // reading further down the page
+        if (_travel < -_showAfter) next = true; // scrolling back up
+      }
     }
     // Back at the very top (after the scroll settles) the bar is always there.
     if (n is ScrollEndNotification && n.metrics.pixels <= n.metrics.minScrollExtent) next = true;
@@ -201,7 +213,7 @@ class _EdmnFloatingNavShellState extends State<EdmnFloatingNavShell> {
 
   @override
   Widget build(BuildContext context) {
-    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : EdmnMotion.normal;
+    final duration = MediaQuery.disableAnimationsOf(context) ? Duration.zero : slideDuration;
     return Stack(
       children: [
         Positioned.fill(child: NotificationListener<ScrollNotification>(onNotification: _onScroll, child: widget.body)),
@@ -215,8 +227,8 @@ class _EdmnFloatingNavShellState extends State<EdmnFloatingNavShell> {
               key: const Key('floating-nav-slide'),
               offset: _visible ? Offset.zero : const Offset(0, 1.6),
               duration: duration,
-              curve: Curves.easeOutCubic,
-              child: AnimatedOpacity(opacity: _visible ? 1 : 0, duration: duration, child: widget.navigation),
+              curve: Curves.easeInOutCubic,
+              child: AnimatedOpacity(opacity: _visible ? 1 : 0, duration: duration, curve: Curves.easeInOut, child: widget.navigation),
             ),
           ),
         ),

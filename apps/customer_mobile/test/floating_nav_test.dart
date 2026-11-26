@@ -110,6 +110,11 @@ void main() {
   testWidgets('scrolling down hides the bar, scrolling back up shows it again', (t) async {
     await t.pumpWidget(_host(currentIndex: 0, onTap: (_) {}));
     expect(slide(t), Offset.zero);
+    expect(t.widget<AnimatedSlide>(find.byKey(const Key('floating-nav-slide'))).duration, const Duration(milliseconds: 550));
+    // a tiny jitter does not move it
+    await t.drag(find.byKey(const Key('content')), const Offset(0, -20));
+    await t.pumpAndSettle();
+    expect(slide(t), Offset.zero);
     await t.drag(find.byKey(const Key('content')), const Offset(0, -600));
     await t.pumpAndSettle();
     expect(slide(t), isNot(Offset.zero));
