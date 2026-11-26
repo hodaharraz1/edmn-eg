@@ -26,7 +26,8 @@ concurrency:
 jobs:
   testflight:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[testflight]')
-    runs-on: macos-15
+    # macos-15 (arm64) is often capacity-starved on hosted runners ("job was not acquired"); the Intel image builds the same app.
+    runs-on: macos-15-intel
     # SEC-183: the App Store Connect key (Admin) lives only in this protected environment, never as a repository secret.
     environment: testflight
     timeout-minutes: 60
