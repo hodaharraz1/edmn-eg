@@ -6,6 +6,7 @@ import {
   categories,
   categoryAttributes,
   cmsBlocks,
+  cmsPages,
   commissionRules,
   governorates,
   legalDocuments,
@@ -506,6 +507,11 @@ async function seedCmsAndPolicies() {
     ];
     await db.insert(cmsBlocks).values(blocks.map((b) => ({ ...b, placement: 'HOME' })));
   }
+  // Help pages the apps link to (Account → عن أضمن, Support → الأسئلة الشائعة). Insert-missing by slug; an admin edit is kept.
+  for (const page of STARTER_PAGES) {
+    const [existing] = await db.select({ id: cmsPages.id }).from(cmsPages).where(eq(cmsPages.slug, page.slug)).limit(1);
+    if (!existing) await db.insert(cmsPages).values({ ...page, isPublished: true });
+  }
   // Fee engine configuration (data, editable from Admin). Pricing versions are seeded as DRAFTS and are
   // never activated by a seed on an existing database: activation goes through maker/checker in Admin.
   const { seedOwnerApprovedDrafts } = await import('@/server/modules/pricing/service');
@@ -518,3 +524,52 @@ async function seedCmsAndPolicies() {
   await seedPayoutChannels();
   await seedRefundPolicyDraft();
 }
+
+/** Starter text for the in-app help pages; the owner edits them from Admin → CMS → Pages. */
+const STARTER_PAGES: { slug: string; title: string; body: string }[] = [
+  {
+    slug: 'about',
+    title: 'عن أضمن',
+    body: `أضمن منصة مصرية للبيع والشراء بأمان، تشغّلها شركة أضمن إي جي في الإسكندرية.
+
+## إحنا بنعمل إيه؟
+- سوق فيه بائعين تمت مراجعة هويتهم ومستنداتهم، لمنتجات جديدة ومستعملة.
+- صفقة محمية: لو اتفقت مع حد برّه المنصة، تدفع لأضمن، والمبلغ يفضل محجوز لحد ما تستلم وتتأكد.
+- البائع ما يستلمش مستحقاته غير بعد تأكيد الاستلام وموافقة فريق أضمن.
+
+## ليه تثق فينا؟
+- الفلوس بتتحوّل لحسابات أضمن المعلنة فقط، وأي حركة فلوس بيراجعها موظفين اتنين.
+- كل الأسعار بالجنيه المصري، والشحن بيتحدد حسب المحافظة قبل الشراء.
+- عندنا سياسة واضحة للإرجاع والنزاعات، وفريق دعم بيرد عليك.
+
+## تواصل معانا
+من صفحة المساعدة والدعم جوه التطبيق، أو على info@edmneg.com.`,
+  },
+  {
+    slug: 'faq',
+    title: 'الأسئلة الشائعة',
+    body: `## يعني إيه صفقة محمية؟
+لو اتفقت مع بائع على فيسبوك أو أي مكان، تعمل صفقة في أضمن وتدفع لأضمن. المبلغ يفضل محجوز، والبائع يستلمه بعد ما تأكد إن المنتج وصلك سليم، أو بعد انتهاء مدة الفحص من غير اعتراض.
+
+## أدفع إزاي؟
+بتحويل بنكي أو إنستاباي لحسابات أضمن المعلنة في التطبيق، وترفع إيصال التحويل. وفي طلبات السوق ممكن الدفع عند الاستلام لو متاح للمنتج. فريقنا بيراجع الإيصال قبل ما الطلب يتحرك.
+
+## الفلوس بتوصل البائع إمتى؟
+بعد ما تأكد الاستلام، أو تخلص مدة الفحص من غير اعتراض، وبعد موافقة فريق أضمن.
+
+## لو المنتج وصل فيه مشكلة؟
+اطلب إرجاع أو افتح نزاع من صفحة الطلب قبل ما تأكد الاستلام، أو خلال المدة المكتوبة في سياسة الإرجاع. فريقنا بيراجع الصور والأدلة من الطرفين.
+
+## الشحن بيتحسب إزاي؟
+كل بائع بيحدد سعر ومدة الشحن لكل محافظة، وبتشوفهم قبل ما تأكد الطلب.
+
+## إزاي أبيع على أضمن؟
+من الحساب ← مركز البائع ← قدّم طلب بائع. بنراجع بياناتك ومستنداتك، وبعد الموافقة تقدر تضيف منتجاتك.
+
+## إزاي أسحب رصيدي؟
+من المحفظة ← حسابات الاستلام، ضيف حساب بنكي أو إنستاباي باسمك. بعد التحقق منه تقدر تطلب سحب.
+
+## أقفل حسابي إزاي؟
+من الحساب ← حذف الحساب. لو عندك طلبات أو صفقات مفتوحة لازم تخلص الأول.`,
+  },
+];

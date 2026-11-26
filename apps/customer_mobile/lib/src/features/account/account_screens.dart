@@ -33,7 +33,7 @@ class AccountScreen extends ConsumerWidget {
               EdmnEmptyState(icon: Icons.person_outline_rounded, title: t.signInPromptTitle, message: t.signInPromptBody, actionLabel: t.signIn, onAction: () => context.push('/sign-in?next=/account')),
               EdmnMenuGroup(children: [
                 languageRow(),
-                EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/legal/about')),
+                EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/pages/about')),
                 EdmnMenuItem(icon: Icons.gavel_rounded, title: t.legal, onTap: () => context.push('/legal/terms')),
               ]),
             ])
@@ -65,7 +65,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-messages'), icon: Icons.chat_bubble_outline_rounded, title: t.messages, onTap: () => context.push('/messages')),
                   EdmnMenuItem(key: const Key('menu-notifications'), icon: Icons.notifications_none_rounded, title: t.notifications, onTap: () => context.push('/notifications')),
                   EdmnMenuItem(key: const Key('menu-support'), icon: Icons.help_outline_rounded, title: t.helpSupport, onTap: () => context.push('/support')),
-                  EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/legal/about')),
+                  EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/pages/about')),
                 ]),
                 const SizedBox(height: EdmnSpacing.md),
                 EdmnMenuGroup(children: [

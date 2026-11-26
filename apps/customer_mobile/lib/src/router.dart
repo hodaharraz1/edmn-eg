@@ -62,6 +62,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/', builder: (c, s) => const CatalogHomeScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/categories', builder: (c, s) => const CategoriesScreen())]),
+          // Wallet is a main tab (owner request); signed-out users are sent to sign-in by the redirect.
+          StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (c, s) => const OrdersScreen())]),
         ],
@@ -101,7 +103,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/disputes', builder: (c, s) => const DisputesScreen(store: true)),
       GoRoute(path: '/seller/disputes/:id', builder: (c, s) => DisputeScreen(id: s.pathParameters['id']!, store: true)),
       GoRoute(path: '/reviews/new', builder: (c, s) => WriteReviewScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
-      GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen()),
       GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
       GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/wallet/payout', builder: (c, s) => const AccountPayoutScreen()),
@@ -152,6 +153,7 @@ class MainShell extends ConsumerWidget {
         items: [
           EdmnNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
           EdmnNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
+          EdmnNavItem(icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet_rounded, label: t.wallet),
           EdmnNavItem(icon: Icons.replay_rounded, activeIcon: Icons.replay_rounded, label: t.reorder),
           EdmnNavItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag_rounded, label: t.myOrders),
         ],
