@@ -43,3 +43,7 @@ GitHub ← المستودع ← **Settings** ← **Environments** ← **New envi
   مستثنى (standard encryption only).
 - رقم النسخة (build number) هو رقم تشغيل GitHub، فكل بناء بيطلع برقم أكبر تلقائيًا.
 - لو البناء فشل في خطوة «Check owner setup» يبقى فيه Secret أو Variable ناقص من البند 4.
+
+## الحالة (2026-11-26)
+- الـBundle IDs متسجلين، والتطبيقين اتعملوا في App Store Connect، وبيئة `testflight` فيها المفتاح والمعرّفات ومراجع إلزامي.
+- أول بناء: commit رسالته بتبدأ بـ`[testflight]`؛ المالك يوافق عليه من GitHub ← Actions ← Review deployments.
