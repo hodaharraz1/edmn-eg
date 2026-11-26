@@ -7129,42 +7129,6 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.'**
   String get marketingConsentSubtitle;
-}
-
-class _EdmnLocalizationsDelegate
-    extends LocalizationsDelegate<EdmnLocalizations> {
-  const _EdmnLocalizationsDelegate();
-
-  @override
-  Future<EdmnLocalizations> load(Locale locale) {
-    return SynchronousFuture<EdmnLocalizations>(
-      lookupEdmnLocalizations(locale),
-    );
-  }
-
-  @override
-  bool isSupported(Locale locale) =>
-      <String>['ar', 'en'].contains(locale.languageCode);
-
-  @override
-  bool shouldReload(_EdmnLocalizationsDelegate old) => false;
-}
-
-EdmnLocalizations lookupEdmnLocalizations(Locale locale) {
-  // Lookup logic when only language code is specified.
-  switch (locale.languageCode) {
-    case 'ar':
-      return EdmnLocalizationsAr();
-    case 'en':
-      return EdmnLocalizationsEn();
-  }
-
-  throw FlutterError(
-    'EdmnLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
 
   /// No description provided for @errorFeatureDisabled.
   ///
@@ -7297,4 +7261,40 @@ EdmnLocalizations lookupEdmnLocalizations(Locale locale) {
   /// In ar, this message translates to:
   /// **'إيداعات قيد المراجعة: {count}'**
   String depositPendingCount(String count);
+}
+
+class _EdmnLocalizationsDelegate
+    extends LocalizationsDelegate<EdmnLocalizations> {
+  const _EdmnLocalizationsDelegate();
+
+  @override
+  Future<EdmnLocalizations> load(Locale locale) {
+    return SynchronousFuture<EdmnLocalizations>(
+      lookupEdmnLocalizations(locale),
+    );
+  }
+
+  @override
+  bool isSupported(Locale locale) =>
+      <String>['ar', 'en'].contains(locale.languageCode);
+
+  @override
+  bool shouldReload(_EdmnLocalizationsDelegate old) => false;
+}
+
+EdmnLocalizations lookupEdmnLocalizations(Locale locale) {
+  // Lookup logic when only language code is specified.
+  switch (locale.languageCode) {
+    case 'ar':
+      return EdmnLocalizationsAr();
+    case 'en':
+      return EdmnLocalizationsEn();
+  }
+
+  throw FlutterError(
+    'EdmnLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

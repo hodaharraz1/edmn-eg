@@ -1271,6 +1271,7 @@ void main() {
     expect(find.byKey(const Key('wallet-deposit')), findsNothing);
     expect(find.byKey(const Key('wallet-topup-card')), findsNothing);
     expect(find.text('إيداع'), findsNothing);
+    await _reveal(t, find.byKey(const Key('no-topup')));
     expect(find.byKey(const Key('no-topup')), findsOneWidget);
   });
 
@@ -1297,26 +1298,33 @@ void main() {
     expect(find.text('حساب أضمن'), findsOneWidget);
     expect(find.byKey(const Key('copy-instapayAddress')), findsOneWidget);
     // nothing sent with an empty form / no receipt
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
     await t.tap(find.byKey(const Key('deposit-submit')));
     await t.pumpAndSettle();
     expect(api.topupKeys, isEmpty);
     // over the remaining daily limit is refused client-side
+    await _reveal(t, find.byKey(const Key('upload-field')));
     await t.tap(find.byKey(const Key('upload-field')));
     await t.pumpAndSettle();
     await t.enterText(find.byKey(const Key('deposit-amount')), '1500');
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
     await t.tap(find.byKey(const Key('deposit-submit')));
     await t.pumpAndSettle();
     expect(api.topupKeys, isEmpty);
     expect(find.textContaining('أكبر من المتاح'), findsOneWidget);
     // a valid amount goes through once
     await t.enterText(find.byKey(const Key('deposit-amount')), '50');
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
     await t.tap(find.byKey(const Key('deposit-submit')));
     await t.pumpAndSettle();
     expect(api.topupKeys, hasLength(1));
     expect(api.topupAmounts.single, 'INSTAPAY:50');
+    await t.scrollUntilVisible(find.byKey(const Key('deposit-submitted')), -250, scrollable: _mainList);
     expect(find.byKey(const Key('deposit-submitted')), findsOneWidget);
-    expect(find.text('اتضاف لرصيدك'), findsOneWidget); // only the already-credited one; the new one is pending
+    await _reveal(t, find.byKey(const Key('deposit-tp-new')));
     expect(find.byKey(const Key('deposit-tp-new')), findsOneWidget);
+    await _reveal(t, find.text('اتضاف لرصيدك'));
+    expect(find.text('اتضاف لرصيدك'), findsOneWidget); // only the already-credited one; the new one is pending
   });
 
   testWidgets('wallet deposit list: every status has its own chip, the rejection reason is shown, and only pending can be cancelled', (t) async {

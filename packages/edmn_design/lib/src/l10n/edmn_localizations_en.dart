@@ -3793,7 +3793,8 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get depositMethodBank => 'Bank transfer';
 
   @override
-  String get depositTransferTo => 'Transfer the amount to this account, then upload the receipt';
+  String get depositTransferTo =>
+      'Transfer the amount to this account, then upload the receipt';
 
   @override
   String depositRemainingToday(String amount) {
@@ -3812,7 +3813,8 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get depositSubmit => 'Send receipt';
 
   @override
-  String get depositSubmitted => 'The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.';
+  String get depositSubmitted =>
+      'The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.';
 
   @override
   String get depositsList => 'My deposits';

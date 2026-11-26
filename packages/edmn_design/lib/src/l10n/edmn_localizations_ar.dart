@@ -3756,7 +3756,8 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get depositMethodBank => 'تحويل بنكي';
 
   @override
-  String get depositTransferTo => 'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال';
+  String get depositTransferTo =>
+      'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال';
 
   @override
   String depositRemainingToday(String amount) {
@@ -3775,7 +3776,8 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get depositSubmit => 'إرسال الإيصال';
 
   @override
-  String get depositSubmitted => 'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.';
+  String get depositSubmitted =>
+      'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.';
 
   @override
   String get depositsList => 'إيداعاتي';
