@@ -52,6 +52,12 @@ jobs:
           [ "$HAS_P8" = "true" ] || { echo "::error::APP_STORE_CONNECT_API_KEY_P8 is not configured"; missing=1; }
           exit $missing
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Select Xcode 26 or later (App Store Connect rejects older iOS SDKs)
+        run: |
+          xc=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -n 1)
+          [ -n "$xc" ] || { echo "::error::No Xcode 26+ on this runner image"; ls -d /Applications/Xcode*.app; exit 1; }
+          sudo xcode-select -s "$xc/Contents/Developer"
+          xcodebuild -version
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.47.8'
