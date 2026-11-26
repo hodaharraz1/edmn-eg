@@ -22,7 +22,7 @@
 
 ### 4) حطّهم في GitHub (مش في الشات ولا في الكود)
 GitHub ← المستودع ← **Settings** ← **Environments** ← **New environment** باسم **`testflight`**
-(يفضّل تضيف نفسك في **Required reviewers**)، وبعدين جوّه البيئة دي ضيف الأسرار والمتغير (مش في Repository secrets،
+(من غير Required reviewers: قرار المالك 26/11، رجّعه لما شخص تاني ينضم)، وبعدين جوّه البيئة دي ضيف الأسرار والمتغير (مش في Repository secrets،
 علشان مفتاح Apple بصلاحية Admin ما يبقاش متاح لأي workflow تاني — SEC-183):
 
 | النوع | الاسم | القيمة |
@@ -45,5 +45,9 @@ GitHub ← المستودع ← **Settings** ← **Environments** ← **New envi
 - لو البناء فشل في خطوة «Check owner setup» يبقى فيه Secret أو Variable ناقص من البند 4.
 
 ## الحالة (2026-11-26)
-- الـBundle IDs متسجلين، والتطبيقين اتعملوا في App Store Connect، وبيئة `testflight` فيها المفتاح والمعرّفات ومراجع إلزامي.
-- أول بناء: commit رسالته بتبدأ بـ`[testflight]`؛ المالك يوافق عليه من GitHub ← Actions ← Review deployments.
+- شغال: التطبيقين اترفعوا على TestFlight واتثبتوا على آيفون المالك.
+- البيئة `testflight` فيها المفتاح (سر) والمعرّفات، **من غير مراجع إلزامي** (قرار المالك)، فالبناء بيشتغل لوحده.
+- أي commit على `claude/instinct-integration` رسالته بتبدأ بـ`[testflight]` بيبني ويرفع؛ حوالي 15 دقيقة على Mac Intel.
+- البناء بـXcode 26 (Apple بترفض الأقدم)، والأرشيف بيتعمل من غير توقيع وبيتوقّع وقت التصدير بشهادة توزيع سحابية.
+- `ITSAppUsesNonExemptEncryption = false` في التطبيقين، فسؤال التشفير مش بيظهر في النسخ الجديدة.
+- ملف `.p8` بيتقري بس جوه `env` في خطوة كتابة المفتاح؛ خطوة الفحص بتشوف إنه موجود من غير ما تحطه في سكربت.
