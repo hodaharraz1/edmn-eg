@@ -115,7 +115,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // Push token registration (PKG-PUSH-01): no-op until a push SDK is wired — the default provider has no token.
       final api = ref.read(mobileApiProvider);
       await PushTokenRegistrar(register: (t, k) => api.registerPushToken(token: t, idempotencyKey: k), unregister: (k) => api.unregisterPushToken(idempotencyKey: k)).registerIfAvailable(newIdempotencyKey);
-      if (mounted) context.go(widget.next ?? '/');
+      if (!mounted) return;
+      // Land on home first and open the requested page on top of it, so that page always has a back arrow
+      // (a plain go(next) left it as the only page: no way back to the store).
+      final next = widget.next;
+      context.go('/');
+      if (next != null && next.isNotEmpty && next != '/') context.push(next);
     } catch (e) {
       setState(() => _error = e);
     } finally {
