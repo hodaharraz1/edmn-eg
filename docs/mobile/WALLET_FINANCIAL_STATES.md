@@ -12,7 +12,7 @@
 | Approval, reservation, transfer, uncertain, returned | `approveWithdrawal` (two-person), `markWithdrawalProcessing`, `markWithdrawalPaid`, `markWithdrawalTransferUncertain`, `recordWithdrawalReturned` | **Admin console only.** The app only displays the result. |
 | Receiving accounts | `identity/receiving.ts` (encrypted, versioned, staff-verified) | `GET/POST /wallet/receiving-accounts`, archive |
 | Buyer payments and refunds | `payments/service.ts`, `finance/refunds.ts` (refunds go to the original payment destination) | `GET /wallet/activity` |
-| **Buyer top-up / deposit** | **none** | not built (D28–D31) |
+| **Buyer top-up / deposit** | **only while `wallet.topUpEnabled` (default off)** | PKG-WALLET-01 phase 1: transfer + receipt, credited by two staff; spending the balance is phase 2; no buyer cash-out |
 | **Wallet-to-wallet transfer** | **none** | not built (D34, deferred by owner) |
 
 No financial table, posting rule or approval rule was added or changed in Phase 4. The mobile layer is
@@ -20,7 +20,7 @@ No financial table, posting rule or approval rule was added or changed in Phase 
 
 ## What the wallet means in EDMN
 
-EDMN keeps **no prepaid buyer balance**. A buyer pays each order or deal by manual transfer, and EDMN reviews the
+While `wallet.topUpEnabled` is off (the default) EDMN keeps **no prepaid buyer balance** (PKG-WALLET-01 adds an opt-in deposit behind that flag). A buyer pays each order or deal by manual transfer, and EDMN reviews the
 receipt. Refunds go back to the original payment method. The account wallet therefore shows **earnings**: from the
 user's store, if they own one, and from Protected Deals where they are the seller. For a pure buyer it shows zero
 balances with a one-line explanation, plus their payments and refunds in the activity list.

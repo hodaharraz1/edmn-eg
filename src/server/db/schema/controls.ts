@@ -27,6 +27,8 @@ export const FINANCIAL_ACTIONS = [
   'COD_REMITTANCE',
   /** Settling a courier-company COD shortfall: cash recovered later, or written off as an expense. */
   'COD_SHORTAGE_RESOLUTION',
+  /** Crediting a customer's wallet after staff verified the deposit receipt (PKG-WALLET-01). */
+  'WALLET_TOPUP_CREDIT',
 ] as const;
 export type FinancialAction = (typeof FINANCIAL_ACTIONS)[number];
 export const APPROVAL_STATUSES = ['PENDING_CHECKER', 'APPROVED', 'CONSUMED', 'REVOKED', 'REJECTED'] as const;

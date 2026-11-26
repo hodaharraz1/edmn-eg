@@ -2,9 +2,11 @@ import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../common/file_pick.dart';
 import '../../common/status.dart';
 import '../../common/ui.dart';
 import '../../providers.dart';
@@ -13,8 +15,9 @@ import '../seller/seller_setup_screens.dart' show payoutStatus;
 /// Wallet (D24–D35). Every number is the server's (finance services over the ledger) — the app never adds balances up.
 /// Holds, disputes and in-flight requests are never shown as withdrawable. A payout is a REQUEST: EDMN approves (two
 /// people), reserves and transfers in the admin console; TRANSFER_UNCERTAIN is shown as "being verified", never as
-/// paid or failed. EDMN keeps no prepaid buyer balance, so there is no top-up / deposit flow and no wallet-to-wallet
-/// transfer (D28–D31, D34: business decision pending).
+/// paid or failed. PKG-WALLET-01 phase 1: a prepaid balance can be topped up by transfer + receipt (two-person staff
+/// review) ONLY while the server's `topUp.enabled` is true (flag wallet.topUpEnabled, default off): with it off there is
+/// no deposit button or balance card. No wallet-to-wallet transfer and no buyer cash-out.
 final walletProvider = FutureProvider.autoDispose<GetWalletResponse>((ref) => ref.watch(mobileApiProvider).wallet());
 final walletActivityProvider = FutureProvider.autoDispose.family<ListWalletActivityResponse, ({String? kind, String q})>(
     (ref, a) => ref.watch(mobileApiProvider).walletActivity(kind: a.kind, q: a.q));
@@ -22,6 +25,7 @@ final walletActivityPageProvider = FutureProvider.autoDispose.family<ListWalletA
     (ref, a) => ref.watch(mobileApiProvider).walletActivity(kind: a.kind, q: a.q, page: a.page));
 final walletActivityDetailProvider = FutureProvider.autoDispose.family<ListWalletActivityResponseItemsItem, String>((ref, id) async =>
     ListWalletActivityResponseItemsItem.fromJson((await ref.watch(mobileApiProvider).walletActivityDetail(id)).toJson()));
+final walletTopupsProvider = FutureProvider.autoDispose<ListWalletTopupsResponse>((ref) => ref.watch(mobileApiProvider).walletTopups());
 final accountPayoutsProvider = FutureProvider.autoDispose<ListAccountPayoutRequestsResponse>((ref) => ref.watch(mobileApiProvider).accountPayoutRequests());
 final receivingAccountsProvider = FutureProvider.autoDispose<ListReceivingAccountsResponse>((ref) => ref.watch(mobileApiProvider).receivingAccounts());
 final sellerStatementProvider = FutureProvider.autoDispose<GetSellerStatementResponse>((ref) => ref.watch(mobileApiProvider).sellerStatement());
@@ -33,6 +37,249 @@ String _blockReason(EdmnLocalizations t, String? r) => switch (r) {
       'NOTHING_AVAILABLE' => t.payoutBlockNothing,
       _ => '',
     };
+
+/* ───────────────────────── PKG-WALLET-01 deposit (only reachable while topUp.enabled) ───────────────────────── */
+
+/// Deposit by InstaPay / bank transfer: shows EDMN's account (from the payment settings) with copy buttons, takes the
+/// amount, method, receipt and an optional reference. Submitting NEVER credits: two EDMN staff verify the receipt first.
+class WalletDepositScreen extends ConsumerStatefulWidget {
+  const WalletDepositScreen({super.key});
+  @override
+  ConsumerState<WalletDepositScreen> createState() => _WalletDepositScreenState();
+}
+
+class _WalletDepositScreenState extends ConsumerState<WalletDepositScreen> {
+  final _form = GlobalKey<FormState>();
+  final _amount = TextEditingController();
+  final _reference = TextEditingController();
+  /// One key per deposit the user is making; a retry (lost response) returns the same deposit.
+  final _intent = IntentKey();
+  String? _method;
+  PickedFile? _file;
+  String? _fileError;
+  bool _busy = false;
+  bool _submitted = false;
+  Object? _error;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    _reference.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit(ListWalletTopupsResponse d) async {
+    final t = EdmnLocalizations.of(context);
+    setState(() => _fileError = _file == null ? t.uploadReceiptHint : null);
+    if (!_form.currentState!.validate() || _file == null || _method == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(mobileApiProvider).createWalletTopup(
+            bytes: _file!.bytes,
+            fileName: _file!.name,
+            amount: _amount.text.trim(),
+            method: _method!,
+            payerReference: _reference.text.trim(),
+            clientKey: _intent.value,
+          );
+      _submitted = true;
+      _intent.reset();
+      _amount.clear();
+      _reference.clear();
+      _file = null;
+      ref.invalidate(walletTopupsProvider);
+      ref.invalidate(walletProvider);
+    } catch (e) {
+      // A definite refusal ends this attempt; a lost response keeps the key so the retry returns the same deposit.
+      if (!isRetryableError(e)) _intent.reset();
+      _error = e;
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    final topups = ref.watch(walletTopupsProvider);
+    return EdmnAppScaffold(
+      title: t.depositTitle,
+      body: AsyncView(
+        value: topups,
+        onRetry: () => ref.invalidate(walletTopupsProvider),
+        data: (d) {
+          final remaining = (d.dailyLimitPiastres - d.usedTodayPiastres).clamp(0, d.dailyLimitPiastres);
+          _method ??= d.methods.isEmpty ? null : d.methods.first.code;
+          final method = d.methods.where((m) => m.code == _method).firstOrNull;
+          return ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
+            EdmnWalletCard(label: t.walletBalanceLabel, amountPiastres: d.balancePiastres),
+            const SizedBox(height: EdmnSpacing.sm),
+            Text(t.depositRemainingToday(egpOf(context, remaining)), key: const Key('deposit-remaining'), style: EdmnType.caption.copyWith(color: EdmnColors.textSecondary)),
+            const SizedBox(height: EdmnSpacing.md),
+            if (_submitted) ...[EdmnNotice(key: const Key('deposit-submitted'), message: t.depositSubmitted, tone: EdmnTone.success), const SizedBox(height: EdmnSpacing.md)],
+            if (d.methods.isEmpty)
+              EdmnNotice(key: const Key('deposit-no-methods'), message: t.depositNoMethods, tone: EdmnTone.warning)
+            else
+              Form(
+                key: _form,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Text(t.depositMethodLabel, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: EdmnSpacing.xs),
+                  EdmnRadioCard<String>(
+                    value: _method!,
+                    onChanged: (v) => setState(() => _method = v),
+                    options: [
+                      for (final m in d.methods)
+                        EdmnRadioOption(
+                          value: m.code,
+                          label: m.code == 'INSTAPAY' ? t.depositMethodInstapay : t.depositMethodBank,
+                          icon: m.code == 'INSTAPAY' ? Icons.bolt_rounded : Icons.account_balance_outlined,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: EdmnSpacing.md),
+                  Text(t.depositTransferTo, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+                  const SizedBox(height: EdmnSpacing.xs),
+                  if (method != null) for (final x in method.destinations) _DepositDestination(d: x),
+                  EdmnUploadField(
+                    label: t.uploadReceipt,
+                    hint: t.uploadReceiptHint,
+                    fileName: _file?.name,
+                    uploading: _busy,
+                    error: _fileError,
+                    onClear: () => setState(() => _file = null),
+                    onPick: () async {
+                      final f = await ref.read(filePickerProvider).pick();
+                      if (f != null) {
+                        setState(() {
+                          _file = f;
+                          _fileError = null;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: EdmnSpacing.sm),
+                  EdmnTextField(
+                    key: const Key('deposit-amount'),
+                    controller: _amount,
+                    hint: t.amountEgpHint,
+                    icon: Icons.payments_outlined,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textDirection: TextDirection.ltr,
+                    validator: (v) {
+                      final p = parseEgpToPiastres(v ?? '');
+                      if (p == null || p <= 0) return t.amountInvalid;
+                      if (p > remaining) return t.depositOverLimit(egpOf(context, remaining));
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: EdmnSpacing.sm),
+                  EdmnTextField(key: const Key('deposit-reference'), controller: _reference, hint: t.referenceHint, icon: Icons.tag_rounded, textDirection: TextDirection.ltr),
+                  if (_error != null) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(key: const Key('deposit-error'), message: apiErrorMessage(context, _error!), tone: EdmnTone.danger)],
+                  const SizedBox(height: EdmnSpacing.md),
+                  EdmnPrimaryButton(key: const Key('deposit-submit'), label: t.depositSubmit, loading: _busy, onPressed: () => _submit(d)),
+                ]),
+              ),
+            const SizedBox(height: EdmnSpacing.lg),
+            EdmnSectionHeader(title: t.depositsList),
+            if (d.items.isEmpty)
+              EdmnEmptyState(icon: Icons.account_balance_wallet_outlined, title: t.noDeposits)
+            else
+              for (final x in d.items) _DepositRow(x: x, onCancel: x.cancellable ? () => _cancel(x.id) : null),
+          ]);
+        },
+      ),
+    );
+  }
+
+  final _cancelIntent = IntentKey();
+  Future<void> _cancel(String id) async {
+    final ok = await runAction(context, () => ref.read(mobileApiProvider).cancelWalletTopup(id, idempotencyKey: _cancelIntent.value));
+    _cancelIntent.reset();
+    if (!mounted) return;
+    if (ok) {
+      ref.invalidate(walletTopupsProvider);
+      ref.invalidate(walletProvider);
+    }
+  }
+}
+
+class _DepositDestination extends StatelessWidget {
+  const _DepositDestination({required this.d});
+  final ListWalletTopupsResponseMethodsItemDestinationsItem d;
+
+  @override
+  Widget build(BuildContext context) => EdmnCard(
+        margin: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.sm),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Expanded(child: Text(d.label, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary, fontWeight: FontWeight.w700))),
+            if (d.isTest) const EdmnStatusChip(label: 'TEST', tone: EdmnTone.warning),
+          ]),
+          for (final e in d.details.entries)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: EdmnSpacing.xs),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (e.key.isNotEmpty) Text(destinationLabelOf(EdmnLocalizations.of(context), e.key), style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+                    SelectableText(e.value, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary)),
+                  ]),
+                ),
+                IconButton(
+                  key: Key('copy-${e.key}'),
+                  tooltip: MaterialLocalizations.of(context).copyButtonLabel,
+                  icon: Icon(Icons.copy_rounded, size: EdmnSizes.iconSm, color: EdmnColors.primary, semanticLabel: MaterialLocalizations.of(context).copyButtonLabel),
+                  onPressed: () => Clipboard.setData(ClipboardData(text: e.value)),
+                ),
+              ]),
+            ),
+          if (d.instructionsAr != null) Text(d.instructionsAr!, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+        ]),
+      );
+}
+
+/// Same server field keys the payment screen labels; unknown keys are shown as sent.
+String destinationLabelOf(EdmnLocalizations t, String key) => switch (key) {
+      'bankName' => t.destBankName,
+      'accountName' => t.destAccountName,
+      'accountNumber' => t.destAccountNumber,
+      'iban' => 'IBAN',
+      'instapayAddress' => t.destInstapayAddress,
+      'walletNumber' => t.destWalletNumber,
+      _ => key,
+    };
+
+class _DepositRow extends StatelessWidget {
+  const _DepositRow({required this.x, this.onCancel});
+  final ListWalletTopupsResponseItemsItem x;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    final (label, tone) = switch (x.status) {
+      'PENDING_REVIEW' => (t.depositPending, EdmnTone.warning),
+      'CREDITED' => (t.depositCredited, EdmnTone.success),
+      'REJECTED' => (t.depositRejected, EdmnTone.danger),
+      _ => (t.depositCancelled, EdmnTone.neutral),
+    };
+    return EdmnCard(
+      key: Key('deposit-${x.id}'),
+      margin: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.sm),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: EgpText(x.amountPiastres, style: EdmnType.bodyStrong)),
+          EdmnStatusChip(label: label, tone: tone),
+        ]),
+        if (x.status == 'REJECTED' && x.rejectReasonAr != null) Text(t.depositRejectedReason(x.rejectReasonAr!), style: EdmnType.caption.copyWith(color: EdmnColors.error)),
+        if (onCancel != null) Align(alignment: AlignmentDirectional.centerStart, child: TextButton(key: Key('deposit-cancel-${x.id}'), onPressed: onCancel, child: Text(t.depositCancel))),
+      ]),
+    );
+  }
+}
 
 /* ───────────────────────── D24/D25 wallet home + balance breakdown ───────────────────────── */
 
@@ -64,6 +311,20 @@ class WalletScreen extends ConsumerWidget {
                 ]),
               ),
               if (!w.realMoney) ...[const SizedBox(height: EdmnSpacing.sm), EdmnTestMoneyNotice(message: t.walletTestNotice)],
+              if (w.topUp.enabled) ...[
+                const SizedBox(height: EdmnSpacing.sm),
+                EdmnCard(
+                  key: const Key('wallet-topup-card'),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Text(t.walletBalanceLabel, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: EdmnSpacing.xxs),
+                    EgpText(w.topUp.balancePiastres, style: EdmnType.price.copyWith(color: EdmnColors.textPrimary)),
+                    if (w.topUp.pending.isNotEmpty) Text(t.depositPendingCount('${w.topUp.pending.length}'), style: EdmnType.caption.copyWith(color: EdmnColors.textSecondary)),
+                    const SizedBox(height: EdmnSpacing.sm),
+                    EdmnPrimaryButton(key: const Key('wallet-deposit'), label: t.walletDeposit, icon: Icons.add_card_outlined, onPressed: () => context.push('/wallet/deposit')),
+                  ]),
+                ),
+              ],
               if (!w.hasEarnings) ...[const SizedBox(height: EdmnSpacing.sm), EdmnNotice(key: const Key('no-earnings'), message: t.noEarningsYet)],
               const SizedBox(height: EdmnSpacing.md),
               EdmnCard(
@@ -132,7 +393,7 @@ class WalletScreen extends ConsumerWidget {
               const SizedBox(height: EdmnSpacing.md),
               _RecentActivity(),
               const SizedBox(height: EdmnSpacing.md),
-              if (!w.topUpAvailable) EdmnNotice(key: const Key('no-topup'), message: t.noPrepaidBalance, icon: Icons.info_outline_rounded),
+              if (!w.topUp.enabled) EdmnNotice(key: const Key('no-topup'), message: t.noPrepaidBalance, icon: Icons.info_outline_rounded),
             ]),
           );
         },

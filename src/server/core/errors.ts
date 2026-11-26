@@ -14,7 +14,8 @@ export type DomainErrorCode =
   | 'RATE_LIMITED'
   | 'MFA_REQUIRED'
   | 'STEP_UP_REQUIRED'
-  | 'IDENTITY_REQUIRED';
+  | 'IDENTITY_REQUIRED'
+  | 'FEATURE_DISABLED';
 
 export class DomainError extends Error {
   constructor(
@@ -28,6 +29,7 @@ export class DomainError extends Error {
   }
 }
 
+export const featureDisabled = (msg = 'الخاصية دي مش متاحة دلوقتي') => new DomainError('FEATURE_DISABLED', msg);
 export const notFound = (what = 'العنصر') => new DomainError('NOT_FOUND', `ملقيناش ${what}`);
 export const forbidden = (msg = 'ليست لديك صلاحية لتنفيذ هذا الإجراء') => new DomainError('FORBIDDEN', msg);
 export const unauthenticated = () => new DomainError('UNAUTHENTICATED', 'يجب تسجيل الدخول أولاً');

@@ -47,6 +47,12 @@ export const SETTINGS_SCHEMA = {
   'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
   /** Max total of receipts one customer may upload in one Cairo day (piasters; 250,000 EGP). SENSITIVE: changing it needs step-up. */
   'payments.dailyReceiptLimit': z.number().int().min(0).default(25_000_000),
+  /**
+   * PKG-WALLET-01: customer wallet top-up (deposit by InstaPay / bank transfer with receipt, credited by two staff).
+   * OFF by default: a prepaid balance is stored value and stays closed until counsel confirms. SENSITIVE (step-up).
+   * Daily cap is shared with receipts: it reuses payments.dailyReceiptLimit.
+   */
+  'wallet.topUpEnabled': z.boolean().default(false),
   /** Cash on delivery (market orders only, never protected deals). OFF by default. SENSITIVE. */
   'orders.codEnabled': z.boolean().default(false),
   /** Max order value payable cash on delivery (piasters; 5,000 EGP). SENSITIVE. */
@@ -195,6 +201,7 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payments.realMoneyEnabled',
   'payments.dailyReceiptLimit',
+  'wallet.topUpEnabled',
   'orders.codEnabled',
   'orders.codMaxAmount',
   'orders.codFee',

@@ -21,6 +21,7 @@ import { journalEntries, journalLines, ledgerAccounts } from '@/server/db/schema
  *  SELLER_PENDING             LIABILITY  seller net on paid orders awaiting buyer receipt confirmation
  *  SELLER_AVAILABLE           LIABILITY  seller net available for withdrawal
  *  SELLER_WITHDRAWAL_RESERVED LIABILITY  amounts locked by in-flight withdrawal requests
+ *  CUSTOMER_WALLETS           LIABILITY  customer prepaid wallet balances (PKG-WALLET-01); per-user split in customer_wallet_entries
  */
 export const ACCOUNTS = {
   PLATFORM_CASH: { type: 'ASSET', name: 'نقدية اضمن المحصلة' },
@@ -39,6 +40,8 @@ export const ACCOUNTS = {
   SELLER_PENDING: { type: 'LIABILITY', name: 'رصيد البائع المعلق' },
   SELLER_AVAILABLE: { type: 'LIABILITY', name: 'رصيد البائع المتاح' },
   SELLER_WITHDRAWAL_RESERVED: { type: 'LIABILITY', name: 'رصيد محجوز لطلبات السحب' },
+  /** Customer prepaid wallet balances (PKG-WALLET-01). Platform account; the per-user split is customer_wallet_entries. */
+  CUSTOMER_WALLETS: { type: 'LIABILITY', name: 'أرصدة محافظ العملاء' },
 } as const;
 export type AccountCode = keyof typeof ACCOUNTS;
 const SELLER_CODES: ReadonlySet<AccountCode> = new Set(['SELLER_PENDING', 'SELLER_AVAILABLE', 'SELLER_WITHDRAWAL_RESERVED']);

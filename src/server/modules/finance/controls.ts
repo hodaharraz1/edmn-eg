@@ -185,7 +185,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select entry_type, source_id, count(*) n from journal_entries
-        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL')
+        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL','WALLET_TOPUP_CREDIT')
         group by entry_type, source_id having count(*) > 1`,
     ),
   );
@@ -199,7 +199,8 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
         or (e.source_type = 'withdrawal' and not exists (select 1 from withdrawal_requests w where w.id::text = e.source_id))
         or (e.source_type = 'refund' and not exists (select 1 from refunds r where r.id::text = e.source_id))
         or (e.source_type = 'external_deal' and not exists (select 1 from external_deals d where d.id::text = e.source_id))
-        or (e.source_type = 'ledger_adjustment' and not exists (select 1 from ledger_adjustments a where a.id::text = e.source_id))`,
+        or (e.source_type = 'ledger_adjustment' and not exists (select 1 from ledger_adjustments a where a.id::text = e.source_id))
+        or (e.source_type = 'wallet_topup' and not exists (select 1 from wallet_topups w where w.id::text = e.source_id))`,
     ),
   );
   add(
@@ -248,6 +249,24 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
       conn,
       sql`select e.id, e.entry_type from journal_entries e where e.approval_id is null
         and e.created_at > coalesce((select min(created_at) from financial_approvals), 'infinity'::timestamptz)`,
+    ),
+  );
+  // PKG-WALLET-01: the platform liability account equals the sum of the per-user sub-ledger, and no wallet is negative.
+  add(
+    'WALLET_LEDGER_DRIFT',
+    'رصيد حساب محافظ العملاء لا يطابق مجموع قيود المحافظ',
+    await rows(conn, sql`select coalesce((select balance from ledger_accounts where code = 'CUSTOMER_WALLETS' and seller_id is null), 0) account_balance, coalesce((select sum(amount) from customer_wallet_entries), 0) entries_sum
+      where coalesce((select balance from ledger_accounts where code = 'CUSTOMER_WALLETS' and seller_id is null), 0) <> coalesce((select sum(amount) from customer_wallet_entries), 0)`),
+  );
+  add('WALLET_NEGATIVE', 'رصيد محفظة عميل سالب', await rows(conn, sql`select user_id, sum(amount) balance from customer_wallet_entries group by user_id having sum(amount) < 0`));
+  add(
+    'MISSING_WALLET_JOURNAL',
+    'إيداع مضاف بدون قيده أو بدون قيد المحفظة',
+    await rows(
+      conn,
+      sql`select t.id, t.status from wallet_topups t where t.status = 'CREDITED'
+        and (not exists (select 1 from journal_entries e where e.entry_type = 'WALLET_TOPUP_CREDIT' and e.source_id = t.id::text)
+          or not exists (select 1 from customer_wallet_entries w where w.topup_id = t.id and w.amount = t.amount))`,
     ),
   );
   add(

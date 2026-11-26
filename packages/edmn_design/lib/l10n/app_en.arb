@@ -1322,5 +1322,55 @@
   "marketingConsentTitle": "Marketing messages",
   "@marketingConsentTitle": {},
   "marketingConsentSubtitle": "Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.",
-  "@marketingConsentSubtitle": {}
+  "@marketingConsentSubtitle": {},
+  "errorFeatureDisabled": "This feature is not available right now",
+  "walletBalanceLabel": "Wallet balance",
+  "walletDeposit": "Deposit",
+  "depositTitle": "Deposit to wallet",
+  "depositMethodLabel": "Deposit method",
+  "depositMethodInstapay": "InstaPay",
+  "depositMethodBank": "Bank transfer",
+  "depositTransferTo": "Transfer the amount to this account, then upload the receipt",
+  "depositRemainingToday": "Available to deposit today: {amount} (the daily limit is shared with payment receipts)",
+  "@depositRemainingToday": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositOverLimit": "The amount is more than you can deposit today ({amount})",
+  "@depositOverLimit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositNoMethods": "No deposit methods are available right now",
+  "depositSubmit": "Send receipt",
+  "depositSubmitted": "The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.",
+  "depositsList": "My deposits",
+  "noDeposits": "You have not made any deposit yet",
+  "depositPending": "Under review",
+  "depositCredited": "Added to your balance",
+  "depositRejected": "Rejected",
+  "depositCancelled": "Cancelled",
+  "depositRejectedReason": "Reason: {reason}",
+  "@depositRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "depositCancel": "Cancel deposit",
+  "depositPendingCount": "Deposits under review: {count}",
+  "@depositPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

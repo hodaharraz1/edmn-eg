@@ -3770,4 +3770,78 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   @override
   String get marketingConsentSubtitle =>
       'Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.';
+
+  @override
+  String get errorFeatureDisabled => 'This feature is not available right now';
+
+  @override
+  String get walletBalanceLabel => 'Wallet balance';
+
+  @override
+  String get walletDeposit => 'Deposit';
+
+  @override
+  String get depositTitle => 'Deposit to wallet';
+
+  @override
+  String get depositMethodLabel => 'Deposit method';
+
+  @override
+  String get depositMethodInstapay => 'InstaPay';
+
+  @override
+  String get depositMethodBank => 'Bank transfer';
+
+  @override
+  String get depositTransferTo => 'Transfer the amount to this account, then upload the receipt';
+
+  @override
+  String depositRemainingToday(String amount) {
+    return 'Available to deposit today: $amount (the daily limit is shared with payment receipts)';
+  }
+
+  @override
+  String depositOverLimit(String amount) {
+    return 'The amount is more than you can deposit today ($amount)';
+  }
+
+  @override
+  String get depositNoMethods => 'No deposit methods are available right now';
+
+  @override
+  String get depositSubmit => 'Send receipt';
+
+  @override
+  String get depositSubmitted => 'The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.';
+
+  @override
+  String get depositsList => 'My deposits';
+
+  @override
+  String get noDeposits => 'You have not made any deposit yet';
+
+  @override
+  String get depositPending => 'Under review';
+
+  @override
+  String get depositCredited => 'Added to your balance';
+
+  @override
+  String get depositRejected => 'Rejected';
+
+  @override
+  String get depositCancelled => 'Cancelled';
+
+  @override
+  String depositRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get depositCancel => 'Cancel deposit';
+
+  @override
+  String depositPendingCount(String count) {
+    return 'Deposits under review: $count';
+  }
 }

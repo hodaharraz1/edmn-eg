@@ -41,6 +41,7 @@ approvals are rejected.
 | Protected-deal settlement | DEAL_RELEASE | DEAL_SETTLEMENT | finance.release | yes | — | killswitch.dealRelease |
 | Protected-deal refund | DEAL_REFUND | DEAL_REFUND | refunds.approve | yes | — | killswitch.refunds |
 | Protected-deal payout | DEAL_PAYOUT | DEAL_PAYOUT_PAID | deals.payout | yes | — | killswitch.payouts |
+| Credit a verified customer wallet deposit (PKG-WALLET-01, behind `wallet.topUpEnabled`, default off) | WALLET_TOPUP_CREDIT | WALLET_TOPUP_CREDIT | finance.movement.request (maker) + payments.verify (checker) | yes | maker/checker: requester ≠ crediting staff, DB-enforced (`edmn_movement_requires_two_people`) | killswitch.paymentConfirmation |
 
 ## Actions that need NO prior financial approval (clarification §2)
 

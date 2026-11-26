@@ -372,6 +372,24 @@ class MobileApi {
           body: {'amountPiastres': amountPiastres, 'destination': destination, 'clientKey': clientKey}));
   Future<CancelAccountPayoutRequestResponse> cancelAccountPayout(String id, {required String idempotencyKey}) async => CancelAccountPayoutRequestResponse.fromJson(
       await client.sendJson('POST', fillPath(MobileApiPaths.cancelAccountPayoutRequest.path, {'requestId': id}), idempotencyKey: idempotencyKey));
+  /// PKG-WALLET-01: my wallet deposits + where to transfer + today's remaining limit. `feature_disabled` while the flag is off.
+  Future<ListWalletTopupsResponse> walletTopups() async => ListWalletTopupsResponse.fromJson(await client.getJson(MobileApiPaths.listWalletTopups.path));
+
+  /// Uploads the transfer receipt of a deposit. It is queued for two-person staff review and NEVER credits by itself.
+  /// [clientKey] is this deposit's idempotency key: reuse it when retrying the same upload.
+  Future<CreateWalletTopupResponse> createWalletTopup(
+          {required Uint8List bytes, required String fileName, required String amount, required String method, String? payerReference, required String clientKey}) async =>
+      CreateWalletTopupResponse.fromJson(await client.guard((d) async => (await d.post<dynamic>(MobileApiPaths.createWalletTopup.path,
+          data: FormData.fromMap({
+            'amount': amount,
+            'method': method,
+            if (payerReference != null && payerReference.isNotEmpty) 'payerReference': payerReference,
+            'clientKey': clientKey,
+            'proof': MultipartFile.fromBytes(bytes, filename: fileName),
+          }),
+          options: Options(contentType: 'multipart/form-data'))).data as Map<String, dynamic>));
+  Future<CancelWalletTopupResponse> cancelWalletTopup(String id, {required String idempotencyKey}) async => CancelWalletTopupResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.cancelWalletTopup.path, {'topupId': id}), idempotencyKey: idempotencyKey));
   Future<ListReceivingAccountsResponse> receivingAccounts() async => ListReceivingAccountsResponse.fromJson(await client.getJson(MobileApiPaths.listReceivingAccounts.path));
   Future<AddReceivingAccountResponse> addReceivingAccount(Map<String, dynamic> account, {String? replacesId, required String idempotencyKey}) async =>
       AddReceivingAccountResponse.fromJson(await client.sendJson('POST', MobileApiPaths.addReceivingAccount.path,

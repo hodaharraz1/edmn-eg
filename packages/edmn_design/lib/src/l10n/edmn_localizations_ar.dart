@@ -3733,4 +3733,78 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   @override
   String get marketingConsentSubtitle =>
       'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.';
+
+  @override
+  String get errorFeatureDisabled => 'الخاصية دي مش متاحة دلوقتي';
+
+  @override
+  String get walletBalanceLabel => 'رصيد المحفظة';
+
+  @override
+  String get walletDeposit => 'إيداع';
+
+  @override
+  String get depositTitle => 'إيداع في المحفظة';
+
+  @override
+  String get depositMethodLabel => 'طريقة الإيداع';
+
+  @override
+  String get depositMethodInstapay => 'إنستاباي';
+
+  @override
+  String get depositMethodBank => 'تحويل بنكي';
+
+  @override
+  String get depositTransferTo => 'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال';
+
+  @override
+  String depositRemainingToday(String amount) {
+    return 'المتاح للإيداع النهاردة: $amount (الحد اليومي مشترك مع إيصالات الدفع)';
+  }
+
+  @override
+  String depositOverLimit(String amount) {
+    return 'المبلغ أكبر من المتاح للإيداع النهاردة ($amount)';
+  }
+
+  @override
+  String get depositNoMethods => 'مفيش طرق إيداع متاحة دلوقتي';
+
+  @override
+  String get depositSubmit => 'إرسال الإيصال';
+
+  @override
+  String get depositSubmitted => 'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.';
+
+  @override
+  String get depositsList => 'إيداعاتي';
+
+  @override
+  String get noDeposits => 'لسه معملتش أي إيداع';
+
+  @override
+  String get depositPending => 'قيد المراجعة';
+
+  @override
+  String get depositCredited => 'اتضاف لرصيدك';
+
+  @override
+  String get depositRejected => 'مرفوض';
+
+  @override
+  String get depositCancelled => 'ملغي';
+
+  @override
+  String depositRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get depositCancel => 'إلغاء الإيداع';
+
+  @override
+  String depositPendingCount(String count) {
+    return 'إيداعات قيد المراجعة: $count';
+  }
 }

@@ -7,13 +7,13 @@ import type { MovementKind } from '@/server/db/schema';
 import { runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin } from '@/server/web/session';
 
-const KINDS: MovementKind[] = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION'];
+const KINDS: MovementKind[] = ['SELLER_RELEASE', 'DEAL_RELEASE', 'REFUND_APPROVAL', 'REFUND_REVOCATION', 'WITHDRAWAL_REVERSAL', 'WITHDRAWAL_RETURN', 'COD_REMITTANCE', 'COD_SHORTAGE_RESOLUTION', 'WALLET_TOPUP_CREDIT'];
 
 async function run(fd: FormData, fn: (a: Awaited<ReturnType<typeof requireAdmin>>) => Promise<ActionState | void>) {
   const actor = await requireAdmin();
   const res = await runAction(() => fn(actor));
   const back = str(fd, 'back');
-  for (const p of [back, '/admin/approvals', '/admin/releases', '/admin/refunds', '/admin/withdrawals'].filter(Boolean)) revalidatePath(p);
+  for (const p of [back, '/admin/approvals', '/admin/releases', '/admin/refunds', '/admin/withdrawals', '/admin/wallet-topups'].filter(Boolean)) revalidatePath(p);
   if (res.code === 'STEP_UP_REQUIRED') redirect(`/admin/step-up?next=${encodeURIComponent(back || '/admin')}`);
   return res;
 }
@@ -65,5 +65,23 @@ export async function movementCancelAction(_p: ActionState, fd: FormData): Promi
   return run(fd, async (a) => {
     await cancelMovementRequest(a, str(fd, 'requestId'));
     return { message: 'تم سحب طلبك.' };
+  });
+}
+
+/** Checker step for PKG-WALLET-01: credit a verified deposit to the customer's wallet (the Maker's request is the proposal). */
+export async function walletTopupCreditAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  return run(fd, async (a) => {
+    const { creditTopup } = await import('@/server/modules/finance/wallet-topups');
+    const r = await creditTopup(a, str(fd, 'topupId'), str(fd, 'note') || null);
+    return { message: r.alreadyCredited ? 'الإيداع اتضاف قبل كده.' : 'تمت إضافة الإيداع لمحفظة العميل بعد موافقة شخصين.' };
+  });
+}
+
+/** Reject a deposit (nothing posted; the customer sees the reason). */
+export async function walletTopupRejectAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  return run(fd, async (a) => {
+    const { rejectTopup } = await import('@/server/modules/finance/wallet-topups');
+    const r = await rejectTopup(a, str(fd, 'topupId'), str(fd, 'reason'));
+    return { message: r.alreadyRejected ? 'الإيداع مرفوض من قبل.' : 'تم رفض الإيداع. لم يتحرك أي مبلغ.' };
   });
 }

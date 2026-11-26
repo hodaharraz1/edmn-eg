@@ -1487,5 +1487,55 @@
   "marketingConsentTitle": "رسائل وعروض التسويق",
   "@marketingConsentTitle": {},
   "marketingConsentSubtitle": "استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.",
-  "@marketingConsentSubtitle": {}
+  "@marketingConsentSubtitle": {},
+  "errorFeatureDisabled": "الخاصية دي مش متاحة دلوقتي",
+  "walletBalanceLabel": "رصيد المحفظة",
+  "walletDeposit": "إيداع",
+  "depositTitle": "إيداع في المحفظة",
+  "depositMethodLabel": "طريقة الإيداع",
+  "depositMethodInstapay": "إنستاباي",
+  "depositMethodBank": "تحويل بنكي",
+  "depositTransferTo": "حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال",
+  "depositRemainingToday": "المتاح للإيداع النهاردة: {amount} (الحد اليومي مشترك مع إيصالات الدفع)",
+  "@depositRemainingToday": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositOverLimit": "المبلغ أكبر من المتاح للإيداع النهاردة ({amount})",
+  "@depositOverLimit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositNoMethods": "مفيش طرق إيداع متاحة دلوقتي",
+  "depositSubmit": "إرسال الإيصال",
+  "depositSubmitted": "الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.",
+  "depositsList": "إيداعاتي",
+  "noDeposits": "لسه معملتش أي إيداع",
+  "depositPending": "قيد المراجعة",
+  "depositCredited": "اتضاف لرصيدك",
+  "depositRejected": "مرفوض",
+  "depositCancelled": "ملغي",
+  "depositRejectedReason": "السبب: {reason}",
+  "@depositRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "depositCancel": "إلغاء الإيداع",
+  "depositPendingCount": "إيداعات قيد المراجعة: {count}",
+  "@depositPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -22,6 +22,7 @@ String apiErrorMessage(BuildContext context, Object error) {
     ApiErrorCode.stepUpRequired => t.errorStepUpRequired,
     ApiErrorCode.identityRequired => t.errorIdentityRequired,
     ApiErrorCode.sellerRequired => t.errorSellerRequired,
+    ApiErrorCode.featureDisabled => t.errorFeatureDisabled,
     ApiErrorCode.idempotencyKeyRequired ||
     ApiErrorCode.idempotencyKeyReused ||
     ApiErrorCode.idempotencyInProgress => t.errorIdempotency,

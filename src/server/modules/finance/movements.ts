@@ -4,7 +4,7 @@ import { hasPermission, requirePermission, requireStepUp, type Actor, requireAny
 import type { Permission } from '@/server/rbac/permissions';
 import { conflict, forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
-import { financialMovementRequests, users, type MovementKind } from '@/server/db/schema';
+import { financialMovementRequests, users, walletTopups, type MovementKind } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
 
 /**
@@ -31,6 +31,7 @@ export const MOVEMENT_LABELS: Record<MovementKind, string> = {
   WITHDRAWAL_RETURN: 'تسجيل ارتداد تحويل',
   COD_REMITTANCE: 'تحصيل شركة الشحن نقدًا (دفع عند الاستلام)',
   COD_SHORTAGE_RESOLUTION: 'تسوية عجز تحصيل شركة الشحن (استرداد أو شطب)',
+  WALLET_TOPUP_CREDIT: 'إضافة إيداع لمحفظة عميل',
 };
 
 const ENTITY: Record<MovementKind, string> = {
@@ -42,6 +43,7 @@ const ENTITY: Record<MovementKind, string> = {
   WITHDRAWAL_RETURN: 'withdrawal',
   COD_REMITTANCE: 'payment',
   COD_SHORTAGE_RESOLUTION: 'cod_remittance_shortfall',
+  WALLET_TOPUP_CREDIT: 'wallet_topup',
 };
 
 export type MovementRequest = typeof financialMovementRequests.$inferSelect;
@@ -60,6 +62,14 @@ export async function requestMovement(
   // Writing a COD shortfall off turns courier money into a platform expense: BOTH people need finance.release.
   if (kind === 'COD_SHORTAGE_RESOLUTION' && input.params?.mode === 'WRITTEN_OFF') requirePermission(actor, 'finance.release');
   return db.transaction(async (tx) => {
+    if (kind === 'WALLET_TOPUP_CREDIT') {
+      // The request must be for a real, still-pending deposit and for exactly its amount (never a free-typed number).
+      const [t] = await tx.select().from(walletTopups).where(eq(walletTopups.id, input.entityId)).for('update');
+      if (!t) throw notFound('الإيداع');
+      if (t.status !== 'PENDING_REVIEW') throw invalidState('الإيداع ده اتحسم بالفعل');
+      if (t.amount !== input.amount) throw invalidState('المبلغ لا يطابق مبلغ الإيداع');
+      if (t.userId === actor.userId) throw forbidden('لا يمكنك طلب إضافة إيداع خاص بحسابك');
+    }
     const [open] = await tx
       .select()
       .from(financialMovementRequests)
@@ -110,6 +120,7 @@ export const CHECKER_PERMISSIONS: Record<MovementKind, Permission[]> = {
   WITHDRAWAL_RETURN: ['withdrawals.approve', 'withdrawals.pay'],
   COD_REMITTANCE: ['payments.verify'],
   COD_SHORTAGE_RESOLUTION: ['payments.verify'],
+  WALLET_TOPUP_CREDIT: ['payments.verify'],
 };
 
 /** Checker declines a request (nothing moves). Only someone who could be its Checker may decline it. */

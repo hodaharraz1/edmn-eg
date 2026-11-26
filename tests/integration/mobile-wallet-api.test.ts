@@ -69,7 +69,7 @@ describe('Flow G — wallet', () => {
     const t = await login(c.user.email!);
     const w = await call(walletRoute, '/wallet', { token: t });
     expect(w.status, JSON.stringify(w.body)).toBe(200);
-    expect(w.body).toMatchObject({ hasEarnings: false, topUpAvailable: false, realMoney: false, sources: [] });
+    expect(w.body).toMatchObject({ hasEarnings: false, topUp: { enabled: false, balancePiastres: 0, pending: [] }, realMoney: false, sources: [] });
     expect(w.body.balances.availablePiastres).toBe(0);
     expect(w.body.payout.blockReason).not.toBeNull();
     const a = await call(activityRoute, '/wallet/activity', { token: t });

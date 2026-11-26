@@ -29536,9 +29536,8 @@
                         "blockReason"
                       ]
                     },
-                    "topUpAvailable": {
-                      "type": "boolean",
-                      "description": "Always false: EDMN keeps no prepaid balance and has no top-up service."
+                    "topUp": {
+                      "$ref": "#/components/schemas/WalletTopUpSummary"
                     },
                     "realMoney": {
                       "type": "boolean"
@@ -29550,7 +29549,7 @@
                     "sources",
                     "items",
                     "payout",
-                    "topUpAvailable",
+                    "topUp",
                     "realMoney"
                   ]
                 }
@@ -32059,6 +32058,835 @@
         "x-idempotency": "required"
       }
     },
+    "/api/v1/wallet/topups": {
+      "get": {
+        "operationId": "listWalletTopups",
+        "summary": "My wallet deposits (newest first), where to transfer to, and today's remaining daily limit",
+        "description": "feature_disabled while wallet.topUpEnabled is off.",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "amountPiastres": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                          },
+                          "method": {
+                            "type": "string",
+                            "enum": [
+                              "BANK_TRANSFER",
+                              "INSTAPAY"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "PENDING_REVIEW",
+                              "CREDITED",
+                              "REJECTED",
+                              "CANCELLED"
+                            ]
+                          },
+                          "payerReference": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "rejectReasonAr": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "decidedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "cancellable": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountPiastres",
+                          "method",
+                          "status",
+                          "payerReference",
+                          "rejectReasonAr",
+                          "createdAt",
+                          "decidedAt",
+                          "cancellable"
+                        ]
+                      }
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "enum": [
+                              "BANK_TRANSFER",
+                              "INSTAPAY"
+                            ]
+                          },
+                          "nameAr": {
+                            "type": "string"
+                          },
+                          "nameEn": {
+                            "type": "string"
+                          },
+                          "instructionsAr": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "destinations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "details": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  }
+                                },
+                                "instructionsAr": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "isTest": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "details",
+                                "instructionsAr",
+                                "isTest"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "nameAr",
+                          "nameEn",
+                          "instructionsAr",
+                          "destinations"
+                        ]
+                      }
+                    },
+                    "balancePiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "dailyLimitPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "usedTodayPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "methods",
+                    "balancePiastres",
+                    "dailyLimitPiastres",
+                    "usedTodayPiastres"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: feature_disabled, forbidden",
+            "x-error-codes": [
+              "feature_disabled",
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: invalid_state",
+            "x-error-codes": [
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "read",
+          "perUser": [
+            300,
+            60
+          ],
+          "perInstallation": [
+            120,
+            60
+          ],
+          "perIp": [
+            1200,
+            60
+          ]
+        }
+      },
+      "post": {
+        "operationId": "createWalletTopup",
+        "summary": "Upload the transfer receipt of a deposit (queues it for two-person staff review; never credits by itself)",
+        "description": "multipart/form-data. clientKey is the idempotency key: a retry with the same key returns the first deposit with created=false. feature_disabled while wallet.topUpEnabled is off. Refused over the shared daily cap.",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20,
+                    "description": "Amount transferred in EGP as typed by the customer, e.g. \"1250.50\"."
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "BANK_TRANSFER",
+                      "INSTAPAY"
+                    ]
+                  },
+                  "payerReference": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "clientKey": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{16,100}$"
+                  },
+                  "proof": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "method",
+                  "clientKey",
+                  "proof"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "boolean"
+                    },
+                    "topup": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "amountPiastres": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                        },
+                        "method": {
+                          "type": "string",
+                          "enum": [
+                            "BANK_TRANSFER",
+                            "INSTAPAY"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING_REVIEW",
+                            "CREDITED",
+                            "REJECTED",
+                            "CANCELLED"
+                          ]
+                        },
+                        "payerReference": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "rejectReasonAr": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "decidedAt": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "cancellable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "amountPiastres",
+                        "method",
+                        "status",
+                        "payerReference",
+                        "rejectReasonAr",
+                        "createdAt",
+                        "decidedAt",
+                        "cancellable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "created",
+                    "topup"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: feature_disabled, forbidden",
+            "x-error-codes": [
+              "feature_disabled",
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: conflict, invalid_state",
+            "x-error-codes": [
+              "conflict",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: validation_failed",
+            "x-error-codes": [
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        }
+      }
+    },
+    "/api/v1/wallet/topups/{topupId}/cancel": {
+      "post": {
+        "operationId": "cancelWalletTopup",
+        "summary": "Cancel my deposit while it is pending and staff have not started reviewing it",
+        "tags": [
+          "Wallet"
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "topupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique per logical request; retries reuse it and receive the original response (header Idempotent-Replayed: true).",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "amountPiastres": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "BANK_TRANSFER",
+                        "INSTAPAY"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING_REVIEW",
+                        "CREDITED",
+                        "REJECTED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "payerReference": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "rejectReasonAr": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "decidedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "cancellable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "amountPiastres",
+                    "method",
+                    "status",
+                    "payerReference",
+                    "rejectReasonAr",
+                    "createdAt",
+                    "decidedAt",
+                    "cancellable"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Problem: idempotency_key_required",
+            "x-error-codes": [
+              "idempotency_key_required"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Problem: unauthenticated",
+            "x-error-codes": [
+              "unauthenticated"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Problem: feature_disabled, forbidden",
+            "x-error-codes": [
+              "feature_disabled",
+              "forbidden"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Problem: not_found",
+            "x-error-codes": [
+              "not_found"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Problem: idempotency_in_progress, invalid_state",
+            "x-error-codes": [
+              "idempotency_in_progress",
+              "invalid_state"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Problem: idempotency_key_reused, validation_failed",
+            "x-error-codes": [
+              "idempotency_key_reused",
+              "validation_failed"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Problem: rate_limited",
+            "x-error-codes": [
+              "rate_limited"
+            ],
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Problem: internal_error",
+            "x-error-codes": [
+              "internal_error"
+            ],
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-auth-mode": "customer",
+        "x-rate-limit": {
+          "tier": "write",
+          "perUser": [
+            60,
+            60
+          ],
+          "perInstallation": [
+            20,
+            60
+          ],
+          "perIp": [
+            300,
+            60
+          ]
+        },
+        "x-idempotency": "required"
+      }
+    },
     "/api/v1/wishlist": {
       "get": {
         "operationId": "getWishlist",
@@ -33594,6 +34422,7 @@
           "step_up_required",
           "identity_required",
           "seller_required",
+          "feature_disabled",
           "idempotency_key_required",
           "idempotency_key_reused",
           "idempotency_in_progress",
@@ -34493,6 +35322,7 @@
               "step_up_required",
               "identity_required",
               "seller_required",
+              "feature_disabled",
               "idempotency_key_required",
               "idempotency_key_reused",
               "idempotency_in_progress",
@@ -37238,6 +38068,76 @@
           "accessTokenExpiresAt",
           "refreshToken",
           "sessionExpiresAt"
+        ]
+      },
+      "WalletTopUpSummary": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "wallet.topUpEnabled. false = hide every deposit control; the top-up endpoints answer feature_disabled."
+          },
+          "balancePiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "pending": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "amountPiastres": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "BANK_TRANSFER",
+                    "INSTAPAY"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "amountPiastres",
+                "method",
+                "createdAt"
+              ]
+            }
+          },
+          "dailyLimitPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float."
+          },
+          "usedTodayPiastres": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Deposits plus order/deal receipts counted today (Africa/Cairo) against the one shared daily cap."
+          }
+        },
+        "required": [
+          "enabled",
+          "balancePiastres",
+          "pending",
+          "dailyLimitPiastres",
+          "usedTodayPiastres"
         ]
       },
       "Wishlist": {

@@ -105,6 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/reviews/new', builder: (c, s) => WriteReviewScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
       GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
       GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/wallet/deposit', builder: (c, s) => const WalletDepositScreen()),
       GoRoute(path: '/wallet/payout', builder: (c, s) => const AccountPayoutScreen()),
       GoRoute(path: '/wallet/accounts', builder: (c, s) => const ReceivingAccountsScreen()),
       GoRoute(path: '/seller/statement', builder: (c, s) => const SellerStatementScreen()),

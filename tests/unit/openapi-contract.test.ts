@@ -133,6 +133,9 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...CUSTOMER_MESSAGE_WRITES,
       ...STORE_MESSAGE_WRITES,
       ...WALLET_WRITES,
+      // PKG-WALLET-01: uploading a deposit receipt only QUEUES it for two-person staff review (and is refused while
+      // wallet.topUpEnabled is off); cancelling a pending deposit moves nothing. Crediting stays in the admin console.
+      'createWalletTopup', 'cancelWalletTopup',
       ...BUYER_POSTPURCHASE_WRITES,
       ...STORE_POSTPURCHASE_WRITES,
       ...NOTIFICATION_WRITES,

@@ -1618,7 +1618,7 @@ class Problem {
 
   final int status;
 
-  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
+  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, feature_disabled, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
   final String code;
 
   final String? detail;

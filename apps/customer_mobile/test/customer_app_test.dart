@@ -251,6 +251,40 @@ class FakeMobileApi extends MobileApi {
 
   // Wallet
   String? walletBlock;
+  // ── PKG-WALLET-01 phase 1: deposit (wallet.topUpEnabled) ──
+  bool topUpEnabled = false;
+  final topupKeys = <String>[];
+  final topupAmounts = <String>[];
+  final cancelledTopups = <String>[];
+  List<Map<String, dynamic>> topupItems = [
+    {'id': 'tp-pending', 'amountPiastres': 50000, 'method': 'INSTAPAY', 'status': 'PENDING_REVIEW', 'payerReference': null, 'rejectReasonAr': null, 'createdAt': '2030-01-01T10:00:00Z', 'decidedAt': null, 'cancellable': true},
+    {'id': 'tp-credited', 'amountPiastres': 120000, 'method': 'BANK_TRANSFER', 'status': 'CREDITED', 'payerReference': 'R1', 'rejectReasonAr': null, 'createdAt': '2030-01-01T09:00:00Z', 'decidedAt': '2030-01-01T09:30:00Z', 'cancellable': false},
+    {'id': 'tp-rejected', 'amountPiastres': 70000, 'method': 'INSTAPAY', 'status': 'REJECTED', 'payerReference': null, 'rejectReasonAr': 'الإيصال غير واضح', 'createdAt': '2030-01-01T08:00:00Z', 'decidedAt': '2030-01-01T08:30:00Z', 'cancellable': false},
+    {'id': 'tp-cancelled', 'amountPiastres': 10000, 'method': 'INSTAPAY', 'status': 'CANCELLED', 'payerReference': null, 'rejectReasonAr': null, 'createdAt': '2030-01-01T07:00:00Z', 'decidedAt': '2030-01-01T07:10:00Z', 'cancellable': false},
+  ];
+  @override
+  Future<ListWalletTopupsResponse> walletTopups() async => ListWalletTopupsResponse.fromJson({
+        'items': topupItems,
+        'methods': [
+          {'code': 'INSTAPAY', 'nameAr': 'إنستاباي', 'nameEn': 'InstaPay', 'instructionsAr': null, 'destinations': [{'label': 'حساب أضمن', 'details': {'instapayAddress': 'edmn@instapay'}, 'instructionsAr': null, 'isTest': true}]},
+          {'code': 'BANK_TRANSFER', 'nameAr': 'تحويل بنكي', 'nameEn': 'Bank transfer', 'instructionsAr': null, 'destinations': [{'label': 'بنك مصر', 'details': {'bankName': 'بنك مصر', 'accountNumber': '123456'}, 'instructionsAr': null, 'isTest': true}]},
+        ],
+        'balancePiastres': 120000, 'dailyLimitPiastres': 25000000, 'usedTodayPiastres': 24900000,
+      });
+  @override
+  Future<CreateWalletTopupResponse> createWalletTopup({required Uint8List bytes, required String fileName, required String amount, required String method, String? payerReference, required String clientKey}) async {
+    topupKeys.add(clientKey);
+    topupAmounts.add('$method:$amount');
+    final t = {'id': 'tp-new', 'amountPiastres': 5000, 'method': method, 'status': 'PENDING_REVIEW', 'payerReference': payerReference, 'rejectReasonAr': null, 'createdAt': '2030-01-02T10:00:00Z', 'decidedAt': null, 'cancellable': true};
+    topupItems = [t, ...topupItems];
+    return CreateWalletTopupResponse.fromJson({'created': true, 'topup': t});
+  }
+  @override
+  Future<CancelWalletTopupResponse> cancelWalletTopup(String id, {required String idempotencyKey}) async {
+    cancelledTopups.add(id);
+    topupItems = [for (final x in topupItems) x['id'] == id ? {...x, 'status': 'CANCELLED', 'cancellable': false} : x];
+    return CancelWalletTopupResponse.fromJson(topupItems.firstWhere((x) => x['id'] == id));
+  }
   int requestFailures = 0;
   final requestKeys = <String>[];
   @override
@@ -268,7 +302,12 @@ class FakeMobileApi extends MobileApi {
         'destinations': [{'key': 'STORE_PAYOUT_METHOD', 'label': 'إنستاباي ••••ab', 'scope': 'STORE_AND_DEALS'}],
         'minimumPiastres': 10000, 'blockReason': walletBlock,
       },
-      'topUpAvailable': false, 'realMoney': false,
+      'topUp': {
+        'enabled': topUpEnabled, 'balancePiastres': topUpEnabled ? 120000 : 0,
+        'pending': topUpEnabled ? [{'id': 'tp-pending', 'amountPiastres': 50000, 'method': 'INSTAPAY', 'createdAt': '2030-01-01T10:00:00Z'}] : <Map<String, dynamic>>[],
+        'dailyLimitPiastres': 25000000, 'usedTodayPiastres': 24900000,
+      },
+      'realMoney': false,
     });
   }
   @override
@@ -1224,6 +1263,80 @@ void main() {
     await _reveal(t, find.byKey(const Key('balance-breakdown')));
     expect(find.text('300 ج.م'), findsWidgets); // held, listed apart from available
     await _reveal(t, find.byKey(const Key('no-topup')));
+  });
+
+  testWidgets('wallet deposit: button and balance card are hidden while the server says topUp.enabled is false', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/wallet');
+    expect(find.byKey(const Key('wallet-deposit')), findsNothing);
+    expect(find.byKey(const Key('wallet-topup-card')), findsNothing);
+    expect(find.text('إيداع'), findsNothing);
+    expect(find.byKey(const Key('no-topup')), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit: when enabled the wallet shows رصيد المحفظة, pending count and the إيداع button that opens the form', (t) async {
+    await _start(t, FakeMobileApi()..topUpEnabled = true, signedIn: true);
+    await _go(t, '/wallet');
+    expect(find.byKey(const Key('wallet-topup-card')), findsOneWidget);
+    expect(find.text('رصيد المحفظة'), findsWidgets);
+    expect(find.descendant(of: find.byKey(const Key('wallet-topup-card')), matching: find.text('1,200 ج.م')), findsOneWidget);
+    expect(find.byKey(const Key('no-topup')), findsNothing);
+    await t.tap(find.byKey(const Key('wallet-deposit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('deposit-submit')), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit form: validates amount, receipt and the remaining daily limit; a valid submit is queued for review, never credited', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    // remaining today = 250,000 − 249,000 = 1,000 EGP is shown
+    expect(find.byKey(const Key('deposit-remaining')), findsOneWidget);
+    expect(find.textContaining('1,000 ج.م'), findsWidgets);
+    // EDMN's account details with a copy button for the selected method
+    expect(find.text('حساب أضمن'), findsOneWidget);
+    expect(find.byKey(const Key('copy-instapayAddress')), findsOneWidget);
+    // nothing sent with an empty form / no receipt
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, isEmpty);
+    // over the remaining daily limit is refused client-side
+    await t.tap(find.byKey(const Key('upload-field')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('deposit-amount')), '1500');
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, isEmpty);
+    expect(find.textContaining('أكبر من المتاح'), findsOneWidget);
+    // a valid amount goes through once
+    await t.enterText(find.byKey(const Key('deposit-amount')), '50');
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, hasLength(1));
+    expect(api.topupAmounts.single, 'INSTAPAY:50');
+    expect(find.byKey(const Key('deposit-submitted')), findsOneWidget);
+    expect(find.text('اتضاف لرصيدك'), findsOneWidget); // only the already-credited one; the new one is pending
+    expect(find.byKey(const Key('deposit-tp-new')), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit list: every status has its own chip, the rejection reason is shown, and only pending can be cancelled', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    await _reveal(t, find.byKey(const Key('deposit-tp-cancelled')));
+    expect(find.text('قيد المراجعة'), findsOneWidget);
+    expect(find.text('اتضاف لرصيدك'), findsOneWidget);
+    expect(find.text('مرفوض'), findsOneWidget);
+    expect(find.text('ملغي'), findsOneWidget);
+    expect(find.textContaining('الإيصال غير واضح'), findsOneWidget);
+    expect(find.byKey(const Key('deposit-cancel-tp-pending')), findsOneWidget);
+    expect(find.byKey(const Key('deposit-cancel-tp-credited')), findsNothing);
+    expect(find.byKey(const Key('deposit-cancel-tp-rejected')), findsNothing);
+    await t.tap(find.byKey(const Key('deposit-cancel-tp-pending')));
+    await t.pumpAndSettle();
+    expect(api.cancelledTopups, ['tp-pending']);
+    expect(find.byKey(const Key('deposit-cancel-tp-pending')), findsNothing);
+    expect(find.text('ملغي'), findsNWidgets(2));
   });
 
   testWidgets('wallet: a blocked payout says why (identity) and offers no request button', (t) async {

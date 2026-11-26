@@ -7165,4 +7165,136 @@ EdmnLocalizations lookupEdmnLocalizations(Locale locale) {
     'on GitHub with a reproducible sample app and the gen-l10n configuration '
     'that was used.',
   );
+
+  /// No description provided for @errorFeatureDisabled.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخاصية دي مش متاحة دلوقتي'**
+  String get errorFeatureDisabled;
+
+  /// No description provided for @walletBalanceLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رصيد المحفظة'**
+  String get walletBalanceLabel;
+
+  /// No description provided for @walletDeposit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداع'**
+  String get walletDeposit;
+
+  /// No description provided for @depositTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداع في المحفظة'**
+  String get depositTitle;
+
+  /// No description provided for @depositMethodLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة الإيداع'**
+  String get depositMethodLabel;
+
+  /// No description provided for @depositMethodInstapay.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنستاباي'**
+  String get depositMethodInstapay;
+
+  /// No description provided for @depositMethodBank.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل بنكي'**
+  String get depositMethodBank;
+
+  /// No description provided for @depositTransferTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال'**
+  String get depositTransferTo;
+
+  /// No description provided for @depositRemainingToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتاح للإيداع النهاردة: {amount} (الحد اليومي مشترك مع إيصالات الدفع)'**
+  String depositRemainingToday(String amount);
+
+  /// No description provided for @depositOverLimit.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ أكبر من المتاح للإيداع النهاردة ({amount})'**
+  String depositOverLimit(String amount);
+
+  /// No description provided for @depositNoMethods.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طرق إيداع متاحة دلوقتي'**
+  String get depositNoMethods;
+
+  /// No description provided for @depositSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الإيصال'**
+  String get depositSubmit;
+
+  /// No description provided for @depositSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.'**
+  String get depositSubmitted;
+
+  /// No description provided for @depositsList.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداعاتي'**
+  String get depositsList;
+
+  /// No description provided for @noDeposits.
+  ///
+  /// In ar, this message translates to:
+  /// **'لسه معملتش أي إيداع'**
+  String get noDeposits;
+
+  /// No description provided for @depositPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get depositPending;
+
+  /// No description provided for @depositCredited.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتضاف لرصيدك'**
+  String get depositCredited;
+
+  /// No description provided for @depositRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get depositRejected;
+
+  /// No description provided for @depositCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملغي'**
+  String get depositCancelled;
+
+  /// No description provided for @depositRejectedReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب: {reason}'**
+  String depositRejectedReason(String reason);
+
+  /// No description provided for @depositCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الإيداع'**
+  String get depositCancel;
+
+  /// No description provided for @depositPendingCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداعات قيد المراجعة: {count}'**
+  String depositPendingCount(String count);
 }

@@ -26,6 +26,7 @@ export const ACTION_ENTRY_TYPES: Record<FinancialAction, string[]> = {
   REFUND_REVOCATION: ['REFUND_REVERSAL'],
   COD_REMITTANCE: ['COD_REMITTANCE'],
   COD_SHORTAGE_RESOLUTION: ['COD_SHORTAGE_RESOLUTION'],
+  WALLET_TOPUP_CREDIT: ['WALLET_TOPUP_CREDIT'],
 };
 
 /**
@@ -54,6 +55,7 @@ export const MOVEMENT_ACTIONS: readonly FinancialAction[] = [
   'DEAL_PAYOUT',
   'COD_REMITTANCE',
   'COD_SHORTAGE_RESOLUTION',
+  'WALLET_TOPUP_CREDIT',
 ];
 
 export interface ApprovalRequest {

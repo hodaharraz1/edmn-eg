@@ -17,6 +17,7 @@ abstract final class MobileApiPaths {
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
   static const cancelUnpaidOrder = (method: 'POST', path: '/api/v1/orders/{orderId}/cancel');
+  static const cancelWalletTopup = (method: 'POST', path: '/api/v1/wallet/topups/{topupId}/cancel');
   static const changePassword = (method: 'POST', path: '/api/v1/me/password');
   static const claimDealInvitation = (method: 'POST', path: '/api/v1/deal-invitations/claim');
   static const confirmDealReceipt = (method: 'POST', path: '/api/v1/deals/{dealId}/confirm-receipt');
@@ -28,6 +29,7 @@ abstract final class MobileApiPaths {
   static const createReturn = (method: 'POST', path: '/api/v1/returns');
   static const createSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests');
   static const createSellerProduct = (method: 'POST', path: '/api/v1/seller/products');
+  static const createWalletTopup = (method: 'POST', path: '/api/v1/wallet/topups');
   static const declineDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/decline');
   static const deleteAddress = (method: 'DELETE', path: '/api/v1/me/addresses/{addressId}');
   static const deleteMyPushToken = (method: 'DELETE', path: '/api/v1/me/devices/push-token');
@@ -99,6 +101,7 @@ abstract final class MobileApiPaths {
   static const listStoreReturns = (method: 'GET', path: '/api/v1/seller/returns');
   static const listSupportTickets = (method: 'GET', path: '/api/v1/support/tickets');
   static const listWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity');
+  static const listWalletTopups = (method: 'GET', path: '/api/v1/wallet/topups');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
@@ -505,6 +508,35 @@ class CancelSellerPayoutRequestResponseItemsItem {
   final bool cancellable;
 
   Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'status': status, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'cancellable': cancellable};
+}
+
+class CancelWalletTopupResponse {
+  const CancelWalletTopupResponse({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory CancelWalletTopupResponse.fromJson(Map<String, dynamic> json) => CancelWalletTopupResponse(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
 }
 
 class Cart {
@@ -942,6 +974,47 @@ class CreateSellerProductRequest {
   final String condition;
 
   Map<String, dynamic> toJson() => {'categoryId': categoryId, 'titleAr': titleAr, 'condition': condition};
+}
+
+class CreateWalletTopupResponse {
+  const CreateWalletTopupResponse({required this.created, required this.topup});
+
+  factory CreateWalletTopupResponse.fromJson(Map<String, dynamic> json) => CreateWalletTopupResponse(created: json['created'] as bool, topup: CreateWalletTopupResponseTopup.fromJson(json['topup'] as Map<String, dynamic>));
+
+  final bool created;
+
+  final CreateWalletTopupResponseTopup topup;
+
+  Map<String, dynamic> toJson() => {'created': created, 'topup': topup.toJson()};
+}
+
+class CreateWalletTopupResponseTopup {
+  const CreateWalletTopupResponseTopup({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory CreateWalletTopupResponseTopup.fromJson(Map<String, dynamic> json) => CreateWalletTopupResponseTopup(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
 }
 
 class DeclineDealInvitationRequest {
@@ -2105,9 +2178,9 @@ class GetWalletActivityResponseLink {
 }
 
 class GetWalletResponse {
-  const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUpAvailable, required this.realMoney});
+  const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUp, required this.realMoney});
 
-  factory GetWalletResponse.fromJson(Map<String, dynamic> json) => GetWalletResponse(hasEarnings: json['hasEarnings'] as bool, balances: GetWalletResponseBalances.fromJson(json['balances'] as Map<String, dynamic>), sources: (json['sources'] as List).map((e) => GetWalletResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetWalletResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), payout: GetWalletResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), topUpAvailable: json['topUpAvailable'] as bool, realMoney: json['realMoney'] as bool);
+  factory GetWalletResponse.fromJson(Map<String, dynamic> json) => GetWalletResponse(hasEarnings: json['hasEarnings'] as bool, balances: GetWalletResponseBalances.fromJson(json['balances'] as Map<String, dynamic>), sources: (json['sources'] as List).map((e) => GetWalletResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetWalletResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), payout: GetWalletResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), topUp: WalletTopUpSummary.fromJson(json['topUp'] as Map<String, dynamic>), realMoney: json['realMoney'] as bool);
 
   final bool hasEarnings;
 
@@ -2119,12 +2192,11 @@ class GetWalletResponse {
 
   final GetWalletResponsePayout payout;
 
-  /// Always false: EDMN keeps no prepaid balance and has no top-up service.
-  final bool topUpAvailable;
+  final WalletTopUpSummary topUp;
 
   final bool realMoney;
 
-  Map<String, dynamic> toJson() => {'hasEarnings': hasEarnings, 'balances': balances.toJson(), 'sources': sources.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'payout': payout.toJson(), 'topUpAvailable': topUpAvailable, 'realMoney': realMoney};
+  Map<String, dynamic> toJson() => {'hasEarnings': hasEarnings, 'balances': balances.toJson(), 'sources': sources.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'payout': payout.toJson(), 'topUp': topUp.toJson(), 'realMoney': realMoney};
 }
 
 class GetWalletResponseBalances {
@@ -2968,6 +3040,91 @@ class ListWalletActivityResponseItemsItemLink {
   Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
 }
 
+class ListWalletTopupsResponse {
+  const ListWalletTopupsResponse({required this.items, required this.methods, required this.balancePiastres, required this.dailyLimitPiastres, required this.usedTodayPiastres});
+
+  factory ListWalletTopupsResponse.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponse(items: (json['items'] as List).map((e) => ListWalletTopupsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), methods: (json['methods'] as List).map((e) => ListWalletTopupsResponseMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), balancePiastres: (json['balancePiastres'] as num).toInt(), dailyLimitPiastres: (json['dailyLimitPiastres'] as num).toInt(), usedTodayPiastres: (json['usedTodayPiastres'] as num).toInt());
+
+  final List<ListWalletTopupsResponseItemsItem> items;
+
+  final List<ListWalletTopupsResponseMethodsItem> methods;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int balancePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int dailyLimitPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int usedTodayPiastres;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'methods': methods.map((e) => e.toJson()).toList(), 'balancePiastres': balancePiastres, 'dailyLimitPiastres': dailyLimitPiastres, 'usedTodayPiastres': usedTodayPiastres};
+}
+
+class ListWalletTopupsResponseItemsItem {
+  const ListWalletTopupsResponseItemsItem({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory ListWalletTopupsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseItemsItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
+}
+
+class ListWalletTopupsResponseMethodsItem {
+  const ListWalletTopupsResponseMethodsItem({required this.code, required this.nameAr, required this.nameEn, required this.instructionsAr, required this.destinations});
+
+  factory ListWalletTopupsResponseMethodsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?, destinations: (json['destinations'] as List).map((e) => ListWalletTopupsResponseMethodsItemDestinationsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  final String code;
+
+  final String nameAr;
+
+  final String nameEn;
+
+  final String? instructionsAr;
+
+  final List<ListWalletTopupsResponseMethodsItemDestinationsItem> destinations;
+
+  Map<String, dynamic> toJson() => {'code': code, 'nameAr': nameAr, 'nameEn': nameEn, 'instructionsAr': instructionsAr, 'destinations': destinations.map((e) => e.toJson()).toList()};
+}
+
+class ListWalletTopupsResponseMethodsItemDestinationsItem {
+  const ListWalletTopupsResponseMethodsItemDestinationsItem({required this.label, required this.details, required this.instructionsAr, required this.isTest});
+
+  factory ListWalletTopupsResponseMethodsItemDestinationsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseMethodsItemDestinationsItem(label: json['label'] as String, details: (json['details'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e as String)), instructionsAr: json['instructionsAr'] as String?, isTest: json['isTest'] as bool);
+
+  final String label;
+
+  final Map<String, String> details;
+
+  final String? instructionsAr;
+
+  final bool isTest;
+
+  Map<String, dynamic> toJson() => {'label': label, 'details': details, 'instructionsAr': instructionsAr, 'isTest': isTest};
+}
+
 class LoginRequest {
   const LoginRequest({required this.identifier, required this.password, required this.device});
 
@@ -3605,7 +3762,7 @@ class Problem {
 
   final int status;
 
-  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
+  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, feature_disabled, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
   final String code;
 
   final String? detail;
@@ -5835,6 +5992,46 @@ class VerifyDealDeliveryCodeRequest {
   final String code;
 
   Map<String, dynamic> toJson() => {'code': code};
+}
+
+class WalletTopUpSummary {
+  const WalletTopUpSummary({required this.enabled, required this.balancePiastres, required this.pending, required this.dailyLimitPiastres, required this.usedTodayPiastres});
+
+  factory WalletTopUpSummary.fromJson(Map<String, dynamic> json) => WalletTopUpSummary(enabled: json['enabled'] as bool, balancePiastres: (json['balancePiastres'] as num).toInt(), pending: (json['pending'] as List).map((e) => WalletTopUpSummaryPendingItem.fromJson(e as Map<String, dynamic>)).toList(), dailyLimitPiastres: (json['dailyLimitPiastres'] as num).toInt(), usedTodayPiastres: (json['usedTodayPiastres'] as num).toInt());
+
+  /// wallet.topUpEnabled. false = hide every deposit control; the top-up endpoints answer feature_disabled.
+  final bool enabled;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int balancePiastres;
+
+  final List<WalletTopUpSummaryPendingItem> pending;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int dailyLimitPiastres;
+
+  /// Deposits plus order/deal receipts counted today (Africa/Cairo) against the one shared daily cap.
+  final int usedTodayPiastres;
+
+  Map<String, dynamic> toJson() => {'enabled': enabled, 'balancePiastres': balancePiastres, 'pending': pending.map((e) => e.toJson()).toList(), 'dailyLimitPiastres': dailyLimitPiastres, 'usedTodayPiastres': usedTodayPiastres};
+}
+
+class WalletTopUpSummaryPendingItem {
+  const WalletTopUpSummaryPendingItem({required this.id, required this.amountPiastres, required this.method, required this.createdAt});
+
+  factory WalletTopUpSummaryPendingItem.fromJson(Map<String, dynamic> json) => WalletTopUpSummaryPendingItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY (kept as String for forward compatibility).
+  final String method;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'createdAt': createdAt};
 }
 
 class Wishlist {

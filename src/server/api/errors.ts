@@ -20,6 +20,7 @@ export const API_ERROR_CODES = [
   'step_up_required',
   'identity_required',
   'seller_required',
+  'feature_disabled',
   'idempotency_key_required',
   'idempotency_key_reused',
   'idempotency_in_progress',
@@ -41,6 +42,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   step_up_required: 401,
   identity_required: 403,
   seller_required: 403,
+  feature_disabled: 403,
   idempotency_key_required: 400,
   idempotency_key_reused: 422,
   idempotency_in_progress: 409,
@@ -60,6 +62,7 @@ const FROM_DOMAIN: Record<DomainErrorCode, ApiErrorCode> = {
   MFA_REQUIRED: 'mfa_required',
   STEP_UP_REQUIRED: 'step_up_required',
   IDENTITY_REQUIRED: 'identity_required',
+  FEATURE_DISABLED: 'feature_disabled',
 };
 
 export const problemSchema = z
