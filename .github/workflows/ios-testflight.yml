@@ -76,12 +76,14 @@ jobs:
             --dart-define=EDMN_API_BASE_URL=https://edmn-staging.vercel.app \
             --dart-define=EDMN_APP_VERSION=1.0.0-${GITHUB_SHA::7}
       - name: Archive (automatic signing with the API key)
+        # Sign with a cloud-managed Apple Distribution certificate: a development certificate would need a private key
+        # that exists only on the machine that created it ("Revoke certificate ... private key is not installed").
         working-directory: apps/${{ matrix.app }}/ios
         run: |
           set -o pipefail
           xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Distribution" \
             -allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" \
             -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
             archive | tail -n 40
