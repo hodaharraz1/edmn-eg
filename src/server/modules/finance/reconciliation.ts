@@ -120,10 +120,17 @@ export async function confirmMatch(actor: Actor, externalId: string, target: { t
     if (t.state === 'MATCHED') throw conflict('الحركة دي متطابقة بالفعل');
     const taken = await tx.execute(sql`select 1 from external_transactions where state = 'MATCHED' and matched_type = ${target.type} and matched_id = ${target.id} limit 1`);
     if (taken.rows.length) throw conflict('السجل ده متطابق مع حركة تانية بالفعل');
-    const table = { payment: 'payments', withdrawal: 'withdrawal_requests', refund: 'refunds', deal_payout: 'deal_payouts' }[target.type];
-    if (!table) throw validation('نوع غير صالح');
-    const amountCol = target.type === 'payment' ? sql.raw('coalesce(confirmed_amount, amount_due)') : sql.raw('amount');
-    const rec = await tx.execute<{ amount: string }>(sql`select ${amountCol}::text amount from ${sql.raw(table)} where id = ${target.id}`);
+    // L7: a fixed, per-type statement — the table and column are chosen by the closed MatchType union, never
+    // interpolated into SQL text. An unknown type is refused before any query runs.
+    const recordAmount: Record<MatchType, (id: string) => ReturnType<typeof sql>> = {
+      payment: (id) => sql`select coalesce(confirmed_amount, amount_due)::text amount from payments where id = ${id}`,
+      withdrawal: (id) => sql`select amount::text amount from withdrawal_requests where id = ${id}`,
+      refund: (id) => sql`select amount::text amount from refunds where id = ${id}`,
+      deal_payout: (id) => sql`select amount::text amount from deal_payouts where id = ${id}`,
+    };
+    const readAmount = recordAmount[target.type];
+    if (!readAmount) throw validation('نوع غير صالح');
+    const rec = await tx.execute<{ amount: string }>(readAmount(target.id));
     if (!rec.rows.length) throw notFound('السجل');
     const expected = Number(rec.rows[0].amount);
     const journal = await tx.execute<{ id: string }>(sql`select id from journal_entries where source_id = ${target.id} or idempotency_key like ${'%' + target.id + '%'} order by created_at desc limit 1`);

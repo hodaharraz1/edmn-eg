@@ -53,6 +53,27 @@ export async function readiness(): Promise<{ ready: boolean; checks: Record<stri
   return { ready, checks };
 }
 
+/**
+ * SEC-04 L9: public readiness is cached for a few seconds. A public endpoint that opens a database query on
+ * every request is an unauthenticated amplifier; the probe only needs to be as fresh as the load balancer's
+ * own interval. `cached` tells the caller (and the route) whether this answer was served from memory.
+ */
+const READINESS_TTL_MS = 5_000;
+let readinessMemo: { at: number; value: { ready: boolean; checks: Record<string, Check> } } | null = null;
+
+export async function readinessCached(): Promise<{ ready: boolean; checks: Record<string, Check>; cached: boolean }> {
+  const now = Date.now();
+  if (readinessMemo && now - readinessMemo.at < READINESS_TTL_MS) return { ...readinessMemo.value, cached: true };
+  const value = await readiness();
+  readinessMemo = { at: Date.now(), value };
+  return { ...value, cached: false };
+}
+
+/** Test seam: forget the memoised readiness answer. */
+export function resetReadinessCache() {
+  readinessMemo = null;
+}
+
 export async function deepHealth() {
   const { SCHEDULE } = await import('@/server/jobs/worker');
   const { providerHealthReport } = await import('./provider-health');

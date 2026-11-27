@@ -64,6 +64,26 @@ export async function fileFromForm(value: FormDataEntryValue | null): Promise<{ 
  * Images are re-encoded with sharp (auto-orient, metadata/EXIF/GPS stripped), which also
  * neutralizes polyglot payloads. PDFs are accepted only for document purposes.
  */
+/**
+ * SEC-04 L10: a basic PDF content gate that runs before the bytes are stored.
+ * It rejects a file that is not a PDF, a truncated PDF, and a PDF whose object names include active content
+ * (JavaScript, launch actions, auto-actions, embedded files, RichMedia, XFA). It is a content sanity gate that
+ * fails closed — NOT a malware scanner: MALWARE_SCANNER_URL remains the real control for private documents.
+ */
+const PDF_ACTIVE_NAMES = ['JavaScript', 'JS', 'Launch', 'EmbeddedFile', 'OpenAction', 'AA', 'RichMedia', 'XFA'] as const;
+export function pdfContentProblems(data: Buffer): string[] {
+  const problems: string[] = [];
+  if (data.length < 8) return ['not-a-pdf'];
+  if (!data.subarray(0, 1024).toString('latin1').includes('%PDF-')) problems.push('not-a-pdf');
+  if (!data.subarray(Math.max(0, data.length - 2048)).toString('latin1').includes('%%EOF')) problems.push('truncated');
+  const text = data.toString('latin1');
+  for (const name of PDF_ACTIVE_NAMES) {
+    // A PDF name object: '/' + name, delimited by a name terminator (never part of a longer word).
+    if (new RegExp(`/${name}(?![A-Za-z0-9#])`).test(text)) problems.push(`active-content:${name}`);
+  }
+  return problems;
+}
+
 export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput): Promise<StoredFile> {
   const userId = requireUser(actor);
   // Per-user upload budget (F-13): catalog images are numerous by nature, every other purpose is occasional.
@@ -96,6 +116,11 @@ export async function storeUpload(tx: DbOrTx, actor: Actor, input: UploadInput):
   const variantKeys: string[] = [];
 
   if (kind === 'pdf') {
+    const pdfProblems = pdfContentProblems(input.data);
+    if (pdfProblems.length) {
+      logger.warn('upload.pdf_rejected', { purpose: input.purpose, problems: pdfProblems });
+      throw validation('ملف الـPDF فيه محتوى غير مسموح. ارفع نسخة PDF عادية من غير JavaScript أو ملفات مدمجة أو أوامر تلقائية');
+    }
     body = input.data;
     ext = 'pdf';
     mime = 'application/pdf';

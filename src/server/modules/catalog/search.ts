@@ -196,7 +196,7 @@ export async function filterableAttributes(categoryId: string, query: SearchQuer
     join product_attribute_values pav on pav.attribute_id = a.id
     cross join lateral unnest(pav.values) as v(value)
     left join attribute_options ao on ao.attribute_id = a.id and ao.value = v.value
-    where ca.category_id = any(${sql.raw(`'{${cat.path.join(',')}}'::uuid[]`)}) and ca.is_filterable
+    where ca.category_id = any(${cat.path}::uuid[]) and ca.is_filterable
       and ${inResults}
       ${otherAttrs.length ? sql`and ${sql.join(otherAttrs, sql` and `)}` : sql``}
     group by a.code, a.name_ar, a.type, v.value, ao.label_ar, ao.sort_order

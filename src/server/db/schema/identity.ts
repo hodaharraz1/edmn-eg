@@ -189,6 +189,41 @@ export const userRoles = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.roleCode] })],
 );
 
+/**
+ * SEC-04 M1: a PRIVILEGED role (SUPER_ADMIN, or any role carrying `roles.manage` or a money permission) is granted by
+ * two different super admins. One requests (Maker), a DIFFERENT one approves (Checker) and executes the grant; the
+ * row is then CONSUMED so a single approval can never be replayed. `decided_by <> requested_by` is a CHECK, and a
+ * guard trigger makes the decision final and its identity columns immutable — a code path that forgets the service
+ * rule still cannot approve itself or re-point an approval at another account.
+ */
+export const privilegedRoleRequests = pgTable(
+  'privileged_role_requests',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    targetUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    roleCode: text()
+      .notNull()
+      .references(() => roles.code, { onDelete: 'restrict' }),
+    requestedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    reason: text().notNull(),
+    status: text().notNull().default('PENDING'),
+    decidedBy: uuid().references(() => users.id),
+    decidedAt: ts(),
+    consumedAt: ts(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('privileged_role_requests_target_idx').on(t.targetUserId),
+    check('privileged_role_requests_status_chk', sql`${t.status} in ('PENDING','APPROVED','REJECTED','CONSUMED','EXPIRED')`),
+    check('privileged_role_requests_two_people_chk', sql`${t.decidedBy} is null or ${t.decidedBy} <> ${t.requestedBy}`),
+    check('privileged_role_requests_reason_len_chk', sql`char_length(${t.reason}) >= 10`),
+  ],
+);
+
 /* ───────── Reference data ───────── */
 export const governorates = pgTable('governorates', {
   id: integer().primaryKey(),

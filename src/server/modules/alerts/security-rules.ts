@@ -33,7 +33,8 @@ const at = (v: string | null) => (v ? new Date(v) : null);
 
 /** Clamp a configurable lookback so an override can never widen a scan past 7 days or below 1 hour. */
 export const clampLookback = (h: number) => Math.min(168, Math.max(1, Number(h) || 0));
-export const lookbackHours = (h: number) => sql.raw(`interval '${clampLookback(h)} hours'`);
+/** L7: bound integer parameter (clamped) instead of an interpolated interval string. */
+export const lookbackHours = (h: number) => sql`make_interval(hours => ${clampLookback(h)}::int)`;
 
 /** sha256 fingerprints — the only form in which a source identifier may appear in an alert. */
 export const redactRef = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 10);

@@ -8,7 +8,7 @@ is involved. Procedures: [`docs/runbooks/SELF_HOSTED_DEPLOYMENT.md`](../docs/run
 |---|---|
 | `compose/docker-compose.prod.yml` | `web` + `worker` (same image, tag = commit SHA). One-off `migrate` / `migrate-preflight` / `seed` / `acceptance` (profile `ops`). Optional `postgres` (`postgres-local`) and `clamd` + `scanner` (`scanner`). |
 | `compose/postgres/init/01-roles.sh` | Creates the `edmn_owner` / `edmn_app` (DML only) / `edmn_backup` (read-only) roles. UTF8, UTC. Runs only on an empty volume. |
-| `proxy/nginx/edmn.conf`, `nginx-tls.conf` | nginx template for www, apex and admin. Includes guard blocks, never captures `api.edmneg.com`, and answers the apex itself. |
+| `proxy/nginx/edmn.conf`, `nginx-tls.conf`, `proxy-common.conf` | nginx template for www, apex and admin. Includes guard blocks, never captures `api.edmneg.com`, and answers the apex itself. `nginx-tls.conf` installs as `/etc/edmn/nginx-tls.conf`; `proxy-common.conf` installs as `/etc/edmn/nginx-proxy-common.conf` (shared by the rate-limited locations, SEC-04 L1). |
 | `proxy/apache/edmn.conf` | Apache template. Standalone vhosts (A), or a cPanel userdata include (B). |
 | `systemd/edmn-{tick,backup,watch}.{service,timer}` | Scheduler watchdog (1 min), daily backup, and health watch (5 min). |
 | `scripts/deploy.sh` | `first` / `normal`: the 12-step deploy with STOP and app-image-only auto rollback. |

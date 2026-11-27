@@ -67,8 +67,8 @@ export async function saveCategory(actor: Actor, id: string | null, input: z.inp
         // Re-root every descendant's path.
         await tx.execute(sql`
           update categories set
-            path = ${sql.raw(`'{${newPath.join(',')}}'::uuid[]`)} || path[array_position(path, ${id}::uuid) + 1 :],
-            depth = cardinality(${sql.raw(`'{${newPath.join(',')}}'::uuid[]`)} || path[array_position(path, ${id}::uuid) + 1 :]) - 1
+            path = ${newPath}::uuid[] || path[array_position(path, ${id}::uuid) + 1 :],
+            depth = cardinality(${newPath}::uuid[] || path[array_position(path, ${id}::uuid) + 1 :]) - 1
           where ${id}::uuid = any(path) and id <> ${id}::uuid`);
       }
       await audit(tx, actor, { action: 'catalog.category_updated', entityType: 'category', entityId: id, oldValues: { nameAr: old.nameAr, parentId: old.parentId, isActive: old.isActive, isRestricted: old.isRestricted, isProhibited: old.isProhibited }, newValues: values });

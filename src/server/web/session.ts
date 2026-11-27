@@ -15,6 +15,22 @@ export const WEB_COOKIE = 'edmn_sid';
 export const ADMIN_COOKIE = 'edmn_admin_sid';
 export const CART_COOKIE = 'edmn_cart';
 
+/**
+ * SEC-04 L5: on any secure deployment the session and cart cookies are written with the `__Host-` prefix.
+ * Browsers refuse a `__Host-` cookie that carries a Domain, is not Secure, or has a Path other than '/', so a
+ * sibling subdomain (seller./admin.) can neither overwrite nor shadow the session cookie. Plain names stay on
+ * http for local development, and are still read during the transition so nobody is logged out by the rename.
+ */
+export function hostCookieName(base: string): string {
+  return cookieSecure() ? `__Host-${base}` : base;
+}
+
+/** Read a cookie under both its current and its pre-L5 name (one-time transition, no session loss). */
+async function readCookie(base: string): Promise<string | undefined> {
+  const jar = await cookies();
+  return jar.get(hostCookieName(base))?.value ?? jar.get(base)?.value;
+}
+
 export async function requestMeta(): Promise<RequestContext> {
   const h = await headers();
   const rid = h.get('x-request-id');
@@ -28,7 +44,7 @@ export async function requestMeta(): Promise<RequestContext> {
 
 
 export async function setSessionCookie(name: string, token: string, maxAgeHours: number) {
-  (await cookies()).set(name, token, {
+  (await cookies()).set(hostCookieName(name), token, {
     httpOnly: true,
     secure: cookieSecure(),
     sameSite: 'lax',
@@ -44,16 +60,18 @@ export async function setSessionCookie(name: string, token: string, maxAgeHours:
  */
 export async function revokePresentedSession(name: string) {
   const { logout } = await import('@/server/auth/service');
-  await logout((await cookies()).get(name)?.value);
+  await logout(await readCookie(name));
 }
 
 export async function clearCookie(name: string) {
-  (await cookies()).delete(name);
+  const jar = await cookies();
+  jar.delete(name);
+  jar.delete(hostCookieName(name));
 }
 
 /** Current customer/seller web session (cached per request). */
 export const getWebSession = cache(async () => {
-  const token = (await cookies()).get(WEB_COOKIE)?.value;
+  const token = await readCookie(WEB_COOKIE);
   const row = await resolveSession(token, 'WEB');
   if (!row) return null;
   return { user: row.user, session: row.session, token: token! };
@@ -111,7 +129,7 @@ export const getAdminSession = cache(async () => {
     const host = ((await headers()).get('host') ?? '').split(':')[0].toLowerCase();
     if (host !== (process.env.ADMIN_HOST ?? 'admin.edmneg.com').toLowerCase()) return null;
   }
-  const token = (await cookies()).get(ADMIN_COOKIE)?.value;
+  const token = await readCookie(ADMIN_COOKIE);
   const row = await resolveSession(token, 'ADMIN');
   if (!row || !row.user.isStaff) return null;
   return { user: row.user, session: row.session, token: token! };
@@ -135,11 +153,11 @@ export async function getAdminActor(): Promise<Actor | null> {
 /** Guest cart token (random, HttpOnly). Only its hash is stored server-side. */
 export async function guestCartToken(create: boolean): Promise<string | null> {
   const jar = await cookies();
-  const existing = jar.get(CART_COOKIE)?.value;
+  const existing = jar.get(hostCookieName(CART_COOKIE))?.value ?? jar.get(CART_COOKIE)?.value;
   if (existing && existing.length >= 30) return existing;
   if (!create) return null;
   const token = randomUUID() + randomUUID();
-  jar.set(CART_COOKIE, token, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: 60 * 86400 });
+  jar.set(hostCookieName(CART_COOKIE), token, { httpOnly: true, secure: cookieSecure(), sameSite: 'lax', path: '/', maxAge: 60 * 86400 });
   return token;
 }
 

@@ -75,6 +75,11 @@ export function unsafeProductionConfig(e: Env, raw: Record<string, string | unde
   if (e.SMS_DRIVER === 'http' && !e.SMS_HTTP_URL) problems.push('SMS_HTTP_URL required for http sms driver');
   if (!e.EDMN_ENVIRONMENT) problems.push('EDMN_ENVIRONMENT must be set to "staging" or "production" for a production build');
   if (e.EDMN_ENVIRONMENT && !['staging', 'production'].includes(e.EDMN_ENVIRONMENT)) problems.push(`EDMN_ENVIRONMENT=${e.EDMN_ENVIRONMENT} is not allowed for a production build (use "staging" or "production")`);
+  if (e.EDMN_ENVIRONMENT === 'production' && !raw.VERCEL && raw.TRUSTED_PROXY !== 'true') {
+    // SEC-04 M2: a self-hosted production build behind no declared proxy cannot know a client IP, so every
+    // per-IP limit collapses into one shared bucket. Refuse to boot instead of degrading silently.
+    problems.push('TRUSTED_PROXY must be "true" in a self-hosted production deployment (client IPs are otherwise unknown)');
+  }
   if (e.EDMN_ENVIRONMENT === 'production') {
     // Demo/E2E fixtures and their credentials never belong to production (fail closed at boot).
     for (const k of ['STAGING_DEMO_PASSWORD', 'STAGING_ADMIN_PASSWORD', 'STAGING_TOTP_SECRET']) if (raw[k]) problems.push(`${k} must not be set in production`);

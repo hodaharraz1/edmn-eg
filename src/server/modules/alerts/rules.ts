@@ -39,7 +39,8 @@ export interface AlertRule {
 
 const q = async <T>(conn: DbOrTx, query: ReturnType<typeof sql>) => (await conn.execute(query)).rows as T[];
 const at = (v: string | null) => (v ? new Date(v) : null);
-const hours = (h: number) => sql.raw(`interval '${Math.max(0, Number(h) || 0)} hours'`);
+/** L7: the lookback is a bound integer parameter — never a string glued into SQL. */
+const hours = (h: number) => sql`make_interval(hours => ${Math.max(0, Math.trunc(Number(h) || 0))}::int)`;
 
 type Row = { id: string; due: string | null; ref: string; uid?: string | null };
 const toCandidates = (rows: Row[], entityType: string, link: (r: Row) => string, withUser = true): AlertCandidate[] =>

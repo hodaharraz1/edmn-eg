@@ -75,8 +75,8 @@ export async function ledgerHealthBlock(conn: DbOrTx): Promise<LedgerHealthBlock
   let row: { status: unknown; fresh: unknown; future: unknown } | undefined;
   try {
     const r = await conn.execute<{ status: unknown; fresh: unknown; future: unknown }>(sql`select status,
-      checked_at > now() - ${sql.raw(`interval '${LEDGER_HEALTH_MAX_AGE_MINUTES} minutes'`)} fresh,
-      checked_at > now() + ${sql.raw(`interval '${LEDGER_HEALTH_FUTURE_SKEW_MINUTES} minutes'`)} future
+      checked_at > now() - make_interval(mins => ${LEDGER_HEALTH_MAX_AGE_MINUTES}::int) fresh,
+      checked_at > now() + make_interval(mins => ${LEDGER_HEALTH_FUTURE_SKEW_MINUTES}::int) future
       from ledger_health_checks order by checked_at desc limit 1`);
     row = r.rows[0];
   } catch {

@@ -14,9 +14,10 @@ export const updatedAt = () =>
 /** Money in integer minor units (piasters). Never floating point. */
 export const money = () => bigint({ mode: 'number' });
 
+/** Enum literals as bound parameters (L7): still validated, but nothing is pasted into SQL text. */
 export function inList(values: readonly string[]): SQL {
   for (const v of values) if (!/^[A-Z0-9_]+$/.test(v)) throw new Error(`unsafe enum literal ${v}`);
-  return sql.raw(values.map((v) => `'${v}'`).join(', '));
+  return sql.join(values.map((v) => sql`${v}`), sql`, `);
 }
 
 /** CHECK (col IN (...)) generated from the same constant arrays the state machines use. */

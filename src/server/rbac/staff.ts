@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
 import { hashPassword } from '@/server/auth/password';
 import { randomToken, sha256 } from '@/server/core/crypto';
@@ -8,7 +8,7 @@ import { requirePermission, requireStepUp, type Actor } from '@/server/core/acto
 import { forbidden, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
-import { authTokens, rolePermissions, roles, userRoles, users } from '@/server/db/schema';
+import { authTokens, privilegedRoleRequests, rolePermissions, roles, userRoles, users } from '@/server/db/schema';
 import { ALL_PERMISSIONS, type Permission } from './permissions';
 
 /**
@@ -76,7 +76,9 @@ export async function createStaffUser(
     const [r] = await tx.select().from(roles).where(eq(roles.code, input.role));
     if (!r) throw validation('دور غير صالح');
     const privileged = await isPrivilegedRole(tx, input.role);
-    if (privileged) await assertPrivilegedAllowed(tx, actor, { confirm: input.confirmPrivileged, reason: input.reason });
+    // M1: a brand-new account cannot be born privileged — an approved request has to name an existing account, so
+    // the account is created without a role and the role is granted afterwards by two different super admins.
+    if (privileged) throw validation('ما ينفعش تعمل حساب جديد بدور ذو صلاحيات عليا. اعمل الحساب من غير دور، وبعدها اطلب الدور بموافقة مدير عام تاني');
     const [u] = await tx.insert(users).values({ email, phone, fullName: input.fullName.trim(), passwordHash, isStaff: true, passwordChangedAt: new Date() }).returning();
     await tx.insert(userRoles).values({ userId: u.id, roleCode: input.role, grantedBy: actor.userId });
     const token = randomToken(32);
@@ -87,7 +89,11 @@ export async function createStaffUser(
   });
 }
 
-export async function setStaffRole(actor: Actor, op: 'grant' | 'revoke', input: { userId: string; role: string; reason?: string | null; confirmPrivileged?: boolean }) {
+export async function setStaffRole(
+  actor: Actor,
+  op: 'grant' | 'revoke',
+  input: { userId: string; role: string; reason?: string | null; confirmPrivileged?: boolean; approvalRequestId?: string | null },
+) {
   guard(actor);
   if (input.userId === actor.userId) throw validation('لا يمكنك تعديل أدوارك بنفسك');
   await db.transaction(async (tx) => {
@@ -96,7 +102,12 @@ export async function setStaffRole(actor: Actor, op: 'grant' | 'revoke', input: 
     const [r] = await tx.select().from(roles).where(eq(roles.code, input.role));
     if (!r) throw validation('دور غير صالح');
     const privileged = await isPrivilegedRole(tx, input.role);
-    if (privileged) await assertPrivilegedAllowed(tx, actor, { confirm: input.confirmPrivileged, reason: input.reason });
+    if (privileged) {
+      await assertPrivilegedAllowed(tx, actor, { confirm: input.confirmPrivileged, reason: input.reason });
+      // M1: a privileged GRANT needs an approved second person; a revocation stays with one super admin (removing
+      // privilege is never the dangerous direction).
+      if (op === 'grant') await consumeApprovedRequest(tx, actor, input);
+    }
     if (op === 'grant') await tx.insert(userRoles).values({ userId: input.userId, roleCode: input.role, grantedBy: actor.userId }).onConflictDoNothing();
     else {
       if (input.role === 'SUPER_ADMIN') await assertNotLastSuperAdmin(tx, input.userId);
@@ -147,6 +158,103 @@ export async function setRolePermissions(actor: Actor, input: { role: string; pe
     if (perms.length) await tx.insert(rolePermissions).values(perms.map((p) => ({ roleCode: input.role, permission: p })));
     await audit(tx, actor, { action: 'rbac.role_permissions_changed', entityType: 'role', entityId: input.role, oldValues: { permissions: old.map((o) => o.permission) }, newValues: { permissions: perms }, reason: input.reason });
   });
+}
+
+/* ═══════════ SEC-04 M1: two people for a privileged role ═══════════
+ * Before this change one SUPER_ADMIN could mint a second privileged account and use it as their own Checker.
+ * Now: one super admin REQUESTS (Maker), a DIFFERENT super admin APPROVES (Checker) and executes the grant in the
+ * same action. The pair is recorded, the approval is single-use, and the people behind the two accounts must be
+ * distinguishable (same phone, same mailbox or the same network in the last day is refused as one person with two
+ * accounts).
+ */
+
+/** Refuse an approval that looks like the same human behind two accounts. */
+async function assertDistinctPeople(tx: DbOrTx, requesterId: string, approverId: string) {
+  if (requesterId === approverId) throw forbidden('لازم شخص تاني يوافق: مينفعش توافق على طلب أنت اللي عملته');
+  const rows = await tx.select({ id: users.id, email: users.email, phone: users.phone }).from(users).where(inArray(users.id, [requesterId, approverId]));
+  const a = rows.find((r) => r.id === requesterId);
+  const b = rows.find((r) => r.id === approverId);
+  if (!a || !b) throw validation('حساب غير صالح');
+  if (a.phone && b.phone && a.phone === b.phone) throw forbidden('نفس رقم الموبايل على الحسابين: لازم شخصين مختلفين فعلًا');
+  if (a.email && b.email && a.email === b.email) throw forbidden('نفس البريد على الحسابين: لازم شخصين مختلفين فعلًا');
+  const localPart = (e: string | null) => (e ?? '').split('@')[0].replace(/[.+].*$/, '');
+  if (localPart(a.email) && localPart(a.email) === localPart(b.email)) throw forbidden('الحسابين بيشتركوا في نفس اسم البريد: لازم شخصين مختلفين فعلًا');
+  const shared = await tx.execute<{ n: string }>(sql`select count(*)::text n from sessions s1 join sessions s2 on s1.ip = s2.ip
+    where s1.user_id = ${requesterId} and s2.user_id = ${approverId} and s1.ip is not null
+      and s1.created_at > now() - interval '24 hours' and s2.created_at > now() - interval '24 hours'`);
+  if (Number(shared.rows[0]?.n ?? 0) > 0) throw forbidden('الحسابين دخلا من نفس عنوان الشبكة خلال آخر 24 ساعة: لازم شخصين مختلفين فعلًا');
+}
+
+/** Immediate security notice to every other active super admin (the audit row alone is not an alert). */
+async function alertSuperAdmins(tx: DbOrTx, exceptUserId: string, message: string) {
+  const rows = await tx.execute<{ email: string | null }>(sql`select u.email from user_roles ur join users u on u.id = ur.user_id
+    where ur.role_code = 'SUPER_ADMIN' and u.status = 'ACTIVE' and u.id <> ${exceptUserId}`);
+  for (const r of rows.rows) {
+    if (r.email) await sendDirect(tx, 'ACCOUNT_SECURITY', { email: r.email }, { message }, { subject: 'تنبيه أمني: تغيير صلاحيات عليا في اضمن' });
+  }
+}
+
+/** Maker step: open a request for a privileged role. Nothing is granted yet. */
+export async function requestPrivilegedRole(actor: Actor, input: { userId: string; role: string; reason: string }) {
+  guard(actor);
+  if (input.userId === actor.userId) throw validation('لا يمكنك طلب دور لنفسك');
+  const reason = (input.reason ?? '').trim();
+  if (reason.length < 10) throw validation('اكتب سبب منح الدور (10 أحرف على الأقل)');
+  return db.transaction(async (tx) => {
+    if (!(await isSuperAdmin(tx, actor.userId!))) throw forbidden('طلب الصلاحيات العليا للمدير العام فقط');
+    const [target] = await tx.select({ isStaff: users.isStaff, status: users.status }).from(users).where(eq(users.id, input.userId));
+    if (!target?.isStaff) throw validation('الأدوار الإدارية لحسابات فريق العمل فقط');
+    if (target.status !== 'ACTIVE') throw validation('الحساب مش نشط');
+    const [r] = await tx.select({ code: roles.code }).from(roles).where(eq(roles.code, input.role));
+    if (!r) throw validation('دور غير صالح');
+    if (!(await isPrivilegedRole(tx, input.role))) throw validation('الدور ده مش من الصلاحيات العليا: امنحه مباشرة من غير طلب');
+    const [req] = await tx
+      .insert(privilegedRoleRequests)
+      .values({ targetUserId: input.userId, roleCode: input.role, requestedBy: actor.userId!, reason })
+      .returning();
+    await audit(tx, actor, { action: 'rbac.privileged_role_requested', entityType: 'user', entityId: input.userId, newValues: { role: input.role, requestId: req.id }, reason });
+    await alertSuperAdmins(tx, actor.userId!, `طلب منح الدور ${input.role} لحساب في فريق العمل محتاج موافقة مدير عام تاني. السبب: ${reason}`);
+    return req;
+  });
+}
+
+/** Checker step: a DIFFERENT super admin approves or rejects. An approval is single-use (CONSUMED on execution). */
+export async function decidePrivilegedRoleRequest(actor: Actor, input: { requestId: string; approve: boolean; reason?: string | null }) {
+  guard(actor);
+  return db.transaction(async (tx) => {
+    const [req] = await tx.select().from(privilegedRoleRequests).where(eq(privilegedRoleRequests.id, input.requestId)).for('update');
+    if (!req) throw validation('الطلب غير موجود');
+    if (req.status !== 'PENDING') throw validation('الطلب ده اتحسم قبل كده');
+    if (!(await isSuperAdmin(tx, actor.userId!))) throw forbidden('الموافقة على الصلاحيات العليا للمدير العام فقط');
+    await assertDistinctPeople(tx, req.requestedBy, actor.userId!);
+    const [updated] = await tx
+      .update(privilegedRoleRequests)
+      .set({ status: input.approve ? 'APPROVED' : 'REJECTED', decidedBy: actor.userId, decidedAt: new Date() })
+      .where(eq(privilegedRoleRequests.id, req.id))
+      .returning();
+    await audit(tx, actor, {
+      action: input.approve ? 'rbac.privileged_role_approved' : 'rbac.privileged_role_rejected',
+      entityType: 'user',
+      entityId: req.targetUserId,
+      newValues: { role: req.roleCode, requestId: req.id },
+      reason: input.reason?.trim() || null,
+    });
+    await alertSuperAdmins(tx, actor.userId!, `تم ${input.approve ? 'اعتماد' : 'رفض'} طلب منح الدور ${req.roleCode}. نفّذ المنح من شاشة الأدوار لو معتمد.`);
+    return updated;
+  });
+}
+
+/** Consume an APPROVED request (single use, 24 h, different person from the requester) — or refuse the grant. */
+async function consumeApprovedRequest(tx: DbOrTx, actor: Actor, input: { userId: string; role: string; approvalRequestId?: string | null }) {
+  if (!input.approvalRequestId) {
+    throw validation('منح دور ذو صلاحيات عليا محتاج موافقة مدير عام تاني: اعمل طلب الأول ووافق عليه شخص مختلف');
+  }
+  const [req] = await tx.select().from(privilegedRoleRequests).where(eq(privilegedRoleRequests.id, input.approvalRequestId)).for('update');
+  if (!req || req.status !== 'APPROVED') throw validation('الموافقة غير موجودة أو مش معتمدة');
+  if (req.targetUserId !== input.userId || req.roleCode !== input.role) throw validation('الموافقة دي مش لنفس الحساب والدور');
+  if (req.requestedBy === actor.userId) throw forbidden('مينفعش تنفّذ طلب أنت اللي عملته: لازم شخص تاني');
+  if (!req.decidedAt || Date.now() - req.decidedAt.getTime() > 24 * 3600_000) throw validation('الموافقة قديمة (أكتر من 24 ساعة): اطلب موافقة جديدة');
+  await tx.update(privilegedRoleRequests).set({ status: 'CONSUMED', consumedAt: new Date() }).where(eq(privilegedRoleRequests.id, req.id));
 }
 
 /** Staff holding a privileged role (for screens). */
