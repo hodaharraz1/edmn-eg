@@ -33,7 +33,7 @@ $$ LANGUAGE plpgsql;--> statement-breakpoint
 -- A wallet payment is confirmed by its payer (the customer spending their own balance), with no staff review:
 -- relax the two-person CHECK for method WALLET only. Staff-confirmed payments keep the original rule.
 ALTER TABLE "payments" DROP CONSTRAINT "payments_two_person_chk";--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_two_person_chk" CHECK ("payments"."confirmed_by" is null or ("payments"."review_started_by" is not null and "payments"."confirmed_by" <> "payments"."review_started_by") or ("payments"."method" = 'WALLET' and "payments"."confirmed_by" = "payments"."payer_user_id"));--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_two_person_chk" CHECK ("payments"."confirmed_by" is null or ("payments"."review_started_by" is not null and "payments"."confirmed_by" <> "payments"."review_started_by") or ("payments"."method" = 'WALLET' and "payments"."confirmed_by" = "payments"."payer_user_id")) NOT VALID;--> statement-breakpoint
 -- The WALLET method code exists so orders/deals can carry it; availability is gated by the
 -- wallet.topUpEnabled setting (never by the staff-managed transfer-method list).
 INSERT INTO "payment_methods" ("code", "name_ar", "name_en", "is_enabled", "sort_order") VALUES ('WALLET', 'محفظة أضمن', 'EDMN Wallet', false, 90) ON CONFLICT ("code") DO NOTHING;--> statement-breakpoint

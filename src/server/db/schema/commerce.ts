@@ -376,7 +376,8 @@ export const payments = pgTable(
     check('payments_target_chk', sql`(${t.orderId} is null) <> (${t.dealId} is null)`),
     check('payments_amount_chk', sql`${t.amountDue} > 0`),
     // Two-person confirmation: a payment can only be confirmed after a review started by someone else.
-    check('payments_two_person_chk', sql`${t.confirmedBy} is null or (${t.reviewStartedBy} is not null and ${t.confirmedBy} <> ${t.reviewStartedBy})`),
+    // PKG-WALLET-02: a WALLET payment is confirmed by its own payer (no staff money arrives); 0036 (NOT VALID, like 0026).
+    check('payments_two_person_chk', sql`${t.confirmedBy} is null or (${t.reviewStartedBy} is not null and ${t.confirmedBy} <> ${t.reviewStartedBy}) or (${t.method} = 'WALLET' and ${t.confirmedBy} = ${t.payerUserId})`),
   ],
 );
 

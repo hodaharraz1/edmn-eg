@@ -7715,7 +7715,7 @@
         },
         "payments_two_person_chk": {
           "name": "payments_two_person_chk",
-          "value": "\"payments\".\"confirmed_by\" is null or (\"payments\".\"review_started_by\" is not null and \"payments\".\"confirmed_by\" <> \"payments\".\"review_started_by\")"
+          "value": "\"payments\".\"confirmed_by\" is null or (\"payments\".\"review_started_by\" is not null and \"payments\".\"confirmed_by\" <> \"payments\".\"review_started_by\") or (\"payments\".\"method\" = 'WALLET' and \"payments\".\"confirmed_by\" = \"payments\".\"payer_user_id\")"
         }
       },
       "isRLSEnabled": false
