@@ -22,7 +22,7 @@ beforeAll(async () => {
   admin = await makeAdmin(['SUPER_ADMIN']);
   await ensurePaymentSetup();
 });
-afterAll(() => resetSettings('auth.captchaMode', 'auth.loginDelayAfterFailures', 'auth.loginDelayMaxSeconds'));
+afterAll(() => resetSettings('auth.captchaMode', 'auth.captchaSiteKey', 'auth.loginDelayAfterFailures', 'auth.loginDelayMaxSeconds'));
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.CAPTCHA_SECRET;
@@ -118,12 +118,18 @@ describe('SEC-194 (L3) — CAPTCHA is configurable (default off, fails closed)',
   it('is off by default and refuses to be turned on without provider keys in the environment', async () => {
     expect(await getSetting('auth.captchaMode')).toBe('off');
     delete process.env.CAPTCHA_SECRET;
+    await updateSetting(admin, 'auth.captchaSiteKey', 'test-site-key', 'مفتاح الموقع العام للاختبار');
     await expect(updateSetting(admin, 'auth.captchaMode', 'always', 'اختبار')).rejects.toThrow(/CAPTCHA_SECRET/);
     expect(await getSetting('auth.captchaMode')).toBe('off');
+    await resetSettings('auth.captchaSiteKey');
+    process.env.CAPTCHA_SECRET = 'test-secret';
+    await expect(updateSetting(admin, 'auth.captchaMode', 'always', 'اختبار')).rejects.toThrow();
+    expect(await getSetting('auth.captchaMode')).toBe('off'); // PKG-FOLLOWUP-02: no public site key, no CAPTCHA
   });
 
   it("'always': no token or a failed token is refused; a verified token logs in", async () => {
     process.env.CAPTCHA_SECRET = 'test-secret';
+    await updateSetting(admin, 'auth.captchaSiteKey', 'test-site-key', 'مفتاح الموقع العام للاختبار');
     await updateSetting(admin, 'auth.captchaMode', 'always', 'اختبار CAPTCHA');
     const u = await makeUser();
     const meta = ip();
@@ -133,18 +139,19 @@ describe('SEC-194 (L3) — CAPTCHA is configurable (default off, fails closed)',
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true }), { status: 200 })));
     const ok = await login(u.email!, 'Test@12345', 'WEB', meta, { captchaToken: 'good' });
     expect(ok.user.id).toBe(u.id);
-    await resetSettings('auth.captchaMode');
+    await resetSettings('auth.captchaMode', 'auth.captchaSiteKey');
   });
 
   it("'after_failures': the first N attempts on an identifier need no token, the next one does", async () => {
     process.env.CAPTCHA_SECRET = 'test-secret';
+    await updateSetting(admin, 'auth.captchaSiteKey', 'test-site-key', 'مفتاح الموقع العام للاختبار');
     await updateSetting(admin, 'auth.captchaMode', 'after_failures', 'اختبار CAPTCHA بعد الفشل');
     const u = await makeUser();
     const meta = ip();
     await wrongN(u.email!, 5, meta); // within the free budget (default 5): ordinary wrong-password answers
     await endDelay(u.id);
     await expect(login(u.email!, 'wrong-password', 'WEB', meta)).rejects.toMatchObject({ code: 'VALIDATION' }); // the 6th needs the token
-    await resetSettings('auth.captchaMode');
+    await resetSettings('auth.captchaMode', 'auth.captchaSiteKey');
   });
 });
 

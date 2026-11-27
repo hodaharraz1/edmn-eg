@@ -2,7 +2,7 @@ import 'package:edmn_admin/src/app.dart';
 import 'package:edmn_admin/src/providers.dart';
 import 'package:edmn_api/admin.dart';
 import 'package:edmn_core/edmn_core.dart';
-import 'package:edmn_design/edmn_design.dart' show ErrorView;
+import 'package:edmn_design/edmn_design.dart' show CaptchaSolver, ErrorView;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,8 +19,20 @@ class FakeAdminApi extends AdminApi {
   int revokeAttempts = 0;
   final keys = <String>[];
 
+  /// SEC-194: when set, sign-in is refused (the way the server does) until the request carries a captchaToken.
+  bool captchaRequired = false;
+  final loginCaptchaTokens = <String?>[];
+
   @override
-  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device}) async => SessionResult(
+  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device, String? captchaToken}) async {
+    loginCaptchaTokens.add(captchaToken);
+    if (captchaRequired && captchaToken != 'solved-token') {
+      throw const ApiFailure(code: ApiErrorCode.validationFailed, status: 422, fieldErrors: {'captcha': ['التحقق مطلوب']});
+    }
+    return _session();
+  }
+
+  SessionResult _session() => SessionResult(
       user: const SessionResultUser(id: 'a', fullName: 'مسؤول', isStaff: true),
       tokens: TokenPair(accessToken: 'em1.a.b', accessTokenExpiresAt: '2030-01-01T00:00:00Z', refreshToken: 'r' * 40, sessionExpiresAt: '2030-01-01T00:00:00Z'),
       deviceId: 'd', mfa: SessionResultMfa(required: true, enrolled: enrolled));
@@ -182,7 +194,8 @@ class FakeAdminApi extends AdminApi {
   }
 }
 
-Widget _app(FakeAdminApi api) => ProviderScope(overrides: [
+Widget _app(FakeAdminApi api, {CaptchaSolver? solver}) => ProviderScope(overrides: [
+      if (solver != null) captchaSolverProvider.overrideWithValue(solver),
       buildConfigProvider.overrideWithValue(_config),
       sessionStoreProvider.overrideWithValue(MemorySessionStore()),
       adminApiProvider.overrideWithValue(api),
@@ -202,7 +215,49 @@ Future<void> _signIn(WidgetTester t) async {
   await t.pumpAndSettle();
 }
 
+void captchaTests() {
+  testWidgets('SEC-194: no CAPTCHA is shown or sent while the server does not ask for one', (t) async {
+    var solverCalls = 0;
+    final api = FakeAdminApi();
+    await t.pumpWidget(_app(api, solver: (context, url) async {
+      solverCalls++;
+      return 'solved-token';
+    }));
+    await t.pumpAndSettle();
+    await _signIn(t);
+    expect(solverCalls, 0);
+    expect(api.loginCaptchaTokens, [null]);
+    expect(find.byKey(const Key('totp')), findsOneWidget);
+  });
+
+  testWidgets('SEC-194: when the server asks, the app shows the CAPTCHA and retries the same sign-in with the token', (t) async {
+    Uri? shown;
+    final api = FakeAdminApi()..captchaRequired = true;
+    await t.pumpWidget(_app(api, solver: (context, url) async {
+      shown = url;
+      return 'solved-token';
+    }));
+    await t.pumpAndSettle();
+    await _signIn(t);
+    expect(shown?.path, '/captcha/mobile');
+    expect(api.loginCaptchaTokens, [null, 'solved-token']);
+    expect(find.byKey(const Key('totp')), findsOneWidget); // reached the second step
+  });
+
+  testWidgets('SEC-194: closing the CAPTCHA does not sign in and shows the reason', (t) async {
+    final api = FakeAdminApi()..captchaRequired = true;
+    await t.pumpWidget(_app(api, solver: (context, url) async => null));
+    await t.pumpAndSettle();
+    await _signIn(t);
+    expect(api.loginCaptchaTokens, [null]);
+    expect(find.byKey(const Key('totp')), findsNothing);
+    expect(find.byKey(const Key('error')), findsOneWidget);
+    expect(find.textContaining('مش روبوت'), findsOneWidget);
+  });
+}
+
 void main() {
+  captchaTests();
   testWidgets('nothing is reachable before sign-in and TOTP; a wrong code is refused', (t) async {
     final api = FakeAdminApi();
     await t.pumpWidget(_app(api));

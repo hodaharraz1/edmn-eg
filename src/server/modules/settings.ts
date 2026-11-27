@@ -204,6 +204,12 @@ export const SETTINGS_SCHEMA = {
    * in the environment (turning it on without them is refused). SENSITIVE.
    */
   'auth.captchaMode': z.enum(['off', 'after_failures', 'always']).default('off'),
+  /**
+   * PKG-FOLLOWUP-02: the PUBLIC site key of the CAPTCHA provider (the one chosen by CAPTCHA_PROVIDER). It is shown to every
+   * visitor on the login page and in the mobile CAPTCHA page by design, so it is not a secret; the secret stays in
+   * CAPTCHA_SECRET. Required before 'auth.captchaMode' can leave 'off'. SENSITIVE (a wrong key locks everyone out).
+   */
+  'auth.captchaSiteKey': z.string().max(200).regex(/^[A-Za-z0-9_-]*$/).default(''),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -242,6 +248,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'notifications.circuitBreaker',
   'notifications.devicePushEnabled',
   'auth.captchaMode',
+  'auth.captchaSiteKey',
   'auth.loginDelayAfterFailures',
   'auth.loginDelayMaxSeconds',
 ];
@@ -304,6 +311,11 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   if (key === 'auth.captchaMode' && parsed.data !== 'off') {
     const { captchaConfig } = await import('@/server/auth/login-throttle');
     if (!captchaConfig()) throw validation('اضبط CAPTCHA_PROVIDER و CAPTCHA_SECRET في بيئة التشغيل قبل تفعيل CAPTCHA، وإلا الدخول هيتقفل على الكل.');
+    // The widget cannot render without the public key: the login pages and the apps would ask for a CAPTCHA nobody can solve.
+    if (!(await getSetting('auth.captchaSiteKey'))) throw validation('اضبط المفتاح العام للـCAPTCHA (auth.captchaSiteKey) قبل التفعيل، وإلا الدخول هيتقفل على الكل.');
+  }
+  if (key === 'auth.captchaSiteKey' && parsed.data === '' && (await getSetting('auth.captchaMode')) !== 'off') {
+    throw validation('اقفل وضع الـCAPTCHA الأول (auth.captchaMode = off) قبل مسح المفتاح العام.');
   }
   if (key === 'payments.realMoneyEnabled' && parsed.data === true) {
     if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');

@@ -3891,4 +3891,15 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get searchHintAppliances => 'Tornado washer';
+
+  @override
+  String get captchaTitle => 'Confirm you are not a robot';
+
+  @override
+  String get captchaRequiredError =>
+      'We need to confirm you are not a robot before sign-in. Complete the check and try again.';
+
+  @override
+  String get captchaLoadFailed =>
+      'The check could not load. Check your connection and try again.';
 }

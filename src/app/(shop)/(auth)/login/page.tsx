@@ -7,6 +7,8 @@ import { Field, Input } from '@/ui/form';
 import { Alert } from '@/ui/feedback';
 import { safeNext } from '@/server/web/action';
 import { currentUser } from '@/server/web/session';
+import { loadCaptchaPublic } from '@/server/auth/captcha-public';
+import { LoginCaptcha } from '@/ui/captcha-widget';
 
 export const metadata: Metadata = { title: 'تسجيل الدخول', robots: { index: false } };
 
@@ -15,6 +17,7 @@ export default async function LoginPage(props: PageProps<'/login'>) {
   // `returnTo` is accepted as an alias of `next`; both are validated (internal relative paths only).
   const next = safeNext(typeof sp.next === 'string' ? sp.next : typeof sp.returnTo === 'string' ? sp.returnTo : null, '/');
   if (await currentUser()) redirect(next);
+  const captcha = await loadCaptchaPublic();
   return (
     <>
       <h1 className="mb-1 text-xl font-bold">تسجيل الدخول</h1>
@@ -28,6 +31,7 @@ export default async function LoginPage(props: PageProps<'/login'>) {
         <Field label="كلمة المرور" htmlFor="password" required>
           <Input id="password" name="password" type="password" autoComplete="current-password" required />
         </Field>
+        <LoginCaptcha config={captcha} />
         <div className="flex flex-wrap justify-between gap-2 text-sm">
           <Link href="/contact#cant-sign-in" className="text-brand-700 hover:underline" data-testid="login-help">مش قادر تدخل؟ كلّم الدعم</Link>
           <Link href="/forgot-password" className="text-brand-700 hover:underline">نسيت كلمة المرور؟</Link>

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import type { DbOrTx } from '@/server/db/client';
+import { scanCounters } from '@/server/auth/rate-limit';
 import type { AlertCandidate, AlertRule } from './rules';
 
 /**
@@ -139,14 +140,10 @@ export const SECURITY_ALERT_RULES: AlertRule[] = [
     staffPermission: 'audit.view',
     severity: 'HIGH',
     defaults: { preHours: 0, cooldownHours: 2, agingHours: 2 },
-    candidates: async (c, cfg) =>
+    candidates: async () =>
       toSpikeCandidates(
-        await q<{ source: string; count: number }>(c, sql`
-          select key source, count from rate_limits
-          where (key like 'login-id:%' or key like 'login-ip:%')
-            and count >= ${LOGIN_SPIKE_MIN_ATTEMPTS}
-            and window_start > now() - ${lookbackHours(cfg.agingHours)}
-          limit ${MAX_CANDIDATES}`),
+        // PKG-FOLLOWUP-02: the counters live in Redis / server memory since PKG-PERF-01, not in the rate_limits table.
+        (await scanCounters(['login-id:', 'login-ip:'], LOGIN_SPIKE_MIN_ATTEMPTS, MAX_CANDIDATES)).counters.map((x) => ({ source: x.key, count: x.count })),
         'login',
         'محاولة دخول فاشلة',
         '/admin/audit',

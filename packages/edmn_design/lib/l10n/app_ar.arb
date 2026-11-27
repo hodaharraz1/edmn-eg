@@ -1558,5 +1558,8 @@
   "searchHintPhones": "آيفون 15",
   "searchHintWatches": "ساعة كاسيو",
   "searchHintConsoles": "بلايستيشن 5",
-  "searchHintAppliances": "غسالة تورنيدو"
+  "searchHintAppliances": "غسالة تورنيدو",
+  "captchaTitle": "تأكيد إنك مش روبوت",
+  "captchaRequiredError": "محتاجين نتأكد إنك مش روبوت قبل الدخول. كمّل التحقق وجرّب تاني.",
+  "captchaLoadFailed": "تعذّر تحميل التحقق. اتأكد من الاتصال وحاول تاني."
 }

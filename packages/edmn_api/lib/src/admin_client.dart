@@ -9,9 +9,9 @@ class AdminApi {
   AdminApi(this.client);
   final ApiClient client;
 
-  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device}) async {
+  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device, String? captchaToken}) async {
     final r = SessionResult.fromJson(
-        await client.sendJson('POST', AdminApiPaths.adminLogin.path, body: AdminLoginRequest(identifier: identifier, password: password, device: device).toJson(), skipAuth: true));
+        await client.sendJson('POST', AdminApiPaths.adminLogin.path, body: AdminLoginRequest(identifier: identifier, password: password, device: device, captchaToken: captchaToken).toJson(), skipAuth: true));
     await client.adoptTokens(SessionTokens.fromJson(r.tokens.toJson()));
     return r;
   }

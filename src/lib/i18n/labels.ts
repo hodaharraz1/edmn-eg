@@ -13,6 +13,7 @@ export const STATUS: Record<string, { ar: string; tone: Tone }> = {
   RESTRICTED: { ar: 'مقيّد', tone: 'warning' },
   SUSPENDED: { ar: 'موقوف', tone: 'danger' },
   REJECTED: { ar: 'مرفوض', tone: 'danger' },
+  CREDITED: { ar: 'أُضيف للرصيد', tone: 'success' },
   // Product
   SUBMITTED: { ar: 'مُرسل للمراجعة', tone: 'warning' },
   UNDER_REVIEW: { ar: 'قيد المراجعة', tone: 'warning' },
@@ -199,7 +200,7 @@ export function sellerOrderStatusLabel(status: string | null | undefined, receip
 }
 
 export const LABELS = {
-  paymentMethod: { BANK_TRANSFER: 'تحويل بنكي', INSTAPAY: 'إنستاباي', VODAFONE_CASH: 'فودافون كاش', ORANGE_CASH: 'أورنج كاش', ETISALAT_CASH: 'إي آند كاش (اتصالات)', WE_PAY: 'وي باي', BM_WALLET: 'محفظة بنك مصر', COD: 'الدفع عند الاستلام' } as Record<string, string>,
+  paymentMethod: { BANK_TRANSFER: 'تحويل بنكي', INSTAPAY: 'إنستاباي', VODAFONE_CASH: 'فودافون كاش', ORANGE_CASH: 'أورنج كاش', ETISALAT_CASH: 'إي آند كاش (اتصالات)', WE_PAY: 'وي باي', BM_WALLET: 'محفظة بنك مصر', COD: 'الدفع عند الاستلام', WALLET: 'رصيد المحفظة' } as Record<string, string>,
   payoutType: { BANK_ACCOUNT: 'حساب بنكي', INSTAPAY: 'إنستاباي', MOBILE_WALLET: 'محفظة موبايل' } as Record<string, string>,
   condition: { NEW: 'جديد', USED: 'مستعمل' } as Record<string, string>,
   usedGrade: { LIKE_NEW: 'زي الجديد', VERY_GOOD: 'جيد جداً', GOOD: 'جيد', ACCEPTABLE: 'مقبول' } as Record<string, string>,

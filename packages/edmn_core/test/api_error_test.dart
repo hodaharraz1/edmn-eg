@@ -30,4 +30,15 @@ void main() {
     expect(ApiFailure.fromDio(DioException(requestOptions: RequestOptions(path: '/'))).code, ApiErrorCode.network);
     expect(ApiFailure.fromDio(_err(502, '<html>bad gateway</html>')).code, ApiErrorCode.unknown);
   });
+
+  test('SEC-194: a validation_failed with a captcha field error means the server wants a CAPTCHA answer', () {
+    final f = ApiFailure.fromDio(_err(422, {'code': 'validation_failed', 'fieldErrors': {'captcha': ['التحقق مطلوب']}}));
+    expect(f.captchaRequired, isTrue);
+    expect(f.fieldErrors['captcha'], ['التحقق مطلوب']);
+    // Other validation errors, other codes and plain failures never trigger the challenge.
+    expect(ApiFailure.fromDio(_err(422, {'code': 'validation_failed', 'fieldErrors': {'email': ['x']}})).captchaRequired, isFalse);
+    expect(ApiFailure.fromDio(_err(422, {'code': 'validation_failed', 'issues': []})).captchaRequired, isFalse);
+    expect(ApiFailure.fromDio(_err(401, {'code': 'unauthenticated', 'fieldErrors': {'captcha': ['x']}})).captchaRequired, isFalse);
+    expect(const ApiFailure(code: ApiErrorCode.network).captchaRequired, isFalse);
+  });
 }

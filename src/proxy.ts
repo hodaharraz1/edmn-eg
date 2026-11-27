@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { captchaCspFor, type CaptchaCsp } from '@/lib/captcha-providers';
 
 /**
  * Edge routing for the three surfaces served by one Next.js app:
@@ -35,7 +36,7 @@ export function proxy(req: NextRequest) {
   // Every page (marketplace, account, Seller Center, admin) runs under a strict per-request nonce CSP: no inline
   // script executes unless Next.js stamped it with this request's nonce (Next reads it from the request CSP header).
   // All pages render per request already (root layout), so the nonce costs no static caching.
-  const csp = shared ? null : pageCsp(btoa(crypto.randomUUID()));
+  const csp = shared ? null : pageCsp(btoa(crypto.randomUUID()), captchaCspFor(pathname, process.env));
   if (csp) headers.set('content-security-policy', csp);
   // The page the visitor actually asked for, so a login wall can send them back to it (validated by safeNext on
   // use). Always overwritten/removed here — a client-supplied value never reaches the app.
@@ -77,18 +78,19 @@ export function proxy(req: NextRequest) {
  * (aspect ratios, computed positions, CSS custom properties) and style attributes cannot carry a nonce.
  * Scripts — the actual XSS vector — are nonce-only.
  */
-export function pageCsp(nonce: string): string {
+export function pageCsp(nonce: string, captcha: CaptchaCsp | null = null): string {
+  const more = (base: string, extra: string[] | undefined) => [base, ...(extra ?? [])].join(' ');
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'` + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
-    "style-src 'self' 'unsafe-inline'",
+    more(`script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`, captcha?.scriptSrc) + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
+    more("style-src 'self' 'unsafe-inline'", captcha?.styleSrc),
     "font-src 'self'",
     "img-src 'self' data: blob:",
-    "connect-src 'self'",
+    more("connect-src 'self'", captcha?.connectSrc),
     "worker-src 'self'",
     "manifest-src 'self'",
     "frame-ancestors 'none'",
-    "frame-src 'none'",
+    captcha && captcha.frameSrc.length ? more("frame-src", captcha.frameSrc) : "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

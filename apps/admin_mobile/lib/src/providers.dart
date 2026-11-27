@@ -7,6 +7,9 @@ import 'net/cert_pins.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final buildConfigProvider = Provider<BuildConfig>((ref) => BuildConfig.fromDefines());
+
+/// SEC-194: shows the server's CAPTCHA challenge (a web view of the server-hosted page) and returns its token. Tests override it.
+final captchaSolverProvider = Provider<CaptchaSolver>((ref) => showCaptchaChallenge);
 final telemetryProvider = Provider<Telemetry>((ref) => Telemetry());
 
 /// Admin credentials: own namespace, never shared with the Customer App.
