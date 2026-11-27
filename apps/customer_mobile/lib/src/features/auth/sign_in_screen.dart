@@ -119,8 +119,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       // Land on home first and open the requested page on top of it, so that page always has a back arrow
       // (a plain go(next) left it as the only page: no way back to the store).
       final next = widget.next;
-      context.go('/');
-      if (next != null && next.isNotEmpty && next != '/') context.push(next);
+      const tabs = {'/', '/categories', '/wallet', '/cart', '/orders'};
+      if (next != null && tabs.contains(next)) {
+        context.go(next); // a main tab: open it directly (the bottom bar is the way around)
+      } else {
+        context.go('/');
+        if (next != null && next.isNotEmpty) context.push(next);
+      }
     } catch (e) {
       setState(() => _error = e);
     } finally {

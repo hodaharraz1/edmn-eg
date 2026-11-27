@@ -130,7 +130,7 @@ class _SunburstHeader extends ConsumerWidget {
                 icon: Icons.shopping_cart_outlined,
                 badge: cartCount,
                 tooltip: t.cartTitle,
-                onTap: () => context.push('/cart'),
+                onTap: () => context.go('/cart'),
               ),
               const SizedBox(width: EdmnSpacing.xs),
               _CircleButton(

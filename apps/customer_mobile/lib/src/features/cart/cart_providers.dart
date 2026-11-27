@@ -29,7 +29,7 @@ Future<bool> addToCart(BuildContext context, WidgetRef ref, String variantId, {i
     ref.invalidate(cartProvider);
     if (context.mounted && !quiet) {
       final router = GoRouter.of(context);
-      showEdmnMessage(context, t.addedToCart, actionLabel: t.viewCart, onAction: () => router.push('/cart'));
+      showEdmnMessage(context, t.addedToCart, actionLabel: t.viewCart, onAction: () => router.go('/cart'));
     }
     return true;
   } catch (e) {

@@ -750,7 +750,7 @@ void main() {
     // Real Money is OFF, but the TEST notice belongs to money steps only — never app-wide.
     expect(find.textContaining('وضع تجريبي'), findsNothing);
     expect(find.byKey(const Key('test-money-notice')), findsNothing);
-    for (final tab in ['الرئيسية', 'الأقسام', 'المحفظة', 'طلباتي']) {
+    for (final tab in ['الرئيسية', 'الأقسام', 'المحفظة', 'السلة', 'طلباتي']) {
       expect(find.text(tab), findsOneWidget);
     }
   });
@@ -792,6 +792,15 @@ void main() {
     expect(api.cartQty, 2);
     expect(find.byKey(const Key('buy-now')), findsNothing);
     expect(find.textContaining('السلة'), findsWidgets);
+  });
+
+  testWidgets('السلة is a main tab: it opens the cart with «إتمام الشراء» and shows the item count on the tab', (t) async {
+    final api = FakeMobileApi()..cartQty = 2;
+    await _start(t, api, signedIn: true);
+    await t.tap(find.byKey(const Key('nav-cart')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('checkout')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('nav-cart')), matching: find.text('2')), findsOneWidget);
   });
 
   testWidgets('a guest who taps "أضف" is sent to sign-in (the mobile cart belongs to an account)', (t) async {

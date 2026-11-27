@@ -40,10 +40,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       title: c == null || c.itemCount == 0 ? t.cartTitle : '${t.cartTitle} ${t.cartCount(c.itemCount)}',
       bottomBar: c == null || c.groups.isEmpty
           ? null
-          : EdmnPrimaryButton(
-              key: const Key('checkout'),
-              label: t.checkoutCta,
-              onPressed: c.hasIssues ? null : () => context.push('/checkout'),
+          : Padding(
+              // The cart is a main tab: keep «إتمام الشراء» above the floating bar.
+              padding: const EdgeInsetsDirectional.only(bottom: EdmnFloatingNavigation.barHeight + EdmnSpacing.sm),
+              child: EdmnPrimaryButton(
+                key: const Key('checkout'),
+                label: t.checkoutCta,
+                onPressed: c.hasIssues ? null : () => context.push('/checkout'),
+              ),
             ),
       body: !signedIn
           ? EdmnEmptyState(

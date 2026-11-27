@@ -271,7 +271,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
           key: const Key('product-cart'),
           tooltip: t.cartTitle,
           color: EdmnColors.onPrimary,
-          onPressed: () => context.push('/cart'),
+          onPressed: () => context.go('/cart'),
           icon: Badge(
             isLabelVisible: ref.watch(cartCountProvider) > 0,
             backgroundColor: EdmnColors.brandRed,
@@ -319,7 +319,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                               setState(() => _buying = true);
                               final ok = await addToCart(context, ref, variant.id, quantity: _qty, quiet: true);
                               if (mounted) setState(() => _buying = false);
-                              if (ok && context.mounted) context.push('/cart');
+                              if (ok && context.mounted) context.go('/cart');
                             },
                     ),
                   ),

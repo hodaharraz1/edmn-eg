@@ -64,6 +64,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [GoRoute(path: '/categories', builder: (c, s) => const CategoriesScreen())]),
           // Wallet is a main tab (owner request); signed-out users are sent to sign-in by the redirect.
           StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen())]),
+          // Cart is a main tab (owner request 2026-11-27: buying must be one tap away, like Noon).
+          StatefulShellBranch(routes: [GoRoute(path: '/cart', builder: (c, s) => const CartScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (c, s) => const OrdersScreen())]),
         ],
       ),
@@ -71,7 +73,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/categories/:id', builder: (c, s) => CategoryProductsScreen(categoryId: s.pathParameters['id']!, category: s.extra as Category?)),
       GoRoute(path: '/products/:slug', builder: (c, s) => ProductScreen(slug: s.pathParameters['slug']!)),
       GoRoute(path: '/stores/:slug', builder: (c, s) => StoreScreen(slug: s.pathParameters['slug']!)),
-      GoRoute(path: '/cart', builder: (c, s) => const CartScreen()),
       GoRoute(path: '/checkout', builder: (c, s) => const CheckoutScreen()),
       GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen()),
       GoRoute(path: '/orders/:id', builder: (c, s) => OrderScreen(orderId: s.pathParameters['id']!, justPlaced: s.uri.queryParameters['placed'] == '1')),
@@ -147,7 +148,7 @@ class MainShell extends ConsumerWidget {
     final t = EdmnLocalizations.of(context);
     final cartCount = ref.watch(cartCountProvider);
     // PKG-UI-01: the floating frosted-glass nav pill replaces the docked bar. Same four tabs, same order:
-    // الرئيسية، الأقسام، المحفظة، طلباتي; the ACTIVE tab gets the blue accent circle (owner decision: no centre
+    // الرئيسية، الأقسام، المحفظة، السلة، طلباتي; the ACTIVE tab gets the blue accent circle (owner decision: no centre
     // button). It hides while scrolling down and returns on scrolling up (owner decision 2026-11-27); screens pad
     // their scroll views with EdmnFloatingNavigation.clearanceOf.
     return Scaffold(
@@ -169,11 +170,17 @@ class MainShell extends ConsumerWidget {
               label: t.wallet,
             ),
             EdmnFloatingNavItem(
+              key: const Key('nav-cart'),
+              icon: Icons.shopping_cart_outlined,
+              activeIcon: Icons.shopping_cart_rounded,
+              label: t.cartTitle,
+              badge: cartCount > 0 ? cartCount : null,
+            ),
+            EdmnFloatingNavItem(
               key: const Key('nav-orders'),
               icon: Icons.shopping_bag_outlined,
               activeIcon: Icons.shopping_bag_rounded,
               label: t.myOrders,
-              badge: cartCount > 0 ? cartCount : null,
             ),
           ],
         ),
