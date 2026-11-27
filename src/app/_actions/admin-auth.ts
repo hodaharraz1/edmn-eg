@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { captchaTokenFrom } from '@/server/auth/login-throttle';
 import { beginTotpEnrollment, elevateSession, login, logout, stepUp, verifyTotpForUser } from '@/server/auth/service';
 import { env } from '@/server/core/env';
 import { db } from '@/server/db/client';
@@ -11,7 +12,7 @@ import { ADMIN_COOKIE, clearCookie, getAdminSession, requestMeta, revokePresente
 
 export async function adminLoginAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const res = await runAction(async () => {
-    const { token } = await login(str(fd, 'email'), str(fd, 'password'), 'ADMIN', await requestMeta());
+    const { token } = await login(str(fd, 'email'), str(fd, 'password'), 'ADMIN', await requestMeta(), { captchaToken: captchaTokenFrom((n) => str(fd, n)) });
     await revokePresentedSession(ADMIN_COOKIE);
     await setSessionCookie(ADMIN_COOKIE, token, env().ADMIN_SESSION_TTL_HOURS);
   });

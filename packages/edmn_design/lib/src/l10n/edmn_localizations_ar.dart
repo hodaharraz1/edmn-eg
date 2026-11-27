@@ -10,10 +10,10 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   EdmnLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appNameCustomer => 'اضمن';
+  String get appNameCustomer => 'أضمن';
 
   @override
-  String get appNameAdmin => 'اضمن — الإدارة';
+  String get appNameAdmin => 'أضمن — الإدارة';
 
   @override
   String get retry => 'حاول تاني';
@@ -358,6 +358,12 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get addedToCart => 'اتضاف للسلة';
 
   @override
+  String get viewCart => 'شوف السلة';
+
+  @override
+  String get buyNow => 'اشتري دلوقتي';
+
+  @override
   String get protectedDealBannerTitle => 'أضمن صفقة';
 
   @override
@@ -555,6 +561,12 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get stepAddress => 'العنوان';
+
+  @override
+  String get shippingFromStores => 'الشحن من كل متجر';
+
+  @override
+  String get freeShipping => 'شحن مجاني';
 
   @override
   String get stepDelivery => 'التوصيل';
@@ -2750,6 +2762,11 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   }
 
   @override
+  String starRatingLabel(int count) {
+    return '$count من 5 نجوم';
+  }
+
+  @override
   String evidenceLabel(int max) {
     return 'صور أو مستندات (حتى $max)';
   }
@@ -2923,7 +2940,7 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get adminKpiGmv => 'إجمالي قيمة البضائع (GMV)';
 
   @override
-  String get adminKpiRevenue => 'إيرادات اضمن';
+  String get adminKpiRevenue => 'إيرادات أضمن';
 
   @override
   String get adminKpiOrders => 'الطلبات (المدفوعة / الكل)';
@@ -3007,6 +3024,9 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get adminDisputes => 'النزاعات والشكاوى';
+
+  @override
+  String get adminAccountClosures => 'طلبات إغلاق الحسابات';
 
   @override
   String get adminAuditLog => 'سجل العمليات';
@@ -3446,4 +3466,392 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'تم إلغاء الطلب. لا تقم بشحنه.';
+
+  @override
+  String get adminReturns => 'المرتجعات';
+
+  @override
+  String get adminAlertsInbox => 'التنبيهات التشغيلية';
+
+  @override
+  String get adminCustomers => 'العملاء';
+
+  @override
+  String get adminSupportInbox => 'تذاكر الدعم';
+
+  @override
+  String get adminTabReturnsPending => 'بانتظار القرار';
+
+  @override
+  String get adminTabReturnsActive => 'قيد التنفيذ';
+
+  @override
+  String get adminTabReturnsDone => 'منتهية أو محوّلة';
+
+  @override
+  String get adminSearchReturns => 'ابحث برقم المرتجع';
+
+  @override
+  String get adminCod => 'الدفع عند الاستلام (COD)';
+
+  @override
+  String get adminTabCodAwaiting => 'بانتظار كشف الشحن';
+
+  @override
+  String get adminTabCodShortfalls => 'عجز مفتوح';
+
+  @override
+  String get adminStatusCodCollected => 'اتسلّم، بانتظار التحصيل';
+
+  @override
+  String get adminSearchCustomers => 'ابحث بالاسم أو البريد أو الموبايل';
+
+  @override
+  String get adminTabAllAlerts => 'الكل';
+
+  @override
+  String get adminStageDue => 'مستحق';
+
+  @override
+  String get adminStageOverdue => 'متأخر';
+
+  @override
+  String get adminStagePre => 'قبل الموعد';
+
+  @override
+  String get adminTabAllCustomers => 'كل العملاء';
+
+  @override
+  String get adminStatusReturnRequested => 'طلب إرجاع جديد';
+
+  @override
+  String get adminStatusReturnInTransit => 'في الطريق للبائع';
+
+  @override
+  String get adminStatusReturnReceived => 'استلمه البائع';
+
+  @override
+  String get adminStatusReturnInspection => 'قيد الفحص';
+
+  @override
+  String get adminStatusRefundPending => 'الاسترداد بانتظار الاعتماد';
+
+  @override
+  String get adminStatusInProgress => 'قيد المعالجة';
+
+  @override
+  String get adminStatusWaitingCustomer => 'بانتظار العميل';
+
+  @override
+  String get adminStatusWaitingSeller => 'بانتظار البائع';
+
+  @override
+  String get adminStatusEscalated => 'محوّلة لمستوى أعلى';
+
+  @override
+  String get adminStatusSuspended => 'موقوف';
+
+  @override
+  String get adminRetNextRequested =>
+      'مراجعة الطلب وقبوله أو رفضه (البائع في تطبيقه أو الإدارة من لوحة الويب)';
+
+  @override
+  String get adminRetNextApproved => 'بانتظار شحن المنتج من العميل';
+
+  @override
+  String get adminRetNextInTransit => 'تسجيل استلام المرتجع';
+
+  @override
+  String get adminRetNextReceived => 'بدء الفحص';
+
+  @override
+  String get adminRetNextInspection =>
+      'قرار الاسترداد (يصرفه فريق المالية بموافقة شخصين)';
+
+  @override
+  String get adminRetNextRefundPending =>
+      'اعتماد وصرف الاسترداد من فريق المالية (شخصان)';
+
+  @override
+  String get adminRetNextClosed => 'لا شيء — مغلق';
+
+  @override
+  String get adminRetNextDisputed => 'يُتابع من خلال النزاع';
+
+  @override
+  String get adminFieldNextStep => 'الخطوة التالية';
+
+  @override
+  String get adminFieldRefund => 'مبلغ الاسترداد';
+
+  @override
+  String get adminFieldEvidenceCount => 'صور الإثبات';
+
+  @override
+  String get adminFieldStatutory => 'ضمن المدة القانونية';
+
+  @override
+  String get adminFieldDecision => 'سبب القرار';
+
+  @override
+  String get adminFieldInspection => 'ملاحظة الفحص';
+
+  @override
+  String get adminFieldEmail => 'البريد الإلكتروني';
+
+  @override
+  String get adminFieldPhone => 'الموبايل';
+
+  @override
+  String get adminVerified => 'موثّق';
+
+  @override
+  String get adminNotVerified => 'غير موثّق';
+
+  @override
+  String get adminFieldLastLogin => 'آخر دخول';
+
+  @override
+  String get adminFieldJoined => 'تاريخ التسجيل';
+
+  @override
+  String get adminSectionAddresses => 'العناوين (المدينة والمحافظة فقط)';
+
+  @override
+  String get adminSectionActivity => 'النشاط';
+
+  @override
+  String get adminSectionRecentOrders => 'أحدث الطلبات';
+
+  @override
+  String get adminCountOrders => 'الطلبات';
+
+  @override
+  String get adminCountReturns => 'المرتجعات';
+
+  @override
+  String get adminCountDisputes => 'النزاعات';
+
+  @override
+  String get adminCountTickets => 'تذاكر الدعم';
+
+  @override
+  String get adminCountDeals => 'الصفقات المحمية';
+
+  @override
+  String get adminCountReviews => 'التقييمات';
+
+  @override
+  String get adminCustomerManageOnWeb =>
+      'تغيير حالة العميل يتم من لوحة الويب فقط.';
+
+  @override
+  String get adminReturnsOnWeb =>
+      'قرارات المرتجعات والاسترداد لا تتم من هذا التطبيق: البائع يقرر من تطبيقه، والاسترداد يعتمده ويصرفه فريق المالية من لوحة الويب بموافقة شخصين.';
+
+  @override
+  String get adminAlertsOnWeb =>
+      'قواعد التنبيهات تُضبط من لوحة الويب. هذه القائمة للمتابعة فقط.';
+
+  @override
+  String get adminAlertRulesSection => 'القواعد المفعّلة';
+
+  @override
+  String adminAlertSent(int count) {
+    return 'أُرسل $count مرة';
+  }
+
+  @override
+  String get adminFieldPriority => 'الأولوية';
+
+  @override
+  String get adminFromSeller => 'من بائع';
+
+  @override
+  String get adminAttachment => 'مرفق';
+
+  @override
+  String get adminReply => 'الرد على العميل';
+
+  @override
+  String get adminReplyHint =>
+      'يظهر الرد للعميل باسم فريق الدعم ويصله إشعار. الرد لا يغلق التذكرة ولا يقبل مرفقات.';
+
+  @override
+  String get adminReplySend => 'إرسال الرد';
+
+  @override
+  String get adminReplySent => 'تم إرسال الرد';
+
+  @override
+  String get adminSupportOnWeb =>
+      'الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.';
+
+  @override
+  String get accountDeletion => 'حذف الحساب';
+
+  @override
+  String get accountDeletionBody =>
+      'طلب حذف الحساب بيسجّل طلب عند فريق أضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.';
+
+  @override
+  String get accountDeletionReasonHint => 'سبب الحذف (اختياري)';
+
+  @override
+  String get accountDeletionSubmit => 'إرسال طلب حذف الحساب';
+
+  @override
+  String get accountDeletionConfirm =>
+      'متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.';
+
+  @override
+  String get accountDeletionSent =>
+      'اتسجّل طلبك، وفريق أضمن هيكمّله بعد مراجعة الحساب';
+
+  @override
+  String get accountDeletionPending => 'طلب حذف الحساب قيد التنفيذ';
+
+  @override
+  String get accountDeletionPendingBody =>
+      'فريق أضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.';
+
+  @override
+  String get accountDeletionBlockedTitle => 'مش هينفع تقفل حسابك دلوقتي';
+
+  @override
+  String get accountDeletionBlockedBody =>
+      'خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:';
+
+  @override
+  String get accountDeletionCancel => 'إلغاء طلب الحذف';
+
+  @override
+  String get accountDeletionCancelled => 'اتلغى طلب حذف الحساب';
+
+  @override
+  String get accountDeletionRequestedAt => 'تاريخ الطلب';
+
+  @override
+  String get accountDeletionCancelConfirm =>
+      'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.';
+
+  @override
+  String get marketingConsentLabel =>
+      'أوافق على استقبال عروض ورسائل تسويق من أضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)';
+
+  @override
+  String get marketingConsentTitle => 'رسائل وعروض التسويق';
+
+  @override
+  String get marketingConsentSubtitle =>
+      'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.';
+
+  @override
+  String get errorFeatureDisabled => 'الخاصية دي مش متاحة دلوقتي';
+
+  @override
+  String get walletBalanceLabel => 'رصيد المحفظة';
+
+  @override
+  String get walletDeposit => 'إيداع';
+
+  @override
+  String get depositTitle => 'إيداع في المحفظة';
+
+  @override
+  String get depositMethodLabel => 'طريقة الإيداع';
+
+  @override
+  String get depositMethodInstapay => 'إنستاباي';
+
+  @override
+  String get depositMethodBank => 'تحويل بنكي';
+
+  @override
+  String get depositMethodWallet => 'محفظة إلكترونية';
+
+  @override
+  String get depositMethodWalletHint =>
+      'فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة';
+
+  @override
+  String get depositTransferTo =>
+      'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال';
+
+  @override
+  String depositRemainingToday(String amount) {
+    return 'المتاح للإيداع النهاردة: $amount (الحد اليومي مشترك مع إيصالات الدفع)';
+  }
+
+  @override
+  String depositOverLimit(String amount) {
+    return 'المبلغ أكبر من المتاح للإيداع النهاردة ($amount)';
+  }
+
+  @override
+  String get depositNoMethods => 'مفيش طرق إيداع متاحة دلوقتي';
+
+  @override
+  String get depositSubmit => 'إرسال الإيصال';
+
+  @override
+  String get depositSubmitted =>
+      'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.';
+
+  @override
+  String get depositsList => 'إيداعاتي';
+
+  @override
+  String get noDeposits => 'لسه معملتش أي إيداع';
+
+  @override
+  String get depositPending => 'قيد المراجعة';
+
+  @override
+  String get depositCredited => 'اتضاف لرصيدك';
+
+  @override
+  String get depositRejected => 'مرفوض';
+
+  @override
+  String get depositCancelled => 'ملغي';
+
+  @override
+  String depositRejectedReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get depositCancel => 'إلغاء الإيداع';
+
+  @override
+  String depositPendingCount(String count) {
+    return 'إيداعات قيد المراجعة: $count';
+  }
+
+  @override
+  String get shopByCategory => 'اشترى حسب الفئة';
+
+  @override
+  String get offersLabel => 'عروض';
+
+  @override
+  String get homeLabel => 'المنزل';
+
+  @override
+  String discountPercentLabel(int percent) {
+    return 'خصم $percent%';
+  }
+
+  @override
+  String get searchHintPhones => 'آيفون 15';
+
+  @override
+  String get searchHintWatches => 'ساعة كاسيو';
+
+  @override
+  String get searchHintConsoles => 'بلايستيشن 5';
+
+  @override
+  String get searchHintAppliances => 'غسالة تورنيدو';
 }

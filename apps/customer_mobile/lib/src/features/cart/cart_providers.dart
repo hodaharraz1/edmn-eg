@@ -16,7 +16,8 @@ final cartProvider = FutureProvider<Cart?>((ref) async {
 final cartCountProvider = Provider<int>((ref) => ref.watch(cartProvider).value?.itemCount ?? 0);
 
 /// Adds a variant to the cart. Signed-out users go to sign-in first and come back. One idempotency key per tap.
-Future<bool> addToCart(BuildContext context, WidgetRef ref, String variantId, {int quantity = 1}) async {
+/// The confirmation offers «شوف السلة»; [quiet] skips it (used by «اشتري دلوقتي», which goes straight to checkout).
+Future<bool> addToCart(BuildContext context, WidgetRef ref, String variantId, {int quantity = 1, bool quiet = false}) async {
   final t = EdmnLocalizations.of(context);
   if (!ref.read(signedInProvider)) {
     final here = GoRouterState.of(context).uri.toString();
@@ -26,7 +27,10 @@ Future<bool> addToCart(BuildContext context, WidgetRef ref, String variantId, {i
   try {
     await ref.read(mobileApiProvider).addToCart(variantId, quantity, idempotencyKey: newIdempotencyKey());
     ref.invalidate(cartProvider);
-    if (context.mounted) showEdmnMessage(context, t.addedToCart);
+    if (context.mounted && !quiet) {
+      final router = GoRouter.of(context);
+      showEdmnMessage(context, t.addedToCart, actionLabel: t.viewCart, onAction: () => router.go('/cart'));
+    }
     return true;
   } catch (e) {
     if (context.mounted) showEdmnMessage(context, apiErrorMessage(context, e), error: true);

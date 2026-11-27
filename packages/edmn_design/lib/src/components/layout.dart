@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../tokens.dart';
+import 'sunburst.dart';
 
 /// Board layout: a blue gradient header (title centered in white, optional back/actions) with the white content sheet
 /// overlapping it with rounded top corners. Used by every inner screen.
@@ -20,6 +21,7 @@ class EdmnAppScaffold extends StatelessWidget {
     this.headerExtent = 0,
     this.sheet = true,
     this.backgroundColor = EdmnColors.surface,
+    this.sunburst = false,
   });
 
   final String? title;
@@ -47,6 +49,10 @@ class EdmnAppScaffold extends StatelessWidget {
   final bool sheet;
   final Color backgroundColor;
 
+  /// PKG-UI-01: the tab screens (الأقسام، المحفظة، طلباتي) share the reference sunburst header system:
+  /// same colours, fonts and spacing as home. Layout and behaviour do not change.
+  final bool sunburst;
+
   @override
   Widget build(BuildContext context) {
     final canPop = showBack ?? Navigator.of(context).canPop();
@@ -54,14 +60,21 @@ class EdmnAppScaffold extends StatelessWidget {
       title: title,
       leading:
           leading ??
-          (canPop || onBack != null ? EdmnBackButton(onPressed: onBack) : null),
+          (canPop || onBack != null
+              ? EdmnBackButton(
+                  onPressed: onBack,
+                  color: null,
+                )
+              : null),
       actions: actions,
+      sunburst: sunburst,
       child: headerChild,
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: EdmnColors.primaryDark,
+        backgroundColor:
+            sunburst ? EdmnColors.sunburstDeep : EdmnColors.primaryDark,
         resizeToAvoidBottomInset: true,
         bottomNavigationBar: bottomNavigation,
         body: Column(
@@ -114,15 +127,23 @@ class EdmnHeader extends StatelessWidget {
     this.leading,
     this.actions = const [],
     this.child,
+    this.sunburst = false,
   });
   final String? title;
   final Widget? leading;
   final List<Widget> actions;
   final Widget? child;
 
+  /// PKG-UI-01: renders the reference sunburst (shared with home) instead of the blue gradient,
+  /// with navy titles/icons for contrast. Same layout either way.
+  final bool sunburst;
+
+  /// Both sides get the same width (so the title stays centred), wide enough for every action.
+  double get _sideWidth => (EdmnSizes.minTouch + EdmnSpacing.xs) * (actions.isEmpty ? 1 : actions.length);
+
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(gradient: EdmnColors.headerGradient),
+  Widget build(BuildContext context) => _HeaderBackground(
+    sunburst: sunburst,
     child: SafeArea(
       bottom: false,
       child: Padding(
@@ -136,8 +157,8 @@ class EdmnHeader extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: EdmnSizes.minTouch + EdmnSpacing.xs,
-                    child: leading,
+                    width: _sideWidth,
+                    child: Align(alignment: AlignmentDirectional.centerStart, child: leading),
                   ),
                   Expanded(
                     child: Text(
@@ -151,7 +172,7 @@ class EdmnHeader extends StatelessWidget {
                     ),
                   ),
                   SizedBox(
-                    width: EdmnSizes.minTouch + EdmnSpacing.xs,
+                    width: _sideWidth,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: actions,
@@ -165,13 +186,30 @@ class EdmnHeader extends StatelessWidget {
   );
 }
 
+class _HeaderBackground extends StatelessWidget {
+  const _HeaderBackground({required this.sunburst, required this.child});
+  final bool sunburst;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => sunburst
+      ? EdmnSunburstBackground(child: child)
+      : DecoratedBox(
+          decoration: const BoxDecoration(gradient: EdmnColors.headerGradient),
+          child: child,
+        );
+}
+
 class EdmnBackButton extends StatelessWidget {
-  const EdmnBackButton({super.key, this.onPressed});
+  const EdmnBackButton({super.key, this.onPressed, this.color});
   final VoidCallback? onPressed;
+
+  /// Icon colour; defaults to [EdmnColors.onPrimary] on the blue header. The sunburst header passes navy.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => IconButton(
-    color: EdmnColors.onPrimary,
+    color: color ?? EdmnColors.onPrimary,
     // Directional: points right in Arabic, left in English. Named through the icon's semantic label: a tooltip alone
     // reaches the web as a description, so the back button was announced as an unnamed button on every screen.
     icon: Icon(Icons.arrow_back_ios_new_rounded, size: EdmnSizes.icon, semanticLabel: MaterialLocalizations.of(context).backButtonTooltip),
@@ -268,7 +306,8 @@ class _NavButton extends StatelessWidget {
               children: [
                 Badge(
                   isLabelVisible: (item.badge ?? 0) > 0,
-                  backgroundColor: EdmnColors.brandRed,
+                  backgroundColor: EdmnColors.accent,
+                  textColor: EdmnColors.onAccent,
                   label: Text('${item.badge}'),
                   child: Icon(
                     selected ? item.activeIcon : item.icon,

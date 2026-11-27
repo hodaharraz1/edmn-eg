@@ -12,10 +12,12 @@ abstract final class MobileApiPaths {
   static const addWishlistItem = (method: 'PUT', path: '/api/v1/wishlist/{productId}');
   static const archiveReceivingAccount = (method: 'POST', path: '/api/v1/wallet/receiving-accounts/{accountId}/archive');
   static const archiveSellerProduct = (method: 'POST', path: '/api/v1/seller/products/{productId}/archive');
+  static const cancelAccountDeletionRequest = (method: 'POST', path: '/api/v1/me/deletion-request/cancel');
   static const cancelAccountPayoutRequest = (method: 'POST', path: '/api/v1/wallet/payout-requests/{requestId}/cancel');
   static const cancelDeal = (method: 'POST', path: '/api/v1/deals/{dealId}/cancel');
   static const cancelSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests/{requestId}/cancel');
   static const cancelUnpaidOrder = (method: 'POST', path: '/api/v1/orders/{orderId}/cancel');
+  static const cancelWalletTopup = (method: 'POST', path: '/api/v1/wallet/topups/{topupId}/cancel');
   static const changePassword = (method: 'POST', path: '/api/v1/me/password');
   static const claimDealInvitation = (method: 'POST', path: '/api/v1/deal-invitations/claim');
   static const confirmDealReceipt = (method: 'POST', path: '/api/v1/deals/{dealId}/confirm-receipt');
@@ -27,12 +29,15 @@ abstract final class MobileApiPaths {
   static const createReturn = (method: 'POST', path: '/api/v1/returns');
   static const createSellerPayoutRequest = (method: 'POST', path: '/api/v1/seller/payout-requests');
   static const createSellerProduct = (method: 'POST', path: '/api/v1/seller/products');
+  static const createWalletTopup = (method: 'POST', path: '/api/v1/wallet/topups');
   static const declineDealInvitation = (method: 'POST', path: '/api/v1/deals/{dealId}/decline');
   static const deleteAddress = (method: 'DELETE', path: '/api/v1/me/addresses/{addressId}');
+  static const deleteMyPushToken = (method: 'DELETE', path: '/api/v1/me/devices/push-token');
   static const deleteSellerProductImage = (method: 'DELETE', path: '/api/v1/seller/products/{productId}/images/{fileId}');
   static const escalateMyReturn = (method: 'POST', path: '/api/v1/returns/{returnId}/escalate');
   static const escalateStoreReturn = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/escalate');
   static const forgotPassword = (method: 'POST', path: '/api/v1/auth/password/forgot');
+  static const getAccountDeletionRequest = (method: 'GET', path: '/api/v1/me/deletion-request');
   static const getAppConfig = (method: 'GET', path: '/api/v1/app/config');
   static const getCart = (method: 'GET', path: '/api/v1/cart');
   static const getCategoryAttributes = (method: 'GET', path: '/api/v1/catalog/categories/{categoryId}/attributes');
@@ -96,6 +101,7 @@ abstract final class MobileApiPaths {
   static const listStoreReturns = (method: 'GET', path: '/api/v1/seller/returns');
   static const listSupportTickets = (method: 'GET', path: '/api/v1/support/tickets');
   static const listWalletActivity = (method: 'GET', path: '/api/v1/wallet/activity');
+  static const listWalletTopups = (method: 'GET', path: '/api/v1/wallet/topups');
   static const login = (method: 'POST', path: '/api/v1/auth/login');
   static const logout = (method: 'POST', path: '/api/v1/auth/logout');
   static const markConversationSeen = (method: 'POST', path: '/api/v1/conversations/{conversationId}/seen');
@@ -103,6 +109,7 @@ abstract final class MobileApiPaths {
   static const markNotificationsRead = (method: 'POST', path: '/api/v1/notifications/read');
   static const markSellerProductOutOfStock = (method: 'POST', path: '/api/v1/seller/products/{productId}/out-of-stock');
   static const markStoreConversationSeen = (method: 'POST', path: '/api/v1/seller/conversations/{conversationId}/seen');
+  static const myPushTokenStatus = (method: 'GET', path: '/api/v1/me/devices/push-token');
   static const openDealConversation = (method: 'POST', path: '/api/v1/deals/{dealId}/conversation');
   static const openDispute = (method: 'POST', path: '/api/v1/disputes');
   static const openOrderConversation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/conversation');
@@ -125,6 +132,7 @@ abstract final class MobileApiPaths {
   static const reportMessage = (method: 'POST', path: '/api/v1/conversations/messages/{messageId}/report');
   static const reportOrderProblem = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/problem');
   static const reportStoreMessage = (method: 'POST', path: '/api/v1/seller/conversations/messages/{messageId}/report');
+  static const requestAccountDeletion = (method: 'POST', path: '/api/v1/me/deletion-request');
   static const requestCancellation = (method: 'POST', path: '/api/v1/seller-orders/{sellerOrderId}/cancellation-request');
   static const resetPassword = (method: 'POST', path: '/api/v1/auth/password/reset');
   static const respondDealChangeRequest = (method: 'POST', path: '/api/v1/deals/{dealId}/change-response');
@@ -137,6 +145,7 @@ abstract final class MobileApiPaths {
   static const runSellerOrderStep = (method: 'POST', path: '/api/v1/seller/orders/{sellerOrderId}/steps');
   static const runStoreReturnStep = (method: 'POST', path: '/api/v1/seller/returns/{returnId}/steps');
   static const saveDealStep = (method: 'PUT', path: '/api/v1/deals/{dealId}/steps/{step}');
+  static const saveMyPushToken = (method: 'POST', path: '/api/v1/me/devices/push-token');
   static const saveNotificationPreferences = (method: 'PUT', path: '/api/v1/notifications/preferences');
   static const saveSellerApplicationBusiness = (method: 'PUT', path: '/api/v1/seller/application/business');
   static const saveSellerApplicationIdentity = (method: 'PUT', path: '/api/v1/seller/application/identity');
@@ -348,6 +357,53 @@ class ArchiveReceivingAccountResponseItemsItem {
   Map<String, dynamic> toJson() => {'id': id, 'type': type, 'label': label, 'holderName': holderName, 'status': status, 'reviewNote': reviewNote, 'createdAt': createdAt};
 }
 
+class CancelAccountDeletionRequestResponse {
+  const CancelAccountDeletionRequestResponse({required this.request});
+
+  factory CancelAccountDeletionRequestResponse.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponse(request: json['request'] == null ? null : CancelAccountDeletionRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final CancelAccountDeletionRequestResponseRequest? request;
+
+  Map<String, dynamic> toJson() => {'request': request?.toJson()};
+}
+
+class CancelAccountDeletionRequestResponseRequest {
+  const CancelAccountDeletionRequestResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory CancelAccountDeletionRequestResponseRequest.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => CancelAccountDeletionRequestResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<CancelAccountDeletionRequestResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class CancelAccountDeletionRequestResponseRequestBlockersItem {
+  const CancelAccountDeletionRequestResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory CancelAccountDeletionRequestResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => CancelAccountDeletionRequestResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
+}
+
 class CancelAccountPayoutRequestResponse {
   const CancelAccountPayoutRequestResponse({required this.items});
 
@@ -452,6 +508,35 @@ class CancelSellerPayoutRequestResponseItemsItem {
   final bool cancellable;
 
   Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'status': status, 'createdAt': createdAt, 'paidAt': paidAt, 'reference': reference, 'reasonAr': reasonAr, 'cancellable': cancellable};
+}
+
+class CancelWalletTopupResponse {
+  const CancelWalletTopupResponse({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory CancelWalletTopupResponse.fromJson(Map<String, dynamic> json) => CancelWalletTopupResponse(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
 }
 
 class Cart {
@@ -612,9 +697,9 @@ class ChangePasswordRequest {
 }
 
 class Checkout {
-  const Checkout({required this.selectedAddressId, required this.addresses, required this.cart, required this.paymentMethods, required this.paymentWindowHours, required this.realMoneyEnabled, required this.mandatoryRightsNoticeAr});
+  const Checkout({required this.selectedAddressId, required this.addresses, required this.cart, required this.paymentMethods, required this.codFeePiastres, required this.paymentWindowHours, required this.realMoneyEnabled, required this.mandatoryRightsNoticeAr});
 
-  factory Checkout.fromJson(Map<String, dynamic> json) => Checkout(selectedAddressId: json['selectedAddressId'] as String?, addresses: (json['addresses'] as List).map((e) => Address.fromJson(e as Map<String, dynamic>)).toList(), cart: Cart.fromJson(json['cart'] as Map<String, dynamic>), paymentMethods: (json['paymentMethods'] as List).map((e) => CheckoutPaymentMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), paymentWindowHours: (json['paymentWindowHours'] as num).toInt(), realMoneyEnabled: json['realMoneyEnabled'] as bool, mandatoryRightsNoticeAr: json['mandatoryRightsNoticeAr'] as String);
+  factory Checkout.fromJson(Map<String, dynamic> json) => Checkout(selectedAddressId: json['selectedAddressId'] as String?, addresses: (json['addresses'] as List).map((e) => Address.fromJson(e as Map<String, dynamic>)).toList(), cart: Cart.fromJson(json['cart'] as Map<String, dynamic>), paymentMethods: (json['paymentMethods'] as List).map((e) => CheckoutPaymentMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), codFeePiastres: (json['codFeePiastres'] as num).toInt(), paymentWindowHours: (json['paymentWindowHours'] as num).toInt(), realMoneyEnabled: json['realMoneyEnabled'] as bool, mandatoryRightsNoticeAr: json['mandatoryRightsNoticeAr'] as String);
 
   final String? selectedAddressId;
 
@@ -624,13 +709,15 @@ class Checkout {
 
   final List<CheckoutPaymentMethodsItem> paymentMethods;
 
+  final int codFeePiastres;
+
   final int paymentWindowHours;
 
   final bool realMoneyEnabled;
 
   final String mandatoryRightsNoticeAr;
 
-  Map<String, dynamic> toJson() => {'selectedAddressId': selectedAddressId, 'addresses': addresses.map((e) => e.toJson()).toList(), 'cart': cart.toJson(), 'paymentMethods': paymentMethods.map((e) => e.toJson()).toList(), 'paymentWindowHours': paymentWindowHours, 'realMoneyEnabled': realMoneyEnabled, 'mandatoryRightsNoticeAr': mandatoryRightsNoticeAr};
+  Map<String, dynamic> toJson() => {'selectedAddressId': selectedAddressId, 'addresses': addresses.map((e) => e.toJson()).toList(), 'cart': cart.toJson(), 'paymentMethods': paymentMethods.map((e) => e.toJson()).toList(), 'codFeePiastres': codFeePiastres, 'paymentWindowHours': paymentWindowHours, 'realMoneyEnabled': realMoneyEnabled, 'mandatoryRightsNoticeAr': mandatoryRightsNoticeAr};
 }
 
 class CheckoutPaymentMethodsItem {
@@ -638,7 +725,7 @@ class CheckoutPaymentMethodsItem {
 
   factory CheckoutPaymentMethodsItem.fromJson(Map<String, dynamic> json) => CheckoutPaymentMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD, WALLET (kept as String for forward compatibility).
   final String code;
 
   final String nameAr;
@@ -889,6 +976,47 @@ class CreateSellerProductRequest {
   Map<String, dynamic> toJson() => {'categoryId': categoryId, 'titleAr': titleAr, 'condition': condition};
 }
 
+class CreateWalletTopupResponse {
+  const CreateWalletTopupResponse({required this.created, required this.topup});
+
+  factory CreateWalletTopupResponse.fromJson(Map<String, dynamic> json) => CreateWalletTopupResponse(created: json['created'] as bool, topup: CreateWalletTopupResponseTopup.fromJson(json['topup'] as Map<String, dynamic>));
+
+  final bool created;
+
+  final CreateWalletTopupResponseTopup topup;
+
+  Map<String, dynamic> toJson() => {'created': created, 'topup': topup.toJson()};
+}
+
+class CreateWalletTopupResponseTopup {
+  const CreateWalletTopupResponseTopup({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory CreateWalletTopupResponseTopup.fromJson(Map<String, dynamic> json) => CreateWalletTopupResponseTopup(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
+}
+
 class DeclineDealInvitationRequest {
   const DeclineDealInvitationRequest({required this.reason});
 
@@ -933,6 +1061,16 @@ class DeclineDealInvitationResponseItemsItem {
   final String createdAt;
 
   Map<String, dynamic> toJson() => {'id': id, 'ref': ref, 'title': title, 'status': status, 'role': role, 'counterparty': counterparty, 'totalPiastres': totalPiastres, 'createdAt': createdAt};
+}
+
+class DeleteMyPushTokenResponse {
+  const DeleteMyPushTokenResponse({required this.registered});
+
+  factory DeleteMyPushTokenResponse.fromJson(Map<String, dynamic> json) => DeleteMyPushTokenResponse(registered: json['registered'] as bool);
+
+  final bool registered;
+
+  Map<String, dynamic> toJson() => {'registered': registered};
 }
 
 class DeviceInfo {
@@ -1191,6 +1329,53 @@ class ForgotPasswordRequest {
   Map<String, dynamic> toJson() => {'identifier': identifier};
 }
 
+class GetAccountDeletionRequestResponse {
+  const GetAccountDeletionRequestResponse({required this.request});
+
+  factory GetAccountDeletionRequestResponse.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponse(request: json['request'] == null ? null : GetAccountDeletionRequestResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final GetAccountDeletionRequestResponseRequest? request;
+
+  Map<String, dynamic> toJson() => {'request': request?.toJson()};
+}
+
+class GetAccountDeletionRequestResponseRequest {
+  const GetAccountDeletionRequestResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory GetAccountDeletionRequestResponseRequest.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => GetAccountDeletionRequestResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<GetAccountDeletionRequestResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class GetAccountDeletionRequestResponseRequestBlockersItem {
+  const GetAccountDeletionRequestResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory GetAccountDeletionRequestResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => GetAccountDeletionRequestResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
+}
+
 class GetCategoryAttributesResponse {
   const GetCategoryAttributesResponse({required this.items});
 
@@ -1397,7 +1582,7 @@ class GetPaymentResponse {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD, WALLET (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -1993,9 +2178,9 @@ class GetWalletActivityResponseLink {
 }
 
 class GetWalletResponse {
-  const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUpAvailable, required this.realMoney});
+  const GetWalletResponse({required this.hasEarnings, required this.balances, required this.sources, required this.items, required this.payout, required this.topUp, required this.realMoney});
 
-  factory GetWalletResponse.fromJson(Map<String, dynamic> json) => GetWalletResponse(hasEarnings: json['hasEarnings'] as bool, balances: GetWalletResponseBalances.fromJson(json['balances'] as Map<String, dynamic>), sources: (json['sources'] as List).map((e) => GetWalletResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetWalletResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), payout: GetWalletResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), topUpAvailable: json['topUpAvailable'] as bool, realMoney: json['realMoney'] as bool);
+  factory GetWalletResponse.fromJson(Map<String, dynamic> json) => GetWalletResponse(hasEarnings: json['hasEarnings'] as bool, balances: GetWalletResponseBalances.fromJson(json['balances'] as Map<String, dynamic>), sources: (json['sources'] as List).map((e) => GetWalletResponseSourcesItem.fromJson(e as Map<String, dynamic>)).toList(), items: (json['items'] as List).map((e) => GetWalletResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), payout: GetWalletResponsePayout.fromJson(json['payout'] as Map<String, dynamic>), topUp: WalletTopUpSummary.fromJson(json['topUp'] as Map<String, dynamic>), realMoney: json['realMoney'] as bool);
 
   final bool hasEarnings;
 
@@ -2007,12 +2192,11 @@ class GetWalletResponse {
 
   final GetWalletResponsePayout payout;
 
-  /// Always false: EDMN keeps no prepaid balance and has no top-up service.
-  final bool topUpAvailable;
+  final WalletTopUpSummary topUp;
 
   final bool realMoney;
 
-  Map<String, dynamic> toJson() => {'hasEarnings': hasEarnings, 'balances': balances.toJson(), 'sources': sources.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'payout': payout.toJson(), 'topUpAvailable': topUpAvailable, 'realMoney': realMoney};
+  Map<String, dynamic> toJson() => {'hasEarnings': hasEarnings, 'balances': balances.toJson(), 'sources': sources.map((e) => e.toJson()).toList(), 'items': items.map((e) => e.toJson()).toList(), 'payout': payout.toJson(), 'topUp': topUp.toJson(), 'realMoney': realMoney};
 }
 
 class GetWalletResponseBalances {
@@ -2856,10 +3040,95 @@ class ListWalletActivityResponseItemsItemLink {
   Map<String, dynamic> toJson() => {'kind': kind, 'id': id};
 }
 
-class LoginRequest {
-  const LoginRequest({required this.identifier, required this.password, required this.device});
+class ListWalletTopupsResponse {
+  const ListWalletTopupsResponse({required this.items, required this.methods, required this.balancePiastres, required this.dailyLimitPiastres, required this.usedTodayPiastres});
 
-  factory LoginRequest.fromJson(Map<String, dynamic> json) => LoginRequest(identifier: json['identifier'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
+  factory ListWalletTopupsResponse.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponse(items: (json['items'] as List).map((e) => ListWalletTopupsResponseItemsItem.fromJson(e as Map<String, dynamic>)).toList(), methods: (json['methods'] as List).map((e) => ListWalletTopupsResponseMethodsItem.fromJson(e as Map<String, dynamic>)).toList(), balancePiastres: (json['balancePiastres'] as num).toInt(), dailyLimitPiastres: (json['dailyLimitPiastres'] as num).toInt(), usedTodayPiastres: (json['usedTodayPiastres'] as num).toInt());
+
+  final List<ListWalletTopupsResponseItemsItem> items;
+
+  final List<ListWalletTopupsResponseMethodsItem> methods;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int balancePiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int dailyLimitPiastres;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int usedTodayPiastres;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'methods': methods.map((e) => e.toJson()).toList(), 'balancePiastres': balancePiastres, 'dailyLimitPiastres': dailyLimitPiastres, 'usedTodayPiastres': usedTodayPiastres};
+}
+
+class ListWalletTopupsResponseItemsItem {
+  const ListWalletTopupsResponseItemsItem({required this.id, required this.amountPiastres, required this.method, required this.status, required this.payerReference, required this.rejectReasonAr, required this.createdAt, required this.decidedAt, required this.cancellable});
+
+  factory ListWalletTopupsResponseItemsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseItemsItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, status: json['status'] as String, payerReference: json['payerReference'] as String?, rejectReasonAr: json['rejectReasonAr'] as String?, createdAt: json['createdAt'] as String, decidedAt: json['decidedAt'] as String?, cancellable: json['cancellable'] as bool);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  final String method;
+
+  /// One of: PENDING_REVIEW, CREDITED, REJECTED, CANCELLED (kept as String for forward compatibility).
+  final String status;
+
+  final String? payerReference;
+
+  final String? rejectReasonAr;
+
+  final String createdAt;
+
+  final String? decidedAt;
+
+  final bool cancellable;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'status': status, 'payerReference': payerReference, 'rejectReasonAr': rejectReasonAr, 'createdAt': createdAt, 'decidedAt': decidedAt, 'cancellable': cancellable};
+}
+
+class ListWalletTopupsResponseMethodsItem {
+  const ListWalletTopupsResponseMethodsItem({required this.code, required this.nameAr, required this.nameEn, required this.instructionsAr, required this.destinations});
+
+  factory ListWalletTopupsResponseMethodsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseMethodsItem(code: json['code'] as String, nameAr: json['nameAr'] as String, nameEn: json['nameEn'] as String, instructionsAr: json['instructionsAr'] as String?, destinations: (json['destinations'] as List).map((e) => ListWalletTopupsResponseMethodsItemDestinationsItem.fromJson(e as Map<String, dynamic>)).toList());
+
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  final String code;
+
+  final String nameAr;
+
+  final String nameEn;
+
+  final String? instructionsAr;
+
+  final List<ListWalletTopupsResponseMethodsItemDestinationsItem> destinations;
+
+  Map<String, dynamic> toJson() => {'code': code, 'nameAr': nameAr, 'nameEn': nameEn, 'instructionsAr': instructionsAr, 'destinations': destinations.map((e) => e.toJson()).toList()};
+}
+
+class ListWalletTopupsResponseMethodsItemDestinationsItem {
+  const ListWalletTopupsResponseMethodsItemDestinationsItem({required this.label, required this.details, required this.instructionsAr, required this.isTest});
+
+  factory ListWalletTopupsResponseMethodsItemDestinationsItem.fromJson(Map<String, dynamic> json) => ListWalletTopupsResponseMethodsItemDestinationsItem(label: json['label'] as String, details: (json['details'] as Map<String, dynamic>).map((k, e) => MapEntry(k, e as String)), instructionsAr: json['instructionsAr'] as String?, isTest: json['isTest'] as bool);
+
+  final String label;
+
+  final Map<String, String> details;
+
+  final String? instructionsAr;
+
+  final bool isTest;
+
+  Map<String, dynamic> toJson() => {'label': label, 'details': details, 'instructionsAr': instructionsAr, 'isTest': isTest};
+}
+
+class LoginRequest {
+  const LoginRequest({required this.identifier, required this.password, required this.device, this.captchaToken});
+
+  factory LoginRequest.fromJson(Map<String, dynamic> json) => LoginRequest(identifier: json['identifier'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>), captchaToken: json['captchaToken'] == null ? null : json['captchaToken'] as String);
 
   final String identifier;
 
@@ -2867,7 +3136,9 @@ class LoginRequest {
 
   final DeviceInfo device;
 
-  Map<String, dynamic> toJson() => {'identifier': identifier, 'password': password, 'device': device.toJson()};
+  final String? captchaToken;
+
+  Map<String, dynamic> toJson() => {'identifier': identifier, 'password': password, 'device': device.toJson(), if (captchaToken != null) 'captchaToken': captchaToken};
 }
 
 class MarkConversationSeenRequest {
@@ -2928,6 +3199,18 @@ class MarkStoreConversationSeenResponse {
   final int unread;
 
   Map<String, dynamic> toJson() => {'unread': unread};
+}
+
+class MyPushTokenStatusResponse {
+  const MyPushTokenStatusResponse({required this.registered, required this.enabled});
+
+  factory MyPushTokenStatusResponse.fromJson(Map<String, dynamic> json) => MyPushTokenStatusResponse(registered: json['registered'] as bool, enabled: json['enabled'] as bool);
+
+  final bool registered;
+
+  final bool enabled;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'enabled': enabled};
 }
 
 class NotificationPreferences {
@@ -3285,7 +3568,7 @@ class Payment {
 
   final String id;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD, WALLET (kept as String for forward compatibility).
   final String method;
 
   final String status;
@@ -3357,7 +3640,7 @@ class PlaceOrderRequest {
 
   final String addressId;
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD, WALLET (kept as String for forward compatibility).
   final String paymentMethod;
 
   final String checkoutKey;
@@ -3481,7 +3764,7 @@ class Problem {
 
   final int status;
 
-  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
+  /// One of: validation_failed, unauthenticated, forbidden, not_found, conflict, invalid_state, insufficient_stock, insufficient_balance, rate_limited, mfa_required, step_up_required, identity_required, seller_required, feature_disabled, idempotency_key_required, idempotency_key_reused, idempotency_in_progress, internal_error (kept as String for forward compatibility).
   final String code;
 
   final String? detail;
@@ -3753,9 +4036,9 @@ class ProductDetailVariantsItemSpecsItem {
 }
 
 class Profile {
-  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.permissions});
+  const Profile({required this.id, required this.fullName, required this.email, required this.phone, required this.locale, required this.emailVerified, required this.phoneVerified, required this.isStaff, required this.totpEnrolled, required this.marketingOptIn, required this.permissions});
 
-  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
+  factory Profile.fromJson(Map<String, dynamic> json) => Profile(id: json['id'] as String, fullName: json['fullName'] as String, email: json['email'] as String?, phone: json['phone'] as String?, locale: json['locale'] as String, emailVerified: json['emailVerified'] as bool, phoneVerified: json['phoneVerified'] as bool, isStaff: json['isStaff'] as bool, totpEnrolled: json['totpEnrolled'] as bool, marketingOptIn: json['marketingOptIn'] as bool, permissions: (json['permissions'] as List).map((e) => e as String).toList());
 
   final String id;
 
@@ -3776,9 +4059,11 @@ class Profile {
 
   final bool totpEnrolled;
 
+  final bool marketingOptIn;
+
   final List<String> permissions;
 
-  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'permissions': permissions.map((e) => e).toList()};
+  Map<String, dynamic> toJson() => {'id': id, 'fullName': fullName, 'email': email, 'phone': phone, 'locale': locale, 'emailVerified': emailVerified, 'phoneVerified': phoneVerified, 'isStaff': isStaff, 'totpEnrolled': totpEnrolled, 'marketingOptIn': marketingOptIn, 'permissions': permissions.map((e) => e).toList()};
 }
 
 class ProtectedDeal {
@@ -4073,9 +4358,9 @@ class RefreshTokenRequest {
 }
 
 class RegisterRequest {
-  const RegisterRequest({required this.fullName, required this.email, required this.phone, required this.password, required this.device});
+  const RegisterRequest({required this.fullName, required this.email, required this.phone, required this.password, this.marketingConsent, required this.device});
 
-  factory RegisterRequest.fromJson(Map<String, dynamic> json) => RegisterRequest(fullName: json['fullName'] as String, email: json['email'] as String, phone: json['phone'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
+  factory RegisterRequest.fromJson(Map<String, dynamic> json) => RegisterRequest(fullName: json['fullName'] as String, email: json['email'] as String, phone: json['phone'] as String, password: json['password'] as String, marketingConsent: json['marketingConsent'] == null ? null : json['marketingConsent'] as bool, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
 
   final String fullName;
 
@@ -4085,9 +4370,11 @@ class RegisterRequest {
 
   final String password;
 
+  final bool? marketingConsent;
+
   final DeviceInfo device;
 
-  Map<String, dynamic> toJson() => {'fullName': fullName, 'email': email, 'phone': phone, 'password': password, 'device': device.toJson()};
+  Map<String, dynamic> toJson() => {'fullName': fullName, 'email': email, 'phone': phone, 'password': password, if (marketingConsent != null) 'marketingConsent': marketingConsent, 'device': device.toJson()};
 }
 
 class ReopenSupportTicketRequest {
@@ -4271,6 +4558,63 @@ class ReportStoreMessageResponse {
   final bool ok;
 
   Map<String, dynamic> toJson() => {'ok': ok};
+}
+
+class RequestAccountDeletionRequest {
+  const RequestAccountDeletionRequest({this.reason});
+
+  factory RequestAccountDeletionRequest.fromJson(Map<String, dynamic> json) => RequestAccountDeletionRequest(reason: json['reason'] == null ? null : json['reason'] as String);
+
+  final String? reason;
+
+  Map<String, dynamic> toJson() => {if (reason != null) 'reason': reason};
+}
+
+class RequestAccountDeletionResponse {
+  const RequestAccountDeletionResponse({required this.request});
+
+  factory RequestAccountDeletionResponse.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponse(request: RequestAccountDeletionResponseRequest.fromJson(json['request'] as Map<String, dynamic>));
+
+  final RequestAccountDeletionResponseRequest request;
+
+  Map<String, dynamic> toJson() => {'request': request.toJson()};
+}
+
+class RequestAccountDeletionResponseRequest {
+  const RequestAccountDeletionResponseRequest({required this.id, required this.status, required this.reason, required this.blockers, required this.createdAt, required this.completedAt});
+
+  factory RequestAccountDeletionResponseRequest.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponseRequest(id: json['id'] as String, status: json['status'] as String, reason: json['reason'] as String?, blockers: (json['blockers'] as List).map((e) => RequestAccountDeletionResponseRequestBlockersItem.fromJson(e as Map<String, dynamic>)).toList(), createdAt: json['createdAt'] as String, completedAt: json['completedAt'] as String?);
+
+  final String id;
+
+  /// One of: BLOCKED, PENDING, COMPLETED, WITHDRAWN (kept as String for forward compatibility).
+  final String status;
+
+  final String? reason;
+
+  final List<RequestAccountDeletionResponseRequestBlockersItem> blockers;
+
+  final String createdAt;
+
+  final String? completedAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'status': status, 'reason': reason, 'blockers': blockers.map((e) => e.toJson()).toList(), 'createdAt': createdAt, 'completedAt': completedAt};
+}
+
+class RequestAccountDeletionResponseRequestBlockersItem {
+  const RequestAccountDeletionResponseRequestBlockersItem({required this.code, required this.label, required this.count});
+
+  factory RequestAccountDeletionResponseRequestBlockersItem.fromJson(Map<String, dynamic> json) => RequestAccountDeletionResponseRequestBlockersItem(code: json['code'] as String, label: json['label'] as String, count: (json['count'] as num).toInt());
+
+  /// Stable blocker code (e.g. OPEN_ORDERS).
+  final String code;
+
+  /// Ready-to-show Arabic reason.
+  final String label;
+
+  final int count;
+
+  Map<String, dynamic> toJson() => {'code': code, 'label': label, 'count': count};
 }
 
 class RequestCancellationRequest {
@@ -4620,6 +4964,31 @@ class RunStoreReturnStepRequest {
   Map<String, dynamic> toJson() => {'step': step, if (note != null) 'note': note, if (reason != null) 'reason': reason, if (includeShipping != null) 'includeShipping': includeShipping, if (restock != null) 'restock': restock};
 }
 
+class SaveMyPushTokenRequest {
+  const SaveMyPushTokenRequest({required this.token, this.provider});
+
+  factory SaveMyPushTokenRequest.fromJson(Map<String, dynamic> json) => SaveMyPushTokenRequest(token: json['token'] as String, provider: json['provider'] == null ? null : json['provider'] as String);
+
+  final String token;
+
+  /// One of: FCM, APNS (kept as String for forward compatibility).
+  final String? provider;
+
+  Map<String, dynamic> toJson() => {'token': token, if (provider != null) 'provider': provider};
+}
+
+class SaveMyPushTokenResponse {
+  const SaveMyPushTokenResponse({required this.registered, required this.platform});
+
+  factory SaveMyPushTokenResponse.fromJson(Map<String, dynamic> json) => SaveMyPushTokenResponse(registered: json['registered'] as bool, platform: json['platform'] as String);
+
+  final bool registered;
+
+  final String platform;
+
+  Map<String, dynamic> toJson() => {'registered': registered, 'platform': platform};
+}
+
 class SaveNotificationPreferencesRequest {
   const SaveNotificationPreferencesRequest({this.messagesInApp, this.messagesSound, this.messagesPush, this.messagesEmail, this.pushPreview});
 
@@ -4881,9 +5250,9 @@ class SaveSellerStoreSettingsRequest {
 }
 
 class SearchProductsResponse {
-  const SearchProductsResponse({required this.items, required this.page, required this.pageSize, required this.total, required this.pages});
+  const SearchProductsResponse({required this.items, required this.page, required this.pageSize, required this.total, required this.pages, required this.nextCursor});
 
-  factory SearchProductsResponse.fromJson(Map<String, dynamic> json) => SearchProductsResponse(items: (json['items'] as List).map((e) => ProductCard.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), pageSize: (json['pageSize'] as num).toInt(), total: (json['total'] as num).toInt(), pages: (json['pages'] as num).toInt());
+  factory SearchProductsResponse.fromJson(Map<String, dynamic> json) => SearchProductsResponse(items: (json['items'] as List).map((e) => ProductCard.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), pageSize: (json['pageSize'] as num).toInt(), total: (json['total'] as num).toInt(), pages: (json['pages'] as num).toInt(), nextCursor: json['nextCursor'] as String?);
 
   final List<ProductCard> items;
 
@@ -4895,7 +5264,9 @@ class SearchProductsResponse {
 
   final int pages;
 
-  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'total': total, 'pages': pages};
+  final String? nextCursor;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'total': total, 'pages': pages, 'nextCursor': nextCursor};
 }
 
 class SellerApplication {
@@ -5423,7 +5794,7 @@ class StartDealPaymentRequest {
 
   factory StartDealPaymentRequest.fromJson(Map<String, dynamic> json) => StartDealPaymentRequest(method: json['method'] as String);
 
-  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH, ORANGE_CASH, ETISALAT_CASH, WE_PAY, BM_WALLET, COD, WALLET (kept as String for forward compatibility).
   final String method;
 
   Map<String, dynamic> toJson() => {'method': method};
@@ -5606,13 +5977,15 @@ class UpdateAddressResponse {
 }
 
 class UpdateMeRequest {
-  const UpdateMeRequest({required this.fullName});
+  const UpdateMeRequest({required this.fullName, this.marketingOptIn});
 
-  factory UpdateMeRequest.fromJson(Map<String, dynamic> json) => UpdateMeRequest(fullName: json['fullName'] as String);
+  factory UpdateMeRequest.fromJson(Map<String, dynamic> json) => UpdateMeRequest(fullName: json['fullName'] as String, marketingOptIn: json['marketingOptIn'] == null ? null : json['marketingOptIn'] as bool);
 
   final String fullName;
 
-  Map<String, dynamic> toJson() => {'fullName': fullName};
+  final bool? marketingOptIn;
+
+  Map<String, dynamic> toJson() => {'fullName': fullName, if (marketingOptIn != null) 'marketingOptIn': marketingOptIn};
 }
 
 class VerifyDealDeliveryCodeRequest {
@@ -5623,6 +5996,46 @@ class VerifyDealDeliveryCodeRequest {
   final String code;
 
   Map<String, dynamic> toJson() => {'code': code};
+}
+
+class WalletTopUpSummary {
+  const WalletTopUpSummary({required this.enabled, required this.balancePiastres, required this.pending, required this.dailyLimitPiastres, required this.usedTodayPiastres});
+
+  factory WalletTopUpSummary.fromJson(Map<String, dynamic> json) => WalletTopUpSummary(enabled: json['enabled'] as bool, balancePiastres: (json['balancePiastres'] as num).toInt(), pending: (json['pending'] as List).map((e) => WalletTopUpSummaryPendingItem.fromJson(e as Map<String, dynamic>)).toList(), dailyLimitPiastres: (json['dailyLimitPiastres'] as num).toInt(), usedTodayPiastres: (json['usedTodayPiastres'] as num).toInt());
+
+  /// wallet.topUpEnabled. false = hide every deposit control; the top-up endpoints answer feature_disabled.
+  final bool enabled;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int balancePiastres;
+
+  final List<WalletTopUpSummaryPendingItem> pending;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int dailyLimitPiastres;
+
+  /// Deposits plus order/deal receipts counted today (Africa/Cairo) against the one shared daily cap.
+  final int usedTodayPiastres;
+
+  Map<String, dynamic> toJson() => {'enabled': enabled, 'balancePiastres': balancePiastres, 'pending': pending.map((e) => e.toJson()).toList(), 'dailyLimitPiastres': dailyLimitPiastres, 'usedTodayPiastres': usedTodayPiastres};
+}
+
+class WalletTopUpSummaryPendingItem {
+  const WalletTopUpSummaryPendingItem({required this.id, required this.amountPiastres, required this.method, required this.createdAt});
+
+  factory WalletTopUpSummaryPendingItem.fromJson(Map<String, dynamic> json) => WalletTopUpSummaryPendingItem(id: json['id'] as String, amountPiastres: (json['amountPiastres'] as num).toInt(), method: json['method'] as String, createdAt: json['createdAt'] as String);
+
+  final String id;
+
+  /// Amount in piastres (1 EGP = 100 piastres). Format with the shared money formatter, never as a float.
+  final int amountPiastres;
+
+  /// One of: BANK_TRANSFER, INSTAPAY, VODAFONE_CASH (kept as String for forward compatibility).
+  final String method;
+
+  final String createdAt;
+
+  Map<String, dynamic> toJson() => {'id': id, 'amountPiastres': amountPiastres, 'method': method, 'createdAt': createdAt};
 }
 
 class Wishlist {

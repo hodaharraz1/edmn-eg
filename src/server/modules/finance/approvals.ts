@@ -24,16 +24,24 @@ export const ACTION_ENTRY_TYPES: Record<FinancialAction, string[]> = {
   DEAL_PAYOUT: ['DEAL_PAYOUT_PAID'],
   WITHDRAWAL_PAYOUT_RETURN: ['WITHDRAWAL_RETURNED'],
   REFUND_REVOCATION: ['REFUND_REVERSAL'],
+  COD_REMITTANCE: ['COD_REMITTANCE'],
+  COD_SHORTAGE_RESOLUTION: ['COD_SHORTAGE_RESOLUTION'],
+  WALLET_TOPUP_CREDIT: ['WALLET_TOPUP_CREDIT'],
 };
 
 /**
- * OWNER RULE (Batch 1.5): EVERY actual financial movement is two-person — a Maker and a DIFFERENT Checker,
- * no amount threshold, no exception. Mirrored by the DB trigger `financial_approvals_movement_two_person`.
- * Not listed (documented): PAYMENT_CONFIRMATION / DEAL_PAYMENT_CONFIRMATION verify money RECEIVED (the payer
- * submits, a reviewer who is never the payer confirms; the payer is recorded as requester) and
- * WITHDRAWAL_RESERVATION locks the seller's own funds at the seller's request (its payout is two-person).
+ * OWNER RULE (Batch 1.5 + payment hardening): EVERY actual financial movement AND every payment
+ * confirmation is two-person — a Maker and a DIFFERENT Checker, no amount threshold, no exception.
+ * Mirrored by the DB trigger `edmn_movement_requires_two_people`.
+ * PAYMENT_CONFIRMATION / DEAL_PAYMENT_CONFIRMATION: the Maker is the reviewer who started the review
+ * (payments.review_started_by), the Checker is the confirmer — a payment can never be confirmed by the
+ * person who reviewed it (also enforced by the payments_two_person_chk DB CHECK).
+ * Not listed (documented): WITHDRAWAL_RESERVATION locks the seller's own funds at the seller's request
+ * (its payout is two-person).
  */
 export const MOVEMENT_ACTIONS: readonly FinancialAction[] = [
+  'PAYMENT_CONFIRMATION',
+  'DEAL_PAYMENT_CONFIRMATION',
   'SELLER_RELEASE',
   'REFUND_APPROVAL',
   'REFUND_PAYOUT',
@@ -45,6 +53,9 @@ export const MOVEMENT_ACTIONS: readonly FinancialAction[] = [
   'DEAL_RELEASE',
   'DEAL_REFUND',
   'DEAL_PAYOUT',
+  'COD_REMITTANCE',
+  'COD_SHORTAGE_RESOLUTION',
+  'WALLET_TOPUP_CREDIT',
 ];
 
 export interface ApprovalRequest {

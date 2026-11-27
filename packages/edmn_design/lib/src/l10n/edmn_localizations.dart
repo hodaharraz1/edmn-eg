@@ -101,13 +101,13 @@ abstract class EdmnLocalizations {
   /// No description provided for @appNameCustomer.
   ///
   /// In ar, this message translates to:
-  /// **'اضمن'**
+  /// **'أضمن'**
   String get appNameCustomer;
 
   /// No description provided for @appNameAdmin.
   ///
   /// In ar, this message translates to:
-  /// **'اضمن — الإدارة'**
+  /// **'أضمن — الإدارة'**
   String get appNameAdmin;
 
   /// No description provided for @retry.
@@ -746,6 +746,18 @@ abstract class EdmnLocalizations {
   /// **'اتضاف للسلة'**
   String get addedToCart;
 
+  /// No description provided for @viewCart.
+  ///
+  /// In ar, this message translates to:
+  /// **'شوف السلة'**
+  String get viewCart;
+
+  /// No description provided for @buyNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشتري دلوقتي'**
+  String get buyNow;
+
   /// No description provided for @protectedDealBannerTitle.
   ///
   /// In ar, this message translates to:
@@ -1123,6 +1135,18 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'العنوان'**
   String get stepAddress;
+
+  /// No description provided for @shippingFromStores.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن من كل متجر'**
+  String get shippingFromStores;
+
+  /// No description provided for @freeShipping.
+  ///
+  /// In ar, this message translates to:
+  /// **'شحن مجاني'**
+  String get freeShipping;
 
   /// No description provided for @stepDelivery.
   ///
@@ -5264,6 +5288,12 @@ abstract class EdmnLocalizations {
   /// **'قيّم المتجر {store}'**
   String rateStore(String store);
 
+  /// No description provided for @starRatingLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} من 5 نجوم'**
+  String starRatingLabel(int count);
+
   /// No description provided for @evidenceLabel.
   ///
   /// In ar, this message translates to:
@@ -5579,7 +5609,7 @@ abstract class EdmnLocalizations {
   /// No description provided for @adminKpiRevenue.
   ///
   /// In ar, this message translates to:
-  /// **'إيرادات اضمن'**
+  /// **'إيرادات أضمن'**
   String get adminKpiRevenue;
 
   /// No description provided for @adminKpiOrders.
@@ -5743,6 +5773,12 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'النزاعات والشكاوى'**
   String get adminDisputes;
+
+  /// No description provided for @adminAccountClosures.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلبات إغلاق الحسابات'**
+  String get adminAccountClosures;
 
   /// No description provided for @adminAuditLog.
   ///
@@ -6595,6 +6631,720 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'تم إلغاء الطلب. لا تقم بشحنه.'**
   String get soHintCancelled;
+
+  /// No description provided for @adminReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'المرتجعات'**
+  String get adminReturns;
+
+  /// No description provided for @adminAlertsInbox.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيهات التشغيلية'**
+  String get adminAlertsInbox;
+
+  /// No description provided for @adminCustomers.
+  ///
+  /// In ar, this message translates to:
+  /// **'العملاء'**
+  String get adminCustomers;
+
+  /// No description provided for @adminSupportInbox.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذاكر الدعم'**
+  String get adminSupportInbox;
+
+  /// No description provided for @adminTabReturnsPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار القرار'**
+  String get adminTabReturnsPending;
+
+  /// No description provided for @adminTabReturnsActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد التنفيذ'**
+  String get adminTabReturnsActive;
+
+  /// No description provided for @adminTabReturnsDone.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتهية أو محوّلة'**
+  String get adminTabReturnsDone;
+
+  /// No description provided for @adminSearchReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث برقم المرتجع'**
+  String get adminSearchReturns;
+
+  /// No description provided for @adminCod.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدفع عند الاستلام (COD)'**
+  String get adminCod;
+
+  /// No description provided for @adminTabCodAwaiting.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار كشف الشحن'**
+  String get adminTabCodAwaiting;
+
+  /// No description provided for @adminTabCodShortfalls.
+  ///
+  /// In ar, this message translates to:
+  /// **'عجز مفتوح'**
+  String get adminTabCodShortfalls;
+
+  /// No description provided for @adminStatusCodCollected.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتسلّم، بانتظار التحصيل'**
+  String get adminStatusCodCollected;
+
+  /// No description provided for @adminSearchCustomers.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث بالاسم أو البريد أو الموبايل'**
+  String get adminSearchCustomers;
+
+  /// No description provided for @adminTabAllAlerts.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get adminTabAllAlerts;
+
+  /// No description provided for @adminStageDue.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستحق'**
+  String get adminStageDue;
+
+  /// No description provided for @adminStageOverdue.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأخر'**
+  String get adminStageOverdue;
+
+  /// No description provided for @adminStagePre.
+  ///
+  /// In ar, this message translates to:
+  /// **'قبل الموعد'**
+  String get adminStagePre;
+
+  /// No description provided for @adminTabAllCustomers.
+  ///
+  /// In ar, this message translates to:
+  /// **'كل العملاء'**
+  String get adminTabAllCustomers;
+
+  /// No description provided for @adminStatusReturnRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب إرجاع جديد'**
+  String get adminStatusReturnRequested;
+
+  /// No description provided for @adminStatusReturnInTransit.
+  ///
+  /// In ar, this message translates to:
+  /// **'في الطريق للبائع'**
+  String get adminStatusReturnInTransit;
+
+  /// No description provided for @adminStatusReturnReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'استلمه البائع'**
+  String get adminStatusReturnReceived;
+
+  /// No description provided for @adminStatusReturnInspection.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد الفحص'**
+  String get adminStatusReturnInspection;
+
+  /// No description provided for @adminStatusRefundPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسترداد بانتظار الاعتماد'**
+  String get adminStatusRefundPending;
+
+  /// No description provided for @adminStatusInProgress.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المعالجة'**
+  String get adminStatusInProgress;
+
+  /// No description provided for @adminStatusWaitingCustomer.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار العميل'**
+  String get adminStatusWaitingCustomer;
+
+  /// No description provided for @adminStatusWaitingSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار البائع'**
+  String get adminStatusWaitingSeller;
+
+  /// No description provided for @adminStatusEscalated.
+  ///
+  /// In ar, this message translates to:
+  /// **'محوّلة لمستوى أعلى'**
+  String get adminStatusEscalated;
+
+  /// No description provided for @adminStatusSuspended.
+  ///
+  /// In ar, this message translates to:
+  /// **'موقوف'**
+  String get adminStatusSuspended;
+
+  /// No description provided for @adminRetNextRequested.
+  ///
+  /// In ar, this message translates to:
+  /// **'مراجعة الطلب وقبوله أو رفضه (البائع في تطبيقه أو الإدارة من لوحة الويب)'**
+  String get adminRetNextRequested;
+
+  /// No description provided for @adminRetNextApproved.
+  ///
+  /// In ar, this message translates to:
+  /// **'بانتظار شحن المنتج من العميل'**
+  String get adminRetNextApproved;
+
+  /// No description provided for @adminRetNextInTransit.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل استلام المرتجع'**
+  String get adminRetNextInTransit;
+
+  /// No description provided for @adminRetNextReceived.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدء الفحص'**
+  String get adminRetNextReceived;
+
+  /// No description provided for @adminRetNextInspection.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرار الاسترداد (يصرفه فريق المالية بموافقة شخصين)'**
+  String get adminRetNextInspection;
+
+  /// No description provided for @adminRetNextRefundPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'اعتماد وصرف الاسترداد من فريق المالية (شخصان)'**
+  String get adminRetNextRefundPending;
+
+  /// No description provided for @adminRetNextClosed.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا شيء — مغلق'**
+  String get adminRetNextClosed;
+
+  /// No description provided for @adminRetNextDisputed.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُتابع من خلال النزاع'**
+  String get adminRetNextDisputed;
+
+  /// No description provided for @adminFieldNextStep.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخطوة التالية'**
+  String get adminFieldNextStep;
+
+  /// No description provided for @adminFieldRefund.
+  ///
+  /// In ar, this message translates to:
+  /// **'مبلغ الاسترداد'**
+  String get adminFieldRefund;
+
+  /// No description provided for @adminFieldEvidenceCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور الإثبات'**
+  String get adminFieldEvidenceCount;
+
+  /// No description provided for @adminFieldStatutory.
+  ///
+  /// In ar, this message translates to:
+  /// **'ضمن المدة القانونية'**
+  String get adminFieldStatutory;
+
+  /// No description provided for @adminFieldDecision.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب القرار'**
+  String get adminFieldDecision;
+
+  /// No description provided for @adminFieldInspection.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحظة الفحص'**
+  String get adminFieldInspection;
+
+  /// No description provided for @adminFieldEmail.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني'**
+  String get adminFieldEmail;
+
+  /// No description provided for @adminFieldPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموبايل'**
+  String get adminFieldPhone;
+
+  /// No description provided for @adminVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'موثّق'**
+  String get adminVerified;
+
+  /// No description provided for @adminNotVerified.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير موثّق'**
+  String get adminNotVerified;
+
+  /// No description provided for @adminFieldLastLogin.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر دخول'**
+  String get adminFieldLastLogin;
+
+  /// No description provided for @adminFieldJoined.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ التسجيل'**
+  String get adminFieldJoined;
+
+  /// No description provided for @adminSectionAddresses.
+  ///
+  /// In ar, this message translates to:
+  /// **'العناوين (المدينة والمحافظة فقط)'**
+  String get adminSectionAddresses;
+
+  /// No description provided for @adminSectionActivity.
+  ///
+  /// In ar, this message translates to:
+  /// **'النشاط'**
+  String get adminSectionActivity;
+
+  /// No description provided for @adminSectionRecentOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'أحدث الطلبات'**
+  String get adminSectionRecentOrders;
+
+  /// No description provided for @adminCountOrders.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلبات'**
+  String get adminCountOrders;
+
+  /// No description provided for @adminCountReturns.
+  ///
+  /// In ar, this message translates to:
+  /// **'المرتجعات'**
+  String get adminCountReturns;
+
+  /// No description provided for @adminCountDisputes.
+  ///
+  /// In ar, this message translates to:
+  /// **'النزاعات'**
+  String get adminCountDisputes;
+
+  /// No description provided for @adminCountTickets.
+  ///
+  /// In ar, this message translates to:
+  /// **'تذاكر الدعم'**
+  String get adminCountTickets;
+
+  /// No description provided for @adminCountDeals.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصفقات المحمية'**
+  String get adminCountDeals;
+
+  /// No description provided for @adminCountReviews.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقييمات'**
+  String get adminCountReviews;
+
+  /// No description provided for @adminCustomerManageOnWeb.
+  ///
+  /// In ar, this message translates to:
+  /// **'تغيير حالة العميل يتم من لوحة الويب فقط.'**
+  String get adminCustomerManageOnWeb;
+
+  /// No description provided for @adminReturnsOnWeb.
+  ///
+  /// In ar, this message translates to:
+  /// **'قرارات المرتجعات والاسترداد لا تتم من هذا التطبيق: البائع يقرر من تطبيقه، والاسترداد يعتمده ويصرفه فريق المالية من لوحة الويب بموافقة شخصين.'**
+  String get adminReturnsOnWeb;
+
+  /// No description provided for @adminAlertsOnWeb.
+  ///
+  /// In ar, this message translates to:
+  /// **'قواعد التنبيهات تُضبط من لوحة الويب. هذه القائمة للمتابعة فقط.'**
+  String get adminAlertsOnWeb;
+
+  /// No description provided for @adminAlertRulesSection.
+  ///
+  /// In ar, this message translates to:
+  /// **'القواعد المفعّلة'**
+  String get adminAlertRulesSection;
+
+  /// No description provided for @adminAlertSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'أُرسل {count} مرة'**
+  String adminAlertSent(int count);
+
+  /// No description provided for @adminFieldPriority.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأولوية'**
+  String get adminFieldPriority;
+
+  /// No description provided for @adminFromSeller.
+  ///
+  /// In ar, this message translates to:
+  /// **'من بائع'**
+  String get adminFromSeller;
+
+  /// No description provided for @adminAttachment.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفق'**
+  String get adminAttachment;
+
+  /// No description provided for @adminReply.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرد على العميل'**
+  String get adminReply;
+
+  /// No description provided for @adminReplyHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'يظهر الرد للعميل باسم فريق الدعم ويصله إشعار. الرد لا يغلق التذكرة ولا يقبل مرفقات.'**
+  String get adminReplyHint;
+
+  /// No description provided for @adminReplySend.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الرد'**
+  String get adminReplySend;
+
+  /// No description provided for @adminReplySent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال الرد'**
+  String get adminReplySent;
+
+  /// No description provided for @adminSupportOnWeb.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.'**
+  String get adminSupportOnWeb;
+
+  /// No description provided for @accountDeletion.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف الحساب'**
+  String get accountDeletion;
+
+  /// No description provided for @accountDeletionBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب حذف الحساب بيسجّل طلب عند فريق أضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.'**
+  String get accountDeletionBody;
+
+  /// No description provided for @accountDeletionReasonHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سبب الحذف (اختياري)'**
+  String get accountDeletionReasonHint;
+
+  /// No description provided for @accountDeletionSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال طلب حذف الحساب'**
+  String get accountDeletionSubmit;
+
+  /// No description provided for @accountDeletionConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.'**
+  String get accountDeletionConfirm;
+
+  /// No description provided for @accountDeletionSent.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتسجّل طلبك، وفريق أضمن هيكمّله بعد مراجعة الحساب'**
+  String get accountDeletionSent;
+
+  /// No description provided for @accountDeletionPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب حذف الحساب قيد التنفيذ'**
+  String get accountDeletionPending;
+
+  /// No description provided for @accountDeletionPendingBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'فريق أضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.'**
+  String get accountDeletionPendingBody;
+
+  /// No description provided for @accountDeletionBlockedTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'مش هينفع تقفل حسابك دلوقتي'**
+  String get accountDeletionBlockedTitle;
+
+  /// No description provided for @accountDeletionBlockedBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:'**
+  String get accountDeletionBlockedBody;
+
+  /// No description provided for @accountDeletionCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء طلب الحذف'**
+  String get accountDeletionCancel;
+
+  /// No description provided for @accountDeletionCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتلغى طلب حذف الحساب'**
+  String get accountDeletionCancelled;
+
+  /// No description provided for @accountDeletionRequestedAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الطلب'**
+  String get accountDeletionRequestedAt;
+
+  /// No description provided for @accountDeletionCancelConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.'**
+  String get accountDeletionCancelConfirm;
+
+  /// No description provided for @marketingConsentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أوافق على استقبال عروض ورسائل تسويق من أضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)'**
+  String get marketingConsentLabel;
+
+  /// No description provided for @marketingConsentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رسائل وعروض التسويق'**
+  String get marketingConsentTitle;
+
+  /// No description provided for @marketingConsentSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.'**
+  String get marketingConsentSubtitle;
+
+  /// No description provided for @errorFeatureDisabled.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخاصية دي مش متاحة دلوقتي'**
+  String get errorFeatureDisabled;
+
+  /// No description provided for @walletBalanceLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رصيد المحفظة'**
+  String get walletBalanceLabel;
+
+  /// No description provided for @walletDeposit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداع'**
+  String get walletDeposit;
+
+  /// No description provided for @depositTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداع في المحفظة'**
+  String get depositTitle;
+
+  /// No description provided for @depositMethodLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'طريقة الإيداع'**
+  String get depositMethodLabel;
+
+  /// No description provided for @depositMethodInstapay.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنستاباي'**
+  String get depositMethodInstapay;
+
+  /// No description provided for @depositMethodBank.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحويل بنكي'**
+  String get depositMethodBank;
+
+  /// No description provided for @depositMethodWallet.
+  ///
+  /// In ar, this message translates to:
+  /// **'محفظة إلكترونية'**
+  String get depositMethodWallet;
+
+  /// No description provided for @depositMethodWalletHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة'**
+  String get depositMethodWalletHint;
+
+  /// No description provided for @depositTransferTo.
+  ///
+  /// In ar, this message translates to:
+  /// **'حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال'**
+  String get depositTransferTo;
+
+  /// No description provided for @depositRemainingToday.
+  ///
+  /// In ar, this message translates to:
+  /// **'المتاح للإيداع النهاردة: {amount} (الحد اليومي مشترك مع إيصالات الدفع)'**
+  String depositRemainingToday(String amount);
+
+  /// No description provided for @depositOverLimit.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ أكبر من المتاح للإيداع النهاردة ({amount})'**
+  String depositOverLimit(String amount);
+
+  /// No description provided for @depositNoMethods.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفيش طرق إيداع متاحة دلوقتي'**
+  String get depositNoMethods;
+
+  /// No description provided for @depositSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال الإيصال'**
+  String get depositSubmit;
+
+  /// No description provided for @depositSubmitted.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.'**
+  String get depositSubmitted;
+
+  /// No description provided for @depositsList.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداعاتي'**
+  String get depositsList;
+
+  /// No description provided for @noDeposits.
+  ///
+  /// In ar, this message translates to:
+  /// **'لسه معملتش أي إيداع'**
+  String get noDeposits;
+
+  /// No description provided for @depositPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'قيد المراجعة'**
+  String get depositPending;
+
+  /// No description provided for @depositCredited.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتضاف لرصيدك'**
+  String get depositCredited;
+
+  /// No description provided for @depositRejected.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرفوض'**
+  String get depositRejected;
+
+  /// No description provided for @depositCancelled.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملغي'**
+  String get depositCancelled;
+
+  /// No description provided for @depositRejectedReason.
+  ///
+  /// In ar, this message translates to:
+  /// **'السبب: {reason}'**
+  String depositRejectedReason(String reason);
+
+  /// No description provided for @depositCancel.
+  ///
+  /// In ar, this message translates to:
+  /// **'إلغاء الإيداع'**
+  String get depositCancel;
+
+  /// No description provided for @depositPendingCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إيداعات قيد المراجعة: {count}'**
+  String depositPendingCount(String count);
+
+  /// No description provided for @shopByCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشترى حسب الفئة'**
+  String get shopByCategory;
+
+  /// No description provided for @offersLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'عروض'**
+  String get offersLabel;
+
+  /// No description provided for @homeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنزل'**
+  String get homeLabel;
+
+  /// No description provided for @discountPercentLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'خصم {percent}%'**
+  String discountPercentLabel(int percent);
+
+  /// No description provided for @searchHintPhones.
+  ///
+  /// In ar, this message translates to:
+  /// **'آيفون 15'**
+  String get searchHintPhones;
+
+  /// No description provided for @searchHintWatches.
+  ///
+  /// In ar, this message translates to:
+  /// **'ساعة كاسيو'**
+  String get searchHintWatches;
+
+  /// No description provided for @searchHintConsoles.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلايستيشن 5'**
+  String get searchHintConsoles;
+
+  /// No description provided for @searchHintAppliances.
+  ///
+  /// In ar, this message translates to:
+  /// **'غسالة تورنيدو'**
+  String get searchHintAppliances;
 }
 
 class _EdmnLocalizationsDelegate

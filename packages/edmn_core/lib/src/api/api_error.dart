@@ -16,6 +16,7 @@ enum ApiErrorCode {
   stepUpRequired('step_up_required'),
   identityRequired('identity_required'),
   sellerRequired('seller_required'),
+  featureDisabled('feature_disabled'),
   idempotencyKeyRequired('idempotency_key_required'),
   idempotencyKeyReused('idempotency_key_reused'),
   idempotencyInProgress('idempotency_in_progress'),

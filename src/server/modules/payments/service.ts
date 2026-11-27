@@ -1,12 +1,12 @@
 import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
+import { PAYMENT_METHOD_CODES, dealMachine, orderMachine, paymentMachine, sellerOrderMachine } from '@/domain/machines';
 import { audit } from '@/server/audit/audit';
 import { requirePermission, requireUser, type Actor, requireStepUp } from '@/server/core/actor';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { parseEgp } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import {
+import { codRemittanceShortfalls,
   externalDeals,
   inventoryReservations,
   orderItems,
@@ -69,6 +69,23 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
     if (p.status !== 'AWAITING_PAYMENT' && p.status !== 'REJECTED') throw invalidState('مينفعش ترفع إثبات دفع للطلب ده دلوقتي');
     if (p.dueAt < new Date() && p.status === 'AWAITING_PAYMENT') throw invalidState('مهلة الدفع للطلب ده خلصت');
     if (!proof) throw validation('ارفع صورة أو ملف إثبات الدفع', { proof: ['مطلوب'] });
+    // Daily cap per customer (Cairo calendar day) over receipts uploaded (SUBMITTED) or confirmed (ACCEPTED).
+    // Rejected proofs stop counting, so a refused upload never blocks a corrected one.
+    const dailyLimit = await getSetting('payments.dailyReceiptLimit', tx);
+    const [{ total }] = await tx
+      .select({ total: sql<string>`coalesce(sum(${paymentSubmissions.claimedAmount}), 0)::text` })
+      .from(paymentSubmissions)
+      .innerJoin(payments, eq(payments.id, paymentSubmissions.paymentId))
+      .where(
+        and(
+          eq(payments.payerUserId, userId),
+          inArray(paymentSubmissions.status, ['SUBMITTED', 'ACCEPTED']),
+          sql`(${paymentSubmissions.createdAt} at time zone 'Africa/Cairo')::date = (now() at time zone 'Africa/Cairo')::date`,
+        ),
+      );
+    if (Number(total) + claimed > dailyLimit) {
+      throw validation(`وصلت للحد الأقصى اليومي لإيصالات الدفع (${formatEGP(dailyLimit)}). مينفعش ترفع إيصال جديد قبل بكرة بتوقيت القاهرة`);
+    }
     const file = await storeUpload(tx, actor, { purpose: 'PAYMENT_PROOF', data: proof.data, originalName: proof.name });
     const [sub] = await tx
       .insert(paymentSubmissions)
@@ -100,7 +117,7 @@ export async function submitProof(actor: Actor, paymentId: string, input: z.inpu
   });
 }
 
-async function moveOrderTo(tx: DbOrTx, actor: Actor, orderId: string, to: 'PAYMENT_UNDER_REVIEW' | 'PENDING_PAYMENT' | 'PAID', reason?: string) {
+export async function moveOrderTo(tx: DbOrTx, actor: Actor, orderId: string, to: 'PAYMENT_UNDER_REVIEW' | 'PENDING_PAYMENT' | 'PAID', reason?: string) {
   const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
   if (o.status !== to) {
     await transition(tx, actor, orderMachine, o.id, o.status, to, reason);
@@ -120,9 +137,11 @@ export async function startReview(actor: Actor, paymentId: string) {
   await db.transaction(async (tx) => {
     const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
     if (!p) throw notFound('عملية الدفع');
-    if (p.status !== 'PAYMENT_SUBMITTED') return;
-    await transition(tx, actor, paymentMachine, p.id, p.status, 'UNDER_REVIEW');
-    await tx.update(payments).set({ status: 'UNDER_REVIEW' }).where(eq(payments.id, p.id));
+    // The reviewer is the Maker of the later confirmation: it can never be confirmed by the same person.
+    if (p.status === 'UNDER_REVIEW' && p.reviewStartedBy) return;
+    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') return;
+    if (p.status === 'PAYMENT_SUBMITTED') await transition(tx, actor, paymentMachine, p.id, p.status, 'UNDER_REVIEW');
+    await tx.update(payments).set({ status: 'UNDER_REVIEW', reviewStartedBy: actor.userId }).where(eq(payments.id, p.id));
     await audit(tx, actor, { action: 'payment.review_started', entityType: 'payment', entityId: p.id });
   });
 }
@@ -142,13 +161,17 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
     await assertNotPaused(tx, 'killswitch.paymentConfirmation');
     if (p.currency !== 'EGP') throw invalidState('عملة غير مدعومة');
     if (expectedAmount !== undefined && expectedAmount !== p.amountDue) throw invalidState('المبلغ تغيّر بعد فتح الصفحة. راجع المبلغ واعتمد تاني');
-    if (p.status !== 'PAYMENT_SUBMITTED' && p.status !== 'UNDER_REVIEW') throw invalidState('لا يوجد إثبات دفع قيد المراجعة لهذه العملية');
+    // Two-person rule: a staff reviewer must have started the review first…
+    if (p.status !== 'UNDER_REVIEW') throw invalidState('تأكيد الدفع يتطلب أن يبدأ المراجعة موظف آخر أولاً (بدء المراجعة)');
+    if (!p.reviewStartedBy) throw invalidState('تأكيد الدفع يتطلب أن يبدأ المراجعة موظف آخر أولاً (بدء المراجعة)');
     const [sub] = await tx.select().from(paymentSubmissions).where(eq(paymentSubmissions.id, submissionId)).for('update');
     if (!sub || sub.paymentId !== p.id || sub.status !== 'SUBMITTED') throw invalidState('إثبات الدفع المحدد غير صالح للتأكيد');
     // The amount the buyer declares must equal the amount due; a different transfer needs a new proof.
     if (sub.claimedAmount !== p.amountDue) throw invalidState('المبلغ المحوَّل المعلن لا يطابق المبلغ المطلوب. اطلب إثباتاً جديداً بالمبلغ الصحيح');
     // Separation of duties: staff can never confirm a payment they made or one that pays their own store.
     if (p.payerUserId === actor.userId) throw forbidden('لا يمكنك تأكيد دفعة قمت بها بنفسك');
+    // …and the confirmer can never be the reviewer who started the review (also enforced by DB CHECK).
+    if (p.reviewStartedBy === actor.userId) throw forbidden('تأكيد الدفع يتطلب شخصين: من بدأ المراجعة لا يمكنه تأكيد الدفع');
     await assertNotSelfDealingOnPayment(tx, actor, p);
     // Pilot safety: a payment made while real money was off can never be confirmed after go-live.
     if (p.isTest && (await realMoneyEnabled(tx))) throw invalidState('هذه دفعة تجريبية (TEST) ولا يمكن تأكيدها بعد تفعيل الأموال الحقيقية');
@@ -162,6 +185,8 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
       economicVersion: `amount:${p.amountDue}:submission:${sub.id}`,
       reason: note?.trim() || 'تأكيد استلام التحويل بعد مراجعة الإثبات',
       idempotencyKey: `payment-confirmation:${p.id}`,
+      // Maker = the reviewer who started the review; the Checker is this confirmer (DB-enforced different).
+      dualControl: { requestedBy: p.reviewStartedBy },
     });
     await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', note);
     await tx.update(payments).set({ status: 'CONFIRMED', confirmedAt: new Date(), confirmedBy: actor.userId, confirmedAmount: p.amountDue }).where(eq(payments.id, p.id));
@@ -176,6 +201,182 @@ export async function confirmPayment(actor: Actor, paymentId: string, submission
       reason: note ?? null,
     });
     return { alreadyConfirmed: false };
+  });
+}
+
+/** COD order's payment row (locked in the caller's transaction), or null for prepaid orders. */
+export async function codPaymentOf(tx: DbOrTx, orderId: string) {
+  const [p] = await tx.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.method, 'COD'))).for('update');
+  return p ?? null;
+}
+
+/**
+ * Cash collected at handover: the COD payment moves COD_PENDING → COD_COLLECTED (idempotent).
+ * Called wherever a sub-order reaches DELIVERED (buyer confirmation or entitlement timeout).
+ */
+export async function markCodCollected(tx: DbOrTx, actor: Actor, orderId: string) {
+  const p = await codPaymentOf(tx, orderId);
+  if (!p || p.status !== 'COD_PENDING') return;
+  await transition(tx, actor, paymentMachine, p.id, 'COD_PENDING', 'COD_COLLECTED', 'حصّل المندوب المبلغ نقدًا عند التسليم');
+  await tx.update(payments).set({ status: 'COD_COLLECTED' }).where(eq(payments.id, p.id));
+  await audit(tx, actor, { action: 'payment.cod_collected', entityType: 'payment', entityId: p.id, newValues: { status: 'COD_COLLECTED', amountDue: p.amountDue } });
+}
+
+/** COD refusal/cancellation before any collection: void the pending COD payment (idempotent). */
+export async function cancelCodPaymentIfUncollected(tx: DbOrTx, actor: Actor, orderId: string, why: string) {
+  const p = await codPaymentOf(tx, orderId);
+  if (!p || p.status !== 'COD_PENDING') return;
+  await transition(tx, actor, paymentMachine, p.id, 'COD_PENDING', 'CANCELLED', why);
+  await tx.update(payments).set({ status: 'CANCELLED' }).where(eq(payments.id, p.id));
+  await audit(tx, actor, { action: 'payment.cod_cancelled', entityType: 'payment', entityId: p.id, newValues: { status: 'CANCELLED' }, reason: why });
+}
+
+/**
+ * Staff record the courier company's cash remittance for a COD order (Checker step of the universal
+ * two-person rule): a Maker opens a COD_REMITTANCE movement request for the exact expected amount, a
+ * DIFFERENT staff member (payments.verify + fresh 2FA) executes this. One journal entry per order:
+ * cash in, each delivered sub-order's seller pending (minus EDMN commission, deferred), fees + COD fee
+ * deferred. The seller payout afterwards is the existing release-after-return-period flow, unchanged.
+ * A sub-order the customer refused contributes nothing (no cash was collected for it).
+ */
+export async function recordCodRemittance(actor: Actor, paymentId: string, input: { reason: string; actualAmount: number; statementRef: string }) {
+  requirePermission(actor, 'payments.verify');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  // COD-02: the actual amount is read from the courier company's statement, not assumed.
+  if (!Number.isSafeInteger(input.actualAmount) || input.actualAmount < 0) throw validation('مبلغ الكشف غير صحيح');
+  const statementRef = input.statementRef?.trim();
+  if (!statementRef || statementRef.length < 3) throw validation('اكتب مرجع كشف شركة الشحن');
+  return db.transaction(async (tx) => {
+    const [p] = await tx.select().from(payments).where(eq(payments.id, paymentId)).for('update');
+    if (!p) throw notFound('الدفعة');
+    if (p.method !== 'COD') throw validation('تحصيل شركة الشحن خاص بطلبات الدفع عند الاستلام فقط');
+    if (p.status === 'CONFIRMED') return { alreadyConfirmed: true, shortfall: 0 };
+    if (p.status !== 'COD_COLLECTED') throw invalidState('التحصيل يُسجَّل بعد تسليم الطلب وتحصيل المندوب للمبلغ');
+    if (!p.orderId) throw invalidState('الدفعة غير مرتبطة بطلب');
+    const [order] = await tx.select().from(orders).where(eq(orders.id, p.orderId)).for('update');
+    if (!order) throw notFound('الطلب');
+    const sos = await tx.select().from(sellerOrders).where(eq(sellerOrders.orderId, order.id)).for('update');
+    if (!sos.length) throw invalidState('لا توجد طلبات فرعية');
+    if (!sos.every((x) => ['DELIVERED', 'COMPLETED', 'DELIVERY_FAILED', 'CANCELLED'].includes(x.status)))
+      throw invalidState('لا يمكن تسجيل التحصيل قبل ما كل شحنات الطلب تتسلّم أو تترفض');
+    const delivered = sos.filter((x) => x.status === 'DELIVERED' || x.status === 'COMPLETED');
+    if (!delivered.length) throw invalidState('مفيش شحنة اتسلمت — مفيش تحصيل مستحق');
+    const expected = delivered.reduce((a, x) => a + x.grossTotal, 0) + (order.codFee ?? 0);
+    // COD-02: the statement may remit LESS than collected. More than expected is a statement/entry mismatch — reject it.
+    if (input.actualAmount > expected) throw validation('مبلغ الكشف أكبر من المستحق — راجع كشف شركة الشحن قبل التسجيل');
+    const shortfall = expected - input.actualAmount;
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'COD_REMITTANCE', p.id, expected);
+    const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
+      action: 'COD_REMITTANCE',
+      entityType: 'payment',
+      entityId: p.id,
+      amount: expected,
+      economicVersion: `cod-remit:${p.id}:${expected}`,
+      reason: why,
+      idempotencyKey: `cod-remit:${p.id}`,
+    });
+    const sellerSum = delivered.reduce((a, x) => a + x.sellerNet, 0);
+    const deferred = expected - sellerSum;
+    await postEntry(tx, actor, {
+      entryType: 'COD_REMITTANCE',
+      sourceType: 'payment',
+      sourceId: p.id,
+      idempotencyKey: `cod-remit:${p.id}`,
+      description: `تحصيل شركة الشحن نقدًا لطلب الدفع عند الاستلام ${order.number}`,
+      approvalId: approval.id,
+      lines: [
+        { account: { code: 'PLATFORM_CASH' }, debit: input.actualAmount, memo: `cash actually remitted per courier statement ${statementRef}` },
+        ...(shortfall > 0 ? [{ account: { code: 'COD_SHORTAGE_RECEIVABLE' as const }, debit: shortfall, memo: `courier shortfall still owed, statement ${statementRef}` }] : []),
+        ...delivered.map((x) => ({ account: { code: 'SELLER_PENDING' as const, sellerId: x.sellerId }, credit: x.sellerNet, memo: `seller payable (pending) ${order.number}-${x.suffix}` })),
+        ...(deferred > 0 ? [{ account: { code: 'COMMISSION_DEFERRED' as const }, credit: deferred, memo: 'EDMN fees + COD fee (deferred)' }] : []),
+      ],
+    });
+    await transition(tx, actor, paymentMachine, p.id, p.status, 'CONFIRMED', why);
+    // The two-person rule for COD is the movement request: the Maker stands in reviewStartedBy so the
+    // DB CHECK (confirmer ≠ reviewer) keeps its teeth without any special case.
+    await tx.update(payments).set({ status: 'CONFIRMED', reviewStartedBy: mreq.requestedBy, confirmedBy: actor.userId, confirmedAt: new Date() }).where(eq(payments.id, p.id));
+    if (shortfall > 0) {
+      // The platform (not the sellers) carries the courier's shortfall; it stays OPEN for review until recovered or written off.
+      await tx.insert(codRemittanceShortfalls).values({ paymentId: p.id, expectedAmount: expected, actualAmount: input.actualAmount, shortfallAmount: shortfall, statementRef, createdBy: actor.userId });
+    }
+    await completeMovementRequest(tx, actor, mreq, approval.id);
+    await audit(tx, actor, {
+      action: 'payment.cod_remittance_recorded',
+      entityType: 'payment',
+      entityId: p.id,
+      oldValues: { status: p.status },
+      newValues: { status: 'CONFIRMED', amount: expected, actualAmount: input.actualAmount, shortfall, statementRef, approvalId: approval.id, deliveredSellerOrders: delivered.map((x) => x.id) },
+      reason: why,
+    });
+    await notify(tx, { event: 'PAYMENT_CONFIRMED', userIds: [p.payerUserId], vars: { order: order.number }, link: `/account/orders/${order.id}`, dedupeKey: `payment:${p.id}:confirmed` });
+    return { alreadyConfirmed: false, approvalId: approval.id, amount: expected, actualAmount: input.actualAmount, shortfall };
+  });
+}
+
+/**
+ * COD-02 — settle an OPEN courier shortfall. The resolution comes from the Maker's movement request
+ * (params.mode): RECOVERED = the courier paid the gap later (cash in), WRITTEN_OFF = expense. Two-person,
+ * like every financial movement.
+ */
+export async function resolveCodShortfall(actor: Actor, shortfallId: string, input: { reason: string }) {
+  requirePermission(actor, 'payments.verify');
+  requireStepUp(actor);
+  const why = requireReason(input.reason);
+  return db.transaction(async (tx) => {
+    const [sf] = await tx.select().from(codRemittanceShortfalls).where(eq(codRemittanceShortfalls.id, shortfallId)).for('update');
+    if (!sf) throw notFound('العجز');
+    if (sf.status === 'RESOLVED') return { alreadyResolved: true };
+    const { takeMovementRequest, completeMovementRequest } = await import('@/server/modules/finance/movements');
+    const mreq = await takeMovementRequest(tx, actor, 'COD_SHORTAGE_RESOLUTION', sf.id, sf.shortfallAmount);
+    const mode = (mreq.params as Record<string, unknown> | null)?.mode;
+    if (mode !== 'RECOVERED' && mode !== 'WRITTEN_OFF') throw invalidState('طلب التسوية لا يحدد طريقة صحيحة (استرداد أو شطب)');
+    // Write-off (expense) needs finance.release on the approver too; the requester was checked in requestMovement.
+    if (mode === 'WRITTEN_OFF') requirePermission(actor, 'finance.release');
+    const approval = await grantApproval(tx, actor, {
+      dualControl: { requestedBy: mreq.requestedBy },
+      action: 'COD_SHORTAGE_RESOLUTION',
+      entityType: 'cod_remittance_shortfall',
+      entityId: sf.id,
+      amount: sf.shortfallAmount,
+      economicVersion: `cod-shortfall:${sf.id}:${sf.status}`,
+      reason: why,
+      idempotencyKey: `cod-shortfall-resolve:${sf.id}`,
+    });
+    await postEntry(tx, actor, {
+      entryType: 'COD_SHORTAGE_RESOLUTION',
+      sourceType: 'cod_remittance_shortfall',
+      sourceId: sf.id,
+      idempotencyKey: `cod-shortfall-resolve:${sf.id}`,
+      description: mode === 'RECOVERED' ? `استرداد عجز تحصيل شركة الشحن (كشف ${sf.statementRef})` : `شطب عجز تحصيل شركة الشحن كمصروف (كشف ${sf.statementRef})`,
+      approvalId: approval.id,
+      lines:
+        mode === 'RECOVERED'
+          ? [
+              { account: { code: 'PLATFORM_CASH' }, debit: sf.shortfallAmount, memo: 'courier paid the shortfall later' },
+              { account: { code: 'COD_SHORTAGE_RECEIVABLE' }, credit: sf.shortfallAmount, memo: 'shortfall settled' },
+            ]
+          : [
+              { account: { code: 'ADJUSTMENTS_EXPENSE' }, debit: sf.shortfallAmount, memo: 'shortfall written off' },
+              { account: { code: 'COD_SHORTAGE_RECEIVABLE' }, credit: sf.shortfallAmount, memo: 'shortfall settled' },
+            ],
+    });
+    await tx
+      .update(codRemittanceShortfalls)
+      .set({ status: 'RESOLVED', resolution: mode, resolutionReason: why, resolvedBy: actor.userId, resolvedAt: new Date() })
+      .where(eq(codRemittanceShortfalls.id, sf.id));
+    await completeMovementRequest(tx, actor, mreq, approval.id);
+    await audit(tx, actor, {
+      action: 'payment.cod_shortfall_resolved',
+      entityType: 'cod_remittance_shortfall',
+      entityId: sf.id,
+      oldValues: { status: sf.status },
+      newValues: { status: 'RESOLVED', resolution: mode, amount: sf.shortfallAmount, approvalId: approval.id },
+      reason: why,
+    });
+    return { alreadyResolved: false, resolution: mode, approvalId: approval.id };
   });
 }
 
@@ -283,7 +484,7 @@ export async function rejectPayment(actor: Actor, paymentId: string, submissionI
 /* ───────── Admin: payment methods & destinations ───────── */
 
 export const destinationSchema = z.object({
-  methodCode: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']),
+  methodCode: z.enum(PAYMENT_METHOD_CODES),
   label: z.string().trim().min(2).max(100),
   details: z.record(z.string(), z.string().trim().max(200)),
   instructionsAr: z.string().trim().max(1000).optional().default(''),
@@ -331,6 +532,12 @@ export async function updatePaymentMethod(actor: Actor, code: 'BANK_TRANSFER' | 
   });
 }
 
+/** Cash-on-delivery availability + pricing for checkout surfaces (app and web). */
+export async function codCheckoutConfig(conn: DbOrTx = db) {
+  const [enabled, fee, max] = await Promise.all([getSetting('orders.codEnabled', conn), getSetting('orders.codFee', conn), getSetting('orders.codMaxAmount', conn)]);
+  return { enabled, fee, max };
+}
+
 export async function enabledPaymentMethods(conn: DbOrTx = db) {
   const methods = await conn.select().from(paymentMethods).where(eq(paymentMethods.isEnabled, true)).orderBy(asc(paymentMethods.sortOrder));
   const dests = methods.length
@@ -343,7 +550,7 @@ export async function enabledPaymentMethods(conn: DbOrTx = db) {
   return methods.map((m) => ({ ...m, destinations: dests.filter((d) => d.methodCode === m.code) })).filter((m) => m.destinations.length);
 }
 
-export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'REJECTED')[], limit = 50, offset = 0) {
+export async function paymentQueue(status: ('PAYMENT_SUBMITTED' | 'UNDER_REVIEW' | 'CONFIRMED' | 'REJECTED' | 'COD_PENDING' | 'COD_COLLECTED')[], limit = 50, offset = 0) {
   return db
     .select({ payment: payments, payer: { id: users.id, fullName: users.fullName, phone: users.phone }, orderNumber: orders.number, dealNumber: externalDeals.number })
     .from(payments)

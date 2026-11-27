@@ -1,6 +1,9 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { validation } from '@/server/core/errors';
 import { normalizeSearch } from '@/server/core/text';
 import { db, type DbOrTx } from '@/server/db/client';
+import { cachedCount, countCacheKey, storeCount } from './count-cache';
+import { cursorKeysFromRow, decodeCursor, encodeCursor, keysetCondition, searchOrderBy, cursorKeySelect, type DecodedCursor } from './search-cursor';
 import {
   attributeOptions,
   attributes,
@@ -40,6 +43,8 @@ export interface SearchQuery {
   sort?: Sort;
   page?: number;
   pageSize?: number;
+  /** Keyset cursor from the previous page's `nextCursor` (P4). Mutually exclusive with `page`; bound to the filters that produced it. */
+  cursor?: string;
 }
 
 export const listingCardFields = {
@@ -106,49 +111,73 @@ function searchTsQuery(q: string) {
   return terms.map((t) => `${t}:*`).join(' & ');
 }
 
+/** Everything that changes the result set (and therefore the count and the cursor), nothing that only changes the page. */
+function filterFingerprint(query: SearchQuery, q: string): string {
+  return countCacheKey({
+    q,
+    categoryId: query.categoryId ?? null,
+    brandIds: query.brandIds ? [...query.brandIds].sort() : null,
+    sellerId: query.sellerId ?? null,
+    condition: query.condition ?? null,
+    minPrice: query.minPrice ?? null,
+    maxPrice: query.maxPrice ?? null,
+    minRating: query.minRating ?? null,
+    inStock: query.inStock ?? null,
+    verifiedOnly: query.verifiedOnly ?? null,
+    dealsOnly: query.dealsOnly ?? null,
+    governorateId: query.governorateId ?? null,
+    attrs: query.attrs ?? null,
+    sort: query.sort ?? 'recommended',
+  });
+}
+
 export async function searchProducts(query: SearchQuery, conn: DbOrTx = db) {
   const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), 60);
   const page = Math.max(query.page ?? 1, 1);
   const where = catalogConditions(query);
   const q = query.q ? normalizeSearch(query.q).slice(0, 100) : '';
   const rank: SQL | null = q ? sql`(ts_rank(${products.searchVector}, to_tsquery('simple', ${searchTsQuery(q)})) + word_similarity(${q}, ${products.searchText}))` : null;
-  const orderBy: SQL[] = (() => {
-    switch (query.sort) {
-      case 'best_selling':
-        return [desc(products.salesCount)];
-      case 'top_rated':
-        return [desc(products.ratingAvg), desc(products.ratingCount)];
-      case 'newest':
-        return [desc(products.publishedAt)];
-      case 'price_asc':
-        return [asc(products.minPrice)];
-      case 'price_desc':
-        return [desc(products.minPrice)];
-      default:
-        return [
-          ...(rank ? [desc(rank)] : []),
-          sql`(${products.totalAvailable} > 0) desc`,
-          desc(sql`(${products.ratingAvg}::numeric * ln(${products.ratingCount} + 2)) + ln(${products.salesCount} + 1)`),
-          desc(products.publishedAt),
-        ];
-    }
-  })();
+  const orderBy = searchOrderBy(query, q, rank);
+  // P4: keyset pagination. The cursor is bound to the filter fingerprint, so a cursor from another search is
+  // rejected instead of paging the wrong result set. `page` (offset) stays for the web listing.
+  const fh = filterFingerprint(query, q);
+  let cursor: DecodedCursor | null = null;
+  if (query.cursor) {
+    cursor = decodeCursor(query.cursor);
+    const keyset = cursor && cursor.fh === fh ? keysetCondition(query, q, rank, cursor) : null;
+    if (!keyset) throw validation('رابط الصفحة ده مش صالح للبحث ده — ابدأ من أول صفحة');
+    where.push(keyset);
+  }
   const base = conn
-    .select(listingCardFields)
+    .select({ ...listingCardFields, ...cursorKeySelect(query, q, rank) })
     .from(products)
     .innerJoin(sellers, eq(sellers.id, products.sellerId))
     .innerJoin(stores, eq(stores.sellerId, products.sellerId))
     .where(and(...where));
-  const [items, [{ total }]] = await Promise.all([
-    base.orderBy(...orderBy, asc(products.id)).limit(pageSize).offset((page - 1) * pageSize),
-    conn
-      .select({ total: sql<number>`count(*)::int` })
-      .from(products)
-      .innerJoin(sellers, eq(sellers.id, products.sellerId))
-      .innerJoin(stores, eq(stores.sellerId, products.sellerId))
-      .where(and(...where)),
+  // P4: the exact count is computed once per filter set (short TTL), not on every page of the same search.
+  const cached = cursor || page > 1 ? cachedCount(fh) : null;
+  const [rows, countRows] = await Promise.all([
+    // One extra row tells us whether a next page exists without trusting the (possibly cached) total.
+    base.orderBy(...orderBy).limit(pageSize + 1).offset(cursor ? 0 : (page - 1) * pageSize),
+    cached !== null
+      ? Promise.resolve([] as { total: number }[])
+      : conn
+          .select({ total: sql<number>`count(*)::int` })
+          .from(products)
+          .innerJoin(sellers, eq(sellers.id, products.sellerId))
+          .innerJoin(stores, eq(stores.sellerId, products.sellerId))
+          .where(and(...catalogConditions(query))),
   ]);
-  return { items, total, page, pageSize, pages: Math.max(1, Math.ceil(total / pageSize)) };
+  const total = cached ?? countRows[0].total;
+  if (cached === null) storeCount(fh, total);
+  const items = rows.slice(0, pageSize).map((r) => {
+    const clean = { ...r } as Record<string, unknown>;
+    for (const k of Object.keys(clean)) if (k.startsWith('__k')) delete clean[k];
+    return clean as unknown as (typeof rows)[number];
+  });
+  const last = rows.length > pageSize ? rows[pageSize - 1] : null;
+  const nextCursor = last ? encodeCursor(fh, cursorKeysFromRow(last as unknown as Record<string, unknown>), String(last.id)) : null;
+  return { items, total, page, pageSize, pages: Math.max(1, Math.ceil(total / pageSize)), nextCursor };
 }
 
 /** Brand facet: counts within the current result set (every active filter except the brand selection itself). */
@@ -196,7 +225,7 @@ export async function filterableAttributes(categoryId: string, query: SearchQuer
     join product_attribute_values pav on pav.attribute_id = a.id
     cross join lateral unnest(pav.values) as v(value)
     left join attribute_options ao on ao.attribute_id = a.id and ao.value = v.value
-    where ca.category_id = any(${sql.raw(`'{${cat.path.join(',')}}'::uuid[]`)}) and ca.is_filterable
+    where ca.category_id = any(${cat.path}::uuid[]) and ca.is_filterable
       and ${inResults}
       ${otherAttrs.length ? sql`and ${sql.join(otherAttrs, sql` and `)}` : sql``}
     group by a.code, a.name_ar, a.type, v.value, ao.label_ar, ao.sort_order

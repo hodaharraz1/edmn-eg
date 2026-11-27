@@ -4,6 +4,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+
+// MOBILE-REL-01: release signing comes from keystore.properties (written by CI from GitHub Secrets) or the
+// EDMN_* environment variables. The release build FAILS when no release keystore is configured: a release
+// artifact is never signed with the debug key. Setup steps: docs/mobile/ANDROID_PLAY.md.
+val relPropsFile = rootProject.file("keystore.properties")
+val relProps = java.util.Properties()
+if (relPropsFile.exists()) relPropsFile.inputStream().use { relProps.load(it) }
+
 android {
     namespace = "com.edmneg.edmn_customer"
     compileSdk = flutter.compileSdkVersion
@@ -29,11 +37,25 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = relProps.getProperty("keyAlias") ?: System.getenv("EDMN_KEY_ALIAS")
+            keyPassword = relProps.getProperty("keyPassword") ?: System.getenv("EDMN_KEY_PASSWORD")
+            storeFile = (relProps.getProperty("storeFile") ?: System.getenv("EDMN_KEYSTORE_FILE"))?.let { file(it) }
+            storePassword = relProps.getProperty("storePassword") ?: System.getenv("EDMN_KEYSTORE_PASSWORD")
+        }
+    }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // MOBILE-REL-01: never the debug key. A release build without the release keystore fails loudly.
+            check(signingConfigs.getByName("release").storeFile?.exists() == true) {
+                "Release keystore not configured. Create keystore.properties per docs/mobile/ANDROID_PLAY.md " +
+                    "or build via .github/workflows/android-play.yml. Debug keys are never used for release."
+            }
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }

@@ -9,6 +9,7 @@ import { accountWithdrawals, cancelWithdrawal, previewAccountWithdrawal, request
 import { identityStatus } from '@/server/modules/identity/service';
 import { archiveReceivingDestination, myReceivingDestinations, submitReceivingDestination, type ReceivingDestinationInput } from '@/server/modules/identity/receiving';
 import { getSetting } from '@/server/modules/settings';
+import { topUpSummary } from '@/server/modules/finance/wallet-topups';
 import { activePayoutMethod } from '@/server/modules/sellers/service';
 
 /**
@@ -21,8 +22,9 @@ import { activePayoutMethod } from '@/server/modules/sellers/service';
  *    reservation and the transfer stay in the admin console; TRANSFER_UNCERTAIN is shown as such, never resolved here;
  *  - receiving accounts: submitted for staff verification; only verified ones can receive.
  *
- * EDMN keeps no prepaid buyer balance: there is no top-up / deposit service, and refunds go back to the original
- * payment method. The app therefore shows no «add funds» flow (see docs/mobile/WALLET_FINANCIAL_STATES.md).
+ * Prepaid balance (PKG-WALLET-01, phase 1): a customer can deposit by transfer + receipt, credited by two staff, ONLY while
+ * wallet.topUpEnabled is on (default off). Spending the balance is phase 2; buyers never cash it out. Refunds still go
+ * back to the original payment method.
  */
 
 type Bal = Pick<SourceBalances, 'pending' | 'held' | 'entitledAwaitingRelease' | 'available' | 'reserved' | 'liability' | 'disputeExposure' | 'paidOut'>;
@@ -73,8 +75,8 @@ export async function walletView(actor: Actor) {
       minimumPiastres: await getSetting('withdrawals.minimumAmount', db),
       blockReason,
     },
-    /** No prepaid balance / top-up service exists in EDMN (business decision pending): the app shows no deposit flow. */
-    topUpAvailable: false,
+    /** PKG-WALLET-01: deposit by transfer + receipt, behind wallet.topUpEnabled (default off). */
+    topUp: await topUpSummary(db, userId),
     realMoney: await getSetting('payments.realMoneyEnabled', db),
   };
 }

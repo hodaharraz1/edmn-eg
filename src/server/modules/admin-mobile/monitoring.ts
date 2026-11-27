@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, ilike, inArray, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
-import { requirePermission, type Actor } from '@/server/core/actor';
+import { requireAnyPermission, requirePermission, type Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { auditLogs, disputes, externalDeals, orders, sellerOrders, sellers, stores, users, type IdentityStatus } from '@/server/db/schema';
+import { accountClosureRequests, auditLogs, disputes, externalDeals, orders, sellerOrders, sellers, stores, users, type IdentityStatus } from '@/server/db/schema';
 import { identityQueue } from '@/server/modules/identity/service';
 import { ORDER_STATUSES } from '@/domain/machines';
 
@@ -175,6 +175,21 @@ export async function disputeMonitor(actor: Actor, tab: keyof typeof DISPUTE_TAB
     assignedToMe: r.d.assignedTo === actor.userId,
     createdAt: iso(r.d.createdAt),
   }));
+}
+
+/** Account-closure requests, read-only — the SAME gate as the web /admin/closures page (customers.manage or customers.view). */
+export const CLOSURE_TABS = { open: ['PENDING'], closed: ['BLOCKED', 'COMPLETED', 'WITHDRAWN'] } as const;
+export async function closureMonitor(actor: Actor, tab: keyof typeof CLOSURE_TABS) {
+  requireAnyPermission(actor, ['customers.manage', 'customers.view']);
+  const rows = await db
+    .select({ r: accountClosureRequests, name: users.fullName })
+    .from(accountClosureRequests)
+    .innerJoin(users, eq(users.id, accountClosureRequests.userId))
+    .where(inArray(accountClosureRequests.status, [...CLOSURE_TABS[tab]]))
+    .orderBy(desc(accountClosureRequests.createdAt), desc(accountClosureRequests.id))
+    .limit(100);
+  // Minimised payload: masked name only, no e-mail, phone or internal fields.
+  return rows.map((x) => ({ id: x.r.id, customer: maskName(x.name), status: x.r.status as string, createdAt: iso(x.r.createdAt) }));
 }
 
 export const AUDIT_ACTOR_TYPES = ['ADMIN', 'SELLER', 'CUSTOMER', 'SYSTEM', 'ANONYMOUS'] as const;

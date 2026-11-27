@@ -45,6 +45,8 @@ export const profile = z
     phoneVerified: z.boolean(),
     isStaff: z.boolean(),
     totpEnrolled: z.boolean(),
+    /** Marketing messages consent (OFF by default; withdrawable anytime). */
+    marketingOptIn: z.boolean(),
     permissions: z.array(z.string()),
   })
   .meta({ id: 'Profile' });

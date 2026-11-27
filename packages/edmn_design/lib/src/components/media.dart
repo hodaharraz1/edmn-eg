@@ -142,7 +142,7 @@ class EdmnPageDots extends StatelessWidget {
             shape: BoxShape.circle,
             color: i == index
                 ? (onDark ? EdmnColors.onPrimary : EdmnColors.primary)
-                : (onDark ? EdmnColors.accentCyan : EdmnColors.disabled),
+                : (onDark ? EdmnColors.accent : EdmnColors.disabled),
           ),
         ),
     ],

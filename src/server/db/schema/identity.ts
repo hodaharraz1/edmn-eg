@@ -25,9 +25,14 @@ export const users = pgTable(
     passwordChangedAt: ts(),
     lastLoginAt: ts(),
     failedLoginCount: integer().notNull().default(0),
+    /** End of the current escalating login delay (SEC-194); not a hard lock. */
     lockedUntil: ts(),
+    /** Time of the last wrong password in the current streak; a streak older than 24h restarts. */
+    lastFailedLoginAt: ts(),
     closedAt: ts(),
     anonymizedAt: ts(),
+    /** Marketing messages consent. OFF by default; the customer can withdraw it anytime. Every change is in marketing_consent_events. */
+    marketingOptIn: boolean().notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -36,6 +41,57 @@ export const users = pgTable(
     uniqueIndex('users_phone_uq').on(t.phone).where(sql`${t.phone} is not null`),
     enumCheck('users_status_chk', t.status, USER_STATUSES),
     index('users_staff_idx').on(t.isStaff),
+  ],
+);
+
+export const MARKETING_CONSENT_ACTIONS = ['GRANT', 'WITHDRAW'] as const;
+
+/** Dated marketing-consent log: every grant and withdrawal, never edited or deleted. */
+export const marketingConsentEvents = pgTable(
+  'marketing_consent_events',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: text({ enum: MARKETING_CONSENT_ACTIONS }).notNull(),
+    channel: text(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('marketing_consent_events_user_idx').on(t.userId, t.createdAt)],
+);
+
+export const MARKETING_EXPORT_STATUSES = ['REQUESTED', 'EXECUTED', 'REJECTED'] as const;
+
+/**
+ * Marketing audience exports — three controls together: the dedicated permission, the requester's explicit
+ * confirmation, and a DIFFERENT staff member's approval (DB-enforced). The file stays encrypted at rest
+ * (AES-256-GCM, one-time passphrase shown once at execution); every request, execution, rejection and
+ * download is audit-logged.
+ */
+export const marketingExports = pgTable(
+  'marketing_exports',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    requestedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    requestReason: text().notNull(),
+    status: text({ enum: MARKETING_EXPORT_STATUSES }).notNull().default('REQUESTED'),
+    approvedBy: uuid().references(() => users.id),
+    rowCount: integer(),
+    /** Encrypted export file (base64 of the documented JSON envelope). Only the one-time passphrase opens it. */
+    fileEnc: text(),
+    fileName: text(),
+    requestedAt: ts().notNull().defaultNow(),
+    executedAt: ts(),
+    rejectedAt: ts(),
+    rejectReason: text(),
+  },
+  (t) => [
+    enumCheck('marketing_exports_status_chk', t.status, MARKETING_EXPORT_STATUSES),
+    check('marketing_exports_two_person_chk', sql`${t.approvedBy} is null or ${t.approvedBy} <> ${t.requestedBy}`),
+    index('marketing_exports_status_idx').on(t.status, t.requestedAt),
   ],
 );
 
@@ -134,6 +190,41 @@ export const userRoles = pgTable(
     createdAt: createdAt(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.roleCode] })],
+);
+
+/**
+ * SEC-04 M1: a PRIVILEGED role (SUPER_ADMIN, or any role carrying `roles.manage` or a money permission) is granted by
+ * two different super admins. One requests (Maker), a DIFFERENT one approves (Checker) and executes the grant; the
+ * row is then CONSUMED so a single approval can never be replayed. `decided_by <> requested_by` is a CHECK, and a
+ * guard trigger makes the decision final and its identity columns immutable — a code path that forgets the service
+ * rule still cannot approve itself or re-point an approval at another account.
+ */
+export const privilegedRoleRequests = pgTable(
+  'privileged_role_requests',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    targetUserId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    roleCode: text()
+      .notNull()
+      .references(() => roles.code, { onDelete: 'restrict' }),
+    requestedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    reason: text().notNull(),
+    status: text().notNull().default('PENDING'),
+    decidedBy: uuid().references(() => users.id),
+    decidedAt: ts(),
+    consumedAt: ts(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('privileged_role_requests_target_idx').on(t.targetUserId),
+    check('privileged_role_requests_status_chk', sql`${t.status} in ('PENDING','APPROVED','REJECTED','CONSUMED','EXPIRED')`),
+    check('privileged_role_requests_two_people_chk', sql`${t.decidedBy} is null or ${t.decidedBy} <> ${t.requestedBy}`),
+    check('privileged_role_requests_reason_len_chk', sql`char_length(${t.reason}) >= 10`),
+  ],
 );
 
 /* ───────── Reference data ───────── */
@@ -303,6 +394,34 @@ export const mobileDevices = pgTable(
     enumCheck('mobile_devices_app_chk', t.app, MOBILE_APPS),
     enumCheck('mobile_devices_platform_chk', t.platform, MOBILE_PLATFORMS),
   ],
+);
+
+/**
+ * A push-notification token for a registered mobile device (PKG-PUSH-01). One row per device; the token is write-only
+ * from the app and never shown to staff (console shows counts only). Sending stays off while
+ * notifications.devicePushEnabled is false, and the only sender driver is the log driver — no FCM/APNs keys exist.
+ */
+export const devicePushTokens = pgTable(
+  'device_push_tokens',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    deviceId: uuid()
+      .notNull()
+      .references(() => mobileDevices.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The device push token, AES-GCM encrypted at rest (core/crypto `encrypt`) like web-push secrets; only the sender decrypts it. */
+    tokenEnc: text().notNull(),
+    /**
+     * Which provider issued this token: FCM (firebase_messaging default on both platforms) or APNS (raw Apple token).
+     * NULL = the app did not say; the sender routes NULL as FCM (PKG-PUSH-02).
+     */
+    provider: text(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex('device_push_tokens_device_uq').on(t.deviceId), index('device_push_tokens_user_idx').on(t.userId)],
 );
 
 /**

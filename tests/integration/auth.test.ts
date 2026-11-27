@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { eq } from 'drizzle-orm';
 import { beginTotpEnrollment, changePassword, login, register, resolveSession, verifyTotpForUser } from '@/server/auth/service';
 import { totpCode } from '@/server/auth/totp';
@@ -10,6 +11,9 @@ import { updateSetting } from '@/server/modules/settings';
 import { makeUser } from '../helpers/factory';
 
 const meta = { ip: '127.0.0.1', userAgent: 'vitest' };
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('withdrawals.dualControlThreshold', 'marketplace.supportPhone'));
 
 describe('auth hardening', () => {
   it('accepts a TOTP code once and rejects its replay', async () => {

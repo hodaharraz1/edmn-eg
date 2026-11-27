@@ -30,7 +30,8 @@ async function main() {
   if (!process.env.DATA_ENCRYPTION_KEY_ID) throw new Error('DATA_ENCRYPTION_KEY_ID is not set: nothing to rotate to');
   console.log(`${apply ? 'APPLY' : 'DRY RUN'} — target key id: ${primaryKeyId()}`);
   for (const [table, column] of COLUMNS) {
-    const rows = (await db.execute<{ id: string; v: string }>(sql.raw(`select id::text id, ${column} v from ${table} where ${column} is not null`))).rows;
+    // L7: identifiers come from this file's fixed COLUMNS list and are emitted as identifiers; values are bound.
+    const rows = (await db.execute<{ id: string; v: string }>(sql`select id::text id, ${sql.identifier(column)} v from ${sql.identifier(table)} where ${sql.identifier(column)} is not null`)).rows;
     const stale = rows.filter((r) => needsReencryption(r.v));
     let done = 0;
     let refused = 0;
@@ -47,7 +48,7 @@ async function main() {
         const next = encrypt(plain);
         if (decrypt(next) !== plain) throw new Error('round-trip verification failed');
         try {
-          await db.execute(sql.raw(`update ${table} set ${column} = '${next.replace(/'/g, "''")}' where id = '${r.id.replace(/'/g, "''")}' and ${column} = '${r.v.replace(/'/g, "''")}'`));
+          await db.execute(sql`update ${sql.identifier(table)} set ${sql.identifier(column)} = ${next} where id = ${r.id}::uuid and ${sql.identifier(column)} = ${r.v}`);
           done++;
         } catch {
           refused++; // immutable by trigger (versioned records): stays readable through the previous key

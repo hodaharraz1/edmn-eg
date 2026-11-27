@@ -29,6 +29,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final signedIn = ref.watch(signedInProvider);
     final orders = ref.watch(ordersProvider);
     return EdmnAppScaffold(
+      sunburst: true,
       title: t.myOrders,
       showBack: false,
       body: !signedIn
@@ -37,6 +38,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(EdmnSpacing.screen, EdmnSpacing.md, EdmnSpacing.screen, EdmnSpacing.sm),
                 child: EdmnSearchBar(hint: t.searchOrdersHint, onChanged: (v) => setState(() => _q = v.trim().toUpperCase())),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(EdmnSpacing.screen, 0, EdmnSpacing.screen, EdmnSpacing.sm),
+                child: EdmnSecondaryButton(key: const Key('open-reorder'), label: t.reorder, icon: Icons.replay_rounded, onPressed: () => context.push('/reorder')),
               ),
               EdmnFilterPills<OrderFilter>(
                 options: [(OrderFilter.all, t.all), (OrderFilter.inProgress, t.filterInProgress), (OrderFilter.delivered, t.filterDelivered), (OrderFilter.cancelled, t.filterCancelled)],
@@ -58,7 +63,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                       onRefresh: () => ref.refresh(ordersProvider.future),
                       child: ListView.builder(
                         key: const PageStorageKey('orders'),
-                        padding: const EdgeInsetsDirectional.symmetric(horizontal: EdmnSpacing.screen),
+                        // Bottom clearance keeps the last order above the floating nav pill (PKG-UI-01).
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          EdmnSpacing.screen,
+                          0,
+                          EdmnSpacing.screen,
+                          EdmnFloatingNavigation.clearanceOf(context),
+                        ),
                         itemCount: shown.length + 1,
                         itemBuilder: (_, i) {
                           if (i == shown.length) {
@@ -475,7 +486,6 @@ class ReorderScreen extends ConsumerWidget {
     final orders = ref.watch(ordersProvider);
     return EdmnAppScaffold(
       title: t.reorder,
-      showBack: false,
       body: !signedIn
           ? EdmnEmptyState(icon: Icons.replay_rounded, title: t.signInPromptTitle, message: t.signInPromptBody, actionLabel: t.signIn, onAction: () => context.push('/sign-in?next=/reorder'))
           : AsyncView(

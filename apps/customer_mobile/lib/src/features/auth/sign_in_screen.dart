@@ -112,7 +112,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await ref.read(mobileApiProvider).login(identifier: _identifier.text.trim(), password: _password.text, device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion));
       ref.read(signedInProvider.notifier).set(true);
       ref.invalidate(profileProvider);
-      if (mounted) context.go(widget.next ?? '/');
+      // Push token registration (PKG-PUSH-01): no-op until a push SDK is wired — the default provider has no token.
+      final api = ref.read(mobileApiProvider);
+      await PushTokenRegistrar(register: (t, k) => api.registerPushToken(token: t, idempotencyKey: k), unregister: (k) => api.unregisterPushToken(idempotencyKey: k)).registerIfAvailable(newIdempotencyKey);
+      if (!mounted) return;
+      // Land on home first and open the requested page on top of it, so that page always has a back arrow
+      // (a plain go(next) left it as the only page: no way back to the store).
+      final next = widget.next;
+      const tabs = {'/', '/categories', '/wallet', '/cart', '/orders'};
+      if (next != null && tabs.contains(next)) {
+        context.go(next); // a main tab: open it directly (the bottom bar is the way around)
+      } else {
+        context.go('/');
+        if (next != null && next.isNotEmpty) context.push(next);
+      }
     } catch (e) {
       setState(() => _error = e);
     } finally {
@@ -199,6 +212,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  bool _marketingConsent = false; // marketing consent is OFF by default (PKG-PRIVACY-01)
   bool _busy = false;
   Object? _error;
 
@@ -223,6 +237,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             phone: _phone.text.trim(),
             email: _email.text.trim(),
             password: _password.text,
+            marketingConsent: _marketingConsent,
             device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion),
           );
       ref.read(signedInProvider.notifier).set(true);
@@ -270,6 +285,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: EdmnSpacing.sm),
             EdmnTextField(key: const Key('reg-password'), controller: _password, hint: t.newPasswordHint, icon: Icons.lock_outline_rounded, obscure: true, validator: (v) => (v ?? '').length < 8 ? t.passwordTooShort : null),
+            CheckboxListTile(
+              key: const Key('reg-marketing-consent'),
+              contentPadding: EdgeInsets.zero,
+              value: _marketingConsent,
+              onChanged: (v) => setState(() => _marketingConsent = v ?? false),
+              title: Text(t.marketingConsentLabel, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+            ),
           ]),
         ),
         const SizedBox(height: EdmnSpacing.sm),

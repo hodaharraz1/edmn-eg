@@ -1,7 +1,7 @@
 {
   "@@locale": "ar",
-  "appNameCustomer": "اضمن",
-  "appNameAdmin": "اضمن — الإدارة",
+  "appNameCustomer": "أضمن",
+  "appNameAdmin": "أضمن — الإدارة",
   "retry": "حاول تاني",
   "cancel": "إلغاء",
   "confirm": "تأكيد",
@@ -129,6 +129,8 @@
   "add": "أضف",
   "addToCart": "أضف إلى السلة",
   "addedToCart": "اتضاف للسلة",
+  "viewCart": "شوف السلة",
+  "buyNow": "اشتري دلوقتي",
   "protectedDealBannerTitle": "أضمن صفقة",
   "protectedDealBannerBody": "تسوق بأمان وضمان حقيقي",
   "shopNow": "تسوق الآن",
@@ -221,6 +223,8 @@
   "signInToCheckout": "سجّل دخولك علشان تكمل الشراء",
   "checkoutTitle": "إتمام الطلب",
   "stepAddress": "العنوان",
+  "shippingFromStores": "الشحن من كل متجر",
+  "freeShipping": "شحن مجاني",
   "stepDelivery": "التوصيل",
   "stepPayment": "الدفع",
   "stepConfirm": "تأكيد",
@@ -1126,6 +1130,14 @@
       }
     }
   },
+  "starRatingLabel": "{count} من 5 نجوم",
+  "@starRatingLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "evidenceLabel": "صور أو مستندات (حتى {max})",
   "@evidenceLabel": {
     "placeholders": {
@@ -1212,7 +1224,7 @@
   "adminRange90d": "٩٠ يوم",
   "adminRange365d": "سنة",
   "adminKpiGmv": "إجمالي قيمة البضائع (GMV)",
-  "adminKpiRevenue": "إيرادات اضمن",
+  "adminKpiRevenue": "إيرادات أضمن",
   "adminKpiOrders": "الطلبات (المدفوعة / الكل)",
   "adminKpiDeals": "الصفقات المحمية",
   "adminKpiBuyers": "مشترون نشطون",
@@ -1240,6 +1252,7 @@
   "adminOrders": "الطلبات والشحن",
   "adminDeals": "الصفقات المضمونة",
   "adminDisputes": "النزاعات والشكاوى",
+  "adminAccountClosures": "طلبات إغلاق الحسابات",
   "adminAuditLog": "سجل العمليات",
   "adminTabPending": "قيد المراجعة",
   "adminTabNeedsInfo": "بانتظار معلومات",
@@ -1381,5 +1394,169 @@
   "soHintReceived": "استلم المشتري الطلب. مستحقاتك معلّقة حتى تراجعها أضمن وتعتمدها.",
   "soHintCompleted": "اكتمل الطلب واعتمدت أضمن تحويل مستحقاته.",
   "soHintFailed": "تعذّر توصيل الطلب. سيتواصل معك فريق أضمن بشأن الخطوات التالية.",
-  "soHintCancelled": "تم إلغاء الطلب. لا تقم بشحنه."
+  "soHintCancelled": "تم إلغاء الطلب. لا تقم بشحنه.",
+  "adminReturns": "المرتجعات",
+  "adminAlertsInbox": "التنبيهات التشغيلية",
+  "adminCustomers": "العملاء",
+  "adminSupportInbox": "تذاكر الدعم",
+  "adminTabReturnsPending": "بانتظار القرار",
+  "adminTabReturnsActive": "قيد التنفيذ",
+  "adminTabReturnsDone": "منتهية أو محوّلة",
+  "adminSearchReturns": "ابحث برقم المرتجع",
+  "adminCod": "الدفع عند الاستلام (COD)",
+  "adminTabCodAwaiting": "بانتظار كشف الشحن",
+  "adminTabCodShortfalls": "عجز مفتوح",
+  "adminStatusCodCollected": "اتسلّم، بانتظار التحصيل",
+  "adminSearchCustomers": "ابحث بالاسم أو البريد أو الموبايل",
+  "adminTabAllAlerts": "الكل",
+  "adminStageDue": "مستحق",
+  "adminStageOverdue": "متأخر",
+  "adminStagePre": "قبل الموعد",
+  "adminTabAllCustomers": "كل العملاء",
+  "adminStatusReturnRequested": "طلب إرجاع جديد",
+  "adminStatusReturnInTransit": "في الطريق للبائع",
+  "adminStatusReturnReceived": "استلمه البائع",
+  "adminStatusReturnInspection": "قيد الفحص",
+  "adminStatusRefundPending": "الاسترداد بانتظار الاعتماد",
+  "adminStatusInProgress": "قيد المعالجة",
+  "adminStatusWaitingCustomer": "بانتظار العميل",
+  "adminStatusWaitingSeller": "بانتظار البائع",
+  "adminStatusEscalated": "محوّلة لمستوى أعلى",
+  "adminStatusSuspended": "موقوف",
+  "adminRetNextRequested": "مراجعة الطلب وقبوله أو رفضه (البائع في تطبيقه أو الإدارة من لوحة الويب)",
+  "adminRetNextApproved": "بانتظار شحن المنتج من العميل",
+  "adminRetNextInTransit": "تسجيل استلام المرتجع",
+  "adminRetNextReceived": "بدء الفحص",
+  "adminRetNextInspection": "قرار الاسترداد (يصرفه فريق المالية بموافقة شخصين)",
+  "adminRetNextRefundPending": "اعتماد وصرف الاسترداد من فريق المالية (شخصان)",
+  "adminRetNextClosed": "لا شيء — مغلق",
+  "adminRetNextDisputed": "يُتابع من خلال النزاع",
+  "adminFieldNextStep": "الخطوة التالية",
+  "adminFieldRefund": "مبلغ الاسترداد",
+  "adminFieldEvidenceCount": "صور الإثبات",
+  "adminFieldStatutory": "ضمن المدة القانونية",
+  "adminFieldDecision": "سبب القرار",
+  "adminFieldInspection": "ملاحظة الفحص",
+  "adminFieldEmail": "البريد الإلكتروني",
+  "adminFieldPhone": "الموبايل",
+  "adminVerified": "موثّق",
+  "adminNotVerified": "غير موثّق",
+  "adminFieldLastLogin": "آخر دخول",
+  "adminFieldJoined": "تاريخ التسجيل",
+  "adminSectionAddresses": "العناوين (المدينة والمحافظة فقط)",
+  "adminSectionActivity": "النشاط",
+  "adminSectionRecentOrders": "أحدث الطلبات",
+  "adminCountOrders": "الطلبات",
+  "adminCountReturns": "المرتجعات",
+  "adminCountDisputes": "النزاعات",
+  "adminCountTickets": "تذاكر الدعم",
+  "adminCountDeals": "الصفقات المحمية",
+  "adminCountReviews": "التقييمات",
+  "adminCustomerManageOnWeb": "تغيير حالة العميل يتم من لوحة الويب فقط.",
+  "adminReturnsOnWeb": "قرارات المرتجعات والاسترداد لا تتم من هذا التطبيق: البائع يقرر من تطبيقه، والاسترداد يعتمده ويصرفه فريق المالية من لوحة الويب بموافقة شخصين.",
+  "adminAlertsOnWeb": "قواعد التنبيهات تُضبط من لوحة الويب. هذه القائمة للمتابعة فقط.",
+  "adminAlertRulesSection": "القواعد المفعّلة",
+  "adminAlertSent": "أُرسل {count} مرة",
+  "@adminAlertSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminFieldPriority": "الأولوية",
+  "adminFromSeller": "من بائع",
+  "adminAttachment": "مرفق",
+  "adminReply": "الرد على العميل",
+  "adminReplyHint": "يظهر الرد للعميل باسم فريق الدعم ويصله إشعار. الرد لا يغلق التذكرة ولا يقبل مرفقات.",
+  "adminReplySend": "إرسال الرد",
+  "adminReplySent": "تم إرسال الرد",
+  "adminSupportOnWeb": "الإسناد وتغيير الحالة والملاحظات الداخلية تتم من لوحة الويب.",
+  "accountDeletion": "حذف الحساب",
+  "accountDeletionBody": "طلب حذف الحساب بيسجّل طلب عند فريق أضمن، ومش بيمسح أي حاجة في الحال. لو عندك عمليات أو مستحقات لسه مفتوحة هنقولك إيه اللي لازم يتقفل الأول. بيانات الطلبات والمدفوعات بتفضل محفوظة حسب سياسة الاحتفاظ.",
+  "accountDeletionReasonHint": "سبب الحذف (اختياري)",
+  "accountDeletionSubmit": "إرسال طلب حذف الحساب",
+  "accountDeletionConfirm": "متأكد إنك عايز تطلب حذف حسابك؟ تقدر تلغي الطلب في أي وقت قبل ما يتنفّذ.",
+  "accountDeletionSent": "اتسجّل طلبك، وفريق أضمن هيكمّله بعد مراجعة الحساب",
+  "accountDeletionPending": "طلب حذف الحساب قيد التنفيذ",
+  "accountDeletionPendingBody": "فريق أضمن هيكمّل إغلاق الحساب بعد ما يتأكد إن كل العمليات اتقفلت. تقدر تلغي الطلب في أي وقت.",
+  "accountDeletionBlockedTitle": "مش هينفع تقفل حسابك دلوقتي",
+  "accountDeletionBlockedBody": "خلّص العمليات دي الأول وبعدها تقدر تطلب حذف الحساب:",
+  "accountDeletionCancel": "إلغاء طلب الحذف",
+  "accountDeletionCancelled": "اتلغى طلب حذف الحساب",
+  "accountDeletionRequestedAt": "تاريخ الطلب",
+  "accountDeletionCancelConfirm": "متأكد إنك عايز تلغي طلب حذف الحساب؟ هيبقى حسابك شغال عادي.",
+  "marketingConsentLabel": "أوافق على استقبال عروض ورسائل تسويق من أضمن (اختياري — تقدر تلغيها في أي وقت من الإعدادات)",
+  "@marketingConsentLabel": {},
+  "marketingConsentTitle": "رسائل وعروض التسويق",
+  "@marketingConsentTitle": {},
+  "marketingConsentSubtitle": "استقبال عروض ورسائل تسويق على موبايلك وبريدك. مقفولة افتراضيًا وتقدر تلغيها في أي وقت.",
+  "@marketingConsentSubtitle": {},
+  "errorFeatureDisabled": "الخاصية دي مش متاحة دلوقتي",
+  "walletBalanceLabel": "رصيد المحفظة",
+  "walletDeposit": "إيداع",
+  "depositTitle": "إيداع في المحفظة",
+  "depositMethodLabel": "طريقة الإيداع",
+  "depositMethodInstapay": "إنستاباي",
+  "depositMethodBank": "تحويل بنكي",
+  "depositMethodWallet": "محفظة إلكترونية",
+  "depositMethodWalletHint": "فودافون كاش، أورانج كاش، اتصالات كاش، WE Pay أو أي محفظة",
+  "depositTransferTo": "حوّل المبلغ على الحساب ده، وبعدها ارفع صورة الإيصال",
+  "depositRemainingToday": "المتاح للإيداع النهاردة: {amount} (الحد اليومي مشترك مع إيصالات الدفع)",
+  "@depositRemainingToday": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositOverLimit": "المبلغ أكبر من المتاح للإيداع النهاردة ({amount})",
+  "@depositOverLimit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositNoMethods": "مفيش طرق إيداع متاحة دلوقتي",
+  "depositSubmit": "إرسال الإيصال",
+  "depositSubmitted": "الإيصال وصل وتحت المراجعة. هيتضاف لرصيدك بعد ما فريق أضمن يتأكد من التحويل.",
+  "depositsList": "إيداعاتي",
+  "noDeposits": "لسه معملتش أي إيداع",
+  "depositPending": "قيد المراجعة",
+  "depositCredited": "اتضاف لرصيدك",
+  "depositRejected": "مرفوض",
+  "depositCancelled": "ملغي",
+  "depositRejectedReason": "السبب: {reason}",
+  "@depositRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "depositCancel": "إلغاء الإيداع",
+  "depositPendingCount": "إيداعات قيد المراجعة: {count}",
+  "@depositPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "shopByCategory": "اشترى حسب الفئة",
+  "offersLabel": "عروض",
+  "homeLabel": "المنزل",
+  "discountPercentLabel": "خصم {percent}%",
+  "@discountPercentLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHintPhones": "آيفون 15",
+  "searchHintWatches": "ساعة كاسيو",
+  "searchHintConsoles": "بلايستيشن 5",
+  "searchHintAppliances": "غسالة تورنيدو"
 }

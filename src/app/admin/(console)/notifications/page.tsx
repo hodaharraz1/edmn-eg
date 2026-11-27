@@ -9,6 +9,10 @@ import { db } from '@/server/db/client';
 import { notificationTemplates, outboundMessages } from '@/server/db/schema';
 import { EVENT_TEMPLATES, type EventName } from '@/server/modules/notifications/events';
 import { deliveryHealth } from '@/server/modules/notifications/message-alerts';
+import { devicePushCredentialsView, pushDeviceCounts } from '@/server/modules/notifications/device-push';
+import { pushCredentialsAction } from '@/app/_actions/push-credentials';
+import { hasPermission } from '@/server/core/actor';
+import { getSetting } from '@/server/modules/settings';
 import { env } from '@/server/core/env';
 import { formatDate } from '@/lib/format';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
@@ -19,8 +23,12 @@ import { Checkbox, Field, Input, Select, Textarea } from '@/ui/form';
 export const metadata = { title: 'الإشعارات' };
 
 export default async function Notifications(props: PageProps<'/admin/notifications'>) {
-  const { allowed } = await adminWith('notifications.manage');
+  const { actor, allowed } = await adminWith('notifications.manage');
   if (!allowed) return <Forbidden />;
+  const pushCounts = await pushDeviceCounts(actor!);
+  const canManagePushKeys = hasPermission(actor!, 'settings.manage');
+  const pushCreds = canManagePushKeys ? await devicePushCredentialsView(actor!) : [];
+  const pushDriver = await getSetting('notifications.devicePushDriver');
   const tab = String((await props.searchParams).tab ?? 'templates');
   const overrides = await db.select().from(notificationTemplates);
   const outbox = tab === 'outbox' ? await db.select().from(outboundMessages).orderBy(desc(outboundMessages.createdAt)).limit(150) : [];
@@ -31,7 +39,57 @@ export default async function Notifications(props: PageProps<'/admin/notificatio
     <div className="space-y-4">
       <PageHeader title="الإشعارات" description="قوالب الرسائل داخل المنصة والبريد والرسائل النصية، وسجل الرسائل الصادرة." />
       <Alert tone={E.MAIL_DRIVER === 'smtp' && E.SMS_DRIVER === 'http' ? 'success' : 'warning'}>البريد: {E.MAIL_DRIVER === 'smtp' ? `SMTP (${E.SMTP_HOST})` : 'وضع السجل فقط — لم يُعد مزود SMTP'} · SMS: {E.SMS_DRIVER === 'http' ? 'HTTP مُعد' : 'وضع السجل فقط — لم يُعد مزود رسائل'}</Alert>
+      <Alert tone={pushCounts.enabled ? 'info' : 'warning'}>
+        الإشعارات الفورية للأجهزة: <b>{pushCounts.enabled ? 'مفعّلة' : 'متوقفة (الوضع الافتراضي)'}</b> — الأجهزة المسجلة:{' '}
+        {pushCounts.total === 0 ? 'لا يوجد' : pushCounts.byPlatform.map((p) => `${p.platform === 'ANDROID' ? 'أندرويد' : p.platform} · ${p.app === 'CUSTOMER' ? 'تطبيق العميل' : 'تطبيق الإدارة'}: ${p.count}`).join('، ')}. تُعرض الأعداد فقط —
+        لا تظهر أي رموز أجهزة. التفعيل والتعطيل من إعدادات النظام (notifications.devicePushEnabled) بتأكيد الهوية.
+      </Alert>
       <Tabs active={tab} tabs={[{ key: 'templates', label: 'القوالب', href: '/admin/notifications' }, { key: 'outbox', label: 'الرسائل الصادرة', href: '/admin/notifications?tab=outbox' }, { key: 'health', label: 'صحة التوصيل', href: '/admin/notifications?tab=health' }]} />
+      <section className="card space-y-3 p-4" data-testid="push-credentials">
+        <h3 className="font-bold">مفاتيح الإرسال الفعلي (Firebase / Apple)</h3>
+        <Alert tone={pushDriver === 'live' ? 'warning' : 'info'}>
+          وضع الإرسال: <b>{pushDriver === 'live' ? 'live — إرسال حقيقي' : 'log — تسجيل فقط (الوضع الافتراضي)'}</b>. المفاتيح تُحفظ مشفّرة في إعدادات السيرفر فقط ولا تُعرض مرة أخرى أبدًا؛ يظهر هنا وصف غير سري فقط.
+          تغيير الوضع من إعدادات النظام (notifications.devicePushDriver) بتأكيد الهوية.
+        </Alert>
+        {!canManagePushKeys && <Alert tone="info">إدارة المفاتيح تحتاج صلاحية «إدارة الإعدادات».</Alert>}
+        {canManagePushKeys && (
+          <>
+            {(['FCM', 'APNS'] as const).map((prov) => {
+              const c = pushCreds.find((x) => x.provider === prov);
+              return (
+                <p key={prov} className="text-sm">
+                  <b>{prov === 'FCM' ? 'Firebase' : 'Apple APNs'}:</b>{' '}
+                  {c ? (
+                    <>مُعدّ — {prov === 'FCM' ? `المشروع: ${c.meta.projectId} (${c.meta.clientEmail})` : `الفريق: ${c.meta.teamId} · المفتاح: ${c.meta.keyId} · الحزمة: ${c.meta.bundleId}${c.meta.sandbox ? ' · sandbox' : ''}`} — آخر تحديث {c.updatedAt ? formatDate(c.updatedAt, true) : ''} بواسطة {c.updatedBy ?? '—'}</>
+                  ) : (
+                    'غير مُعد'
+                  )}
+                </p>
+              );
+            })}
+            <details className="rounded-xl border border-line p-3">
+              <summary className="cursor-pointer text-sm font-semibold">حفظ / استبدال مفاتيح Firebase</summary>
+              <ActionForm action={pushCredentialsAction} className="mt-2 space-y-2">
+                <input type="hidden" name="provider" value="FCM" />
+                <Field label="ملف حساب الخدمة (JSON) كما نزّلته من Firebase" ><Textarea name="serviceAccountJson" rows={5} required dir="ltr" placeholder='{"type":"service_account","project_id":"…","private_key":"…","client_email":"…"}' /></Field>
+                <SubmitButton variant="outline">حفظ مشفّرًا</SubmitButton>
+              </ActionForm>
+            </details>
+            <details className="rounded-xl border border-line p-3">
+              <summary className="cursor-pointer text-sm font-semibold">حفظ / استبدال مفاتيح Apple (APNs)</summary>
+              <ActionForm action={pushCredentialsAction} className="mt-2 grid gap-2 md:grid-cols-2">
+                <input type="hidden" name="provider" value="APNS" />
+                <Field label="Team ID"><Input name="teamId" required dir="ltr" /></Field>
+                <Field label="Key ID"><Input name="keyId" required dir="ltr" /></Field>
+                <Field label="Bundle ID"><Input name="bundleId" required dir="ltr" placeholder="com.edmn.customer" /></Field>
+                <Checkbox name="sandbox" label="بيئة Sandbox (للاختبار فقط)" />
+                <Field label="مفتاح .p8 (محتوى الملف)" className="md:col-span-2"><Textarea name="privateKeyP8" rows={5} required dir="ltr" placeholder="الصق محتوى ملف AuthKey_XXXXXXXXXX.p8 كاملًا" /></Field>
+                <SubmitButton variant="outline">حفظ مشفّرًا</SubmitButton>
+              </ActionForm>
+            </details>
+          </>
+        )}
+      </section>
       {health && <DeliveryHealth h={health} />}
       {tab === 'templates' && (
         <ul className="space-y-2">

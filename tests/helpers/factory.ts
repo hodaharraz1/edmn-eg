@@ -26,7 +26,7 @@ import { addToCart, cartLines } from '@/server/modules/commerce/cart';
 import { placeOrder } from '@/server/modules/commerce/orders';
 import { priceLines } from '@/server/modules/commerce/pricing';
 import { confirmSellerOrder, markShipped, saveShipment } from '@/server/modules/commerce/fulfilment';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { addPayoutMethod, decideSeller, verifyPayoutMethod, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 
 let seq = 0;
@@ -201,6 +201,8 @@ export async function paymentOf(orderId: string) {
 export async function submitAndConfirm(c: { actor: Actor }, orderId: string, admin: Actor) {
   const p = await paymentOf(orderId);
   const { submission } = await submitProof(c.actor, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png('proof'), name: 'proof.png' });
+  // Two-person rule: a different staff member reviews before `admin` confirms.
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return { payment: p, submission };
 }
@@ -229,7 +231,7 @@ let movementMaker: Actor | null = null;
  * Universal Maker/Checker (Batch 1.5): the Maker step for one financial movement, by a finance operator who is
  * NOT the Checker that will execute it. Returns the open request.
  */
-export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
+export async function makerRequest(kind: 'SELLER_RELEASE' | 'DEAL_RELEASE' | 'REFUND_APPROVAL' | 'REFUND_REVOCATION' | 'WITHDRAWAL_REVERSAL' | 'WITHDRAWAL_RETURN' | 'COD_REMITTANCE' | 'COD_SHORTAGE_RESOLUTION', entityId: string, amount: number, opts: { maker?: Actor; params?: Record<string, unknown> } = {}) {
   const { requestMovement } = await import('@/server/modules/finance/movements');
   movementMaker ??= await makeAdmin(['FINANCE_OPERATOR']);
   return requestMovement(opts.maker ?? movementMaker, kind, { entityId, amount, reason: 'طلب حركة مالية في الاختبار', params: opts.params });

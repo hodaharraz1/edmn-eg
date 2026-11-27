@@ -63,6 +63,9 @@ export const EVENT_TEMPLATES = {
   // ── Batch 1.5 (never any identity number, document, bank / wallet detail in these bodies)
   IDENTITY_UPDATED: { title: 'تحديث على التحقق من الهوية', body: 'حالة التحقق من هويتك: {{status}}. {{reason}}', sms: false },
   RECEIVING_DESTINATION_UPDATED: { title: 'تحديث على بيانات استلام الأموال', body: 'حالة {{destination}}: {{status}}. {{reason}}', sms: false },
+  WALLET_TOPUP_SUBMITTED: { title: 'إيصال الإيداع وصلنا', body: 'إيصال إيداع {{amount}} وصلنا وبنراجعه دلوقتي.', sms: false },
+  WALLET_TOPUP_CREDITED: { title: 'اتضاف لرصيد محفظتك', body: 'اتضاف {{amount}} لرصيد محفظتك في أضمن بعد مراجعة الإيصال.', sms: true },
+  WALLET_TOPUP_REJECTED: { title: 'إيصال الإيداع اترفض', body: 'مقدرناش نضيف إيداع {{amount}} لمحفظتك. السبب: {{reason}}', sms: true },
   FINANCE_MOVEMENT_DECIDED: { title: 'قرار على طلب حركة مالية', body: '{{kind}}: {{decision}}', sms: false },
   SUPPORT_TICKET_REOPENED: { title: 'تمت إعادة فتح تذكرة الدعم', body: 'التذكرة #{{ticket}} اتفتحت تاني وبدأت دورة متابعة جديدة.', sms: false },
   /** Proactive alerts (deadline / SLA / aging / stock). Body is built from safe references only. */

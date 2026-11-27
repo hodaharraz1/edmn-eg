@@ -34,14 +34,33 @@ export function installationIdFrom(req: Request): string | null {
   return v && INSTALLATION_RE.test(v) ? v : null;
 }
 
-export async function enforceApiRateLimit(tier: RateTier, routeId: string, who: { userId: string | null; installationId: string | null; ip: string | null }) {
+export interface RateWho {
+  userId: string | null;
+  installationId: string | null;
+  ip: string | null;
+}
+
+/**
+ * The exact buckets a request is charged to, as [key, limit, windowSeconds]. Pure and exported so the composition
+ * (SEC-04 M2) is testable without a database.
+ */
+export function apiRateBuckets(tier: RateTier, routeId: string, who: RateWho): Array<[string, number, number]> {
   const t = RATE_TIERS[tier];
   const checks: Array<[string, number, number]> = [];
   if (who.userId) checks.push([`api:${tier}:u:${who.userId}`, ...t.user]);
   else if (who.installationId) checks.push([`api:${tier}:i:${who.installationId}`, ...t.installation]);
   if (!who.userId && who.ip) checks.push([`api:${tier}:ip:${who.ip}`, ...t.ip]);
+  // SEC-04 M2: a COMPOSITE bucket (device + IP). A client that rotates one dimension — a new installation id on
+  // the same address, or the same device hopping carrier IPs — no longer resets its counter. The ceiling is
+  // deliberately generous (3× the installation tier) so Egyptian CGNAT addresses do not lock out unrelated buyers.
+  if (!who.userId && who.installationId && who.ip) checks.push([`api:${tier}:di:${who.installationId}:${who.ip}`, t.installation[0] * 3, t.installation[1]]);
   // Anonymous and no identity at all: one shared, strict bucket per route so the API cannot be used anonymously at scale.
   if (!who.userId && !who.installationId && !who.ip) checks.push([`api:${tier}:anon:${routeId}`, t.ip[0], t.ip[1]]);
+  return checks;
+}
+
+export async function enforceApiRateLimit(tier: RateTier, routeId: string, who: RateWho) {
+  const checks = apiRateBuckets(tier, routeId, who);
   for (const [key, limit, windowSeconds] of checks) {
     if (!(await hit(key, limit, windowSeconds))) {
       const retry = windowSeconds - (Math.floor(Date.now() / 1000) % windowSeconds);

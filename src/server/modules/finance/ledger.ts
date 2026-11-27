@@ -21,6 +21,7 @@ import { journalEntries, journalLines, ledgerAccounts } from '@/server/db/schema
  *  SELLER_PENDING             LIABILITY  seller net on paid orders awaiting buyer receipt confirmation
  *  SELLER_AVAILABLE           LIABILITY  seller net available for withdrawal
  *  SELLER_WITHDRAWAL_RESERVED LIABILITY  amounts locked by in-flight withdrawal requests
+ *  CUSTOMER_WALLETS           LIABILITY  customer prepaid wallet balances (PKG-WALLET-01); per-user split in customer_wallet_entries
  */
 export const ACCOUNTS = {
   PLATFORM_CASH: { type: 'ASSET', name: 'نقدية اضمن المحصلة' },
@@ -32,11 +33,15 @@ export const ACCOUNTS = {
   DEAL_PAYOUTS_RESERVED: { type: 'LIABILITY', name: 'مستحقات صفقات محجوزة لطلبات سحب' },
   DEAL_FEE_REVENUE: { type: 'REVENUE', name: 'رسوم الصفقات المحمية' },
   ADJUSTMENTS_EXPENSE: { type: 'EXPENSE', name: 'مصروف التسويات' },
+  /** What the courier company still owes EDMN when its statement remits LESS than the COD amount it collected. */
+  COD_SHORTAGE_RECEIVABLE: { type: 'ASSET', name: 'عجز تحصيل مستحق على شركة الشحن' },
   /** Payout/refund transfer costs borne by EDMN (seller-borne costs reduce the amount sent instead). */
   TRANSFER_COST_EXPENSE: { type: 'EXPENSE', name: 'مصروف رسوم التحويل' },
   SELLER_PENDING: { type: 'LIABILITY', name: 'رصيد البائع المعلق' },
   SELLER_AVAILABLE: { type: 'LIABILITY', name: 'رصيد البائع المتاح' },
   SELLER_WITHDRAWAL_RESERVED: { type: 'LIABILITY', name: 'رصيد محجوز لطلبات السحب' },
+  /** Customer prepaid wallet balances (PKG-WALLET-01). Platform account; the per-user split is customer_wallet_entries. */
+  CUSTOMER_WALLETS: { type: 'LIABILITY', name: 'أرصدة محافظ العملاء' },
 } as const;
 export type AccountCode = keyof typeof ACCOUNTS;
 const SELLER_CODES: ReadonlySet<AccountCode> = new Set(['SELLER_PENDING', 'SELLER_AVAILABLE', 'SELLER_WITHDRAWAL_RESERVED']);
@@ -69,7 +74,8 @@ export interface PostInput {
   guards?: { account: AccountRef; min: number }[];
   reversesEntryId?: string;
   /** The operation-specific Admin approval this entry executes. Mandatory (DB trigger enforces it too). */
-  approvalId: string;
+  /** Required for every entry type except WALLET_SPEND (a customer's own balance; DB-guarded by 0036/0037). */
+  approvalId: string | null;
 }
 
 async function ensureAccount(tx: DbOrTx, ref: AccountRef): Promise<string> {
@@ -104,7 +110,12 @@ export async function postEntry(tx: DbOrTx, actor: Actor, input: PostInput): Pro
     .from(journalEntries)
     .where(eq(journalEntries.idempotencyKey, input.idempotencyKey));
   if (existing) return { entryId: existing.id, created: false };
-  if (!input.approvalId) throw new DomainError('FORBIDDEN', 'لا يمكن تسجيل أي حركة مالية بدون موافقة صريحة من الإدارة');
+  if (!input.approvalId) {
+    // PKG-WALLET-02 (owner brief): spending a customer's OWN wallet balance needs no staff review — no outside
+    // money arrives (the deposit was credited two-person); the spend is audited and mirrored in the sub-ledger.
+    // Mirrored at DB level by edmn_journal_requires_approval (0036). Everything else still requires approval.
+    if (input.entryType !== 'WALLET_SPEND') throw new DomainError('FORBIDDEN', 'لا يمكن تسجيل أي حركة مالية بدون موافقة صريحة من الإدارة');
+  }
 
   const lines = input.lines.filter((l) => (l.debit ?? 0) !== 0 || (l.credit ?? 0) !== 0);
   let dr = 0;

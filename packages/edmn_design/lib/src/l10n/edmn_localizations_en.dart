@@ -363,6 +363,12 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get addedToCart => 'Added to cart';
 
   @override
+  String get viewCart => 'View cart';
+
+  @override
+  String get buyNow => 'Buy now';
+
+  @override
   String get protectedDealBannerTitle => 'Protected Deal';
 
   @override
@@ -561,6 +567,12 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get stepAddress => 'Address';
+
+  @override
+  String get shippingFromStores => 'Shipping from each store';
+
+  @override
+  String get freeShipping => 'Free shipping';
 
   @override
   String get stepDelivery => 'Delivery';
@@ -2780,6 +2792,11 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   }
 
   @override
+  String starRatingLabel(int count) {
+    return '$count of 5 stars';
+  }
+
+  @override
   String evidenceLabel(int max) {
     return 'Photos or documents (up to $max)';
   }
@@ -3038,6 +3055,9 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get adminDisputes => 'Disputes and complaints';
+
+  @override
+  String get adminAccountClosures => 'Account closure requests';
 
   @override
   String get adminAuditLog => 'Audit log';
@@ -3481,4 +3501,394 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
 
   @override
   String get soHintCancelled => 'This order was cancelled. Do not ship it.';
+
+  @override
+  String get adminReturns => 'Returns';
+
+  @override
+  String get adminAlertsInbox => 'Operational alerts';
+
+  @override
+  String get adminCustomers => 'Customers';
+
+  @override
+  String get adminSupportInbox => 'Support tickets';
+
+  @override
+  String get adminTabReturnsPending => 'Awaiting decision';
+
+  @override
+  String get adminTabReturnsActive => 'In progress';
+
+  @override
+  String get adminTabReturnsDone => 'Finished or escalated';
+
+  @override
+  String get adminSearchReturns => 'Search by return number';
+
+  @override
+  String get adminCod => 'Cash on delivery (COD)';
+
+  @override
+  String get adminTabCodAwaiting => 'Awaiting courier statement';
+
+  @override
+  String get adminTabCodShortfalls => 'Open shortfalls';
+
+  @override
+  String get adminStatusCodCollected => 'Delivered, awaiting remittance';
+
+  @override
+  String get adminSearchCustomers => 'Search by name, email or phone';
+
+  @override
+  String get adminTabAllAlerts => 'All';
+
+  @override
+  String get adminStageDue => 'Due';
+
+  @override
+  String get adminStageOverdue => 'Overdue';
+
+  @override
+  String get adminStagePre => 'Before the deadline';
+
+  @override
+  String get adminTabAllCustomers => 'All customers';
+
+  @override
+  String get adminStatusReturnRequested => 'Return requested';
+
+  @override
+  String get adminStatusReturnInTransit => 'On its way back';
+
+  @override
+  String get adminStatusReturnReceived => 'Received by the seller';
+
+  @override
+  String get adminStatusReturnInspection => 'Being inspected';
+
+  @override
+  String get adminStatusRefundPending => 'Refund awaiting approval';
+
+  @override
+  String get adminStatusInProgress => 'In progress';
+
+  @override
+  String get adminStatusWaitingCustomer => 'Waiting for the customer';
+
+  @override
+  String get adminStatusWaitingSeller => 'Waiting for the seller';
+
+  @override
+  String get adminStatusEscalated => 'Escalated';
+
+  @override
+  String get adminStatusSuspended => 'Suspended';
+
+  @override
+  String get adminRetNextRequested =>
+      'Review and approve or reject (the seller in the app, or staff on the web console)';
+
+  @override
+  String get adminRetNextApproved =>
+      'Waiting for the customer to send the item back';
+
+  @override
+  String get adminRetNextInTransit => 'Record that the return arrived';
+
+  @override
+  String get adminRetNextReceived => 'Start the inspection';
+
+  @override
+  String get adminRetNextInspection =>
+      'Decide the refund (finance pays it with two-person approval)';
+
+  @override
+  String get adminRetNextRefundPending =>
+      'Finance approves and pays the refund (two people)';
+
+  @override
+  String get adminRetNextClosed => 'Nothing — closed';
+
+  @override
+  String get adminRetNextDisputed => 'Handled through the dispute';
+
+  @override
+  String get adminFieldNextStep => 'Next step';
+
+  @override
+  String get adminFieldRefund => 'Refund amount';
+
+  @override
+  String get adminFieldEvidenceCount => 'Evidence photos';
+
+  @override
+  String get adminFieldStatutory => 'Within the statutory window';
+
+  @override
+  String get adminFieldDecision => 'Decision reason';
+
+  @override
+  String get adminFieldInspection => 'Inspection note';
+
+  @override
+  String get adminFieldEmail => 'Email';
+
+  @override
+  String get adminFieldPhone => 'Mobile';
+
+  @override
+  String get adminVerified => 'verified';
+
+  @override
+  String get adminNotVerified => 'not verified';
+
+  @override
+  String get adminFieldLastLogin => 'Last sign-in';
+
+  @override
+  String get adminFieldJoined => 'Joined';
+
+  @override
+  String get adminSectionAddresses => 'Addresses (city and governorate only)';
+
+  @override
+  String get adminSectionActivity => 'Activity';
+
+  @override
+  String get adminSectionRecentOrders => 'Recent orders';
+
+  @override
+  String get adminCountOrders => 'Orders';
+
+  @override
+  String get adminCountReturns => 'Returns';
+
+  @override
+  String get adminCountDisputes => 'Disputes';
+
+  @override
+  String get adminCountTickets => 'Support tickets';
+
+  @override
+  String get adminCountDeals => 'Protected deals';
+
+  @override
+  String get adminCountReviews => 'Reviews';
+
+  @override
+  String get adminCustomerManageOnWeb =>
+      'Changing a customer\'s status is done on the web console only.';
+
+  @override
+  String get adminReturnsOnWeb =>
+      'Return and refund decisions are not made in this app: the seller decides in their app, and finance approves and pays refunds on the web console with two-person approval.';
+
+  @override
+  String get adminAlertsOnWeb =>
+      'Alert rules are tuned on the web console. This list is for follow-up only.';
+
+  @override
+  String get adminAlertRulesSection => 'Active rules';
+
+  @override
+  String adminAlertSent(int count) {
+    return 'Sent $count times';
+  }
+
+  @override
+  String get adminFieldPriority => 'Priority';
+
+  @override
+  String get adminFromSeller => 'From a seller';
+
+  @override
+  String get adminAttachment => 'Attachment';
+
+  @override
+  String get adminReply => 'Reply to the customer';
+
+  @override
+  String get adminReplyHint =>
+      'The customer sees the reply from the support team and is notified. A reply never closes the ticket and takes no attachments.';
+
+  @override
+  String get adminReplySend => 'Send reply';
+
+  @override
+  String get adminReplySent => 'Reply sent';
+
+  @override
+  String get adminSupportOnWeb =>
+      'Assignment, status changes and internal notes are done on the web console.';
+
+  @override
+  String get accountDeletion => 'Delete account';
+
+  @override
+  String get accountDeletionBody =>
+      'A deletion request is recorded with the EDMN team and deletes nothing immediately. If you still have open activity or balances we will tell you what must be closed first. Order and payment records are kept under the retention policy.';
+
+  @override
+  String get accountDeletionReasonHint => 'Reason (optional)';
+
+  @override
+  String get accountDeletionSubmit => 'Send deletion request';
+
+  @override
+  String get accountDeletionConfirm =>
+      'Are you sure you want to request account deletion? You can cancel the request any time before it is completed.';
+
+  @override
+  String get accountDeletionSent =>
+      'Your request was recorded. The EDMN team will complete it after reviewing the account.';
+
+  @override
+  String get accountDeletionPending => 'Account deletion in progress';
+
+  @override
+  String get accountDeletionPendingBody =>
+      'The EDMN team completes the closure once all activity is settled. You can cancel the request at any time.';
+
+  @override
+  String get accountDeletionBlockedTitle =>
+      'Your account cannot be closed right now';
+
+  @override
+  String get accountDeletionBlockedBody =>
+      'Finish the items below first, then request deletion again:';
+
+  @override
+  String get accountDeletionCancel => 'Cancel deletion request';
+
+  @override
+  String get accountDeletionCancelled => 'Deletion request cancelled';
+
+  @override
+  String get accountDeletionRequestedAt => 'Requested at';
+
+  @override
+  String get accountDeletionCancelConfirm =>
+      'Are you sure you want to cancel the deletion request? Your account stays active.';
+
+  @override
+  String get marketingConsentLabel =>
+      'I agree to receive offers and marketing messages from EDMN (optional - you can withdraw anytime from Settings)';
+
+  @override
+  String get marketingConsentTitle => 'Marketing messages';
+
+  @override
+  String get marketingConsentSubtitle =>
+      'Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.';
+
+  @override
+  String get errorFeatureDisabled => 'This feature is not available right now';
+
+  @override
+  String get walletBalanceLabel => 'Wallet balance';
+
+  @override
+  String get walletDeposit => 'Deposit';
+
+  @override
+  String get depositTitle => 'Deposit to wallet';
+
+  @override
+  String get depositMethodLabel => 'Deposit method';
+
+  @override
+  String get depositMethodInstapay => 'InstaPay';
+
+  @override
+  String get depositMethodBank => 'Bank transfer';
+
+  @override
+  String get depositMethodWallet => 'Mobile wallet';
+
+  @override
+  String get depositMethodWalletHint =>
+      'Vodafone Cash, Orange Cash, Etisalat Cash, WE Pay or any wallet';
+
+  @override
+  String get depositTransferTo =>
+      'Transfer the amount to this account, then upload the receipt';
+
+  @override
+  String depositRemainingToday(String amount) {
+    return 'Available to deposit today: $amount (the daily limit is shared with payment receipts)';
+  }
+
+  @override
+  String depositOverLimit(String amount) {
+    return 'The amount is more than you can deposit today ($amount)';
+  }
+
+  @override
+  String get depositNoMethods => 'No deposit methods are available right now';
+
+  @override
+  String get depositSubmit => 'Send receipt';
+
+  @override
+  String get depositSubmitted =>
+      'The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.';
+
+  @override
+  String get depositsList => 'My deposits';
+
+  @override
+  String get noDeposits => 'You have not made any deposit yet';
+
+  @override
+  String get depositPending => 'Under review';
+
+  @override
+  String get depositCredited => 'Added to your balance';
+
+  @override
+  String get depositRejected => 'Rejected';
+
+  @override
+  String get depositCancelled => 'Cancelled';
+
+  @override
+  String depositRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get depositCancel => 'Cancel deposit';
+
+  @override
+  String depositPendingCount(String count) {
+    return 'Deposits under review: $count';
+  }
+
+  @override
+  String get shopByCategory => 'Shop by category';
+
+  @override
+  String get offersLabel => 'Offers';
+
+  @override
+  String get homeLabel => 'Home';
+
+  @override
+  String discountPercentLabel(int percent) {
+    return '$percent% off';
+  }
+
+  @override
+  String get searchHintPhones => 'iPhone 15';
+
+  @override
+  String get searchHintWatches => 'Casio watch';
+
+  @override
+  String get searchHintConsoles => 'PlayStation 5';
+
+  @override
+  String get searchHintAppliances => 'Tornado washer';
 }

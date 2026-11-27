@@ -1,4 +1,6 @@
 import { customerActor, sellerActor } from '@/server/auth/actors';
+import { hit } from '@/server/auth/rate-limit';
+import { clientIp } from '@/server/web/client-ip';
 import type { Actor } from '@/server/core/actor';
 import { readPrivateFile } from '@/server/storage/access';
 import { getAdminSession, getWebSession, requestMeta } from '@/server/web/session';
@@ -9,6 +11,10 @@ import { adminActor } from '@/server/auth/actors';
  * The id alone is never sufficient; responses are uniform 404s to avoid enumeration.
  */
 export async function GET(req: Request, ctx: RouteContext<'/api/files/[id]'>) {
+  // SEC-04 L1: private-file downloads are a cheap way to enumerate ids; bound them per client IP as well as by
+  // the authorization check below. 240/min is far above a real gallery and far below an enumeration loop.
+  const limited = await hit(`files:ip:${clientIp(req.headers) ?? 'unknown'}`, 240, 60);
+  if (!limited) return new Response('Too many requests', { status: 429, headers: { 'cache-control': 'no-store', 'retry-after': '60' } });
   const { id } = await ctx.params;
   const meta = await requestMeta();
   const candidates: Actor[] = [];

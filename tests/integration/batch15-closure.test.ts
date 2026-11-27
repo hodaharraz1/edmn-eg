@@ -30,7 +30,7 @@ import {
 import { reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
 import { mapLegacySellerIdentities, reviewIdentity, submitIdentity } from '@/server/modules/identity/service';
 import { openSellerOrderConversation, sendMessage } from '@/server/modules/messaging/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { addDisputeMessage, openDispute } from '@/server/modules/postpurchase/disputes';
 import { approveReturn, requestReturn } from '@/server/modules/postpurchase/returns';
 import { addPayoutMethod, saveIdentity, startApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
@@ -81,6 +81,7 @@ async function payableDeal(seller: Actor, price = '1000') {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(seller, deal.id, 'تم التسليم', [{ data: pdf(), name: 'w.pdf' }]);
   const view = await deliveryOtpForBuyer(buyer, deal.id);

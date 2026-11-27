@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/account/account_screens.dart';
+import 'features/account/deletion_screen.dart';
 import 'features/account/devices_screen.dart';
 import 'features/auth/reset_password_screen.dart';
 import 'features/auth/sign_in_screen.dart';
@@ -24,6 +25,7 @@ import 'features/seller/seller_screens.dart';
 import 'features/seller/seller_setup_screens.dart';
 import 'features/support/support_screens.dart';
 import 'features/wallet/wallet_screens.dart';
+import 'deep_links.dart';
 import 'providers.dart';
 import 'features/wishlist/wishlist_screens.dart';
 
@@ -37,6 +39,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // PKG-LINKS-01: a shared web link (App Links / Universal Links) lands on its app route first.
+      final mapped = appLocationForWebUri(state.uri);
+      if (mapped != null && mapped != state.uri.toString()) return mapped;
       final loc = state.matchedLocation;
       final needsAuth = _protected.any((p) => loc.startsWith(p));
       if (needsAuth && !ref.read(signedInProvider)) return '/sign-in?next=${Uri.encodeComponent(state.uri.toString())}';
@@ -57,7 +62,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/', builder: (c, s) => const CatalogHomeScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/categories', builder: (c, s) => const CategoriesScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen())]),
+          // Wallet is a main tab (owner request); signed-out users are sent to sign-in by the redirect.
+          StatefulShellBranch(routes: [GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen())]),
+          // Cart is a main tab (owner request 2026-11-27: buying must be one tap away, like Noon).
+          StatefulShellBranch(routes: [GoRoute(path: '/cart', builder: (c, s) => const CartScreen())]),
           StatefulShellBranch(routes: [GoRoute(path: '/orders', builder: (c, s) => const OrdersScreen())]),
         ],
       ),
@@ -65,8 +73,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/categories/:id', builder: (c, s) => CategoryProductsScreen(categoryId: s.pathParameters['id']!, category: s.extra as Category?)),
       GoRoute(path: '/products/:slug', builder: (c, s) => ProductScreen(slug: s.pathParameters['slug']!)),
       GoRoute(path: '/stores/:slug', builder: (c, s) => StoreScreen(slug: s.pathParameters['slug']!)),
-      GoRoute(path: '/cart', builder: (c, s) => const CartScreen()),
       GoRoute(path: '/checkout', builder: (c, s) => const CheckoutScreen()),
+      GoRoute(path: '/reorder', builder: (c, s) => const ReorderScreen()),
       GoRoute(path: '/orders/:id', builder: (c, s) => OrderScreen(orderId: s.pathParameters['id']!, justPlaced: s.uri.queryParameters['placed'] == '1')),
       GoRoute(path: '/payments/:id', builder: (c, s) => PaymentScreen(paymentId: s.pathParameters['id']!)),
       GoRoute(path: '/account', builder: (c, s) => const AccountScreen()),
@@ -74,6 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/account/profile', builder: (c, s) => const ProfileScreen()),
       GoRoute(path: '/account/security', builder: (c, s) => const SecurityScreen()),
       GoRoute(path: '/account/devices', builder: (c, s) => const DevicesScreen()),
+      GoRoute(path: '/account/deletion', builder: (c, s) => const AccountDeletionScreen()),
       GoRoute(path: '/account/payment-methods', builder: (c, s) => const PaymentMethodsScreen()),
       GoRoute(path: '/account/addresses', builder: (c, s) => const AddressesScreen()),
       GoRoute(path: '/account/addresses/new', builder: (c, s) => const AddressFormScreen()),
@@ -95,9 +104,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/seller/disputes', builder: (c, s) => const DisputesScreen(store: true)),
       GoRoute(path: '/seller/disputes/:id', builder: (c, s) => DisputeScreen(id: s.pathParameters['id']!, store: true)),
       GoRoute(path: '/reviews/new', builder: (c, s) => WriteReviewScreen(sellerOrderId: s.uri.queryParameters['so'] ?? '')),
-      GoRoute(path: '/wallet', builder: (c, s) => const WalletScreen()),
       GoRoute(path: '/wallet/activity', builder: (c, s) => const WalletActivityScreen()),
       GoRoute(path: '/wallet/activity/:id', builder: (c, s) => WalletActivityDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/wallet/deposit', builder: (c, s) => const WalletDepositScreen()),
       GoRoute(path: '/wallet/payout', builder: (c, s) => const AccountPayoutScreen()),
       GoRoute(path: '/wallet/accounts', builder: (c, s) => const ReceivingAccountsScreen()),
       GoRoute(path: '/seller/statement', builder: (c, s) => const SellerStatementScreen()),
@@ -137,18 +146,44 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = EdmnLocalizations.of(context);
-    ref.watch(cartCountProvider);
+    final cartCount = ref.watch(cartCountProvider);
+    // PKG-UI-01: the floating frosted-glass nav pill replaces the docked bar. Same four tabs, same order:
+    // الرئيسية، الأقسام، المحفظة، السلة، طلباتي; the ACTIVE tab gets the blue accent circle (owner decision: no centre
+    // button). It hides while scrolling down and returns on scrolling up (owner decision 2026-11-27); screens pad
+    // their scroll views with EdmnFloatingNavigation.clearanceOf.
     return Scaffold(
-      body: shell,
-      bottomNavigationBar: EdmnBottomNavigation(
-        currentIndex: shell.currentIndex,
-        onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        items: [
-          EdmnNavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
-          EdmnNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
-          EdmnNavItem(icon: Icons.replay_rounded, activeIcon: Icons.replay_rounded, label: t.reorder),
-          EdmnNavItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag_rounded, label: t.myOrders),
-        ],
+      extendBody: true,
+      body: EdmnFloatingNavShell(
+        index: shell.currentIndex,
+        body: shell,
+        navigation: EdmnFloatingNavigation(
+          key: const Key('floating-nav'),
+          currentIndex: shell.currentIndex,
+          onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+          items: [
+            EdmnFloatingNavItem(key: const Key('nav-home'), icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: t.home),
+            EdmnFloatingNavItem(key: const Key('nav-categories'), icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: t.categories),
+            EdmnFloatingNavItem(
+              key: const Key('nav-wallet'),
+              icon: Icons.account_balance_wallet_outlined,
+              activeIcon: Icons.account_balance_wallet_rounded,
+              label: t.wallet,
+            ),
+            EdmnFloatingNavItem(
+              key: const Key('nav-cart'),
+              icon: Icons.shopping_cart_outlined,
+              activeIcon: Icons.shopping_cart_rounded,
+              label: t.cartTitle,
+              badge: cartCount > 0 ? cartCount : null,
+            ),
+            EdmnFloatingNavItem(
+              key: const Key('nav-orders'),
+              icon: Icons.shopping_bag_outlined,
+              activeIcon: Icons.shopping_bag_rounded,
+              label: t.myOrders,
+            ),
+          ],
+        ),
       ),
     );
   }

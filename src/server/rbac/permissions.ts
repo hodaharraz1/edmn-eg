@@ -10,6 +10,7 @@ export const PERMISSIONS = {
   // Customers
   'customers.view': 'عرض العملاء',
   'customers.manage': 'إدارة حسابات العملاء',
+  'customers.exportMarketing': 'تصدير قائمة عملاء التسويق (بموافقة شخصين، للموافقين فقط)',
   // Sellers
   'sellers.view': 'عرض البائعين',
   'sellers.review': 'مراجعة طلبات البائعين',

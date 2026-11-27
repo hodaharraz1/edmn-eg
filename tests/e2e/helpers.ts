@@ -106,6 +106,29 @@ export function acceptDialogs(page: Page) {
   page.on('dialog', (d) => void d.accept());
 }
 
+/**
+ * Two-person payment confirmation through the real staff UI (PKG-PAY-01): the payments reviewer presses
+ * «بدء المراجعة» (maker), then a DIFFERENT staff member confirms (checker). Returns the confirmer's page.
+ */
+export async function reviewThenConfirmPayment(browser: Browser, paymentId: string, opts: { reviewer?: string; confirmer?: string } = {}) {
+  const reviewer = await adminLogin(browser, opts.reviewer ?? 'payments@edmn.local');
+  acceptDialogs(reviewer);
+  await reviewer.goto(`/admin/payments/${paymentId}`);
+  await reviewer.waitForLoadState('networkidle'); // hydrated before interacting (slow serverless cold starts)
+  const started = reviewer.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
+  await reviewer.getByRole('button', { name: 'بدء المراجعة' }).click();
+  await started;
+  await reviewer.context().close();
+  const confirmer = await adminLogin(browser, opts.confirmer ?? 'admin@edmn.local');
+  acceptDialogs(confirmer);
+  await confirmer.goto(`/admin/payments/${paymentId}`);
+  await confirmer.waitForLoadState('networkidle');
+  const confirmed = confirmer.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
+  await confirmer.getByRole('button', { name: /تأكيد دفع/ }).click();
+  await confirmed;
+  return confirmer;
+}
+
 /** Submit the form that contains the given button text and wait for the success toast/alert. */
 export async function submitAndExpect(page: Page, button: string | RegExp, expectText: string | RegExp = /تم/) {
   await page.getByRole('button', { name: button }).first().click();

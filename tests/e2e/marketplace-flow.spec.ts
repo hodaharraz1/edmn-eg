@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { acceptDialogs, adminLogin, customerLogin, PDF, png, q } from './helpers';
+import { PDF, adminLogin, customerLogin, png, q, reviewThenConfirmPayment } from './helpers';
 
 /**
  * Competition critical flow 1, entirely through the UI and real domain logic:
@@ -210,10 +210,7 @@ test('buyer finds the product, checks out and submits payment proof', async ({ b
 
 test('admin verifies the payment', async ({ browser }) => {
   const [p] = await q<{ id: string }>(`select id from payments where order_id = $1`, [orderId]);
-  const page = await adminLogin(browser, 'payments@edmn.local');
-  acceptDialogs(page);
-  await page.goto(`/admin/payments/${p.id}`);
-  await page.getByRole('button', { name: /تأكيد دفع/ }).click();
+  await reviewThenConfirmPayment(browser, p.id); // two-person: payments@ reviews, admin@ confirms
   await expect.poll(async () => (await q<{ status: string }>(`select status from payments where id = $1`, [p.id]))[0].status).toBe('CONFIRMED');
   expect(await soStatus()).toBe('PAID');
 });

@@ -17,7 +17,7 @@ import { customerActor } from '@/server/auth/actors';
 import { totpCode } from '@/server/auth/totp';
 import type { Actor } from '@/server/core/actor';
 import { db } from '@/server/db/client';
-import { auditLogs, disputes, externalDeals, notifications, sellers } from '@/server/db/schema';
+import { auditLogs, disputes, externalDeals, notifications, sellers, users } from '@/server/db/schema';
 import { createDeal } from '@/server/modules/deals/service';
 import { submitIdentity } from '@/server/modules/identity/service';
 import { disputeGraph, openDispute } from '@/server/modules/postpurchase/disputes';
@@ -159,6 +159,9 @@ describe('admin app detail views', () => {
 describe('admin app safe dispute actions', () => {
   it('assignees: only active staff with disputes.manage', async () => {
     const officer = await staff(['DISPUTE_OFFICER']);
+    // The list is capped (200, ordered by name) and the shared test DB holds many eligible staff from other files:
+    // give this officer a name that sorts first so the assertion is about eligibility, not about the cap.
+    await db.update(users).set({ fullName: '000 مسؤول نزاعات اختبار' }).where(eq(users.id, officer.user.id));
     const catalog = await makeUser({ staff: true, roles: ['CATALOG_REVIEWER'] });
     const r = await call(assigneesRoute as Handler, '/admin/disputes/assignees', { token: officer.token });
     expect(r.status).toBe(200);

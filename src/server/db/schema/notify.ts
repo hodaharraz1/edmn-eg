@@ -79,6 +79,29 @@ export const notificationPreferences = pgTable('notification_preferences', {
  * Web Push subscriptions (one per browser/device). The endpoint and keys are a capability to message the
  * device, so they are stored encrypted; only a hash of the endpoint is kept in clear for de-duplication.
  */
+
+/**
+ * Live push-provider credentials (PKG-PUSH-02): one row per provider (FCM / APNS). The payload is the provider's
+ * secret material (service-account JSON / APNs key) encrypted with the same envelope as web-push secrets — it is
+ * never stored in code, never returned by any read API, and never logged.
+ */
+export const DEVICE_PUSH_PROVIDERS = ['FCM', 'APNS'] as const;
+
+export const devicePushCredentials = pgTable(
+  'device_push_credentials',
+  {
+    provider: text({ enum: DEVICE_PUSH_PROVIDERS }).primaryKey(),
+    /** encrypted JSON of the provider credentials (see device-push-senders.ts parseFcmCredentials/parseApnsCredentials). */
+    secretEnc: text().notNull(),
+    updatedBy: uuid()
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [enumCheck('device_push_credentials_provider_chk', t.provider, DEVICE_PUSH_PROVIDERS)],
+);
+
 export const pushSubscriptions = pgTable(
   'push_subscriptions',
   {

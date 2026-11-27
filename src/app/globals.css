@@ -1,22 +1,23 @@
 @import 'tailwindcss';
 
 /* ───────────────────────── EDMN design tokens (master: the approved homepage) ─────────────────────────
-   Deep navy (navigation, hero, protection areas) · EDMN blue (actions, links, focus) · white working surfaces
-   · soft blue-gray secondary sections. Semantic colours only: green = protected/verified/success, amber =
-   warning, red = danger/dispute and the protected-deal CTA. Yellow is never a brand/navigation colour. */
+   PKG-THEME-01 (60 / 30 / 10): Cobalt Blue #2B3FE5 (header, actions, links, focus) · Snow White #F7F8FC
+   (pages, cards, surfaces) · Acid Lime #D6FF3D (touches only; text on it is always navy #0B1340, never white).
+   Semantic colours only: green = protected/verified/success, amber = warning, red = danger/dispute and the
+   protected-deal CTA. Yellow is never a brand/navigation colour. */
 @theme {
   --font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, 'Noto Sans Arabic', system-ui, sans-serif;
 
-  --color-brand-950: #061a3d;
-  --color-brand-900: #0a2a5e;
-  --color-brand-800: #0d3678;
-  --color-brand-700: #0f3f8c;
-  --color-brand-600: #1452b3;
-  --color-brand-500: #1e66d0;
-  --color-brand-400: #4f8be0;
-  --color-brand-200: #bcd2f3;
-  --color-brand-100: #e6eefb;
-  --color-brand-50: #f3f7fd;
+  --color-brand-950: #0b1340;
+  --color-brand-900: #15207a;
+  --color-brand-800: #1c2a95;
+  --color-brand-700: #2233b7;
+  --color-brand-600: #2b3fe5;
+  --color-brand-500: #4a5cec;
+  --color-brand-400: #7381f0;
+  --color-brand-200: #c6ccf8;
+  --color-brand-100: #e8ebfc;
+  --color-brand-50: #f3f4fe;
 
   --color-accent-700: #b3122a;
   --color-accent-600: #d7263d;
@@ -26,19 +27,22 @@
   --color-deal-600: #c2410c;
   --color-deal-100: #ffedd5;
 
-  --color-ink: #0f172a;
+  --color-lime: #d6ff3d; /* Acid Lime accent: touches only, never a page background */
+  --color-on-lime: #0b1340; /* text on lime: navy, never white */
+
+  --color-ink: #0b1340;
   --color-muted: #5b6474;
-  --color-line: #e3e8ef;
-  --color-page: #f4f7fb; /* commerce content background */
-  --color-soft: #eaf0f8; /* secondary sections (soft blue-gray) */
-  --color-navy: #061a3d; /* = brand-950: header, hero, protection areas */
+  --color-line: #dde2f2;
+  --color-page: #f7f8fc; /* commerce content background */
+  --color-soft: #edeff8; /* secondary sections (soft blue-gray) */
+  --color-navy: #1c2a95; /* = brand-800 (primaryDeep): header, hero, protection areas */
 
   --radius-card: 1rem;
   --radius-control: 0.75rem;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 6px 16px -10px rgb(6 26 61 / 0.18);
-  --shadow-pop: 0 16px 36px -14px rgb(6 26 61 / 0.32);
-  --shadow-lift: 0 24px 60px -20px rgb(6 26 61 / 0.45), 0 8px 24px -12px rgb(6 26 61 / 0.25);
-  --shadow-cta: 0 10px 24px -12px rgb(20 82 179 / 0.85);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 6px 16px -10px rgb(11 19 64 / 0.18);
+  --shadow-pop: 0 16px 36px -14px rgb(11 19 64 / 0.32);
+  --shadow-lift: 0 24px 60px -20px rgb(11 19 64 / 0.45), 0 8px 24px -12px rgb(11 19 64 / 0.25);
+  --shadow-cta: 0 10px 24px -12px rgb(43 63 229 / 0.85);
 
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 
@@ -293,7 +297,7 @@
     radial-gradient(42rem 30rem at 24% 48%, rgb(37 99 235 / 0.42), transparent 62%),
     radial-gradient(50rem 26rem at 85% -12%, rgb(30 64 175 / 0.5), transparent 60%),
     radial-gradient(30rem 20rem at 0% 100%, rgb(14 165 233 / 0.14), transparent 60%),
-    linear-gradient(180deg, #061a3d 0%, #082456 55%, #061a3d 100%);
+    linear-gradient(180deg, #0b1340 0%, #15207a 55%, #0b1340 100%);
 }
 .edmn-hero-grid {
   background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
@@ -374,4 +378,28 @@
   -webkit-mask-composite: source-in;
   mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 85%, transparent 100%);
   mask-composite: intersect;
+}
+
+/* UX-02: 48px touch targets on coarse pointers (fingers, not mice). Inline links ignore width/height, so this
+   only enlarges block-level controls; inputs keep their padding and grow to 48px tall. */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  summary,
+  select,
+  input,
+  textarea {
+    min-height: 48px;
+  }
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  summary {
+    min-width: 48px;
+  }
 }

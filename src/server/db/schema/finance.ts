@@ -313,3 +313,36 @@ export const sellerFinancialHolds = pgTable(
     check('seller_holds_closed_chk', sql`(${t.status} = 'ACTIVE') = (${t.closedAt} is null)`),
   ],
 );
+
+/** COD-02: the shipping company's remittance statement said LESS than it collected — the gap is tracked here until recovered or written off. */
+export const SHORTFALL_STATUSES = ['OPEN', 'RESOLVED'] as const;
+export const SHORTFALL_RESOLUTIONS = ['RECOVERED', 'WRITTEN_OFF'] as const;
+export const codRemittanceShortfalls = pgTable(
+  'cod_remittance_shortfalls',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    /** The COD payment whose remittance fell short (one remittance per payment, so one shortfall). */
+    paymentId: uuid().notNull(),
+    expectedAmount: money().notNull(),
+    actualAmount: money().notNull(),
+    shortfallAmount: money().notNull(),
+    /** Reference of the shipping-company statement the actual amount was read from. */
+    statementRef: text().notNull(),
+    status: text({ enum: SHORTFALL_STATUSES }).notNull().default('OPEN'),
+    resolution: text({ enum: SHORTFALL_RESOLUTIONS }),
+    resolutionReason: text(),
+    createdBy: uuid().references(() => users.id),
+    createdAt: createdAt(),
+    resolvedBy: uuid().references(() => users.id),
+    resolvedAt: ts(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('cod_shortfall_payment_uq').on(t.paymentId),
+    index('cod_shortfall_status_idx').on(t.status).where(sql`${t.status} = 'OPEN'`),
+    enumCheck('cod_shortfall_status_chk', t.status, SHORTFALL_STATUSES),
+    enumCheck('cod_shortfall_resolution_chk', t.resolution, SHORTFALL_RESOLUTIONS),
+    check('cod_shortfall_amounts_chk', sql`${t.expectedAmount} > 0 and ${t.actualAmount} >= 0 and ${t.shortfallAmount} > 0 and ${t.actualAmount} + ${t.shortfallAmount} = ${t.expectedAmount}`),
+    check('cod_shortfall_resolved_chk', sql`(${t.status} = 'RESOLVED') = (${t.resolvedAt} is not null)`),
+  ],
+);

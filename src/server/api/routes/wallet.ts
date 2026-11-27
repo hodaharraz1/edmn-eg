@@ -14,6 +14,7 @@ import {
   walletActivityDetail,
   walletView,
 } from '@/server/modules/mobile/wallet';
+import { cancelTopup, myTopups, submitTopup, WALLET_TOPUP_METHODS } from '@/server/modules/finance/wallet-topups';
 import { defineRoute } from '../http';
 import { isoDateTime, piastres, uuid } from '../schemas';
 
@@ -48,7 +49,15 @@ const walletOut = z.object({
     minimumPiastres: piastres,
     blockReason: z.enum(['IDENTITY', 'NO_DESTINATION', 'DEBT', 'NOTHING_AVAILABLE']).nullable(),
   }),
-  topUpAvailable: z.boolean().meta({ description: 'Always false: EDMN keeps no prepaid balance and has no top-up service.' }),
+  topUp: z
+    .object({
+      enabled: z.boolean().meta({ description: 'wallet.topUpEnabled. false = hide every deposit control; the top-up endpoints answer feature_disabled.' }),
+      balancePiastres: piastres,
+      pending: z.array(z.object({ id: uuid, amountPiastres: piastres, method: z.enum(WALLET_TOPUP_METHODS), createdAt: isoDateTime })),
+      dailyLimitPiastres: piastres,
+      usedTodayPiastres: piastres.meta({ description: 'Deposits plus order/deal receipts counted today (Africa/Cairo) against the one shared daily cap.' }),
+    })
+    .meta({ id: 'WalletTopUpSummary' }),
   realMoney: z.boolean(),
 });
 
@@ -211,7 +220,92 @@ export const getStorePayoutAccount = defineRoute({
   handler: ({ actor }) => storePayoutAccount(actor!),
 });
 
+const topupOut = z.object({
+  id: uuid,
+  amountPiastres: piastres,
+  method: z.enum(WALLET_TOPUP_METHODS),
+  status: z.enum(['PENDING_REVIEW', 'CREDITED', 'REJECTED', 'CANCELLED']),
+  payerReference: z.string().nullable(),
+  rejectReasonAr: z.string().nullable(),
+  createdAt: isoDateTime,
+  decidedAt: isoDateTime.nullable(),
+  cancellable: z.boolean(),
+});
+const topupView = (t: Awaited<ReturnType<typeof submitTopup>>['topup'], open = false) => ({
+  id: t.id,
+  amountPiastres: t.amount,
+  method: t.method,
+  status: t.status,
+  payerReference: t.payerReference,
+  rejectReasonAr: t.status === 'REJECTED' ? t.rejectReason : null,
+  createdAt: t.createdAt.toISOString(),
+  decidedAt: t.decidedAt?.toISOString() ?? null,
+  cancellable: t.status === 'PENDING_REVIEW' && !open,
+});
+const topupErrors = [...errors, 'feature_disabled' as const, 'validation_failed' as const];
+
+export const listWalletTopups = defineRoute({
+  ...base,
+  id: 'listWalletTopups',
+  method: 'GET',
+  path: '/api/v1/wallet/topups',
+  summary: 'My wallet deposits (newest first), where to transfer to, and today\'s remaining daily limit',
+  description: 'feature_disabled while wallet.topUpEnabled is off.',
+  rate: 'read',
+  errors: topupErrors,
+  response: z.object({
+    items: z.array(topupOut),
+    methods: z.array(z.object({ code: z.enum(WALLET_TOPUP_METHODS), nameAr: z.string(), nameEn: z.string(), instructionsAr: z.string().nullable(), destinations: z.array(z.object({ label: z.string(), details: z.record(z.string(), z.string()), instructionsAr: z.string().nullable(), isTest: z.boolean() })) })),
+    balancePiastres: piastres,
+    dailyLimitPiastres: piastres,
+    usedTodayPiastres: piastres,
+  }),
+  handler: async ({ actor }) => {
+    const r = await myTopups(actor!);
+    return { items: r.items.map((t) => topupView(t)), methods: r.methods, balancePiastres: r.balancePiastres, dailyLimitPiastres: r.dailyLimitPiastres, usedTodayPiastres: r.usedTodayPiastres };
+  },
+});
+
+export const createWalletTopup = defineRoute({
+  ...base,
+  id: 'createWalletTopup',
+  method: 'POST',
+  path: '/api/v1/wallet/topups',
+  summary: 'Upload the transfer receipt of a deposit (queues it for two-person staff review; never credits by itself)',
+  description: 'multipart/form-data. clientKey is the idempotency key: a retry with the same key returns the first deposit with created=false. feature_disabled while wallet.topUpEnabled is off. Refused over the shared daily cap.',
+  rate: 'write',
+  status: 201,
+  errors: [...topupErrors, 'conflict' as const],
+  multipart: { files: { proof: { max: 1, required: true } } },
+  body: z.object({
+    amount: z.string().trim().min(1).max(20).meta({ description: 'Amount transferred in EGP as typed by the customer, e.g. "1250.50".' }),
+    method: z.enum(WALLET_TOPUP_METHODS),
+    payerReference: z.string().trim().max(100).optional(),
+    clientKey: z.string().regex(/^[A-Za-z0-9_-]{16,100}$/),
+  }),
+  response: z.object({ created: z.boolean(), topup: topupOut }),
+  handler: async ({ actor, body, files }) => {
+    const r = await submitTopup(actor!, { amount: body.amount, method: body.method, payerReference: body.payerReference ?? '', clientKey: body.clientKey }, files.proof?.[0] ?? null);
+    return { created: r.created, topup: topupView(r.topup) };
+  },
+});
+
+export const cancelWalletTopup = defineRoute({
+  ...base,
+  id: 'cancelWalletTopup',
+  method: 'POST',
+  path: '/api/v1/wallet/topups/{topupId}/cancel',
+  summary: 'Cancel my deposit while it is pending and staff have not started reviewing it',
+  rate: 'write',
+  idempotency: 'required',
+  errors: topupErrors,
+  params: z.object({ topupId: uuid }),
+  response: topupOut,
+  handler: async ({ actor, params }) => topupView(await cancelTopup(actor!, params.topupId)),
+});
+
 export const walletRoutes = [
   getWallet, listWalletActivity, getWalletActivity, listAccountPayoutRequests, previewAccountPayoutRequest, createAccountPayoutRequest, cancelAccountPayoutRequest,
+  listWalletTopups, createWalletTopup, cancelWalletTopup,
   listReceivingAccounts, addReceivingAccountRoute, archiveReceivingAccount, getStoreStatement, getStorePayoutAccount,
 ];

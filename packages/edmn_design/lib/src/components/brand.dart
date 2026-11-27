@@ -65,7 +65,7 @@ class EdmnMarketLockup extends StatelessWidget {
       ),
       Text(
         marketLabel,
-        style: EdmnType.headerTitle.copyWith(color: EdmnColors.accentCyan),
+        style: EdmnType.headerTitle.copyWith(color: onDark ? EdmnColors.accent : EdmnColors.primary),
       ),
     ],
   );

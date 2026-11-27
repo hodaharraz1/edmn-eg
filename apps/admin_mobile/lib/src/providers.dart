@@ -2,6 +2,8 @@ import 'package:edmn_api/admin.dart';
 import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/widgets.dart';
+
+import 'net/cert_pins.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final buildConfigProvider = Provider<BuildConfig>((ref) => BuildConfig.fromDefines());
@@ -16,6 +18,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     store: ref.watch(sessionStoreProvider),
     refreshPath: AdminApiPaths.adminRefreshToken.path,
     telemetry: ref.watch(telemetryProvider),
+    // MOBILE-REL-01 (SEC-163): certificate pinning when EDMN_ADMIN_CERT_PINS is set at build time (null otherwise).
+    adapter: buildPinnedAdapter(),
   );
   client.onSessionEnded = () => ref.read(adminSessionProvider.notifier).set(AdminSessionState.signedOut);
   return client;

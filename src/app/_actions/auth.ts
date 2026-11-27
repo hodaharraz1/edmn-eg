@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { captchaTokenFrom } from '@/server/auth/login-throttle';
 import { login, register, requestPasswordReset, resetPassword } from '@/server/auth/service';
 import { env } from '@/server/core/env';
 import { mergeGuestCart } from '@/server/modules/commerce/cart';
@@ -20,7 +21,7 @@ async function afterLogin(token: string, userId: string) {
 export async function loginAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const next = safeNext(str(fd, 'next'), '/');
   const res = await runAction(async () => {
-    const { token, user } = await login(str(fd, 'identifier'), str(fd, 'password'), 'WEB', await requestMeta());
+    const { token, user } = await login(str(fd, 'identifier'), str(fd, 'password'), 'WEB', await requestMeta(), { captchaToken: captchaTokenFrom((n) => str(fd, n)) });
     await afterLogin(token, user.id);
   });
   if (res.ok) redirect(next);
@@ -31,7 +32,7 @@ export async function registerAction(_p: ActionState, fd: FormData): Promise<Act
   const next = safeNext(str(fd, 'next'), '/');
   if (str(fd, 'terms') !== 'on') return { ok: false, error: 'لازم توافق على شروط الاستخدام وسياسة الخصوصية', at: Date.now() };
   const res = await runAction(async () => {
-    const { token, user } = await register({ fullName: str(fd, 'fullName'), email: str(fd, 'email'), phone: str(fd, 'phone'), password: str(fd, 'password') }, await requestMeta());
+    const { token, user } = await register({ fullName: str(fd, 'fullName'), email: str(fd, 'email'), phone: str(fd, 'phone'), password: str(fd, 'password'), marketingConsent: str(fd, 'marketing') === 'on' }, await requestMeta());
     await afterLogin(token, user.id);
   });
   if (res.ok) redirect(next);

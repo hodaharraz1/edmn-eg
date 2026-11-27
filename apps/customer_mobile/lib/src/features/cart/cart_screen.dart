@@ -40,10 +40,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       title: c == null || c.itemCount == 0 ? t.cartTitle : '${t.cartTitle} ${t.cartCount(c.itemCount)}',
       bottomBar: c == null || c.groups.isEmpty
           ? null
-          : EdmnPrimaryButton(
-              key: const Key('checkout'),
-              label: t.checkoutCta,
-              onPressed: c.hasIssues ? null : () => context.push('/checkout'),
+          : Padding(
+              // The cart is a main tab: keep «إتمام الشراء» above the floating bar.
+              padding: const EdgeInsetsDirectional.only(bottom: EdmnFloatingNavigation.barHeight + EdmnSpacing.sm),
+              child: EdmnPrimaryButton(
+                key: const Key('checkout'),
+                label: t.checkoutCta,
+                onPressed: c.hasIssues ? null : () => context.push('/checkout'),
+              ),
             ),
       body: !signedIn
           ? EdmnEmptyState(
@@ -131,7 +135,7 @@ class _SellerGroup extends StatelessWidget {
           const Icon(Icons.storefront_outlined, color: EdmnColors.primary, size: EdmnSizes.iconSm),
           const SizedBox(width: EdmnSpacing.xxs),
           Expanded(child: Text(g.store.name, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w700))),
-          if (g.store.verified) const Icon(Icons.verified_rounded, color: EdmnColors.accentCyan, size: EdmnSizes.iconSm),
+          if (g.store.verified) const Icon(Icons.verified_rounded, color: EdmnColors.primary, size: EdmnSizes.iconSm),
         ]),
         const Divider(height: EdmnSpacing.md),
         for (final l in g.lines) _CartLine(line: l, busy: busy.contains(l.variantId), onQty: onQty),

@@ -35,10 +35,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final quote = ref.watch(checkoutProvider(_addressId));
     final q = quote.value;
     final selected = _addressId ?? q?.selectedAddressId;
+    // Three steps (owner feedback 2026-11-27: «العنوان» then «التوصيل» made no sense as two steps):
+    //   0 التوصيل = where to deliver + what shipping costs from each store, 1 الدفع, 2 تأكيد.
     final canContinue = switch (_step) {
-      0 => selected != null,
-      1 => q?.cart.shippingResolved == true && q?.cart.hasIssues == false,
-      2 => _method != null,
+      0 => selected != null && q?.cart.shippingResolved == true && q?.cart.hasIssues == false,
+      1 => _method != null,
       _ => q?.cart.canCheckout == true && _method != null && selected != null,
     };
     return EdmnAppScaffold(
@@ -48,13 +49,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ? null
           : EdmnPrimaryButton(
               key: const Key('checkout-next'),
-              label: _step < 3 ? t.continueLabel : t.placeOrder,
-              icon: _step < 3 ? null : Icons.check_rounded,
+              label: _step < 2 ? t.continueLabel : t.placeOrder,
+              icon: _step < 2 ? null : Icons.check_rounded,
               loading: _placing,
               onPressed: !canContinue
                   ? null
                   : () {
-                      if (_step < 3) {
+                      if (_step < 2) {
                         setState(() {
                           _step++;
                           _addressId ??= selected;
@@ -68,16 +69,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         value: quote,
         onRetry: () => ref.invalidate(checkoutProvider(_addressId)),
         data: (q) => ListView(padding: const EdgeInsetsDirectional.all(EdmnSpacing.screen), children: [
-          EdmnStepper(labels: [t.stepAddress, t.stepDelivery, t.stepPayment, t.stepConfirm], current: _step),
+          EdmnStepper(labels: [t.stepDelivery, t.stepPayment, t.stepConfirm], current: _step),
           const SizedBox(height: EdmnSpacing.lg),
           if (!q.realMoneyEnabled) ...[EdmnTestMoneyNotice(message: t.testPaymentNotice), const SizedBox(height: EdmnSpacing.md)],
           ...switch (_step) {
-            0 => _addressStep(q, selected),
-            1 => _deliveryStep(q),
-            2 => _paymentStep(q),
+            0 => [..._addressStep(q, selected), const SizedBox(height: EdmnSpacing.lg), ..._deliveryStep(q)],
+            1 => _paymentStep(q),
             _ => _confirmStep(q, selected),
           },
-          if (_step >= 1) ...[
+          if (selected != null) ...[
             const SizedBox(height: EdmnSpacing.lg),
             Text(t.orderSummary, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
             const SizedBox(height: EdmnSpacing.xs),
@@ -87,9 +87,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 (t.shippingFee, q.cart.shippingResolved ? q.cart.shippingTotalPiastres : null),
                 if (q.cart.buyerFeeTotalPiastres > 0) (t.buyerFee, q.cart.buyerFeeTotalPiastres),
                 if (q.cart.discountTotalPiastres > 0) (t.discount, -q.cart.discountTotalPiastres),
+                if (_method == 'COD' && q.codFeePiastres > 0) (languageOf(context) == 'en' ? 'COD collection fee' : 'رسوم الدفع عند الاستلام', q.codFeePiastres),
               ],
               totalLabel: t.total,
-              totalPiastres: q.cart.grandTotalPiastres,
+              totalPiastres: q.cart.grandTotalPiastres + (_method == 'COD' ? q.codFeePiastres : 0),
             ),
           ],
           if (_placeError != null) ...[const SizedBox(height: EdmnSpacing.md), EdmnNotice(message: apiErrorMessage(context, _placeError!), tone: EdmnTone.danger)],
@@ -135,7 +136,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   List<Widget> _deliveryStep(Checkout q) {
     final t = EdmnLocalizations.of(context);
     return [
-      Text(t.stepDelivery, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
+      Text(t.shippingFromStores, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
       const SizedBox(height: EdmnSpacing.xs),
       for (final g in q.cart.groups)
         EdmnCard(
@@ -153,7 +154,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
               ]),
             ),
-            EgpText(g.shippingFeePiastres, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary, fontWeight: FontWeight.w700)),
+            g.shippingFeePiastres == 0
+                ? Text(t.freeShipping, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.success, fontWeight: FontWeight.w800))
+                : EgpText(g.shippingFeePiastres, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary, fontWeight: FontWeight.w700)),
           ]),
         ),
       if (q.cart.hasIssues) EdmnNotice(message: t.priceChangedReview, tone: EdmnTone.warning),
@@ -165,21 +168,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final en = languageOf(context) == 'en';
     IconData icon(String code) => switch (code) {
           'INSTAPAY' => Icons.bolt_rounded,
-          'VODAFONE_CASH' => Icons.phone_iphone_rounded,
+          'VODAFONE_CASH' || 'ORANGE_CASH' || 'ETISALAT_CASH' || 'WE_PAY' || 'BM_WALLET' => Icons.phone_iphone_rounded,
+          'COD' => Icons.payments_outlined,
           _ => Icons.account_balance_outlined,
         };
     return [
       Text(t.paymentMethod, style: EdmnType.cardTitle.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w800)),
       const SizedBox(height: EdmnSpacing.xs),
-      // Only the methods the server enables (manual transfers). Cash on delivery / card / wallet from the board are not
-      // offered because the backend does not support them (VISUAL_AUDIT.md).
+      // Only the methods the server enables. COD appears here when the store setting is on.
       EdmnRadioCard<String>(
         value: _method,
         onChanged: (m) => setState(() => _method = m),
         options: [for (final m in q.paymentMethods) EdmnRadioOption(value: m.code, icon: icon(m.code), label: en ? m.nameEn : m.nameAr, subtitle: m.instructionsAr)],
       ),
       const SizedBox(height: EdmnSpacing.sm),
-      EdmnNotice(message: t.paymentWindow(q.paymentWindowHours), icon: Icons.schedule_rounded),
+      if (_method == 'COD')
+        EdmnNotice(
+          message: en
+              ? 'You pay ${(q.cart.grandTotalPiastres + q.codFeePiastres) / 100} EGP in cash to the courier on delivery.'
+              : 'هتدفع ${(q.cart.grandTotalPiastres + q.codFeePiastres) / 100} ج.م نقدًا للمندوب عند الاستلام.',
+          icon: Icons.payments_outlined,
+        )
+      else
+        EdmnNotice(message: t.paymentWindow(q.paymentWindowHours), icon: Icons.schedule_rounded),
     ];
   }
 
@@ -212,7 +223,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             addressId: addressId,
             paymentMethod: _method!,
             checkoutKey: _checkoutKey.value,
-            expectedTotalPiastres: q.cart.grandTotalPiastres,
+            expectedTotalPiastres: q.cart.grandTotalPiastres + (_method == 'COD' ? q.codFeePiastres : 0),
             expectedPricingVersionId: q.cart.pricingVersionId,
           ));
       ref.invalidate(cartProvider);

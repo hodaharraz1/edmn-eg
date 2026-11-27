@@ -86,7 +86,9 @@ Proven by tests:
    - **GitHub:** *Actions → Migrate staging database* (`.github/workflows/migrate-staging.yml`) with the commit SHA.
      It requires the `staging` environment (required reviewers) and the `STAGING_MIGRATION_DATABASE_URL` secret.
      A `workflow_dispatch` workflow can only be started once the file exists on the repository's default branch.
-     Until then, an operator runs the same commands from a checkout of that commit:
+     Until then, a push to `claude/instinct-integration` whose commit message **starts with** `[migrate-staging]`
+     runs the same job for exactly that commit (same environment, secret and reviewers; reference seed on).
+     Or an operator runs the same commands from a checkout of that commit:
      ```bash
      export EDMN_ENVIRONMENT=staging DATABASE_URL=<staging owner URL> DATABASE_URL_UNPOOLED=<same>
      export EDMN_DB_CHANGE_AUTHORIZATION=staging:$(git rev-parse HEAD)

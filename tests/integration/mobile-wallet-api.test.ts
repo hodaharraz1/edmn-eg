@@ -19,7 +19,7 @@ import { db } from '@/server/db/client';
 import { dealPayouts, externalDeals, journalEntries, sellerMembers, withdrawalRequests, orders, payments, refunds } from '@/server/db/schema';
 import { claimInvitation, confirmDealReceipt, createDeal, deliveryOtpForBuyer, inviteSeller, markDealDelivered, releaseDeal, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer, verifyDeliveryOtp } from '@/server/modules/deals/service';
 import { reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { financialInvariants } from '@/server/modules/finance/controls';
 import { approveWithdrawal, markWithdrawalProcessing, markWithdrawalTransferUncertain } from '@/server/modules/finance/withdrawals';
 import { identityStatus } from '@/server/modules/identity/service';
@@ -69,7 +69,7 @@ describe('Flow G — wallet', () => {
     const t = await login(c.user.email!);
     const w = await call(walletRoute, '/wallet', { token: t });
     expect(w.status, JSON.stringify(w.body)).toBe(200);
-    expect(w.body).toMatchObject({ hasEarnings: false, topUpAvailable: false, realMoney: false, sources: [] });
+    expect(w.body).toMatchObject({ hasEarnings: false, topUp: { enabled: false, balancePiastres: 0, pending: [] }, realMoney: false, sources: [] });
     expect(w.body.balances.availablePiastres).toBe(0);
     expect(w.body.payout.blockReason).not.toBeNull();
     const a = await call(activityRoute, '/wallet/activity', { token: t });
@@ -254,6 +254,7 @@ async function payableDeal(seller: Actor, price = '1000') {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   await markDealDelivered(seller, deal.id, 'تم التسليم', [{ data: pdf(), name: 'w.pdf' }]);
   const view = await deliveryOtpForBuyer(buyer, deal.id);

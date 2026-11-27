@@ -1,4 +1,4 @@
-import { closureAdminAction } from '@/app/_actions/admin';
+import { closureAdminAction, closureRequestExecutionAction } from '@/app/_actions/admin';
 import { adminWith, Forbidden } from '@/app/_components/admin-guard';
 import { hasPermission } from '@/server/core/actor';
 import { db } from '@/server/db/client';
@@ -27,10 +27,19 @@ export default async function Closures() {
             <li key={r.id} className="card p-3 text-sm">
               <p><b>{fullName}</b> <span className="ltr text-xs text-muted">{email}</span> · {formatDate(r.createdAt, true)}</p>
               {blockers.length ? <p className="text-xs text-red-700">موانع حالية: {blockers.map((b) => `${closureBlockerLabel(b.code)} (${b.count})`).join('، ')}</p> : <p className="text-xs text-emerald-700">لا توجد موانع حاليًا (يُعاد الفحص لحظة التنفيذ).</p>}
-              {can && (
+              {can && !r.executionRequestedBy && (
+                <ActionForm action={closureRequestExecutionAction} className="mt-2">
+                  <input type="hidden" name="requestId" value={r.id} /><input type="hidden" name="back" value="/admin/closures" />
+                  <SubmitButton size="sm" variant="outline">طلب تنفيذ الإغلاق (يعتمده موظف آخر)</SubmitButton>
+                </ActionForm>
+              )}
+              {can && r.executionRequestedBy && r.executionRequestedBy === actor.userId && (
+                <p className="mt-2 text-xs text-muted">طلبت تنفيذ الإغلاق. بانتظار اعتماد موظف آخر.</p>
+              )}
+              {can && r.executionRequestedBy && r.executionRequestedBy !== actor.userId && (
                 <ActionForm action={closureAdminAction} className="mt-2">
                   <input type="hidden" name="requestId" value={r.id} /><input type="hidden" name="back" value="/admin/closures" />
-                  <SubmitButton size="sm" variant="outline">تنفيذ الإغلاق (يُعاد فحص الموانع)</SubmitButton>
+                  <SubmitButton size="sm" variant="outline">اعتماد وتنفيذ الإغلاق (يُعاد فحص الموانع)</SubmitButton>
                 </ActionForm>
               )}
             </li>

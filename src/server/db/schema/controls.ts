@@ -23,6 +23,12 @@ export const FINANCIAL_ACTIONS = [
   'DEAL_PAYOUT',
   'WITHDRAWAL_PAYOUT_RETURN',
   'REFUND_REVOCATION',
+  /** Recording the courier company's cash remittance for COD orders. */
+  'COD_REMITTANCE',
+  /** Settling a courier-company COD shortfall: cash recovered later, or written off as an expense. */
+  'COD_SHORTAGE_RESOLUTION',
+  /** Crediting a customer's wallet after staff verified the deposit receipt (PKG-WALLET-01). */
+  'WALLET_TOPUP_CREDIT',
 ] as const;
 export type FinancialAction = (typeof FINANCIAL_ACTIONS)[number];
 export const APPROVAL_STATUSES = ['PENDING_CHECKER', 'APPROVED', 'CONSUMED', 'REVOKED', 'REJECTED'] as const;
@@ -150,6 +156,9 @@ export const accountClosureRequests = pgTable(
     blockers: jsonb().$type<{ code: string; count: number }[]>().notNull().default([]),
     reason: text(),
     decidedBy: uuid().references(() => users.id),
+    /** SEC-164: the staff member (Maker) who asked for execution; a DIFFERENT staff member (Checker, decidedBy) completes it. */
+    executionRequestedBy: uuid().references(() => users.id),
+    executionRequestedAt: ts(),
     completedAt: ts(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

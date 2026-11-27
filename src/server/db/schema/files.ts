@@ -56,6 +56,8 @@ export const files = pgTable(
     ownerUserId: uuid().references(() => users.id),
     createdAt: createdAt(),
     deletedAt: ts(),
+    /** Reserved: set if the stored bytes are ever removed for good by an owner-decided purge (none runs today, owner decision 2026-11-25). */
+    purgedAt: ts(),
     scanStatus: text({ enum: FILE_SCAN_STATUSES }).notNull().default('UNSCANNED'),
     scannedAt: ts(),
     scanEngine: text(),

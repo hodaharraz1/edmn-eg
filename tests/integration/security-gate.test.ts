@@ -13,7 +13,7 @@ import { addToCart, mergeGuestCart } from '@/server/modules/commerce/cart';
 import { setListingActive, moderateProduct } from '@/server/modules/catalog/products';
 import { accountBalance, postEntry, reconcile } from '@/server/modules/finance/ledger';
 import { approveWithdrawal, markWithdrawalFailedBeforeTransfer, markWithdrawalPaid, markWithdrawalProcessing, rejectWithdrawal, requestWithdrawal } from '@/server/modules/finance/withdrawals';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { blockDataSchemas } from '@/server/modules/cms/service';
 import { redactExpiredSecrets, REDACTED_BODY } from '@/server/jobs/worker';
@@ -52,6 +52,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: '1', clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), pay.id);
     await expect(confirmPayment(admin, pay.id, submission.id)).rejects.toThrow(/لا يطابق/);
     expect((await paymentOf(order.id)).status).not.toBe('CONFIRMED');
   });
@@ -75,6 +76,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: String(pay.amountDue / 100), clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), pay.id);
     await expect(confirmPayment(insider, pay.id, submission.id)).rejects.toThrow(/طرف فيها/);
   });
 
@@ -97,6 +99,7 @@ describe('payments (FIN-P1-2, AUTHZ-F2)', () => {
     const order = await checkout(c, [{ variantId: p.variantId, qty: 1 }]);
     const pay = await paymentOf(order.id);
     const { submission } = await submitProof(c.actor, pay.id, { claimedAmount: String(pay.amountDue / 100), clientKey: randomUUID() }, { data: await png('p'), name: 'p.png' });
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), pay.id);
     await Promise.allSettled([confirmPayment(admin, pay.id, submission.id), confirmPayment(admin, pay.id, submission.id)]);
     expect(await confirmPayment(admin, pay.id, submission.id)).toEqual({ alreadyConfirmed: true });
     const entries = await db.select().from(journalEntries).where(sql`${journalEntries.idempotencyKey} like ${`payment:${pay.id}:%`}`);
@@ -302,13 +305,16 @@ describe('authentication (AUTH-01, AUTH-02, AUTH-06, 2FA)', () => {
     else process.env.VERCEL = prev;
   });
 
-  it('SEC-AU-2: parallel wrong passwords still lock the account (atomic counter); a lock looks like a wrong password', async () => {
+  it('SEC-AU-2 (SEC-194 L3): parallel wrong passwords start an escalating delay (atomic counter); a delay looks like a wrong password; no hard lock', async () => {
     const u = await makeUser();
     const meta = { ip: `10.9.${Math.floor(Math.random() * 200)}.${Math.floor(Math.random() * 200)}` };
     await Promise.allSettled(Array.from({ length: 8 }, () => login(u.email!, 'wrong-password', 'WEB', meta)));
     const [row] = await db.select().from(users).where(eq(users.id, u.id));
-    expect(row.lockedUntil && row.lockedUntil > new Date()).toBe(true);
-    await expect(login(u.email!, 'Test@12345', 'WEB', meta)).rejects.toThrow(/بيانات الدخول غير صحيحة/);
+    expect(row.failedLoginCount).toBe(8); // atomic: all 8 counted, none lost (no reset to 0 as the old lock did)
+    expect(row.lastFailedLoginAt).toBeTruthy();
+    expect(row.lockedUntil && row.lockedUntil > new Date()).toBe(true); // the delay window
+    expect(row.lockedUntil!.getTime() - Date.now()).toBeLessThanOrEqual(15 * 60_000); // bounded by the ceiling, never a 15-min-per-8 hard lock that grows unbounded
+    await expect(login(u.email!, 'Test@12345', 'WEB', meta)).rejects.toThrow(/بيانات الدخول غير صحيحة/); // right password is also delayed, same generic error
   });
 
   it('SEC-AU-3: open-redirect payloads are neutralised', () => {

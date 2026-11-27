@@ -169,6 +169,111 @@
       "when": 1794652217839,
       "tag": "0023_preview_database_marker",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795565572747,
+      "tag": "0024_notification_circuit_breaker",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795609989769,
+      "tag": "0025_device_push_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795611832784,
+      "tag": "0026_payment_confirmation_two_person",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795613344367,
+      "tag": "0027_cod_market_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1795614966944,
+      "tag": "0028_privacy_marketing_consent",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795618632619,
+      "tag": "0029_device_push_live_senders",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795621017676,
+      "tag": "0030_cod02_shortfalls",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795707417676,
+      "tag": "0031_secfix01_closure_two_person",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1795793817676,
+      "tag": "0032_closure_identity_retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795880217676,
+      "tag": "0033_wallet_topups",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795966617676,
+      "tag": "0034_wallet_topup_mobile_wallet",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1796053017676,
+      "tag": "0035_two_person_privileged_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1796139417676,
+      "tag": "0036_wallet_spend",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1796226017676,
+      "tag": "0037_wallet_spend_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1796312417676,
+      "tag": "0038_sec194_login_delay_streak",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq, sql } from 'drizzle-orm';
 import { adminActor, customerActor } from '@/server/auth/actors';
 import { db } from '@/server/db/client';
@@ -31,7 +32,7 @@ import {
   submitSellerOffer,
   verifyDeliveryOtp,
 } from '@/server/modules/deals/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { canReadPrivateFile } from '@/server/storage/access';
 import { addReportEvidence, declareReport, ensureDealReport, ensureProductReport, recordInspection, removeReportEvidence, reportFor, saveReportAnswers, verifyPassport } from '@/server/modules/used/reports';
@@ -141,6 +142,7 @@ async function paidUsedDeal() {
   const d = await agreedUsedDeal();
   const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
   const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return d;
 }
@@ -156,6 +158,9 @@ const dealRow = async (id: string) => (await db.select().from(externalDeals).whe
 const snaps = (dealId: string) => db.select().from(conditionSnapshots).where(eq(conditionSnapshots.dealId, dealId));
 
 /* ───────────────────────── 1. Configuration ───────────────────────── */
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('used.safetyScore'));
 
 describe('used commerce — configurable category policy', () => {
   it('the V1 mobile policy is seeded as data and resolves for the category; other categories have none', async () => {

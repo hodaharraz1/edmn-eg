@@ -4,7 +4,7 @@ import pg from 'pg';
 import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import { adminLogin, acceptDialogs } from '../e2e/helpers.ts';
+import { adminLogin, acceptDialogs, reviewThenConfirmPayment } from '../e2e/helpers.ts';
 const url = new URL(process.env.JOURNEY_DATABASE_URL ?? '');
 if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname) || url.pathname !== '/edmn_journey_test') throw new Error('Journey requires the isolated local edmn_journey_test database');
 const db = new pg.Client({ connectionString: url.toString() });
@@ -110,6 +110,8 @@ try {
   };
   await page.route(photoRoute, loseFirstResponse);
   await tap('متابعة');
+  // The tap returns before the intercepted upload finishes; wait for the server's real answer, never assume it arrived.
+  for (let waited = 0; upstreamStatus === undefined && waited < 30_000; waited += 100) await page.waitForTimeout(100);
   assert.equal(upstreamStatus, 200);
   assert.equal((await rows('select count(*)::int n from deal_evidence where deal_id=$1', [invalidDraft.id]))[0].n, 1);
   await page.getByText('أعد المحاولة لإكمال رفع الصور المحددة.').waitFor({ state: 'visible' });
@@ -295,11 +297,8 @@ try {
   await pollStatus('PAYMENT_UNDER_REVIEW');
   assert.equal((await rows('select count(*)::int n from payment_submissions where payment_id=$1', [pay.paymentId]))[0].n, 2);
   console.log('PASS Flutter displays rejected proof and resubmits for review');
-  await admin.goto(`/admin/payments/${pay.paymentId}`);
-  await admin.waitForLoadState('networkidle');
-  const reviewResponse = admin.waitForResponse((r) => new URL(r.url()).pathname === `/admin/payments/${pay.paymentId}` && r.request().method() === 'POST', { timeout: 60000 });
-  await admin.getByRole('button', { name: /تأكيد دفع/ }).click();
-  assert((await reviewResponse).ok());
+  // Two-person confirmation (PKG-PAY-01): payments@ starts the review, a different staff member (admin@) confirms.
+  await reviewThenConfirmPayment(adminBrowser, pay.paymentId);
   await pollStatus('ACTIVE');
   console.log('PASS authorized test staff review: ACTIVE');
   page = sellerContext.pages()[0];

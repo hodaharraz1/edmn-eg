@@ -14,3 +14,4 @@ export * from './notify';
 export * from './kyc';
 export * from './infra';
 export * from './used';
+export * from './wallet';

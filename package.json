@@ -29,7 +29,9 @@
     "ledger:check": "tsx scripts/ledger-check.ts",
     "admin:totp": "tsx scripts/admin-totp.ts",
     "worker:once": "tsx scripts/worker.ts --once",
-    "test:e2e:staging": "playwright test --output=test-results-staging"
+    "test:e2e:staging": "playwright test --output=test-results-staging",
+    "perf:k6": "k6 run perf/k6-api.js",
+    "db:fk-indexes": "tsx scripts/generate-fk-indexes.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.3.0",

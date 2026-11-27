@@ -81,8 +81,10 @@ void main() {
     expect(find.text('في طريقه إليك'), findsOneWidget);
   });
 
-  test('tokens: brand colors are the logo colors', () {
-    expect(EdmnColors.primary, const Color(0xFF1A57A1));
+  test('tokens: PKG-THEME-01 colour system (Cobalt 60 / Snow 30 / Lime 10); logo colours unchanged', () {
+    expect(EdmnColors.primary, const Color(0xFF2B3FE5));
+    expect(EdmnColors.background, const Color(0xFFF7F8FC));
+    expect(EdmnColors.accent, const Color(0xFFD6FF3D));
     expect(EdmnColors.accentCyan, const Color(0xFF1FA7E1));
     expect(EdmnColors.brandRed, const Color(0xFFED181E));
   });

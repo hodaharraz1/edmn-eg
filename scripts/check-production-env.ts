@@ -63,6 +63,7 @@ export function checkProductionEnv(raw: Raw, opts: { domain?: string; migrate?: 
   if (raw.ADMIN_HOST && raw.ADMIN_HOST.toLowerCase() !== `admin.${domain}`) err('ADMIN_HOST', `must be admin.${domain}`);
   if (raw.ENFORCE_ADMIN_HOST !== 'true' && raw.ENFORCE_HOSTS !== 'true') err('ENFORCE_ADMIN_HOST', 'admin-host enforcement must be on (true)');
   if (raw.TRUSTED_PROXY !== 'true') warn('TRUSTED_PROXY', 'should be true behind the EDMN reverse proxy (per-IP rate limits)');
+  if (!raw.REDIS_URL) warn('REDIS_URL', 'not set: rate-limit counters are per web instance (PKG-PERF-01). Set it when running more than one instance');
 
   // 5. Demo / example / localhost values anywhere.
   for (const [k, val] of Object.entries(raw)) {

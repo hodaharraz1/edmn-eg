@@ -15,6 +15,10 @@
 | [JOB_FAILURE](JOB_FAILURE.md) | Scheduled jobs stale/failing, dead-lettered queue jobs |
 | [EMAIL_OUTAGE](EMAIL_OUTAGE.md) | Email/SMS provider down, outbox backlog, dead letters |
 | [SECRET_ROTATION](SECRET_ROTATION.md) | Rotating S7–S10 and application secrets, key versioning, leak scan |
+| [COD_REMITTANCE_AND_SHORTFALL](COD_REMITTANCE_AND_SHORTFALL.md) | كشف تحصيل شركة الشحن للدفع عند الاستلام، والعجز وتسويته (بالعربي) |
+| [MARKETING_EXPORT](MARKETING_EXPORT.md) | تصدير قائمة التسويق المشفّرة بموافقة شخصين (بالعربي) |
+| [NOTIFICATION_KEYS](NOTIFICATION_KEYS.md) | إدخال مفاتيح Firebase وApple وتشغيل الإرسال الفعلي (بالعربي) |
+| [ACCOUNT_DELETION_REQUESTS](ACCOUNT_DELETION_REQUESTS.md) | طلبات حذف الحساب: الموانع والتنفيذ والاحتفاظ (بالعربي) |
 
 Where things are: Ops deep health `/admin/ops`; financial control center `/admin/finance-control`; readiness `/api/ready`; liveness `/api/health`; ledger check `npm run ledger:check`.
 Rules that every runbook inherits: never reset staging/production, never truncate or rewrite financial history, never mutate A-100016, never weaken Maker/Checker / KYC / payout verification, fail closed.

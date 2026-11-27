@@ -3,6 +3,7 @@ import 'package:edmn_core/edmn_core.dart';
 import 'package:edmn_design/edmn_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../providers.dart';
 import 'monitoring_screens.dart';
@@ -457,6 +458,195 @@ class _NoteDialogState extends State<_NoteDialog> {
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.adminCancel)),
         FilledButton(key: const Key('note-save'), onPressed: () => Navigator.of(context).pop(_controller.text.trim()), child: Text(t.adminSave)),
+      ],
+    );
+  }
+}
+
+/* ───────────────────────────── Return (monitoring only) ───────────────────────────── */
+
+/// A return seen by staff: where it stands and what happens next. No decision here: the seller decides in its app and
+/// refunds are approved and paid on the web console (two people).
+class ReturnDetailScreen extends StatelessWidget {
+  const ReturnDetailScreen({super.key, required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    return DetailScaffold<AdminReturnDetailResponse>(
+      title: t.adminReturns,
+      load: (api) => api.returnDetail(id),
+      build: (context, r, _) => [
+        Section(title: '#${r.number}', children: [
+          statusChip(context, r.status),
+          Field(t.adminFieldNextStep, adminReturnNextStep(t, r.status)),
+          Field(t.adminFieldReason, r.reason),
+          Field(t.adminFieldStatutory, r.isStatutory ? t.adminYes : t.adminNo),
+          Field(t.adminFieldDecision, r.decisionReason),
+          Field(t.adminFieldCarrier, r.returnCarrier),
+          Field(t.adminFieldTracking, r.returnTracking, valueWidget: r.returnTracking == null ? null : Text(r.returnTracking!, textDirection: TextDirection.ltr)),
+          Field(t.adminFieldInspection, r.inspectionNote),
+          if (r.refundAmount != null) Field(t.adminFieldRefund, null, valueWidget: EgpText(r.refundAmount)),
+          Field(t.adminFieldEvidenceCount, '${r.evidenceCount}'),
+          Field(t.adminFieldSubmitted, fmtTime(r.createdAt)),
+          const SizedBox(height: EdmnSpacing.xs),
+          Text(r.description, style: EdmnType.body),
+        ]),
+        Section(title: t.adminSectionItems, children: [
+          for (final i in r.items) Field('× ${i.quantity}', null, valueWidget: EgpText(i.unitPrice)),
+        ]),
+        EdmnNotice(key: const Key('returns-on-web'), message: t.adminReturnsOnWeb),
+      ],
+    );
+  }
+}
+
+/* ───────────────────────────── Customer 360 (read only) ───────────────────────────── */
+
+class CustomerDetailScreen extends StatelessWidget {
+  const CustomerDetailScreen({super.key, required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    String verified(bool v) => v ? t.adminVerified : t.adminNotVerified;
+    return DetailScaffold<AdminCustomerDetailResponse>(
+      title: t.adminCustomers,
+      load: (api) => api.customer(id),
+      build: (context, c, _) => [
+        Section(title: c.name, children: [
+          statusChip(context, c.status),
+          // Contact data arrives masked from the server; it is shown left-to-right as received.
+          if (c.email != null) Field(t.adminFieldEmail, null, valueWidget: Text('${c.email} (${verified(c.emailVerified)})', textDirection: TextDirection.ltr, textAlign: TextAlign.start)),
+          if (c.phone != null) Field(t.adminFieldPhone, null, valueWidget: Text('${c.phone} (${verified(c.phoneVerified)})', textDirection: TextDirection.ltr, textAlign: TextAlign.start)),
+          Field(t.adminFieldLastLogin, fmtTime(c.lastLoginAt)),
+          Field(t.adminFieldJoined, fmtTime(c.createdAt)),
+        ]),
+        Section(title: t.adminSectionActivity, children: [
+          Field(t.adminCountOrders, '${c.counts.orders}'),
+          Field(t.adminCountReturns, '${c.counts.returns}'),
+          Field(t.adminCountDisputes, '${c.counts.disputes}'),
+          Field(t.adminCountTickets, '${c.counts.supportTickets}'),
+          Field(t.adminCountDeals, '${c.counts.deals}'),
+          Field(t.adminCountReviews, '${c.counts.reviews}'),
+        ]),
+        if (c.addresses.isNotEmpty) Section(title: t.adminSectionAddresses, children: [for (final a in c.addresses) Text(a, style: EdmnType.body)]),
+        Section(title: t.adminSectionRecentOrders, children: [
+          if (c.recentOrders.isEmpty) Text(t.adminNoTimeline, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+          for (final o in c.recentOrders)
+            ListTile(
+              key: Key('cust-order-${o.id}'),
+              contentPadding: EdgeInsets.zero,
+              title: Text('#${o.number}', textDirection: TextDirection.ltr, textAlign: TextAlign.start),
+              subtitle: Text(fmtTime(o.placedAt)),
+              trailing: EgpText(o.grandTotal),
+              onTap: () => context.push('/monitor/orders/${o.id}'),
+            ),
+        ]),
+        EdmnNotice(message: t.adminCustomerManageOnWeb),
+      ],
+    );
+  }
+}
+
+/* ───────────────────────────── Support ticket (+ the one approved reply) ───────────────────────────── */
+
+class SupportTicketDetailScreen extends ConsumerWidget {
+  const SupportTicketDetailScreen({super.key, required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = EdmnLocalizations.of(context);
+    return DetailScaffold<AdminSupportTicketDetailResponse>(
+      title: t.adminSupportInbox,
+      load: (api) => api.supportTicket(id),
+      build: (context, d, reload) {
+        final open = !const {'RESOLVED', 'CLOSED'}.contains(d.status);
+        return [
+          Section(title: '#${d.number} · ${d.subject}', children: [
+            statusChip(context, d.status),
+            Field(t.adminFieldType, d.type),
+            Field(t.adminFieldPriority, d.priority),
+            if (d.fromSeller) Field(t.adminFieldCustomer, t.adminFromSeller),
+            if (d.assignedToMe) Field(t.adminFieldAssignee, t.adminMe),
+          ]),
+          if (open)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.sm),
+              child: FilledButton.icon(key: const Key('reply'), onPressed: () => _reply(context, ref, d, reload), icon: const Icon(Icons.reply_rounded), label: Text(t.adminReply)),
+            ),
+          Section(title: t.adminSectionMessages, children: [
+            for (final m in d.messages)
+              Container(
+                key: Key('tmsg-${m.id}'),
+                margin: const EdgeInsetsDirectional.only(bottom: EdmnSpacing.xs),
+                padding: const EdgeInsetsDirectional.all(EdmnSpacing.xs),
+                decoration: BoxDecoration(color: m.isInternal ? EdmnColors.warningLight : (m.isStaff ? EdmnColors.primaryLight : EdmnColors.subtle), borderRadius: BorderRadius.circular(EdmnRadii.small)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${m.author ?? '—'} · ${fmtTime(m.createdAt)}${m.isInternal ? ' · ${t.adminInternalNote}' : ''}${m.hasAttachment ? ' · ${t.adminAttachment}' : ''}',
+                      style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+                  Text(m.body),
+                ]),
+              ),
+          ]),
+          EdmnNotice(message: t.adminSupportOnWeb),
+        ];
+      },
+    );
+  }
+
+  Future<void> _reply(BuildContext context, WidgetRef ref, AdminSupportTicketDetailResponse d, Future<void> Function() reload) async {
+    final t = EdmnLocalizations.of(context);
+    final api = ref.read(adminApiProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    // One key per reply intent: a retry after a dropped response replays instead of posting the reply twice.
+    final key = newIdempotencyKey();
+    final text = await showDialog<String>(context: context, builder: (context) => const _ReplyDialog());
+    if (text == null || text.length < 2) return;
+    try {
+      await api.replySupportTicket(d.id, text, idempotencyKey: key);
+      messenger.showSnackBar(SnackBar(key: const Key('reply-sent'), content: Text(t.adminReplySent)));
+      await reload();
+    } on ApiFailure catch (e) {
+      if (context.mounted) messenger.showSnackBar(SnackBar(key: const Key('action-error'), content: Text(apiErrorMessage(context, e))));
+    }
+  }
+}
+
+class _ReplyDialog extends StatefulWidget {
+  const _ReplyDialog();
+  @override
+  State<_ReplyDialog> createState() => _ReplyDialogState();
+}
+
+class _ReplyDialogState extends State<_ReplyDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = EdmnLocalizations.of(context);
+    return AlertDialog(
+      title: Text(t.adminReply),
+      content: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(t.adminReplyHint, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+          const SizedBox(height: EdmnSpacing.xs),
+          // 4000 = the server's limit for a mobile reply.
+          TextField(key: const Key('reply-text'), controller: _controller, maxLines: 5, maxLength: 4000, autofocus: true),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(t.adminCancel)),
+        FilledButton(key: const Key('reply-send'), onPressed: () => Navigator.of(context).pop(_controller.text.trim()), child: Text(t.adminReplySend)),
       ],
     );
   }

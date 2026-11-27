@@ -1,9 +1,9 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { audit } from '@/server/audit/audit';
-import { requirePermission, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
+import { requirePermission, requireStepUp, requireUser, type Actor, requireAnyPermission } from '@/server/core/actor';
 import { forbidden, invalidState, notFound } from '@/server/core/errors';
 import { db, type DbOrTx } from '@/server/db/client';
-import { accountClosureRequests, addresses, sessions, users } from '@/server/db/schema';
+import { accountClosureRequests, addresses, devicePushTokens, files, mobileDevices, pushSubscriptions, sellers, sessions, users } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
 
 export const CLOSURE_BLOCKED_MESSAGE =
@@ -89,13 +89,66 @@ export async function withdrawAccountClosure(actor: Actor) {
  * ledger, refunds, withdrawals, disputes, messages, audit and evidence are kept (retention conflicts are
  * escalated for legal review — nothing financial is deleted).
  */
-export async function completeAccountClosure(actor: Actor, requestId: string) {
+/**
+ * Step 1 (Maker): a staff member asks for a PENDING closure to be executed. Nothing is changed on the account.
+ * Needs the same permission and a fresh step-up as the execution. A repeat by the same person is a no-op; a request already
+ * made by someone else stays theirs (the Checker is whoever is not the Maker).
+ */
+export async function requestClosureExecution(actor: Actor, requestId: string) {
   requirePermission(actor, 'customers.manage');
+  requireStepUp(actor);
   return db.transaction(async (tx) => {
     const [req] = await tx.select().from(accountClosureRequests).where(eq(accountClosureRequests.id, requestId)).for('update');
     if (!req) throw notFound('طلب الإغلاق');
     if (req.status !== 'PENDING') throw invalidState('الطلب ده مش قيد التنفيذ');
     if (req.userId === actor.userId) throw forbidden('لا يمكنك إغلاق حسابك من لوحة الإدارة');
+    if (req.executionRequestedBy) return { requested: false as const, makerId: req.executionRequestedBy };
+    await tx.update(accountClosureRequests).set({ executionRequestedBy: actor.userId!, executionRequestedAt: new Date() }).where(eq(accountClosureRequests.id, req.id));
+    await audit(tx, actor, { action: 'account.closure_execution_requested', entityType: 'user', entityId: req.userId, newValues: { requestId: req.id } });
+    return { requested: true as const, makerId: actor.userId! };
+  });
+}
+
+/**
+ * SEC-165: what a closed account must not keep, as the published deletion page promises (docs/store/ACCOUNT_DELETION_PAGE.md).
+ * Runs inside the closure transaction.
+ *  - device push tokens, web-push subscriptions: deleted. Mobile devices: revoked.
+ *  - the account's own national-ID photos (IDENTITY_DOCUMENT): LOCKED (soft-deleted, so /api/files refuses them) and KEPT.
+ *    Owner decision 2026-11-25: nothing is deleted automatically; the bytes stay until the owner decides otherwise.
+ *    Accounts that ever owned a store keep their verification documents, unlocked.
+ * Financial records, evidence files and receipts are untouched.
+ */
+async function releasePersonalData(tx: DbOrTx, userId: string, now: Date) {
+  await tx.update(mobileDevices).set({ revokedAt: now }).where(and(eq(mobileDevices.userId, userId), isNull(mobileDevices.revokedAt)));
+  const tokens = await tx.delete(devicePushTokens).where(eq(devicePushTokens.userId, userId)).returning({ id: devicePushTokens.id });
+  const subs = await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).returning({ id: pushSubscriptions.id });
+  const [store] = await tx.select({ id: sellers.id }).from(sellers).where(eq(sellers.ownerUserId, userId)).limit(1);
+  let photos = 0;
+  if (!store) {
+    const docs = await tx
+      .update(files)
+      .set({ deletedAt: now })
+      .where(and(eq(files.ownerUserId, userId), eq(files.purpose, 'IDENTITY_DOCUMENT'), isNull(files.deletedAt)))
+      .returning({ id: files.id });
+    photos = docs.length;
+  }
+  return { pushTokens: tokens.length, webPushSubscriptions: subs.length, identityPhotosLocked: photos };
+}
+
+/**
+ * Step 2 (Checker): a DIFFERENT staff member completes the closure. Irreversible, so it needs a fresh step-up (SEC-164) and
+ * two people: the Maker from requestClosureExecution can never be the Checker (service rule + account_closure_two_person_chk).
+ */
+export async function completeAccountClosure(actor: Actor, requestId: string) {
+  requirePermission(actor, 'customers.manage');
+  requireStepUp(actor);
+  return db.transaction(async (tx) => {
+    const [req] = await tx.select().from(accountClosureRequests).where(eq(accountClosureRequests.id, requestId)).for('update');
+    if (!req) throw notFound('طلب الإغلاق');
+    if (req.status !== 'PENDING') throw invalidState('الطلب ده مش قيد التنفيذ');
+    if (req.userId === actor.userId) throw forbidden('لا يمكنك إغلاق حسابك من لوحة الإدارة');
+    if (!req.executionRequestedBy) throw invalidState('الإغلاق يتطلب شخصين: لازم موظف يطلب التنفيذ الأول، وبعدين موظف تاني يعتمده');
+    if (req.executionRequestedBy === actor.userId) throw forbidden('الإغلاق يتطلب شخصين: لا يمكنك اعتماد طلب تنفيذ أنشأته بنفسك');
     await lockAccount(tx, req.userId);
     const blockers = await closureBlockers(tx, req.userId);
     if (blockers.length) {
@@ -105,19 +158,23 @@ export async function completeAccountClosure(actor: Actor, requestId: string) {
     }
     const now = new Date();
     const [u] = await tx.select().from(users).where(eq(users.id, req.userId)).for('update');
+    // Notify BEFORE pseudonymising: notify() reads the email address from the users row, which is nulled below.
+    // The customer hears that the request was executed (in-app + email via the outbox, same transaction).
+    await notifyClosure(tx, req.userId, 'تم إغلاق حسابك بناءً على طلبك. بيانات الطلبات والمدفوعات محفوظة حسب سياسة الاحتفاظ.');
     await tx
       .update(users)
       .set({ status: 'CLOSED', closedAt: now, anonymizedAt: now, fullName: 'حساب مغلق', email: null, phone: null, totpSecretEnc: null })
       .where(eq(users.id, req.userId));
     await tx.update(addresses).set({ archivedAt: now }).where(eq(addresses.userId, req.userId));
     await tx.update(sessions).set({ revokedAt: now }).where(eq(sessions.userId, req.userId));
+    const released = await releasePersonalData(tx, req.userId, now);
     await tx.update(accountClosureRequests).set({ status: 'COMPLETED', completedAt: now, decidedBy: actor.userId }).where(eq(accountClosureRequests.id, req.id));
     await audit(tx, actor, {
       action: 'account.closed',
       entityType: 'user',
       entityId: req.userId,
       oldValues: { status: u.status, hadEmail: !!u.email, hadPhone: !!u.phone },
-      newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
+      newValues: { status: 'CLOSED', pseudonymised: ['full_name', 'email', 'phone', 'addresses'], released, retained: ['orders', 'payments', 'ledger', 'refunds', 'withdrawals', 'disputes', 'messages', 'audit', 'evidence'] },
     });
     return { closed: true, blockers: [] };
   });

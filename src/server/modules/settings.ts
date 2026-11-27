@@ -25,6 +25,19 @@ export const SETTINGS_SCHEMA = {
   'company.socialLinks': z.array(z.object({ label: z.string().max(40), href: z.string().url().startsWith('https://') })).max(8).default([]),
   /** true = new orders / deal invitations / deal payments are refused (site, accounts, support and history stay up). */
   'marketplace.maintenanceMode': z.boolean().default(false),
+  /**
+   * Notification circuit breaker (PKG-SEC-069). DISABLED by default: with enabled=false the outbox behaves exactly
+   * as before. failureThreshold = consecutive provider send failures that open a channel; cooldownSeconds = time
+   * OPEN before one probe send is allowed (HALF_OPEN); probeLeaseSeconds = how long a probe may hold the HALF_OPEN slot.
+   */
+  'notifications.circuitBreaker': z
+    .object({
+      enabled: z.boolean().default(false),
+      failureThreshold: z.number().int().min(2).max(50).default(5),
+      cooldownSeconds: z.number().int().min(30).max(3600).default(300),
+      probeLeaseSeconds: z.number().int().min(30).max(600).default(60),
+    })
+    .default({ enabled: false, failureThreshold: 5, cooldownSeconds: 300, probeLeaseSeconds: 60 }),
   /** Hours a customer has to pay (or submit proof) before an unpaid order expires and stock is released. */
   /**
    * REAL MONEY switch. Off by default: payment destinations and seller withdrawals are TEST only and
@@ -32,6 +45,20 @@ export const SETTINGS_SCHEMA = {
    */
   'payments.realMoneyEnabled': z.boolean().default(false),
   'payments.paymentWindowHours': z.number().int().min(1).max(168).default(48),
+  /** Max total of receipts one customer may upload in one Cairo day (piasters; 250,000 EGP). SENSITIVE: changing it needs step-up. */
+  'payments.dailyReceiptLimit': z.number().int().min(0).default(25_000_000),
+  /**
+   * PKG-WALLET-01: customer wallet top-up (deposit by InstaPay / bank transfer with receipt, credited by two staff).
+   * OFF by default: a prepaid balance is stored value and stays closed until counsel confirms. SENSITIVE (step-up).
+   * Daily cap is shared with receipts: it reuses payments.dailyReceiptLimit.
+   */
+  'wallet.topUpEnabled': z.boolean().default(false),
+  /** Cash on delivery (market orders only, never protected deals). OFF by default. SENSITIVE. */
+  'orders.codEnabled': z.boolean().default(false),
+  /** Max order value payable cash on delivery (piasters; 5,000 EGP). SENSITIVE. */
+  'orders.codMaxAmount': z.number().int().min(0).default(500_000),
+  /** Optional COD fee charged to the customer on collection (piasters; starts at zero). SENSITIVE. */
+  'orders.codFee': z.number().int().min(0).default(0),
   'withdrawals.minimumAmount': z.number().int().min(0).default(10000), // 100 EGP in piasters
   'withdrawals.slaBusinessHours': z.number().int().min(1).max(240).default(48),
   /** Withdrawals at/above this amount require approver ≠ payer (maker/checker). */
@@ -149,9 +176,34 @@ export const SETTINGS_SCHEMA = {
    * Rules without an override use their documented operational default (see alerts/rules.ts).
    */
   'alerts.rules': z.record(z.string(), z.object({ preHours: z.number().min(0).max(720).optional(), cooldownHours: z.number().min(1).max(720).optional(), agingHours: z.number().min(0).max(2160).optional(), enabled: z.boolean().optional() })).default({}),
+  /**
+   * Device push notifications master switch (PKG-PUSH-01). OFF by default: while false, no push is sent to any
+   * registered device (the sender short-circuits). Token registration itself stays available so apps can enroll.
+   * SENSITIVE: toggling goes through the settings step-up confirmation.
+   */
+  'notifications.devicePushEnabled': z.boolean().default(false),
+  /**
+   * Device push sender driver (PKG-PUSH-02). 'log' (default): send intents are logged, nothing leaves the server.
+   * 'live': real FCM/APNs sending using the ENCRYPTED credentials from the admin notifications screen; a provider
+   * without valid credentials fails closed. Keys are never in code or env — server settings only.
+   */
+  'notifications.devicePushDriver': z.enum(['log', 'live']).default('log'),
   /** Mobile apps (Phase 1): builds below these versions are told to update (GET /api/v1/app/config). */
   'mobile.minVersion.customer': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   'mobile.minVersion.admin': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  /**
+   * SEC-194 (L3): escalating login delay. After this many CONSECUTIVE wrong passwords on one account, the account waits
+   * 30s, 60s, 120s ... (doubling) before the next attempt is even checked. Replaces the old 8-failure / 15-minute hard lock.
+   */
+  'auth.loginDelayAfterFailures': z.number().int().min(3).max(20).default(5),
+  /** SEC-194 (L3): ceiling of the escalating login delay, in seconds (default 15 minutes). */
+  'auth.loginDelayMaxSeconds': z.number().int().min(30).max(3600).default(900),
+  /**
+   * SEC-194 (L3): CAPTCHA on login. 'off' (default); 'after_failures' = required after N attempts on the same
+   * identifier within 15 minutes (same N as the delay); 'always' = every login. Needs CAPTCHA_PROVIDER / CAPTCHA_SECRET
+   * in the environment (turning it on without them is refused). SENSITIVE.
+   */
+  'auth.captchaMode': z.enum(['off', 'after_failures', 'always']).default('off'),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -161,6 +213,11 @@ export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS_SCHEMA
 
 export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payments.realMoneyEnabled',
+  'payments.dailyReceiptLimit',
+  'wallet.topUpEnabled',
+  'orders.codEnabled',
+  'orders.codMaxAmount',
+  'orders.codFee',
   'pilot.enabled',
   'pilot.allowedUserIds',
   'pilot.maxOrderAmount',
@@ -173,6 +230,7 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'payout.changeHoldHours',
   'deals.feeBps',
   'deals.feePayer',
+  'notifications.devicePushDriver',
   'settlement.mode',
   'settlement.daysOfMonth',
   'settlement.minimumAmount',
@@ -181,6 +239,11 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'fees.ownerApproved',
   'legal.policiesApproved',
   'used.safetyScore',
+  'notifications.circuitBreaker',
+  'notifications.devicePushEnabled',
+  'auth.captchaMode',
+  'auth.loginDelayAfterFailures',
+  'auth.loginDelayMaxSeconds',
 ];
 
 /** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */
@@ -238,6 +301,10 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw validation('قيمة غير صالحة لهذا الإعداد');
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر سبب التعديل');
+  if (key === 'auth.captchaMode' && parsed.data !== 'off') {
+    const { captchaConfig } = await import('@/server/auth/login-throttle');
+    if (!captchaConfig()) throw validation('اضبط CAPTCHA_PROVIDER و CAPTCHA_SECRET في بيئة التشغيل قبل تفعيل CAPTCHA، وإلا الدخول هيتقفل على الكل.');
+  }
   if (key === 'payments.realMoneyEnabled' && parsed.data === true) {
     if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');
     // Fail closed: every mandatory go-live control must pass (and the owner must still decide).

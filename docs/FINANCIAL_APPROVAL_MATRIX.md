@@ -29,8 +29,8 @@ approvals are rejected.
 
 | Operation | Approval action | Journal entry type | Permission | 2FA | Dual control | Kill switch |
 |---|---|---|---|---|---|---|
-| Confirm manual marketplace payment | PAYMENT_CONFIRMATION | ORDER_PAYMENT | payments.verify | yes | — | killswitch.paymentConfirmation |
-| Confirm protected-deal payment | DEAL_PAYMENT_CONFIRMATION | DEAL_PAYMENT | payments.verify | yes | — | killswitch.paymentConfirmation |
+| Confirm manual marketplace payment | PAYMENT_CONFIRMATION | ORDER_PAYMENT | payments.verify | yes | maker/checker: reviewer (بدء المراجعة) ≠ confirmer, DB-enforced | killswitch.paymentConfirmation |
+| Confirm protected-deal payment | DEAL_PAYMENT_CONFIRMATION | DEAL_PAYMENT | payments.verify | yes | maker/checker: reviewer (بدء المراجعة) ≠ confirmer, DB-enforced | killswitch.paymentConfirmation |
 | Seller release (pending → available + fee recognition) | SELLER_RELEASE | SELLER_RELEASE | finance.release | yes | — | killswitch.sellerRelease |
 | Approve marketplace refund (reversal to refunds payable) | REFUND_APPROVAL | REFUND | refunds.approve | yes | — | killswitch.refunds |
 | Record refund payout | REFUND_PAYOUT | REFUND_PAID | refunds.pay | yes | ≥ threshold: payer ≠ approver | killswitch.payouts |
@@ -41,6 +41,7 @@ approvals are rejected.
 | Protected-deal settlement | DEAL_RELEASE | DEAL_SETTLEMENT | finance.release | yes | — | killswitch.dealRelease |
 | Protected-deal refund | DEAL_REFUND | DEAL_REFUND | refunds.approve | yes | — | killswitch.refunds |
 | Protected-deal payout | DEAL_PAYOUT | DEAL_PAYOUT_PAID | deals.payout | yes | — | killswitch.payouts |
+| Credit a verified customer wallet deposit (PKG-WALLET-01, behind `wallet.topUpEnabled`, default off) | WALLET_TOPUP_CREDIT | WALLET_TOPUP_CREDIT | finance.movement.request (maker) + payments.verify (checker) | yes | maker/checker: requester ≠ crediting staff, DB-enforced (`edmn_movement_requires_two_people`) | killswitch.paymentConfirmation |
 
 ## Actions that need NO prior financial approval (clarification §2)
 

@@ -33,6 +33,10 @@ export default async function RegisterPage(props: PageProps<'/register'>) {
           <FieldError name="password" />
         </Field>
         <Checkbox
+          name="marketing"
+          label="عايز توصلني عروض اضمن وأخبارها (اختياري — تقدر تلغيها في أي وقت من إعدادات حسابك)"
+        />
+        <Checkbox
           name="terms"
           required
           label={

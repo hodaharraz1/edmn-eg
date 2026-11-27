@@ -39,6 +39,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/monitor/orders/:id', builder: (c, s) => OrderDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/monitor/deals/:id', builder: (c, s) => DealDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/monitor/disputes/:id', builder: (c, s) => DisputeDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/monitor/returns/:id', builder: (c, s) => ReturnDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/monitor/customers/:id', builder: (c, s) => CustomerDetailScreen(id: s.pathParameters['id']!)),
+      GoRoute(path: '/monitor/support/:id', builder: (c, s) => SupportTicketDetailScreen(id: s.pathParameters['id']!)),
       GoRoute(path: '/security/revoke-sessions', builder: (c, s) => const RevokeUserSessionsScreen()),
     ],
   );

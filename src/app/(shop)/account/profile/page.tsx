@@ -1,8 +1,8 @@
-import { updateProfileAction } from '@/app/_actions/account';
+import { marketingConsentAction, updateProfileAction } from '@/app/_actions/account';
 import { requireUser } from '@/server/web/session';
 import { ActionForm, SubmitButton } from '@/ui/action-form';
 import { PageHeader } from '@/ui/data';
-import { Field, Input } from '@/ui/form';
+import { Checkbox, Field, Input } from '@/ui/form';
 import Link from '@/ui/link';
 import { BadgeCheck, Mail, Phone, UserRound } from 'lucide-react';
 import { FormSection } from '@/ui/form';
@@ -34,6 +34,12 @@ export default async function ProfilePage() {
           <Field label="البريد الإلكتروني" htmlFor="email" hint="عشان تغيّر البريد أو الموبايل، تواصل معانا"><Input id="email" value={user.email ?? ''} disabled dir="ltr" /></Field>
           <Field label="رقم الموبايل" htmlFor="phone"><Input id="phone" value={user.phone ?? ''} disabled dir="ltr" /></Field>
           <SubmitButton>حفظ</SubmitButton>
+        </ActionForm>
+      </FormSection>
+      <FormSection title="رسائل التسويق" icon={Mail} description="عروض وأخبار اضمن على بريدك وموبايلك. اختيارية تمامًا، وتقدر تسحب موافقتك في أي وقت — وسحبها بيسجّل بتاريخه.">
+        <ActionForm action={marketingConsentAction} className="max-w-xl space-y-4" successMessage="اتحفظ اختيارك">
+          <Checkbox name="marketing" defaultChecked={user.marketingOptIn} label="عايز توصلني عروض اضمن وأخبارها" />
+          <SubmitButton variant="outline">حفظ الاختيار</SubmitButton>
         </ActionForm>
       </FormSection>
       <p className="text-xs leading-6 text-muted">عشان تطلب حذف حسابك وبياناتك، راجع <Link href="/legal/data-deletion" className="font-semibold text-brand-700 underline underline-offset-4">سياسة حذف البيانات</Link> وبعدين افتح تذكرة دعم من نوع «الحساب».</p>

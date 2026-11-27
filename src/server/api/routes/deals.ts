@@ -25,6 +25,7 @@ import {
 } from '@/server/modules/mobile/deals';
 import { defineRoute } from '../http';
 import { isoDateTime, piastres, uuid } from '../schemas';
+import { PAYMENT_METHOD_CODES } from '@/domain/machines';
 
 /**
  * Protected Deal routes. The caller's role (buyer / seller) is derived from the session and the deal; every action
@@ -252,7 +253,7 @@ export const startDealPaymentRoute = defineRoute({
   idempotency: 'required',
   errors,
   params: id,
-  body: z.object({ method: z.enum(['BANK_TRANSFER', 'INSTAPAY', 'VODAFONE_CASH']) }),
+  body: z.object({ method: z.enum(PAYMENT_METHOD_CODES) }),
   response: z.object({ paymentId: uuid, deal }),
   handler: ({ actor, params, body }) => pay(actor!, params.dealId, body.method),
 });

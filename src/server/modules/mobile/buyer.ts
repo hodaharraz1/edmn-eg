@@ -11,7 +11,7 @@ import { acknowledgePrices, cartView } from '@/server/modules/commerce/cart';
 import { customerOrders, orderForCustomer, orderLabel } from '@/server/modules/commerce/orders';
 import type { PricedCart } from '@/server/modules/commerce/pricing';
 import { myAddresses } from '@/server/modules/customers/addresses';
-import { enabledPaymentMethods } from '@/server/modules/payments/service';
+import { codCheckoutConfig, enabledPaymentMethods } from '@/server/modules/payments/service';
 import { getSetting, realMoneyEnabled } from '@/server/modules/settings';
 
 /**
@@ -108,18 +108,30 @@ export async function buyerCheckout(actor: Actor, addressId: string | null) {
   const addrs = await myAddresses(userId);
   const chosen = addressId ? addrs.find((a) => a.id === addressId) : (addrs.find((a) => a.isDefault) ?? addrs[0]);
   if (addressId && !chosen) throw notFound('العنوان');
-  const [cart, methods, windowHours, live, notice] = await Promise.all([
+  const [cart, methods, windowHours, live, notice, cod] = await Promise.all([
     cartView({ userId }, chosen?.governorateId ?? null),
     enabledPaymentMethods(),
     getSetting('payments.paymentWindowHours'),
     realMoneyEnabled(),
     getSetting('returns.mandatoryRightsNotice'),
+    codCheckoutConfig(),
   ]);
+  const methodList = methods.map((m) => ({ code: m.code, nameAr: m.nameAr, nameEn: m.nameEn, instructionsAr: m.instructionsAr ?? null }));
+  // COD has no transfer destination, so it is never in enabledPaymentMethods; it is appended when the
+  // feature is on (market orders only — the server re-checks the cap and fee at placement).
+  if (cod.enabled)
+    methodList.push({
+      code: 'COD' as const,
+      nameAr: 'الدفع عند الاستلام',
+      nameEn: 'Cash on delivery',
+      instructionsAr: cod.fee > 0 ? `تدفع نقدًا للمندوب عند الاستلام (+ رسوم تحصيل ${cod.fee / 100} ج.م)` : 'تدفع نقدًا للمندوب عند الاستلام',
+    });
   return {
     selectedAddressId: chosen?.id ?? null,
     addresses: addrs.map(addressOut),
     cart: cartOut(cart),
-    paymentMethods: methods.map((m) => ({ code: m.code, nameAr: m.nameAr, nameEn: m.nameEn, instructionsAr: m.instructionsAr ?? null })),
+    paymentMethods: methodList,
+    codFeePiastres: cod.enabled ? cod.fee : 0,
     paymentWindowHours: windowHours,
     realMoneyEnabled: live,
     mandatoryRightsNoticeAr: notice,

@@ -107,6 +107,8 @@
   "seeAll": "See all",
   "add": "Add",
   "addToCart": "Add to cart",
+  "viewCart": "View cart",
+  "buyNow": "Buy now",
   "addedToCart": "Added to cart",
   "protectedDealBannerTitle": "Protected Deal",
   "protectedDealBannerBody": "Shop safely with a real guarantee",
@@ -171,6 +173,8 @@
   "signInToCheckout": "Sign in to checkout",
   "checkoutTitle": "Checkout",
   "stepAddress": "Address",
+  "shippingFromStores": "Shipping from each store",
+  "freeShipping": "Free shipping",
   "stepDelivery": "Delivery",
   "stepPayment": "Payment",
   "stepConfirm": "Confirm",
@@ -961,6 +965,14 @@
       }
     }
   },
+  "starRatingLabel": "{count} of 5 stars",
+  "@starRatingLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "evidenceLabel": "Photos or documents (up to {max})",
   "@evidenceLabel": {
     "placeholders": {
@@ -1075,6 +1087,7 @@
   "adminOrders": "Orders and shipping",
   "adminDeals": "Protected deals",
   "adminDisputes": "Disputes and complaints",
+  "adminAccountClosures": "Account closure requests",
   "adminAuditLog": "Audit log",
   "adminTabPending": "Under review",
   "adminTabNeedsInfo": "Awaiting info",
@@ -1216,5 +1229,169 @@
   "soHintReceived": "The buyer received the order. Your earnings stay pending until EDMN reviews and approves them.",
   "soHintCompleted": "The order is complete and EDMN approved the transfer of its earnings.",
   "soHintFailed": "The order couldn't be delivered. The EDMN team will contact you about next steps.",
-  "soHintCancelled": "This order was cancelled. Do not ship it."
+  "soHintCancelled": "This order was cancelled. Do not ship it.",
+  "adminReturns": "Returns",
+  "adminAlertsInbox": "Operational alerts",
+  "adminCustomers": "Customers",
+  "adminSupportInbox": "Support tickets",
+  "adminTabReturnsPending": "Awaiting decision",
+  "adminTabReturnsActive": "In progress",
+  "adminTabReturnsDone": "Finished or escalated",
+  "adminSearchReturns": "Search by return number",
+  "adminCod": "Cash on delivery (COD)",
+  "adminTabCodAwaiting": "Awaiting courier statement",
+  "adminTabCodShortfalls": "Open shortfalls",
+  "adminStatusCodCollected": "Delivered, awaiting remittance",
+  "adminSearchCustomers": "Search by name, email or phone",
+  "adminTabAllAlerts": "All",
+  "adminStageDue": "Due",
+  "adminStageOverdue": "Overdue",
+  "adminStagePre": "Before the deadline",
+  "adminTabAllCustomers": "All customers",
+  "adminStatusReturnRequested": "Return requested",
+  "adminStatusReturnInTransit": "On its way back",
+  "adminStatusReturnReceived": "Received by the seller",
+  "adminStatusReturnInspection": "Being inspected",
+  "adminStatusRefundPending": "Refund awaiting approval",
+  "adminStatusInProgress": "In progress",
+  "adminStatusWaitingCustomer": "Waiting for the customer",
+  "adminStatusWaitingSeller": "Waiting for the seller",
+  "adminStatusEscalated": "Escalated",
+  "adminStatusSuspended": "Suspended",
+  "adminRetNextRequested": "Review and approve or reject (the seller in the app, or staff on the web console)",
+  "adminRetNextApproved": "Waiting for the customer to send the item back",
+  "adminRetNextInTransit": "Record that the return arrived",
+  "adminRetNextReceived": "Start the inspection",
+  "adminRetNextInspection": "Decide the refund (finance pays it with two-person approval)",
+  "adminRetNextRefundPending": "Finance approves and pays the refund (two people)",
+  "adminRetNextClosed": "Nothing — closed",
+  "adminRetNextDisputed": "Handled through the dispute",
+  "adminFieldNextStep": "Next step",
+  "adminFieldRefund": "Refund amount",
+  "adminFieldEvidenceCount": "Evidence photos",
+  "adminFieldStatutory": "Within the statutory window",
+  "adminFieldDecision": "Decision reason",
+  "adminFieldInspection": "Inspection note",
+  "adminFieldEmail": "Email",
+  "adminFieldPhone": "Mobile",
+  "adminVerified": "verified",
+  "adminNotVerified": "not verified",
+  "adminFieldLastLogin": "Last sign-in",
+  "adminFieldJoined": "Joined",
+  "adminSectionAddresses": "Addresses (city and governorate only)",
+  "adminSectionActivity": "Activity",
+  "adminSectionRecentOrders": "Recent orders",
+  "adminCountOrders": "Orders",
+  "adminCountReturns": "Returns",
+  "adminCountDisputes": "Disputes",
+  "adminCountTickets": "Support tickets",
+  "adminCountDeals": "Protected deals",
+  "adminCountReviews": "Reviews",
+  "adminCustomerManageOnWeb": "Changing a customer's status is done on the web console only.",
+  "adminReturnsOnWeb": "Return and refund decisions are not made in this app: the seller decides in their app, and finance approves and pays refunds on the web console with two-person approval.",
+  "adminAlertsOnWeb": "Alert rules are tuned on the web console. This list is for follow-up only.",
+  "adminAlertRulesSection": "Active rules",
+  "adminAlertSent": "Sent {count} times",
+  "@adminAlertSent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminFieldPriority": "Priority",
+  "adminFromSeller": "From a seller",
+  "adminAttachment": "Attachment",
+  "adminReply": "Reply to the customer",
+  "adminReplyHint": "The customer sees the reply from the support team and is notified. A reply never closes the ticket and takes no attachments.",
+  "adminReplySend": "Send reply",
+  "adminReplySent": "Reply sent",
+  "adminSupportOnWeb": "Assignment, status changes and internal notes are done on the web console.",
+  "accountDeletion": "Delete account",
+  "accountDeletionBody": "A deletion request is recorded with the EDMN team and deletes nothing immediately. If you still have open activity or balances we will tell you what must be closed first. Order and payment records are kept under the retention policy.",
+  "accountDeletionReasonHint": "Reason (optional)",
+  "accountDeletionSubmit": "Send deletion request",
+  "accountDeletionConfirm": "Are you sure you want to request account deletion? You can cancel the request any time before it is completed.",
+  "accountDeletionSent": "Your request was recorded. The EDMN team will complete it after reviewing the account.",
+  "accountDeletionPending": "Account deletion in progress",
+  "accountDeletionPendingBody": "The EDMN team completes the closure once all activity is settled. You can cancel the request at any time.",
+  "accountDeletionBlockedTitle": "Your account cannot be closed right now",
+  "accountDeletionBlockedBody": "Finish the items below first, then request deletion again:",
+  "accountDeletionCancel": "Cancel deletion request",
+  "accountDeletionCancelled": "Deletion request cancelled",
+  "accountDeletionRequestedAt": "Requested at",
+  "accountDeletionCancelConfirm": "Are you sure you want to cancel the deletion request? Your account stays active.",
+  "marketingConsentLabel": "I agree to receive offers and marketing messages from EDMN (optional - you can withdraw anytime from Settings)",
+  "@marketingConsentLabel": {},
+  "marketingConsentTitle": "Marketing messages",
+  "@marketingConsentTitle": {},
+  "marketingConsentSubtitle": "Receive offers and marketing messages on your phone and email. Off by default; withdraw anytime.",
+  "@marketingConsentSubtitle": {},
+  "errorFeatureDisabled": "This feature is not available right now",
+  "walletBalanceLabel": "Wallet balance",
+  "walletDeposit": "Deposit",
+  "depositTitle": "Deposit to wallet",
+  "depositMethodLabel": "Deposit method",
+  "depositMethodInstapay": "InstaPay",
+  "depositMethodBank": "Bank transfer",
+  "depositMethodWallet": "Mobile wallet",
+  "depositMethodWalletHint": "Vodafone Cash, Orange Cash, Etisalat Cash, WE Pay or any wallet",
+  "depositTransferTo": "Transfer the amount to this account, then upload the receipt",
+  "depositRemainingToday": "Available to deposit today: {amount} (the daily limit is shared with payment receipts)",
+  "@depositRemainingToday": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositOverLimit": "The amount is more than you can deposit today ({amount})",
+  "@depositOverLimit": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "depositNoMethods": "No deposit methods are available right now",
+  "depositSubmit": "Send receipt",
+  "depositSubmitted": "The receipt arrived and is under review. It will be added to your balance once EDMN confirms the transfer.",
+  "depositsList": "My deposits",
+  "noDeposits": "You have not made any deposit yet",
+  "depositPending": "Under review",
+  "depositCredited": "Added to your balance",
+  "depositRejected": "Rejected",
+  "depositCancelled": "Cancelled",
+  "depositRejectedReason": "Reason: {reason}",
+  "@depositRejectedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "depositCancel": "Cancel deposit",
+  "depositPendingCount": "Deposits under review: {count}",
+  "@depositPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "shopByCategory": "Shop by category",
+  "offersLabel": "Offers",
+  "homeLabel": "Home",
+  "discountPercentLabel": "{percent}% off",
+  "@discountPercentLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHintPhones": "iPhone 15",
+  "searchHintWatches": "Casio watch",
+  "searchHintConsoles": "PlayStation 5",
+  "searchHintAppliances": "Tornado washer"
 }

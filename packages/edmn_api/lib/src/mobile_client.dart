@@ -59,9 +59,9 @@ class MobileApi {
   Future<int> revokeOtherSessions({required String idempotencyKey}) async =>
       RevokeMyOtherSessionsResponse.fromJson(await client.sendJson('POST', MobileApiPaths.revokeMyOtherSessions.path, idempotencyKey: idempotencyKey)).revoked;
 
-  Future<SessionResult> register({required String fullName, required String phone, required String email, required String password, required DeviceInfo device}) async {
+  Future<SessionResult> register({required String fullName, required String phone, required String email, required String password, bool marketingConsent = false, required DeviceInfo device}) async {
     final r = SessionResult.fromJson(await client.sendJson('POST', MobileApiPaths.register.path,
-        body: RegisterRequest(fullName: fullName, email: email, phone: phone, password: password, device: device).toJson(), skipAuth: true));
+        body: RegisterRequest(fullName: fullName, email: email, phone: phone, password: password, marketingConsent: marketingConsent, device: device).toJson(), skipAuth: true));
     await client.adoptTokens(SessionTokens.fromJson(r.tokens.toJson()));
     return r;
   }
@@ -70,13 +70,33 @@ class MobileApi {
   Future<void> forgotPassword(String identifier) => client.sendJson('POST', MobileApiPaths.forgotPassword.path, body: {'identifier': identifier}, skipAuth: true);
 
   // ── Account ────────────────────────────────────────────────────────────────────────────────────────────────
-  Future<Profile> updateMe({required String fullName}) async => Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName}));
+  /// Marketing consent is OFF by default; changeable anytime here (a dated consent event is logged server-side).
+  Future<Profile> updateMe({required String fullName, bool? marketingOptIn}) async =>
+      Profile.fromJson(await client.sendJson('PATCH', MobileApiPaths.updateMe.path, body: {'fullName': fullName, 'marketingOptIn': ?marketingOptIn}));
 
   /// Every other device is signed out; this device receives new tokens.
   Future<void> changePassword({required String current, required String next}) async {
     final tokens = await client.sendJson('POST', MobileApiPaths.changePassword.path, body: {'current': current, 'next': next});
     await client.adoptTokens(SessionTokens.fromJson(tokens));
   }
+
+  // ── Account deletion request (C30) ───────────────────────────────────────────────────────────────────────────
+  /// Asks EDMN to close the account. While anything is open (orders, deals, disputes, wallet balance, payouts) the
+  /// server refuses with validation_failed; the Arabic reasons are in the failure's fieldErrors['blockers'].
+  Future<RequestAccountDeletionResponse> requestAccountDeletion({String? reason, required String idempotencyKey}) async => RequestAccountDeletionResponse.fromJson(
+      await client.sendJson('POST', MobileApiPaths.requestAccountDeletion.path, body: RequestAccountDeletionRequest(reason: reason).toJson(), idempotencyKey: idempotencyKey));
+  Future<GetAccountDeletionRequestResponse> accountDeletionRequest() async =>
+      GetAccountDeletionRequestResponse.fromJson(await client.getJson(MobileApiPaths.getAccountDeletionRequest.path));
+  Future<CancelAccountDeletionRequestResponse> cancelAccountDeletionRequest({required String idempotencyKey}) async =>
+      CancelAccountDeletionRequestResponse.fromJson(await client.sendJson('POST', MobileApiPaths.cancelAccountDeletionRequest.path, idempotencyKey: idempotencyKey));
+
+  // ── Device push token (PKG-PUSH-01): registration only; the server sends nothing while the flag is OFF ──────
+  /// [provider] tells the server which SDK issued the token (firebase_messaging = FCM on both platforms — the default).
+  Future<SaveMyPushTokenResponse> registerPushToken({required String token, String? provider, required String idempotencyKey}) async =>
+      SaveMyPushTokenResponse.fromJson(await client.sendJson('POST', MobileApiPaths.saveMyPushToken.path, body: SaveMyPushTokenRequest(token: token, provider: provider).toJson(), idempotencyKey: idempotencyKey));
+  Future<DeleteMyPushTokenResponse> unregisterPushToken({required String idempotencyKey}) async =>
+      DeleteMyPushTokenResponse.fromJson(await client.sendJson('DELETE', MobileApiPaths.deleteMyPushToken.path, idempotencyKey: idempotencyKey));
+  Future<MyPushTokenStatusResponse> pushTokenStatus() async => MyPushTokenStatusResponse.fromJson(await client.getJson(MobileApiPaths.myPushTokenStatus.path));
 
   Future<void> sendVerificationCode(String channel) => client.sendJson('POST', MobileApiPaths.sendVerificationCode.path, body: {'channel': channel});
   Future<Profile> confirmVerificationCode(String channel, String code) async =>
@@ -352,6 +372,24 @@ class MobileApi {
           body: {'amountPiastres': amountPiastres, 'destination': destination, 'clientKey': clientKey}));
   Future<CancelAccountPayoutRequestResponse> cancelAccountPayout(String id, {required String idempotencyKey}) async => CancelAccountPayoutRequestResponse.fromJson(
       await client.sendJson('POST', fillPath(MobileApiPaths.cancelAccountPayoutRequest.path, {'requestId': id}), idempotencyKey: idempotencyKey));
+  /// PKG-WALLET-01: my wallet deposits + where to transfer + today's remaining limit. `feature_disabled` while the flag is off.
+  Future<ListWalletTopupsResponse> walletTopups() async => ListWalletTopupsResponse.fromJson(await client.getJson(MobileApiPaths.listWalletTopups.path));
+
+  /// Uploads the transfer receipt of a deposit. It is queued for two-person staff review and NEVER credits by itself.
+  /// [clientKey] is this deposit's idempotency key: reuse it when retrying the same upload.
+  Future<CreateWalletTopupResponse> createWalletTopup(
+          {required Uint8List bytes, required String fileName, required String amount, required String method, String? payerReference, required String clientKey}) async =>
+      CreateWalletTopupResponse.fromJson(await client.guard((d) async => (await d.post<dynamic>(MobileApiPaths.createWalletTopup.path,
+          data: FormData.fromMap({
+            'amount': amount,
+            'method': method,
+            if (payerReference != null && payerReference.isNotEmpty) 'payerReference': payerReference,
+            'clientKey': clientKey,
+            'proof': MultipartFile.fromBytes(bytes, filename: fileName),
+          }),
+          options: Options(contentType: 'multipart/form-data'))).data as Map<String, dynamic>));
+  Future<CancelWalletTopupResponse> cancelWalletTopup(String id, {required String idempotencyKey}) async => CancelWalletTopupResponse.fromJson(
+      await client.sendJson('POST', fillPath(MobileApiPaths.cancelWalletTopup.path, {'topupId': id}), idempotencyKey: idempotencyKey));
   Future<ListReceivingAccountsResponse> receivingAccounts() async => ListReceivingAccountsResponse.fromJson(await client.getJson(MobileApiPaths.listReceivingAccounts.path));
   Future<AddReceivingAccountResponse> addReceivingAccount(Map<String, dynamic> account, {String? replacesId, required String idempotencyKey}) async =>
       AddReceivingAccountResponse.fromJson(await client.sendJson('POST', MobileApiPaths.addReceivingAccount.path,

@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
-import 'package:edmn_design/edmn_design.dart' show EdmnSaveButton, EdmnThumb;
+import 'package:edmn_design/edmn_design.dart' show EdmnBackButton, EdmnBottomNavigation, EdmnSaveButton, EdmnThumb;
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
@@ -251,6 +251,41 @@ class FakeMobileApi extends MobileApi {
 
   // Wallet
   String? walletBlock;
+  // ── PKG-WALLET-01 phase 1: deposit (wallet.topUpEnabled) ──
+  bool topUpEnabled = false;
+  final topupKeys = <String>[];
+  final topupAmounts = <String>[];
+  final cancelledTopups = <String>[];
+  List<Map<String, dynamic>> topupItems = [
+    {'id': 'tp-pending', 'amountPiastres': 50000, 'method': 'INSTAPAY', 'status': 'PENDING_REVIEW', 'payerReference': null, 'rejectReasonAr': null, 'createdAt': '2030-01-01T10:00:00Z', 'decidedAt': null, 'cancellable': true},
+    {'id': 'tp-credited', 'amountPiastres': 120000, 'method': 'BANK_TRANSFER', 'status': 'CREDITED', 'payerReference': 'R1', 'rejectReasonAr': null, 'createdAt': '2030-01-01T09:00:00Z', 'decidedAt': '2030-01-01T09:30:00Z', 'cancellable': false},
+    {'id': 'tp-rejected', 'amountPiastres': 70000, 'method': 'INSTAPAY', 'status': 'REJECTED', 'payerReference': null, 'rejectReasonAr': 'الإيصال غير واضح', 'createdAt': '2030-01-01T08:00:00Z', 'decidedAt': '2030-01-01T08:30:00Z', 'cancellable': false},
+    {'id': 'tp-cancelled', 'amountPiastres': 10000, 'method': 'INSTAPAY', 'status': 'CANCELLED', 'payerReference': null, 'rejectReasonAr': null, 'createdAt': '2030-01-01T07:00:00Z', 'decidedAt': '2030-01-01T07:10:00Z', 'cancellable': false},
+  ];
+  @override
+  Future<ListWalletTopupsResponse> walletTopups() async => ListWalletTopupsResponse.fromJson({
+        'items': topupItems,
+        'methods': [
+          {'code': 'INSTAPAY', 'nameAr': 'إنستاباي', 'nameEn': 'InstaPay', 'instructionsAr': null, 'destinations': [{'label': 'حساب أضمن', 'details': {'instapayAddress': 'edmn@instapay'}, 'instructionsAr': null, 'isTest': true}]},
+          {'code': 'BANK_TRANSFER', 'nameAr': 'تحويل بنكي', 'nameEn': 'Bank transfer', 'instructionsAr': null, 'destinations': [{'label': 'بنك مصر', 'details': {'bankName': 'بنك مصر', 'accountNumber': '123456'}, 'instructionsAr': null, 'isTest': true}]},
+          {'code': 'VODAFONE_CASH', 'nameAr': 'فودافون كاش', 'nameEn': 'Vodafone Cash', 'instructionsAr': null, 'destinations': [{'label': 'محفظة أضمن', 'details': {'walletNumber': '01000000000'}, 'instructionsAr': null, 'isTest': true}]},
+        ],
+        'balancePiastres': 120000, 'dailyLimitPiastres': 25000000, 'usedTodayPiastres': 24900000,
+      });
+  @override
+  Future<CreateWalletTopupResponse> createWalletTopup({required Uint8List bytes, required String fileName, required String amount, required String method, String? payerReference, required String clientKey}) async {
+    topupKeys.add(clientKey);
+    topupAmounts.add('$method:$amount');
+    final t = {'id': 'tp-new', 'amountPiastres': 5000, 'method': method, 'status': 'PENDING_REVIEW', 'payerReference': payerReference, 'rejectReasonAr': null, 'createdAt': '2030-01-02T10:00:00Z', 'decidedAt': null, 'cancellable': true};
+    topupItems = [t, ...topupItems];
+    return CreateWalletTopupResponse.fromJson({'created': true, 'topup': t});
+  }
+  @override
+  Future<CancelWalletTopupResponse> cancelWalletTopup(String id, {required String idempotencyKey}) async {
+    cancelledTopups.add(id);
+    topupItems = [for (final x in topupItems) x['id'] == id ? {...x, 'status': 'CANCELLED', 'cancellable': false} : x];
+    return CancelWalletTopupResponse.fromJson(topupItems.firstWhere((x) => x['id'] == id));
+  }
   int requestFailures = 0;
   final requestKeys = <String>[];
   @override
@@ -268,7 +303,12 @@ class FakeMobileApi extends MobileApi {
         'destinations': [{'key': 'STORE_PAYOUT_METHOD', 'label': 'إنستاباي ••••ab', 'scope': 'STORE_AND_DEALS'}],
         'minimumPiastres': 10000, 'blockReason': walletBlock,
       },
-      'topUpAvailable': false, 'realMoney': false,
+      'topUp': {
+        'enabled': topUpEnabled, 'balancePiastres': topUpEnabled ? 120000 : 0,
+        'pending': topUpEnabled ? [{'id': 'tp-pending', 'amountPiastres': 50000, 'method': 'INSTAPAY', 'createdAt': '2030-01-01T10:00:00Z'}] : <Map<String, dynamic>>[],
+        'dailyLimitPiastres': 25000000, 'usedTodayPiastres': 24900000,
+      },
+      'realMoney': false,
     });
   }
   @override
@@ -440,7 +480,7 @@ class FakeMobileApi extends MobileApi {
           ProductCard(id: 'p1', slug: 'headphones', titleAr: 'سماعة لاسلكية', condition: 'NEW', usedGrade: null, minPricePiastres: 125050, compareAtPricePiastres: null,
               inStock: true, ratingAvg: 4.5, ratingCount: 3, store: const ProductCardStore(name: 'متجر القاهرة', slug: 'cairo', verified: true), imageUrl: null, defaultVariantId: 'v1', variantCount: 1),
         ],
-        page: 1, pageSize: pageSize, total: 1, pages: 1,
+        page: 1, pageSize: pageSize, total: 1, pages: 1, nextCursor: null,
       );
 
   @override
@@ -470,7 +510,7 @@ class FakeMobileApi extends MobileApi {
 
   @override
   Future<Profile> me() async => const Profile(
-      id: 'u', fullName: 'منى السيد', email: 'mona@test.local', phone: '+201012345678', locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: false, totpEnrolled: false, permissions: []);
+      id: 'u', fullName: 'منى السيد', email: 'mona@test.local', phone: '+201012345678', locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: false, totpEnrolled: false, marketingOptIn: false, permissions: []);
 
   @override
   Future<Cart> cart({int? governorateId}) async => Cart.fromJson(cartQty == 0
@@ -493,7 +533,7 @@ class FakeMobileApi extends MobileApi {
           {'code': 'INSTAPAY', 'nameAr': 'إنستاباي', 'nameEn': 'InstaPay', 'instructionsAr': null},
           {'code': 'BANK_TRANSFER', 'nameAr': 'تحويل بنكي', 'nameEn': 'Bank transfer', 'instructionsAr': null},
         ],
-        'paymentWindowHours': 48, 'realMoneyEnabled': false, 'mandatoryRightsNoticeAr': 'حقوقك كمستهلك محفوظة',
+        'codFeePiastres': 0, 'paymentWindowHours': 48, 'realMoneyEnabled': false, 'mandatoryRightsNoticeAr': 'حقوقك كمستهلك محفوظة',
       });
 
   @override
@@ -598,6 +638,30 @@ class FakeMobileApi extends MobileApi {
     revokeCalls++;
     return 1;
   }
+
+  // ── Account deletion request (C30) ──
+  GetAccountDeletionRequestResponseRequest? deletionState;
+  ApiFailure? deletionError;
+  final deletionCalls = <(String?, String)>[];
+  final deletionCancelKeys = <String>[];
+
+  @override
+  Future<GetAccountDeletionRequestResponse> accountDeletionRequest() async => GetAccountDeletionRequestResponse(request: deletionState);
+
+  @override
+  Future<RequestAccountDeletionResponse> requestAccountDeletion({String? reason, required String idempotencyKey}) async {
+    deletionCalls.add((reason, idempotencyKey));
+    if (deletionError != null) throw deletionError!;
+    deletionState = GetAccountDeletionRequestResponseRequest(id: 'r1', status: 'PENDING', reason: reason, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null);
+    return RequestAccountDeletionResponse(request: RequestAccountDeletionResponseRequest(id: 'r1', status: 'PENDING', reason: reason, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null));
+  }
+
+  @override
+  Future<CancelAccountDeletionRequestResponse> cancelAccountDeletionRequest({required String idempotencyKey}) async {
+    deletionCancelKeys.add(idempotencyKey);
+    deletionState = GetAccountDeletionRequestResponseRequest(id: 'r1', status: 'WITHDRAWN', reason: null, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null);
+    return CancelAccountDeletionRequestResponse(request: CancelAccountDeletionRequestResponseRequest(id: 'r1', status: 'WITHDRAWN', reason: null, blockers: const [], createdAt: '2030-01-01T10:00:00Z', completedAt: null));
+  }
 }
 
 class _FakePicker implements FilePickerService {
@@ -686,7 +750,7 @@ void main() {
     // Real Money is OFF, but the TEST notice belongs to money steps only — never app-wide.
     expect(find.textContaining('وضع تجريبي'), findsNothing);
     expect(find.byKey(const Key('test-money-notice')), findsNothing);
-    for (final tab in ['الرئيسية', 'الأقسام', 'إعادة الطلب', 'طلباتي']) {
+    for (final tab in ['الرئيسية', 'الأقسام', 'المحفظة', 'السلة', 'طلباتي']) {
       expect(find.text(tab), findsOneWidget);
     }
   });
@@ -709,13 +773,45 @@ void main() {
     expect(find.text('مش لاقيين اللي بتدور عليه'), findsOneWidget);
   });
 
+  testWidgets('product page: «اشتري دلوقتي» adds and opens the cart; «أضف إلى السلة» offers «شوف السلة»; cart icon in the header', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/products/headphones');
+    expect(find.byKey(const Key('product-cart')), findsOneWidget);
+    await t.tap(find.byKey(const Key('add-to-cart')));
+    await t.pumpAndSettle();
+    expect(api.cartQty, 1);
+    expect(find.text('شوف السلة'), findsOneWidget);
+    await t.tap(find.byKey(const Key('snack-action')));
+    await t.pumpAndSettle();
+    expect(find.textContaining('السلة'), findsWidgets);
+    expect(find.byKey(const Key('buy-now')), findsNothing); // we left the product page for the cart
+    await _go(t, '/products/headphones');
+    await t.tap(find.byKey(const Key('buy-now')));
+    await t.pumpAndSettle();
+    expect(api.cartQty, 2);
+    expect(find.byKey(const Key('buy-now')), findsNothing);
+    expect(find.textContaining('السلة'), findsWidgets);
+  });
+
+  testWidgets('السلة is a main tab: it opens the cart with «إتمام الشراء» and shows the item count on the tab', (t) async {
+    final api = FakeMobileApi()..cartQty = 2;
+    await _start(t, api, signedIn: true);
+    await t.tap(find.byKey(const Key('nav-cart')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('checkout')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('nav-cart')), matching: find.text('2')), findsOneWidget);
+  });
+
   testWidgets('a guest who taps "أضف" is sent to sign-in (the mobile cart belongs to an account)', (t) async {
     final api = FakeMobileApi();
     await _start(t, api);
-    final add = find.text('أضف').first;
-    await t.ensureVisible(add);
+    // PKG-UI-01: the video home puts the hero carousel first, so the product cards start below the fold —
+    // scroll the first card into view before tapping "أضف" (same behaviour, new layout).
+    await t.scrollUntilVisible(find.text('أضف'), 300, scrollable: _mainList);
+    await t.ensureVisible(find.text('أضف').first);
     await t.pumpAndSettle();
-    await t.tap(add);
+    await t.tap(find.text('أضف').first);
     await t.pumpAndSettle();
     expect(find.byKey(const Key('sign-in')), findsOneWidget);
     expect(api.cartQty, 0);
@@ -743,10 +839,12 @@ void main() {
     expect(find.byKey(const Key('grand-total')), findsOneWidget);
     await t.tap(find.byKey(const Key('checkout')));
     await t.pumpAndSettle();
-    for (var i = 0; i < 2; i++) {
-      await t.tap(find.byKey(const Key('checkout-next')));
-      await t.pumpAndSettle();
-    }
+    // Step 1 «التوصيل»: address and per-store shipping on one screen (no separate «العنوان» step).
+    expect(find.text('عنوان التوصيل'), findsOneWidget);
+    expect(find.text('الشحن من كل متجر'), findsOneWidget);
+    expect(find.text('العنوان'), findsNothing);
+    await t.tap(find.byKey(const Key('checkout-next')));
+    await t.pumpAndSettle();
     // Payment step: only server-enabled methods; nothing is preselected.
     expect(find.text('إنستاباي'), findsOneWidget);
     expect(find.text('الدفع عند الاستلام'), findsNothing);
@@ -912,6 +1010,61 @@ void main() {
     await t.tap(find.byKey(const Key('revoke-others')));
     await t.pumpAndSettle();
     expect(api.revokeCalls, 1);
+  });
+
+  testWidgets('account deletion: request with a reason, then cancel the pending request', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    expect(find.byKey(const Key('deletion-reason')), findsOneWidget);
+    await t.enterText(find.byKey(const Key('deletion-reason')), 'مش محتاج الحساب');
+    await t.tap(find.byKey(const Key('deletion-submit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCalls, [('مش محتاج الحساب', api.deletionCalls.single.$2)]);
+    expect(find.byKey(const Key('deletion-pending')), findsOneWidget);
+    expect(find.byKey(const Key('deletion-submit')), findsNothing);
+    await t.tap(find.byKey(const Key('deletion-cancel')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCancelKeys, hasLength(1));
+    expect(find.byKey(const Key('deletion-submit')), findsOneWidget);
+  });
+
+  testWidgets('account deletion: a blocked request shows the Arabic reasons from the server', (t) async {
+    final api = FakeMobileApi()
+      ..deletionState = GetAccountDeletionRequestResponseRequest(id: 'r9', status: 'BLOCKED', reason: null, createdAt: '2030-01-01T10:00:00Z', completedAt: null, blockers: [
+        GetAccountDeletionRequestResponseRequestBlockersItem(code: 'OPEN_ORDERS', label: 'طلبات شراء لسه مفتوحة', count: 2),
+        GetAccountDeletionRequestResponseRequestBlockersItem(code: 'NON_ZERO_BALANCE', label: 'رصيد (معلق/متاح/محجوز/مديونية) لا يساوي صفر', count: 1),
+      ]);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    expect(find.byKey(const Key('deletion-blocked')), findsOneWidget);
+    expect(find.text('طلبات شراء لسه مفتوحة'), findsOneWidget);
+    expect(find.byKey(const Key('blocker-NON_ZERO_BALANCE')), findsOneWidget);
+    expect(find.byKey(const Key('deletion-submit')), findsOneWidget);
+  });
+
+  testWidgets('account deletion: a refusal refreshes into the recorded BLOCKED state', (t) async {
+    final api = FakeMobileApi()..deletionError = const ApiFailure(code: ApiErrorCode.validationFailed, status: 422);
+    await _start(t, api, signedIn: true);
+    await _go(t, '/account/deletion');
+    await t.tap(find.byKey(const Key('deletion-submit')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('dialog-confirm')));
+    await t.pumpAndSettle();
+    expect(api.deletionCalls, hasLength(1));
+  });
+
+  testWidgets('account menu carries the deletion entry under security', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/account');
+    await _reveal(t, find.byKey(const Key('menu-account-deletion')));
+    await t.tap(find.byKey(const Key('menu-account-deletion')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('deletion-reason')), findsOneWidget);
   });
 
   testWidgets('seller center: a buyer without a store sees an honest status, not a dashboard', (t) async {
@@ -1147,6 +1300,111 @@ void main() {
     await _reveal(t, find.byKey(const Key('no-topup')));
   });
 
+  testWidgets('reorder lives inside طلباتي, not in the bottom bar; its page has a back arrow', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    expect(find.descendant(of: find.byType(EdmnBottomNavigation), matching: find.text('إعادة الطلب')), findsNothing);
+    await _go(t, '/orders');
+    await t.tap(find.byKey(const Key('open-reorder')));
+    await t.pumpAndSettle();
+    expect(find.text('إعادة الطلب'), findsWidgets);
+    expect(find.byType(EdmnBottomNavigation), findsNothing);
+    expect(find.byType(EdmnBackButton), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit: button and balance card are hidden while the server says topUp.enabled is false', (t) async {
+    await _start(t, FakeMobileApi(), signedIn: true);
+    await _go(t, '/wallet');
+    expect(find.byKey(const Key('wallet-deposit')), findsNothing);
+    expect(find.byKey(const Key('wallet-topup-card')), findsNothing);
+    expect(find.text('إيداع'), findsNothing);
+    await _reveal(t, find.byKey(const Key('no-topup')));
+    expect(find.byKey(const Key('no-topup')), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit: when enabled the wallet shows رصيد المحفظة, pending count and the إيداع button that opens the form', (t) async {
+    await _start(t, FakeMobileApi()..topUpEnabled = true, signedIn: true);
+    await _go(t, '/wallet');
+    expect(find.byKey(const Key('wallet-topup-card')), findsOneWidget);
+    expect(find.text('رصيد المحفظة'), findsWidgets);
+    expect(find.descendant(of: find.byKey(const Key('wallet-topup-card')), matching: find.text('1,200 ج.م')), findsOneWidget);
+    expect(find.byKey(const Key('no-topup')), findsNothing);
+    await t.tap(find.byKey(const Key('wallet-deposit')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('deposit-submit')), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit form: validates amount, receipt and the remaining daily limit; a valid submit is queued for review, never credited', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    // remaining today = 250,000 − 249,000 = 1,000 EGP is shown
+    expect(find.byKey(const Key('deposit-remaining')), findsOneWidget);
+    expect(find.textContaining('1,000 ج.م'), findsWidgets);
+    // EDMN's account details with a copy button for the selected method
+    expect(find.text('حساب أضمن'), findsOneWidget);
+    expect(find.byKey(const Key('copy-instapayAddress')), findsOneWidget);
+    // nothing sent with an empty form / no receipt
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, isEmpty);
+    // over the remaining daily limit is refused client-side
+    await _reveal(t, find.byKey(const Key('upload-field')));
+    await t.tap(find.byKey(const Key('upload-field')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('deposit-amount')), '1500');
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, isEmpty);
+    expect(find.textContaining('أكبر من المتاح'), findsOneWidget);
+    // a valid amount goes through once
+    await t.enterText(find.byKey(const Key('deposit-amount')), '50');
+    await _reveal(t, find.byKey(const Key('deposit-submit')));
+    await t.tap(find.byKey(const Key('deposit-submit')));
+    await t.pumpAndSettle();
+    expect(api.topupKeys, hasLength(1));
+    expect(api.topupAmounts.single, 'INSTAPAY:50');
+    await t.scrollUntilVisible(find.byKey(const Key('deposit-submitted')), -250, scrollable: _mainList);
+    expect(find.byKey(const Key('deposit-submitted')), findsOneWidget);
+    await _reveal(t, find.byKey(const Key('deposit-tp-new')));
+    expect(find.byKey(const Key('deposit-tp-new')), findsOneWidget);
+    await _reveal(t, find.text('اتضاف لرصيدك'));
+    expect(find.text('اتضاف لرصيدك'), findsOneWidget); // only the already-credited one; the new one is pending
+  });
+
+  testWidgets('wallet deposit: the mobile wallet option (Vodafone Cash and every wallet) shows EDMN\'s wallet number with a copy button', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    expect(find.text('محفظة إلكترونية'), findsOneWidget);
+    expect(find.textContaining('فودافون كاش، أورانج كاش'), findsOneWidget);
+    await t.tap(find.text('محفظة إلكترونية'));
+    await t.pumpAndSettle();
+    await _reveal(t, find.byKey(const Key('copy-walletNumber')));
+    expect(find.text('01000000000'), findsOneWidget);
+  });
+
+  testWidgets('wallet deposit list: every status has its own chip, the rejection reason is shown, and only pending can be cancelled', (t) async {
+    final api = FakeMobileApi()..topUpEnabled = true;
+    await _start(t, api, signedIn: true);
+    await _go(t, '/wallet/deposit');
+    await _reveal(t, find.byKey(const Key('deposit-tp-cancelled')));
+    expect(find.text('قيد المراجعة'), findsOneWidget);
+    expect(find.text('اتضاف لرصيدك'), findsOneWidget);
+    expect(find.text('مرفوض'), findsOneWidget);
+    expect(find.text('ملغي'), findsOneWidget);
+    expect(find.textContaining('الإيصال غير واضح'), findsOneWidget);
+    expect(find.byKey(const Key('deposit-cancel-tp-pending')), findsOneWidget);
+    expect(find.byKey(const Key('deposit-cancel-tp-credited')), findsNothing);
+    expect(find.byKey(const Key('deposit-cancel-tp-rejected')), findsNothing);
+    await t.tap(find.byKey(const Key('deposit-cancel-tp-pending')));
+    await t.pumpAndSettle();
+    expect(api.cancelledTopups, ['tp-pending']);
+    expect(find.byKey(const Key('deposit-cancel-tp-pending')), findsNothing);
+    expect(find.text('ملغي'), findsNWidgets(2));
+  });
+
   testWidgets('wallet: a blocked payout says why (identity) and offers no request button', (t) async {
     final api = FakeMobileApi()..walletBlock = 'IDENTITY';
     await _start(t, api, signedIn: true);
@@ -1273,6 +1531,10 @@ void main() {
     final api = FakeMobileApi();
     await _start(t, api, signedIn: true);
     // Home card: not saved → tap → saved (filled heart), announced, one ADD with its own key.
+    // PKG-UI-01: cards start below the fold on the new home; scroll the card into view first.
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
     expect(t.widget<EdmnSaveButton>(heart).saved, isFalse);
     await t.tap(heart);
@@ -1303,6 +1565,9 @@ void main() {
   testWidgets('wishlist (B22): signed-out heart goes to sign-in; a server refusal is shown and nothing changes', (t) async {
     final api = FakeMobileApi();
     await _start(t, api);
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     await t.tap(find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton)));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('sign-in')), findsOneWidget);
@@ -1312,6 +1577,9 @@ void main() {
   testWidgets('wishlist (B22): a server refusal (product no longer available) is shown and the heart stays empty', (t) async {
     final api = FakeMobileApi()..wishlistError = const ApiFailure(code: ApiErrorCode.notFound, status: 404);
     await _start(t, api, signedIn: true);
+    await t.scrollUntilVisible(find.byKey(const Key('product-headphones')), 300, scrollable: _mainList);
+    await t.ensureVisible(find.byKey(const Key('product-headphones')).first);
+    await t.pumpAndSettle();
     final heart = find.descendant(of: find.byKey(const Key('product-headphones')).first, matching: find.byType(EdmnSaveButton));
     await t.tap(heart);
     await t.pumpAndSettle();

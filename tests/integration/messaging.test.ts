@@ -52,7 +52,7 @@ import {
   startDealPayment,
   submitSellerOffer,
 } from '@/server/modules/deals/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { sellerBalances } from '@/server/modules/finance/ledger';
 import { canReadPrivateFile } from '@/server/storage/access';
@@ -256,6 +256,7 @@ describe('protected deal communication', () => {
     await respondToOffer(d.buyer, d.dealId, version, 'ACCEPT');
     const p = await startDealPayment(d.buyer, d.dealId, 'INSTAPAY');
     const { submission } = await submitProof(d.buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+    await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
     await confirmPayment(admin, p.id, submission.id);
     await markDealDelivered(d.seller, d.dealId, 'شحنت', [{ data: pdf(), name: 'w.pdf' }]);
     const otpBefore = await db.select().from(dealDeliveryOtps).where(eq(dealDeliveryOtps.dealId, d.dealId));

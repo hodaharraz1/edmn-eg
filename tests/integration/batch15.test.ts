@@ -37,7 +37,7 @@ import { approveWithdrawal, createAdjustment, decideAdjustment, markWithdrawalPa
 import { archiveReceivingDestination, myReceivingDestinations, revealReceivingDestination, reviewReceivingDestination, submitReceivingDestination } from '@/server/modules/identity/receiving';
 import { identityStatus, mapLegacySellerIdentities, myIdentity, requireApprovedIdentity, reviewIdentity, submitIdentity } from '@/server/modules/identity/service';
 import { grantMessageAccess, openSellerOrderConversation, staffThread } from '@/server/modules/messaging/service';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { saveIdentity, startApplication, uploadSellerDocument } from '@/server/modules/sellers/service';
 import { openTicket, qaReviewTicket, rateTicket, reopenTicket, replyToTicket, ticketSlaCycles, updateTicket } from '@/server/modules/support/service';
@@ -217,6 +217,7 @@ async function paidDeal(opts: { buyer?: Actor; seller?: Actor; price?: string } 
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return { buyer, seller, dealId: deal.id };
 }
@@ -468,9 +469,14 @@ describe('D — every actual financial movement needs two different people (no t
       db.execute(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, dual_control, requested_by, approved_by, approved_at, idempotency_key)
         values ('DEAL_PAYOUT', 'test', ${randomUUID()}, 1, 'v', array['DEAL_PAYOUT'], 'same person', true, ${a.userId}, ${a.userId}, now(), ${randomUUID()})`),
     ).rejects.toThrow();
-    // a recognised exemption still works: payment confirmation records money already received
+    // payment confirmations are two-person too (PAY-01): a single-person confirmation approval is refused
+    await expect(
+      db.execute(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
+        values ('PAYMENT_CONFIRMATION', 'test', ${randomUUID()}, 1, 'v', array['ORDER_PAYMENT'], 'single person', ${a.userId}, now(), ${randomUUID()})`),
+    ).rejects.toThrow();
+    // the one documented exemption still works: WITHDRAWAL_RESERVATION locks the seller's own funds
     const ok = await db.execute(sql`insert into financial_approvals (action, entity_type, entity_id, amount, economic_version, entry_types, reason, approved_by, approved_at, idempotency_key)
-        values ('PAYMENT_CONFIRMATION', 'test', ${randomUUID()}, 1, 'v', array['ORDER_PAYMENT'], 'exempt', ${a.userId}, now(), ${randomUUID()}) returning id`);
+        values ('WITHDRAWAL_RESERVATION', 'test', ${randomUUID()}, 1, 'v', array['WITHDRAWAL_RESERVE'], 'exempt', ${a.userId}, now(), ${randomUUID()}) returning id`);
     expect(ok.rows).toHaveLength(1);
     // request lifecycle: idempotent for the same Maker, conflict for another, reject/cancel are final
     const entityId = randomUUID();

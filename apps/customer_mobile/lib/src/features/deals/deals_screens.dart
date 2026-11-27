@@ -79,8 +79,8 @@ class _DealsHubScreenState extends ConsumerState<DealsHubScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Container(
                     padding: const EdgeInsetsDirectional.symmetric(horizontal: EdmnSpacing.sm, vertical: EdmnSpacing.xxs),
-                    decoration: BoxDecoration(color: EdmnColors.accentCyan, borderRadius: BorderRadius.circular(EdmnRadii.small)),
-                    child: Text(t.protectedDeal, style: EdmnType.section.copyWith(color: EdmnColors.primaryDeep, fontWeight: FontWeight.w800)),
+                    decoration: BoxDecoration(color: EdmnColors.accent, borderRadius: BorderRadius.circular(EdmnRadii.small)),
+                    child: Text(t.protectedDeal, style: EdmnType.section.copyWith(color: EdmnColors.onAccent, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(height: EdmnSpacing.xs),
                   Text(t.dealHubBody, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.onPrimary)),
@@ -634,6 +634,8 @@ class _VerifyCode extends ConsumerStatefulWidget {
 class _VerifyCodeState extends ConsumerState<_VerifyCode> {
   final _c = TextEditingController();
   bool _busy = false;
+  // A snackbar would sit behind this sheet (and outside its semantics), so a rejected code is explained here.
+  Object? _error;
 
   @override
   void dispose() {
@@ -645,6 +647,10 @@ class _VerifyCodeState extends ConsumerState<_VerifyCode> {
   Widget build(BuildContext context) {
     final t = EdmnLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (_error != null) ...[
+        EdmnNotice(key: const Key('verify-code-error'), message: apiErrorMessage(context, _error!), tone: EdmnTone.danger),
+        const SizedBox(height: EdmnSpacing.md),
+      ],
       EdmnTextField(key: const Key('verify-code'), controller: _c, hint: t.codeHint, keyboardType: TextInputType.number, textDirection: TextDirection.ltr, maxLength: 8),
       const SizedBox(height: EdmnSpacing.md),
       EdmnPrimaryButton(
@@ -652,11 +658,26 @@ class _VerifyCodeState extends ConsumerState<_VerifyCode> {
         label: t.verify,
         loading: _busy,
         onPressed: () async {
-          setState(() => _busy = true);
-          final ok = await runAction(context, () => ref.read(mobileApiProvider).verifyDealDeliveryCode(widget.dealId, _c.text.trim()), success: t.verified);
+          setState(() {
+            _busy = true;
+            _error = null;
+          });
+          Object? failure;
+          try {
+            await ref.read(mobileApiProvider).verifyDealDeliveryCode(widget.dealId, _c.text.trim());
+          } catch (e) {
+            failure = e;
+          }
           ref.invalidate(dealProvider(widget.dealId));
-          if (mounted) setState(() => _busy = false);
-          if (ok && context.mounted) Navigator.pop(context);
+          if (!mounted) return;
+          setState(() {
+            _busy = false;
+            _error = failure;
+          });
+          if (failure == null && context.mounted) {
+            showEdmnMessage(context, t.verified);
+            Navigator.pop(context);
+          }
         },
       ),
     ]);

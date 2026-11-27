@@ -185,7 +185,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select entry_type, source_id, count(*) n from journal_entries
-        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL')
+        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL','WALLET_TOPUP_CREDIT','WALLET_SPEND')
         group by entry_type, source_id having count(*) > 1`,
     ),
   );
@@ -199,7 +199,8 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
         or (e.source_type = 'withdrawal' and not exists (select 1 from withdrawal_requests w where w.id::text = e.source_id))
         or (e.source_type = 'refund' and not exists (select 1 from refunds r where r.id::text = e.source_id))
         or (e.source_type = 'external_deal' and not exists (select 1 from external_deals d where d.id::text = e.source_id))
-        or (e.source_type = 'ledger_adjustment' and not exists (select 1 from ledger_adjustments a where a.id::text = e.source_id))`,
+        or (e.source_type = 'ledger_adjustment' and not exists (select 1 from ledger_adjustments a where a.id::text = e.source_id))
+        or (e.source_type = 'wallet_topup' and not exists (select 1 from wallet_topups w where w.id::text = e.source_id))`,
     ),
   );
   add(
@@ -207,9 +208,15 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'دفعة مؤكدة بدون قيد دفع',
     await rows(
       conn,
+      // Prepaid: one ORDER_PAYMENT entry per paid seller order. Cash on delivery (COD-01): one COD_REMITTANCE entry
+      // on the payment itself, posted when staff record the courier's remittance (seller orders are PAID at placement).
       sql`select p.id payment_id, so.id seller_order_id from payments p join seller_orders so on so.order_id = p.order_id
-        where p.status = 'CONFIRMED' and so.paid_at is not null
-          and not exists (select 1 from journal_entries e where e.entry_type = 'ORDER_PAYMENT' and e.source_id = so.id::text)`,
+        where p.status = 'CONFIRMED' and p.method <> 'COD' and so.paid_at is not null
+          and not exists (select 1 from journal_entries e where e.entry_type in ('ORDER_PAYMENT','WALLET_SPEND') and e.source_id = so.id::text)
+        union all
+        select p.id payment_id, null seller_order_id from payments p
+        where p.status = 'CONFIRMED' and p.method = 'COD'
+          and not exists (select 1 from journal_entries e where e.entry_type = 'COD_REMITTANCE' and e.source_id = p.id::text)`,
     ),
   );
   add(
@@ -232,7 +239,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
       sql`select r.id, r.status from refunds r where
         (r.approval_id is not null and r.deal_id is null and not exists (select 1 from journal_entries e where e.idempotency_key = 'refund:' || r.id))
         or (r.approval_id is not null and r.deal_id is not null and not exists (select 1 from journal_entries e where e.source_id = r.deal_id::text and e.entry_type in ('DEAL_REFUND','DEAL_SETTLEMENT')))
-        or (r.status in ('COMPLETED','PAID') and not exists (select 1 from journal_entries e where e.entry_type = 'REFUND_PAID' and e.source_id = r.id::text))`,
+        or (r.status in ('COMPLETED','PAID') and coalesce(r.destination_snapshot->>'method','') <> 'WALLET' and not exists (select 1 from journal_entries e where e.entry_type = 'REFUND_PAID' and e.source_id = r.id::text))`,
     ),
   );
   add(
@@ -241,7 +248,26 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select e.id, e.entry_type from journal_entries e where e.approval_id is null
+        and e.entry_type <> 'WALLET_SPEND'
         and e.created_at > coalesce((select min(created_at) from financial_approvals), 'infinity'::timestamptz)`,
+    ),
+  );
+  // PKG-WALLET-01: the platform liability account equals the sum of the per-user sub-ledger, and no wallet is negative.
+  add(
+    'WALLET_LEDGER_DRIFT',
+    'رصيد حساب محافظ العملاء لا يطابق مجموع قيود المحافظ',
+    await rows(conn, sql`select coalesce((select balance from ledger_accounts where code = 'CUSTOMER_WALLETS' and seller_id is null), 0) account_balance, coalesce((select sum(amount) from customer_wallet_entries), 0) entries_sum
+      where coalesce((select balance from ledger_accounts where code = 'CUSTOMER_WALLETS' and seller_id is null), 0) <> coalesce((select sum(amount) from customer_wallet_entries), 0)`),
+  );
+  add('WALLET_NEGATIVE', 'رصيد محفظة عميل سالب', await rows(conn, sql`select user_id, sum(amount) balance from customer_wallet_entries group by user_id having sum(amount) < 0`));
+  add(
+    'MISSING_WALLET_JOURNAL',
+    'إيداع مضاف بدون قيده أو بدون قيد المحفظة',
+    await rows(
+      conn,
+      sql`select t.id, t.status from wallet_topups t where t.status = 'CREDITED'
+        and (not exists (select 1 from journal_entries e where e.entry_type = 'WALLET_TOPUP_CREDIT' and e.source_id = t.id::text)
+          or not exists (select 1 from customer_wallet_entries w where w.topup_id = t.id and w.amount = t.amount))`,
     ),
   );
   add(
@@ -264,8 +290,11 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     'حجز نشط لطلب ملغي أو مدفوع',
     await rows(
       conn,
+      // A cash-on-delivery order is PAID at placement but keeps its reservation until delivery commits it (COD-01).
       sql`select r.id, so.status from inventory_reservations r join order_items oi on oi.id = r.order_item_id join seller_orders so on so.id = oi.seller_order_id
-        where r.status = 'ACTIVE' and so.status not in ('PENDING_PAYMENT','PAYMENT_UNDER_REVIEW')`,
+        where r.status = 'ACTIVE' and so.status not in ('PENDING_PAYMENT','PAYMENT_UNDER_REVIEW')
+          and not (so.status in ('PAID','SELLER_CONFIRMED','PROCESSING','READY_TO_SHIP','SHIPPED','AWAITING_BUYER_RESPONSE')
+                   and exists (select 1 from payments cp where cp.order_id = so.order_id and cp.method = 'COD'))`,
     ),
   );
   add(

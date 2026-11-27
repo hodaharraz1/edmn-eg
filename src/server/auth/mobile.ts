@@ -152,12 +152,12 @@ export interface MobileSessionResult {
 }
 
 export async function mobileLogin(
-  input: { identifier: string; password: string; app: MobileApp; device: DeviceInput },
+  input: { identifier: string; password: string; app: MobileApp; device: DeviceInput; captchaToken?: string },
   meta: RequestMeta,
 ): Promise<MobileSessionResult> {
   const device = deviceSchema.parse(input.device);
   const scope = scopeForApp(input.app);
-  const res = await login(input.identifier, input.password, scope, { ...meta, channel: scope }, { ipLimit: 300 });
+  const res = await login(input.identifier, input.password, scope, { ...meta, channel: scope }, { ipLimit: 300, captchaToken: input.captchaToken });
   const bound = await bindDevice(res.token, res.user.id, input.app, device, { ...meta, channel: scope });
   return {
     user: { id: res.user.id, fullName: res.user.fullName, isStaff: res.user.isStaff },
@@ -364,13 +364,14 @@ export async function myProfile(actor: Actor) {
     phoneVerified: !!u.phoneVerifiedAt,
     isStaff: u.isStaff,
     totpEnrolled: !!u.totpEnabledAt,
+    marketingOptIn: u.marketingOptIn,
     // Staff only: the effective permission codes, so the Admin App can hide what the server would refuse anyway.
     permissions: actor.type === 'ADMIN' ? [...actor.permissions].sort() : [],
   };
 }
 
 /** Update the signed-in account's display name (audited; the web action wrote it without an audit row). */
-export async function updateMyProfile(actor: Actor, input: { fullName: string }) {
+export async function updateMyProfile(actor: Actor, input: { fullName: string; marketingOptIn?: boolean }) {
   const userId = requireUser(actor);
   const fullName = (input.fullName ?? '').trim();
   if (fullName.length < 3) throw validation('الاسم قصير أوي');
@@ -378,6 +379,10 @@ export async function updateMyProfile(actor: Actor, input: { fullName: string })
     await tx.update(users).set({ fullName: fullName.slice(0, 120) }).where(eq(users.id, userId));
     await audit(tx, actor, { action: 'account.profile_updated', entityType: 'user', entityId: userId });
   });
+  if (typeof input.marketingOptIn === 'boolean') {
+    const { setMarketingConsent } = await import('@/server/modules/customers/marketing');
+    await setMarketingConsent(actor, input.marketingOptIn, 'MOBILE');
+  }
   return myProfile(actor);
 }
 

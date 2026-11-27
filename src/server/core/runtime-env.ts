@@ -73,6 +73,7 @@ export const ENV_POLICY: VarPolicy[] = [
   { name: 'ADMIN_HOST', classification: 'OPTIONAL', secret: false, purpose: 'Admin console host (default admin.edmneg.com)' },
   { name: 'MAIL_FROM', classification: 'REQUIRED', secret: false, requiredIn: ['PRODUCTION'], purpose: 'Sender of every email (real domain, never example.com)' },
   { name: 'TRUSTED_PROXY', classification: 'OPTIONAL', secret: false, purpose: 'Self-hosted only: trust X-Real-IP / X-Forwarded-For from our own reverse proxy' },
+  { name: 'REDIS_URL', classification: 'OPTIONAL', secret: true, purpose: 'Rate-limit counter store (PKG-PERF-01). Without it each web instance keeps its own counters' },
   { name: 'ADMIN_IDLE_TIMEOUT_MINUTES', classification: 'OPTIONAL', secret: false, purpose: 'Staff session idle timeout (default 30, max 240)' },
   { name: 'MALWARE_SCAN_REQUIRED', classification: 'OPTIONAL', secret: false, purpose: 'Gate private files on a scan outside production (always on in production)' },
   { name: 'OUTBOX_ENCRYPT_SECRETS', classification: 'OPTIONAL', secret: false, purpose: 'Seal codes/links in the outbox outside production (always on in production)' },

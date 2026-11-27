@@ -26,7 +26,7 @@ import {
   releaseDeal,
 } from '@/server/modules/deals/service';
 import { deliveryOtpTestMode, generateDeliveryCode } from '@/server/modules/deals/delivery-otp';
-import { confirmPayment, submitProof } from '@/server/modules/payments/service';
+import { confirmPayment, startReview, submitProof } from '@/server/modules/payments/service';
 import { openDispute } from '@/server/modules/postpurchase/disputes';
 import { reconcile, sellerBalances } from '@/server/modules/finance/ledger';
 import { flushOutbound } from '@/server/jobs/worker';
@@ -66,6 +66,7 @@ async function activeDeal(opts: { seller?: Actor } = {}) {
   await respondToOffer(buyer, deal.id, version, 'ACCEPT');
   const p = await startDealPayment(buyer, deal.id, 'INSTAPAY');
   const { submission } = await submitProof(buyer, p.id, { claimedAmount: String(p.amountDue / 100), clientKey: randomUUID() }, { data: await png(), name: 'p.png' });
+  await startReview(await makeAdmin(['PAYMENT_REVIEWER']), p.id);
   await confirmPayment(admin, p.id, submission.id);
   return { buyer, buyerUser, seller, dealId: deal.id };
 }

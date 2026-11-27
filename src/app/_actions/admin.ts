@@ -34,7 +34,7 @@ import { decideSeller, revealNationalId, verifyPayoutMethod, type SellerDecision
 import { replyToTicket, updateTicket } from '@/server/modules/support/service';
 import { deleteBlock, publishLegal, saveBlock, saveLegalDraft, savePage, type BlockType, type LegalCode } from '@/server/modules/cms/service';
 import { SETTINGS_SCHEMA, updateSetting, type SettingKey } from '@/server/modules/settings';
-import { createStaffUser, setRolePermissions, setStaffRole, setStaffStatus } from '@/server/rbac/staff';
+import { createStaffUser, decidePrivilegedRoleRequest, requestPrivilegedRole, setRolePermissions, setStaffRole, setStaffStatus } from '@/server/rbac/staff';
 import { bool, fileOf, int, runAction, str, type ActionState } from '@/server/web/action';
 import { requireAdmin } from '@/server/web/session';
 
@@ -360,8 +360,12 @@ export async function staffUserAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const op = str(fd, 'op');
     const privileged = { reason: str(fd, 'reason') || null, confirmPrivileged: bool(fd, 'confirmPrivileged') };
+    // SEC-04 M1: a privileged grant carries the id of the request a DIFFERENT super admin approved.
+    const approvalRequestId = str(fd, 'approvalRequestId') || null;
     if (op === 'create') await createStaffUser(a, { email: str(fd, 'email'), phone: str(fd, 'phone'), fullName: str(fd, 'fullName'), role: str(fd, 'role'), ...privileged });
-    else if (op === 'grant' || op === 'revoke') await setStaffRole(a, op, { userId: str(fd, 'userId'), role: str(fd, 'role'), ...privileged });
+    else if (op === 'grant' || op === 'revoke') await setStaffRole(a, op, { userId: str(fd, 'userId'), role: str(fd, 'role'), approvalRequestId, ...privileged });
+    else if (op === 'request-privileged') await requestPrivilegedRole(a, { userId: str(fd, 'userId'), role: str(fd, 'role'), reason: str(fd, 'reason') });
+    else if (op === 'decide-privileged') await decidePrivilegedRoleRequest(a, { requestId: str(fd, 'requestId'), approve: str(fd, 'decision') === 'approve', reason: str(fd, 'reason') || null });
     else if (op === 'disable') await setStaffStatus(a, { userId: str(fd, 'userId'), status: str(fd, 'status') === 'ACTIVE' ? 'ACTIVE' : 'DISABLED', ...privileged });
     else throw validation('إجراء غير معروف');
     return done();
@@ -453,6 +457,16 @@ export async function reconciliationAction(_p: ActionState, fd: FormData) {
   }, ['/admin/reconciliation']);
 }
 
+/** Step 1 (Maker): ask for the closure to be executed. A DIFFERENT staff member approves it (SEC-164). */
+export async function closureRequestExecutionAction(_p: ActionState, fd: FormData) {
+  return adminRun(fd, async (a) => {
+    const { requestClosureExecution } = await import('@/server/modules/customers/closure');
+    const r = await requestClosureExecution(a, str(fd, 'requestId'));
+    return done(r.requested ? 'تم طلب تنفيذ الإغلاق. لازم موظف تاني يعتمده' : 'فيه طلب تنفيذ موجود بالفعل وبانتظار موظف تاني');
+  }, ['/admin/closures']);
+}
+
+/** Step 2 (Checker, a different person): complete the closure. */
 export async function closureAdminAction(_p: ActionState, fd: FormData) {
   return adminRun(fd, async (a) => {
     const { completeAccountClosure } = await import('@/server/modules/customers/closure');

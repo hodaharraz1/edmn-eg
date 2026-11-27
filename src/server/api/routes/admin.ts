@@ -14,6 +14,7 @@ import {
 } from '@/server/auth/mobile';
 import { adminDashboard, rangeFromPreset } from '@/server/modules/reports/service';
 import { realMoneyEnabled } from '@/server/modules/settings';
+import { pushTokenStatus, registerPushToken, unregisterPushToken } from '@/server/modules/notifications/device-push';
 import { defineRoute } from '../http';
 import { deviceInfo, isoDateTime, ok, profile, revokedCount, sessionList, sessionResult, tokenPair } from '../schemas';
 
@@ -34,7 +35,7 @@ export const adminLogin = defineRoute({
   auth: 'none',
   rate: 'auth',
   errors: ['unauthenticated', 'rate_limited'],
-  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo }),
+  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo, captchaToken: z.string().max(4096).optional() }),
   response: sessionResult,
   handler: ({ body, meta }) => mobileLogin({ ...body, app: 'ADMIN' }, meta),
 });
@@ -239,4 +240,48 @@ export const adminDashboardRoute = defineRoute({
   },
 });
 
-export const adminRoutes = [adminDashboardRoute, adminLogin, adminRefresh, adminMfaEnroll, adminMfaVerify, adminStepUp, adminLogout, adminMe, adminMySessions, adminRevokeMySession, adminRevokeMyOthers, adminRevokeUser];
+/** Admin App push-token registration (PKG-PUSH-01): same service, bound to the staff session's own installation. */
+export const adminRegisterPushToken = defineRoute({
+  id: 'adminSaveMyPushToken',
+  api: 'admin',
+  method: 'POST',
+  path: '/api/v1/admin/me/devices/push-token',
+  summary: 'Register/refresh the push token of THIS staff installation (stores only; nothing is sent while the flag is off)',
+  tags: ['Admin Account'],
+  auth: 'admin',
+  rate: 'write',
+  idempotency: 'required',
+  errors: ['validation_failed'],
+  body: z.object({ token: z.string().trim().min(16).max(512) }),
+  response: z.object({ registered: z.literal(true), platform: z.string() }),
+  handler: async ({ actor, body }) => registerPushToken(actor!, body.token),
+});
+
+export const adminUnregisterPushToken = defineRoute({
+  id: 'adminDeleteMyPushToken',
+  api: 'admin',
+  method: 'DELETE',
+  path: '/api/v1/admin/me/devices/push-token',
+  summary: "Remove THIS staff installation's push token (idempotent)",
+  tags: ['Admin Account'],
+  auth: 'admin',
+  rate: 'write',
+  idempotency: 'required',
+  response: z.object({ registered: z.literal(false) }),
+  handler: async ({ actor }) => unregisterPushToken(actor!),
+});
+
+export const adminPushTokenStatus = defineRoute({
+  id: 'adminMyPushTokenStatus',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/me/devices/push-token',
+  summary: 'Does THIS staff installation have a registered push token, and is sending enabled server-side',
+  tags: ['Admin Account'],
+  auth: 'admin',
+  rate: 'read',
+  response: z.object({ registered: z.boolean(), enabled: z.boolean() }),
+  handler: async ({ actor }) => pushTokenStatus(actor!),
+});
+
+export const adminRoutes = [adminDashboardRoute, adminLogin, adminRefresh, adminMfaEnroll, adminMfaVerify, adminStepUp, adminLogout, adminMe, adminMySessions, adminRevokeMySession, adminRevokeMyOthers, adminRevokeUser, adminRegisterPushToken, adminUnregisterPushToken, adminPushTokenStatus];

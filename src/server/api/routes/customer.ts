@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { listMySessions, logoutCurrentSession, mobileLogin, mobileRegister, myProfile, refreshMobileSession, revokeMyOtherSessions, revokeMySession } from '@/server/auth/mobile';
 import { registerSchema } from '@/server/auth/service';
+import { pushTokenStatus, registerPushToken, unregisterPushToken } from '@/server/modules/notifications/device-push';
 import { defineRoute } from '../http';
 import { deviceInfo, ok, profile, revokedCount, sessionList, sessionResult, tokenPair } from '../schemas';
 
@@ -38,7 +39,7 @@ export const login = defineRoute({
   auth: 'none',
   rate: 'auth',
   errors: ['unauthenticated', 'rate_limited'],
-  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo }),
+  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo, captchaToken: z.string().max(4096).optional() }),
   response: sessionResult,
   handler: ({ body, meta }) => mobileLogin({ ...body, app: 'CUSTOMER' }, meta),
 });
@@ -134,4 +135,52 @@ export const revokeOthers = defineRoute({
   handler: ({ actor }) => revokeMyOtherSessions(actor!),
 });
 
-export const customerRoutes = [register, login, refresh, logout, me, mySessions, revokeSession, revokeOthers];
+/**
+ * Device push-token registration (PKG-PUSH-01), bound to the session's own installation (actor.deviceId — a
+ * client-supplied device id is never accepted). Registration stores the token only; sending stays off while
+ * notifications.devicePushEnabled is false (default) and the only sender driver is the log driver.
+ */
+export const saveMyPushToken = defineRoute({
+  id: 'saveMyPushToken',
+  api: 'mobile',
+  method: 'POST',
+  path: '/api/v1/me/devices/push-token',
+  summary: 'Register/refresh the push token of THIS installation (stores only; nothing is sent while the flag is off)',
+  tags: ['Account'],
+  auth: 'customer',
+  rate: 'write',
+  idempotency: 'required',
+  errors: ['validation_failed'],
+  body: z.object({ token: z.string().trim().min(16).max(512), provider: z.enum(['FCM', 'APNS']).optional() }),
+  response: z.object({ registered: z.literal(true), platform: z.string() }),
+  handler: async ({ actor, body }) => registerPushToken(actor!, body.token, body.provider),
+});
+
+export const deleteMyPushToken = defineRoute({
+  id: 'deleteMyPushToken',
+  api: 'mobile',
+  method: 'DELETE',
+  path: '/api/v1/me/devices/push-token',
+  summary: 'Remove THIS installation\'s push token (idempotent)',
+  tags: ['Account'],
+  auth: 'customer',
+  rate: 'write',
+  idempotency: 'required',
+  response: z.object({ registered: z.literal(false) }),
+  handler: async ({ actor }) => unregisterPushToken(actor!),
+});
+
+export const myPushTokenStatus = defineRoute({
+  id: 'myPushTokenStatus',
+  api: 'mobile',
+  method: 'GET',
+  path: '/api/v1/me/devices/push-token',
+  summary: 'Does THIS installation have a registered push token, and is sending enabled server-side',
+  tags: ['Account'],
+  auth: 'customer',
+  rate: 'read',
+  response: z.object({ registered: z.boolean(), enabled: z.boolean() }),
+  handler: async ({ actor }) => pushTokenStatus(actor!),
+});
+
+export const customerRoutes = [register, login, refresh, logout, me, mySessions, revokeSession, revokeOthers, saveMyPushToken, deleteMyPushToken, myPushTokenStatus];

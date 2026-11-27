@@ -1,18 +1,27 @@
-import { sql } from 'drizzle-orm';
+import { logger } from '@/server/core/logger';
 import { DomainError } from '@/server/core/errors';
-import { db } from '@/server/db/client';
+import { limitStore, MemoryLimitStore } from '@/server/api/limit-store';
 
 /**
- * Fixed-window counter stored in PostgreSQL so limits hold across multiple app instances.
+ * Fixed-window counter. PKG-PERF-01 (P1): no database write per request — the counter lives in Redis when
+ * `REDIS_URL` is set and in process memory otherwise (see src/server/api/limit-store.ts). The signature and the
+ * semantics are unchanged, so every existing caller keeps its exact limits and behaviour.
  * Returns true when the request is allowed.
  */
+const fallback = new MemoryLimitStore(20_000);
+
 export async function hit(key: string, limit: number, windowSeconds: number): Promise<boolean> {
-  const windowStart = new Date(Math.floor(Date.now() / (windowSeconds * 1000)) * windowSeconds * 1000);
-  const res = await db.execute<{ count: number }>(sql`
-    insert into rate_limits (key, window_start, count) values (${key}, ${windowStart}, 1)
-    on conflict (key, window_start) do update set count = rate_limits.count + 1
-    returning count`);
-  return Number(res.rows[0]?.count ?? 0) <= limit;
+  const store = limitStore();
+  if (store.kind === 'redis') {
+    try {
+      return await store.hit(key, limit, windowSeconds);
+    } catch (e) {
+      // Availability over strictness: a limiter outage must not take the API down. Per-instance memory takes over.
+      logger.warn('rate_limit.redis_failed', { error: e as Error });
+      return fallback.hit(key, limit, windowSeconds);
+    }
+  }
+  return store.hit(key, limit, windowSeconds);
 }
 
 export async function enforce(key: string, limit: number, windowSeconds: number): Promise<void> {
@@ -21,6 +30,8 @@ export async function enforce(key: string, limit: number, windowSeconds: number)
   }
 }
 
+/** Housekeeping for the in-memory store (Redis expires its own keys). Safe to call from the scheduler. */
 export async function pruneRateLimits(): Promise<void> {
-  await db.execute(sql`delete from rate_limits where window_start < now() - interval '1 day'`);
+  await limitStore().prune();
+  await fallback.prune();
 }

@@ -879,8 +879,8 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
           for (var i = 1; i <= 5; i++)
             IconButton(
               key: Key('${widget.key is ValueKey ? (widget.key as ValueKey).value : ''}-star-$i'),
-              tooltip: '$i',
-              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34, semanticLabel: '$i'),
+              tooltip: t.starRatingLabel(i),
+              icon: Icon(i <= _stars ? Icons.star_rounded : Icons.star_outline_rounded, color: EdmnColors.warning, size: 34, semanticLabel: t.starRatingLabel(i)),
               onPressed: () => setState(() => _stars = i),
             ),
         ]),
@@ -904,4 +904,12 @@ class _ReviewFormState extends ConsumerState<_ReviewForm> {
       ]),
     );
   }
+}
+
+/// Test-visible wrapper around the private [_ReviewForm] so widget tests can pump the star row
+/// without standing up the provider tree the surrounding screens need. Production routes use
+/// [_ReviewForm] directly; nothing in the app imports this.
+@visibleForTesting
+Widget buildReviewFormForTest(BuildContext context, WidgetRef ref, {Key? key}) {
+  return _ReviewForm(key: key, title: 'عنصر', onSubmit: (rating, title, body, photos, k) async => null, onDone: () {});
 }

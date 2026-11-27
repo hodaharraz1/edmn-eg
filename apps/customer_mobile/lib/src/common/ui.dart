@@ -17,7 +17,8 @@ class AsyncView<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (value) {
         AsyncData(:final value) => data(value),
-        AsyncError(:final error) when !value.isLoading => EdmnErrorState(
+        // An error stays visible while Riverpod retries in the background (otherwise a missing page spins forever).
+        AsyncError(:final error) => EdmnErrorState(
             error: error,
             onRetry: onRetry,
             onSignIn: () => context.push('/sign-in?next=${Uri.encodeComponent(GoRouterState.of(context).uri.toString())}'),

@@ -1,0 +1,47 @@
+# PKG-INFRA-01 — overlay for the pieces the base production compose does not include yet:
+# Redis (the shared rate-limit counter, PKG-PERF-01) and PgBouncer (connection pooling in front of PostgreSQL).
+#
+#   docker compose -f deploy/compose/docker-compose.prod.yml -f deploy/compose/docker-compose.extra.yml up -d
+#
+# Both are optional to start the app and required to run more than one web instance well:
+#   • without REDIS_URL every web instance keeps its own rate-limit counters
+#   • without PgBouncer every instance opens its own pool straight to PostgreSQL (DATABASE_POOL_MAX per instance)
+services:
+  redis:
+    image: ${EDMN_REDIS_IMAGE:-redis:7.4-alpine}
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    restart: unless-stopped
+    # Counters are disposable: losing Redis only resets in-flight windows. No volume on purpose.
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pgbouncer:
+    image: ${EDMN_PGBOUNCER_IMAGE:-edoburu/pgbouncer:1.23.1}
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:?}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?}
+      DB_NAME: ${POSTGRES_DB:?}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "40"
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $${DB_USER}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# Set on the web/worker service to route through the pooler:
+#   DATABASE_URL: postgresql://user:pass@pgbouncer:5432/<db>   (placeholders)
+# Keep migrations on the direct connection (DATABASE_URL_UNPOOLED) — DDL and advisory locks need a session.

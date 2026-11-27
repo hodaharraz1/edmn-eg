@@ -22,7 +22,13 @@ class CustomerApp extends ConsumerWidget {
       theme: edmnTheme(),
       routerConfig: ref.watch(routerProvider),
       // Version gate + TEST-money banner wrap every screen.
-      builder: (context, child) => AppShell(child: child ?? const SizedBox()),
+      // UX-02: support the OS font-size setting without letting huge text break layouts.
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.85, maxScaleFactor: 1.35),
+        ),
+        child: AppShell(child: child ?? const SizedBox()),
+      ),
     );
   }
 }

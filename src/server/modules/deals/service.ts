@@ -2,7 +2,7 @@ import { absoluteUrl } from '@/server/core/urls';
 import { smsAvailable } from '@/server/core/runtime-env';
 import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision } from '@/domain/machines';
+import { dealMachine, paymentMachine, type DealStatus, type DisputeDecision, type PaymentMethodCode } from '@/domain/machines';
 import { audit, recordTransition } from '@/server/audit/audit';
 import { requireStepUp, requireUser, SYSTEM_ACTOR, type Actor, hasPermission } from '@/server/core/actor';
 import { decryptJson, encryptJson, randomToken, sha256 } from '@/server/core/crypto';
@@ -717,7 +717,10 @@ export async function cancelDeal(actor: Actor, dealId: string, reason: string) {
 }
 
 /** Buyer chooses how to pay → manual payment record created (same verification flow as orders). */
-export async function startDealPayment(actor: Actor, dealId: string, method: 'BANK_TRANSFER' | 'INSTAPAY' | 'VODAFONE_CASH') {
+export async function startDealPayment(actor: Actor, dealId: string, method: PaymentMethodCode) {
+  // Protected Deals are always prepaid and held by EDMN: cash on delivery would hand the goods over before the
+  // money is secured. Refused explicitly, whatever the payment-method settings say.
+  if (method === 'COD') throw validation('الدفع عند الاستلام مش متاح للصفقات المحمية. اختار طريقة دفع تانية');
   const { requireApprovedIdentity } = await import('@/server/modules/identity/service');
   await requireApprovedIdentity(db, actor, 'DEAL_PAYMENT');
   return db.transaction(async (tx) => {
@@ -740,10 +743,18 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
       }
       return existing;
     }
-    const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
-    if (!m?.isEnabled) throw validation('طريقة الدفع دي مش متاحة');
-    const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
-    if (!dests.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي');
+    // PKG-WALLET-02: wallet funding — gated by wallet.topUpEnabled, no transfer destinations.
+    const isWallet = method === 'WALLET';
+    if (isWallet) {
+      if (!(await getSetting('wallet.topUpEnabled', tx))) throw validation('الدفع من المحفظة مش متاح حاليًا');
+    } else {
+      const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
+      if (!m?.isEnabled) throw validation('طريقة الدفع دي مش متاحة');
+    }
+    const dests = isWallet
+      ? []
+      : await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
+    if (!isWallet && !dests.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي');
     const hours = await getSetting('payments.paymentWindowHours', tx);
     const [p] = await tx
       .insert(payments)
@@ -752,13 +763,18 @@ export async function startDealPayment(actor: Actor, dealId: string, method: 'BA
         payerUserId: deal.buyerId,
         isTest: !(await realMoneyEnabled(tx)),
         method,
-        destinationId: dests[0].id,
-        destinationSnapshot: dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
+        destinationId: isWallet ? null : dests[0].id,
+        destinationSnapshot: isWallet ? [] : dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: deal.buyerPays!,
         dueAt: new Date(Date.now() + hours * 3600_000),
       })
       .returning();
     await recordTransition(tx, actor, 'payment', p.id, null, 'AWAITING_PAYMENT');
+    // PKG-WALLET-02: wallet funding settles inside this transaction (rolls back on low balance).
+    if (isWallet) {
+      const { payDealWithWallet } = await import('@/server/modules/finance/wallet-spend');
+      await payDealWithWallet(tx, actor, deal, p);
+    }
     return p;
   });
 }
@@ -840,7 +856,17 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
 }
 
 /** Total wrong-or-right guesses ever made on a deal's delivery codes. A security bound, not a business value. */
-const DEAL_OTP_LIFETIME_GUESSES = 30;
+export const DEAL_OTP_LIFETIME_GUESSES = 30;
+/**
+ * SEC-195 (L4): cumulative guess budget of ONE seller account across ALL deals in a rolling 24h. The per-deal rate limit
+ * (10 / 15 min) and the per-deal lifetime budget above do not stop one account working through many deals, so this one
+ * counts persisted failure audits (survives restarts and a Redis outage, unlike the rate-limit buckets).
+ */
+export const SELLER_OTP_DAILY_FAILURES = 40;
+async function sellerOtpFailures24h(tx: DbOrTx, userId: string): Promise<number> {
+  const r = await tx.execute<{ n: string }>(sql`select count(*)::text n from audit_logs where actor_user_id = ${userId} and action = 'deal.delivery_otp_failed' and created_at > now() - interval '24 hours'`);
+  return Number(r.rows[0]?.n ?? 0);
+}
 async function dealOtpGuesses(tx: DbOrTx, dealId: string): Promise<number> {
   const r = await tx.execute<{ n: string }>(sql`select coalesce(sum(attempts), 0)::text n from deal_delivery_otps where deal_id = ${dealId}`);
   return Number(r.rows[0]?.n ?? 0);
@@ -884,6 +910,8 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
     if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'التسليم اتأكد مسبقًا' : 'مينفعش تتحقق من التسليم في حالة الصفقة دي') };
     // Lifetime guess budget per deal across ALL codes (F-10): regenerating never resets it.
     if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) return { ok: false, error: invalidState('عدد محاولات إدخال رمز الاستلام للصفقة دي خلص. كلّم الدعم لمراجعة التسليم.') };
+    // SEC-195: cumulative lock across deals for this seller account.
+    if ((await sellerOtpFailures24h(tx, userId)) >= SELLER_OTP_DAILY_FAILURES) return { ok: false, error: new DomainError('RATE_LIMITED', 'محاولات إدخال رموز الاستلام الغلط وصلت للحد اليومي. كلّم الدعم لمراجعة حسابك') };
     const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id)).for('update');
     if (!otp || otp.buyerId !== deal.buyerId) return { ok: false, error: invalidState('لا يوجد رمز صالح. اطلب من المشتري رمزًا جديدًا') };
     const now = new Date();
@@ -900,6 +928,21 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
         .set({ attempts, lastAttemptAt: now, ...(locked ? { invalidatedAt: now, invalidReason: 'LOCKED' as const } : {}) })
         .where(eq(dealDeliveryOtps.id, otp.id));
       await audit(tx, actor, { action: 'deal.delivery_otp_failed', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, maxAttempts: otp.maxAttempts, locked } });
+      // SEC-195 (L4) — cumulative lock. (a) Per deal: when the lifetime budget is spent, the code is closed and the deal goes to
+      // Operations review (the same DELIVERY_EXCEPTION dispute + hold a party can open), instead of only refusing further guesses.
+      if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) {
+        await tx.update(dealDeliveryOtps).set({ invalidatedAt: now, invalidReason: 'CLOSED' }).where(and(eq(dealDeliveryOtps.id, otp.id), isNull(dealDeliveryOtps.invalidatedAt)));
+        await audit(tx, actor, { action: 'deal.delivery_otp_budget_exhausted', entityType: 'external_deal', entityId: deal.id, newValues: { guesses: DEAL_OTP_LIFETIME_GUESSES } });
+        await openDeliveryReview(tx, actor, deal, 'DELIVERY_EXCEPTION', 'استُنفدت كل محاولات إدخال رمز الاستلام للصفقة (قفل تراكمي) — مراجعة الإدارة مطلوبة');
+      }
+      // (b) Per seller account across deals: flag the account once when the daily budget is spent.
+      if ((await sellerOtpFailures24h(tx, userId)) >= SELLER_OTP_DAILY_FAILURES) {
+        const [open] = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'user'), eq(riskFlags.entityId, userId), eq(riskFlags.code, 'DELIVERY_CODE_GUESSING'), eq(riskFlags.status, 'OPEN'))).limit(1);
+        if (!open) {
+          await tx.insert(riskFlags).values({ entityType: 'user', entityId: userId, code: 'DELIVERY_CODE_GUESSING', severity: 'HIGH', note: 'محاولات كتير غلط لإدخال رموز استلام صفقات في 24 ساعة', meta: { dealId: deal.id, limit: SELLER_OTP_DAILY_FAILURES } });
+          await audit(tx, actor, { action: 'deal.delivery_otp_daily_budget_exhausted', entityType: 'user', entityId: userId, newValues: { limit: SELLER_OTP_DAILY_FAILURES } });
+        }
+      }
       return {
         ok: false,
         error: validation(locked ? 'تم تجاوز عدد المحاولات. اطلب من المشتري رمزًا جديدًا' : `رمز الاستلام غير صحيح (فاضل ${otp.maxAttempts - attempts} محاولة)`),
@@ -1267,7 +1310,9 @@ export async function approveDealRefundTx(tx: DbOrTx, actor: Actor, refund: type
   const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, refund.dealId!)).for('update');
   if (deal.status !== 'REFUND_PENDING') throw invalidState('حالة الصفقة لا تسمح بالاسترداد');
   if (refund.amount !== deal.buyerPays) throw invalidState('مبلغ الاسترداد لا يطابق المبلغ المحجوز');
-  await postEntry(tx, actor, {
+  // PKG-WALLET-02: a wallet-paid deal is refunded to the wallet (SPEND_REVERSAL), not a payable + staff transfer.
+  const toWallet = (refund.destinationSnapshot as { method?: string } | null)?.method === 'WALLET';
+  const { entryId: dealRefundEntryId } = await postEntry(tx, actor, {
     entryType: 'DEAL_REFUND',
     sourceType: 'external_deal',
     sourceId: deal.id,
@@ -1276,9 +1321,15 @@ export async function approveDealRefundTx(tx: DbOrTx, actor: Actor, refund: type
     approvalId,
     lines: [
       { account: { code: 'DEAL_FUNDS_HELD' }, debit: deal.buyerPays! },
-      { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
+      { account: { code: toWallet ? 'CUSTOMER_WALLETS' : 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
     ],
   });
+  if (toWallet) {
+    const { lockWalletUser } = await import('@/server/modules/finance/wallet-spend');
+    await lockWalletUser(tx, refund.customerId);
+    const { customerWalletEntries } = await import('@/server/db/schema');
+    await tx.insert(customerWalletEntries).values({ userId: refund.customerId, journalEntryId: dealRefundEntryId, amount: refund.amount, kind: 'SPEND_REVERSAL' });
+  }
   await moveDeal(tx, actor, deal, 'REFUNDED', {}, 'اعتماد الاسترداد');
 }
 

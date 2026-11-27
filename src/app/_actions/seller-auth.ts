@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { captchaTokenFrom } from '@/server/auth/login-throttle';
 import { login, register } from '@/server/auth/service';
 import { startApplication } from '@/server/modules/sellers/service';
 import { runAction, safeNext, str, type ActionState } from '@/server/web/action';
@@ -23,7 +24,7 @@ async function afterLogin(token: string, userId: string) {
 export async function sellerLoginAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const next = safeNext(str(fd, 'next'), '/seller');
   const res = await runAction(async () => {
-    const { token, user } = await login(str(fd, 'identifier'), str(fd, 'password'), 'WEB', await requestMeta());
+    const { token, user } = await login(str(fd, 'identifier'), str(fd, 'password'), 'WEB', await requestMeta(), { captchaToken: captchaTokenFrom((n) => str(fd, n)) });
     await afterLogin(token, user.id);
   });
   if (res.ok) redirect(next.startsWith('/seller/') || next === '/seller' ? next : '/seller');

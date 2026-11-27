@@ -31,7 +31,7 @@ import {
   trackingEvents,
 } from '@/server/db/schema';
 import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
-import { restock } from '@/server/modules/catalog/inventory';
+import { commitReservation, releaseReservation, restock } from '@/server/modules/catalog/inventory';
 import { releaseSellerOrderFunds, sellerOrderPosition } from '@/server/modules/finance/postings';
 import { grantApproval } from '@/server/modules/finance/approvals';
 import { assertNotPaused } from '@/server/modules/finance/controls';
@@ -231,6 +231,7 @@ export async function confirmReceipt(actor: Actor, soId: string) {
       receiptBasis: 'BUYER_CONFIRMED',
       entitledAt: now,
     });
+    await codDeliveredEffects(tx, actor, so);
     const [s] = await tx.select().from(shipments).where(eq(shipments.sellerOrderId, so.id)).for('update');
     if (s && s.status !== 'DELIVERED' && shipmentMachine.can(s.status, 'DELIVERED')) {
       await transition(tx, actor, shipmentMachine, s.id, s.status, 'DELIVERED');
@@ -516,14 +517,19 @@ async function cancelSellerOrderTx(tx: DbOrTx, actor: Actor, so: SellerOrder, co
     .update(cancellationRequests)
     .set({ status: 'ACCEPTED', decidedBy: actor.userId, decidedAt: new Date(), decisionNote: note })
     .where(and(eq(cancellationRequests.sellerOrderId, so.id), eq(cancellationRequests.status, 'PENDING')));
-  const items = await tx.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
-  for (const it of items) await restock(tx, it.variantId, it.quantity, `cancel:${so.id}`);
   const [order] = await tx.select().from(orders).where(eq(orders.id, so.orderId));
+  // COD: nothing was ever paid — reserved (never committed) units go back to available, the pending COD
+  // payment is voided, and there is no refund obligation.
+  const cod = await codUncollectedEffects(tx, actor, so, `إلغاء قبل الشحن (${code})`);
+  if (!cod) {
+    const items = await tx.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+    for (const it of items) await restock(tx, it.variantId, it.quantity, `cancel:${so.id}`);
+  }
   // Paid → a refund OBLIGATION (request) for everything the buyer paid for this sub-order. No money
   // moves until an Admin approves it; the order being CANCELLED never means "refund paid".
   const { requestRefundTx, refundableOf } = await import('@/server/modules/finance/refunds');
   const left = await refundableOf(tx, so);
-  if (left.total > 0) {
+  if (!cod && left.total > 0) {
     await requestRefundTx(tx, actor, {
       sellerOrderId: so.id,
       sourceType: 'ORDER_CANCELLATION',
@@ -595,6 +601,29 @@ export async function requestCancellation(actor: Actor, soId: string, note: stri
     await notify(tx, { event: 'CANCELLATION_REQUESTED', userIds: [seller.ownerUserId], vars: { order: `${order.number}-${so.suffix}` }, link: `/seller/orders/${so.id}`, dedupeKey: `cancel-req:${req.id}` });
     return { status: 'PENDING' as const, requestId: req.id };
   });
+}
+
+/**
+ * COD stock and cash bookkeeping at DELIVERED: prepaid orders committed stock at payment confirmation
+ * (commitReservation is a no-op on non-ACTIVE rows), COD orders commit it now; the COD payment moves to
+ * COD_COLLECTED (the courier has the cash; staff still record the remittance, two people).
+ */
+async function codDeliveredEffects(tx: DbOrTx, actor: Actor, so: SellerOrder) {
+  const items = await tx.select({ id: orderItems.id }).from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+  for (const it of items) await commitReservation(tx, it.id);
+  const { markCodCollected } = await import('@/server/modules/payments/service');
+  await markCodCollected(tx, actor, so.orderId);
+}
+
+/** COD sub-order ending without collection (refusal at the door / pre-shipment cancellation): the reserved
+ * units go back to available, the pending COD payment is voided when nothing was collected, and NO refund
+ * obligation is created — the buyer never paid anything. */
+async function codUncollectedEffects(tx: DbOrTx, actor: Actor, so: SellerOrder, why: string) {
+  const items = await tx.select().from(orderItems).where(eq(orderItems.sellerOrderId, so.id));
+  for (const it of items) await releaseReservation(tx, it.id);
+  const { codPaymentOf, cancelCodPaymentIfUncollected } = await import('@/server/modules/payments/service');
+  await cancelCodPaymentIfUncollected(tx, actor, so.orderId, why);
+  return (await codPaymentOf(tx, so.orderId)) != null;
 }
 
 /** After payment confirmation: honour a buyer cancellation requested while the proof was under review. */
@@ -687,9 +716,12 @@ export async function resolveShipmentException(actor: Actor, soId: string, outco
       }
       if (so.status === 'SHIPPED' || so.status === 'AWAITING_BUYER_RESPONSE') {
         await move(tx, actor, so, 'DELIVERY_FAILED', {}, why);
+        // COD refusal: the courier hands nothing over — release the reserved stock, void the pending COD
+        // payment when nothing was collected, and never create a refund for money the buyer never paid.
+        const cod = await codUncollectedEffects(tx, actor, so, `فشل التوصيل (${to})`);
         const { requestRefundTx, refundableOf } = await import('@/server/modules/finance/refunds');
         const left = await refundableOf(tx, so);
-        if (left.total > 0) {
+        if (!cod && left.total > 0) {
           await requestRefundTx(tx, actor, {
             sellerOrderId: so.id,
             sourceType: 'DELIVERY_FAILURE',
@@ -742,6 +774,7 @@ export async function processBuyerResponseTimeouts() {
         entitledAt: new Date(now),
         deliveredAt: so.deliveryEventAt,
       }, 'انتهت مهلة المشتري (24 ساعة) بدون اعتراض');
+      await codDeliveredEffects(tx, SYSTEM_ACTOR, so);
       await audit(tx, SYSTEM_ACTOR, { action: 'seller_order.timeout_entitlement', entityType: 'seller_order', entityId: so.id, newValues: { buyerResponseDueAt: so.buyerResponseDueAt.toISOString(), released: false } });
       const { label, customerId } = await orderNumber(tx, so);
       const [seller] = await tx.select({ ownerUserId: sellers.ownerUserId }).from(sellers).where(eq(sellers.id, so.sellerId));

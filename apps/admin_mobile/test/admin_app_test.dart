@@ -40,7 +40,7 @@ class FakeAdminApi extends AdminApi {
   @override
   Future<Profile> me() async {
     if (!verified) throw const ApiFailure(code: ApiErrorCode.mfaRequired, status: 401);
-    return Profile(id: 'a', fullName: 'مسؤول العمليات', email: 'ops@test.local', phone: null, locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: true, totpEnrolled: true, permissions: permissions);
+    return Profile(id: 'a', fullName: 'مسؤول العمليات', email: 'ops@test.local', phone: null, locale: 'ar', emailVerified: true, phoneVerified: true, isStaff: true, totpEnrolled: true, marketingOptIn: false, permissions: permissions);
   }
 
   final dashboardRanges = <String>[];

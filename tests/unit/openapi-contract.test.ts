@@ -54,7 +54,7 @@ const STORE_POSTPURCHASE_WRITES = new Set(['runStoreReturnStep', 'escalateStoreR
 /** Notification center writes: mark my notifications read, change my own preferences. Naturally idempotent. */
 const NOTIFICATION_WRITES = new Set(['markNotificationsRead', 'saveNotificationPreferences']);
 /** Admin App (Batch 3): the only staff actions on mobile. Workflow-only, audited, no financial or KYC decision. */
-const ADMIN_SAFE_WRITES = new Set(['adminAssignDispute', 'adminAddDisputeNote']);
+const ADMIN_SAFE_WRITES = new Set(['adminAssignDispute', 'adminAddDisputeNote', 'adminReplySupportTicket']); // PKG-I02-06: owner-approved support reply added after review — body carries only `body`, no amount/decision/status
 const WALLET_WRITES = new Set(['previewAccountPayoutRequest', 'createAccountPayoutRequest', 'cancelAccountPayoutRequest', 'addReceivingAccount', 'archiveReceivingAccount']);
 
 /** Buyer writes (cart, addresses, checkout, order actions, payment proof) reviewed for the Customer App. */
@@ -65,6 +65,8 @@ const BUYER_WRITES = new Set([
   'placeOrder', 'cancelUnpaidOrder', 'confirmReceipt', 'requestCancellation', 'reportOrderProblem',
   'submitPaymentProof',
   'addWishlistItem', 'removeWishlistItem',
+  // Account deletion REQUEST (C30): records a PENDING request for EDMN to complete; deletes/anonymizes nothing.
+  'requestAccountDeletion', 'cancelAccountDeletionRequest',
 ]);
 
 describe('mobile API contract (OpenAPI 3.1)', () => {
@@ -131,6 +133,9 @@ describe('mobile API contract (OpenAPI 3.1)', () => {
       ...CUSTOMER_MESSAGE_WRITES,
       ...STORE_MESSAGE_WRITES,
       ...WALLET_WRITES,
+      // PKG-WALLET-01: uploading a deposit receipt only QUEUES it for two-person staff review (and is refused while
+      // wallet.topUpEnabled is off); cancelling a pending deposit moves nothing. Crediting stays in the admin console.
+      'createWalletTopup', 'cancelWalletTopup',
       ...BUYER_POSTPURCHASE_WRITES,
       ...STORE_POSTPURCHASE_WRITES,
       ...NOTIFICATION_WRITES,

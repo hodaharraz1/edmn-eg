@@ -33,7 +33,7 @@ class AccountScreen extends ConsumerWidget {
               EdmnEmptyState(icon: Icons.person_outline_rounded, title: t.signInPromptTitle, message: t.signInPromptBody, actionLabel: t.signIn, onAction: () => context.push('/sign-in?next=/account')),
               EdmnMenuGroup(children: [
                 languageRow(),
-                EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/legal/about')),
+                EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/pages/about')),
                 EdmnMenuItem(icon: Icons.gavel_rounded, title: t.legal, onTap: () => context.push('/legal/terms')),
               ]),
             ])
@@ -65,7 +65,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-messages'), icon: Icons.chat_bubble_outline_rounded, title: t.messages, onTap: () => context.push('/messages')),
                   EdmnMenuItem(key: const Key('menu-notifications'), icon: Icons.notifications_none_rounded, title: t.notifications, onTap: () => context.push('/notifications')),
                   EdmnMenuItem(key: const Key('menu-support'), icon: Icons.help_outline_rounded, title: t.helpSupport, onTap: () => context.push('/support')),
-                  EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/legal/about')),
+                  EdmnMenuItem(icon: Icons.info_outline_rounded, title: t.aboutEdmn, onTap: () => context.push('/pages/about')),
                 ]),
                 const SizedBox(height: EdmnSpacing.md),
                 EdmnMenuGroup(children: [
@@ -78,6 +78,7 @@ class AccountScreen extends ConsumerWidget {
                   EdmnMenuItem(key: const Key('menu-identity'), icon: Icons.badge_outlined, title: t.identityTitle, onTap: () => context.push('/account/identity')),
                   EdmnMenuItem(key: const Key('menu-security'), icon: Icons.lock_outline_rounded, title: t.security, onTap: () => context.push('/account/security')),
                   EdmnMenuItem(icon: Icons.gavel_rounded, title: t.legal, onTap: () => context.push('/legal/terms')),
+                  EdmnMenuItem(key: const Key('menu-account-deletion'), icon: Icons.delete_forever_outlined, title: t.accountDeletion, destructive: true, onTap: () => context.push('/account/deletion')),
                   EdmnMenuItem(
                     key: const Key('menu-sign-out'),
                     icon: Icons.logout_rounded,
@@ -165,6 +166,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             if (p.phone != null) verifyRow(Icons.phone_outlined, p.phone!, p.phoneVerified, 'PHONE'),
             if (p.email != null) verifyRow(Icons.mail_outline_rounded, p.email!, p.emailVerified, 'EMAIL'),
+            // Marketing consent: OFF by default, withdrawable anytime; every change is logged server-side (PKG-PRIVACY-01).
+            EdmnCard(
+              margin: const EdgeInsetsDirectional.only(top: EdmnSpacing.sm),
+              padding: const EdgeInsetsDirectional.all(EdmnSpacing.sm),
+              child: SwitchListTile(
+                key: const Key('marketing-consent-toggle'),
+                contentPadding: EdgeInsets.zero,
+                value: p.marketingOptIn,
+                title: Text(t.marketingConsentTitle, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.textPrimary)),
+                subtitle: Text(t.marketingConsentSubtitle, style: EdmnType.secondary.copyWith(color: EdmnColors.textSecondary)),
+                onChanged: (v) async {
+                  final ok = await runAction(context, () => ref.read(mobileApiProvider).updateMe(fullName: p.fullName, marketingOptIn: v), success: t.saved);
+                  if (ok) ref.invalidate(profileProvider);
+                },
+              ),
+            ),
           ]);
         },
       ),

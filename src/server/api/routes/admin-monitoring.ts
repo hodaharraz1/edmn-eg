@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AUDIT_ACTOR_TYPES,
   auditTrail,
+  closureMonitor,
   dealMonitor,
   disputeMonitor,
   identityReviewQueue,
@@ -112,6 +113,23 @@ export const adminDisputeMonitor = defineRoute({
     items: z.array(z.object({ id: z.uuid(), number: z.string(), kind: z.enum(['DEAL', 'RETURN', 'ORDER']), claimant: z.string().nullable(), reasonCode: z.string(), claimedAmount: piastres.nullable(), status: z.string(), assignedToMe: z.boolean(), createdAt: nullableIso })),
   }),
   handler: async ({ actor, query }) => ({ items: await disputeMonitor(actor!, query.tab ?? 'open') }),
+});
+
+export const adminClosureMonitor = defineRoute({
+  id: 'adminListClosureRequests',
+  api: 'admin',
+  method: 'GET',
+  path: '/api/v1/admin/closure-requests',
+  summary: 'Account-closure requests: pending or decided (same permission as the web /admin/closures page)',
+  tags: ['Admin Monitoring'],
+  auth: 'admin',
+  rate: 'read',
+  errors: ['forbidden'],
+  query: z.object({ tab: z.enum(['open', 'closed']).optional() }),
+  response: z.object({
+    items: z.array(z.object({ id: z.uuid(), customer: z.string().nullable(), status: z.string(), createdAt: nullableIso })),
+  }),
+  handler: async ({ actor, query }) => ({ items: await closureMonitor(actor!, query.tab ?? 'open') }),
 });
 
 export const adminAuditTrail = defineRoute({
@@ -367,6 +385,7 @@ export const adminMonitoringRoutes = [
   adminOrderMonitor,
   adminDealMonitor,
   adminDisputeMonitor,
+  adminClosureMonitor,
   adminAuditTrail,
   adminSellerDetail,
   adminIdentityDetail,

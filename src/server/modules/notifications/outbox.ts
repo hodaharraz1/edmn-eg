@@ -9,6 +9,7 @@ import { db } from '@/server/db/client';
 import { outboundMessages } from '@/server/db/schema';
 import { providerFor } from './providers';
 import { recordProviderResult } from '@/server/ops/provider-health';
+import { admitSend, breakerConfig, deferOutboxRow, isBreakerChannel, recordBreakerFailure, recordBreakerSuccess } from './circuit-breaker';
 
 /**
  * RELIABLE OUTBOX (Batch 2) for email / SMS.
@@ -16,6 +17,8 @@ import { recordProviderResult } from '@/server/ops/provider-health';
  *                the same row); a SENDING row older than 10 minutes (crashed flusher) is returned to PENDING.
  *                Delivery is at-least-once; the outbox id is passed to the provider as an idempotency reference.
  *   retry        exponential backoff (1, 2, 4, 8 … min, max 60) up to max_attempts, then FAILED + dead_lettered_at.
+ *   breaker      PKG-SEC-069 circuit breaker (circuit-breaker.ts), DISABLED by default: when a channel's provider keeps
+ *                failing, due rows are deferred (PENDING, attempts untouched) instead of hammering it. Flag off = unchanged.
  *   states       SENT = accepted by the provider (provider_message_id kept). DELIVERED / BOUNCED are recorded only
  *                from a provider delivery event (recordDeliveryEvent) — never assumed.
  *   secrets      codes, reset links and invitation links (SECRET_EVENTS): in PRODUCTION (or OUTBOX_ENCRYPT_SECRETS=true)
@@ -72,13 +75,31 @@ export async function flushOutbound(limit = 50) {
   let sent = 0;
   let failed = 0;
   let deadLettered = 0;
+  let deferred = 0;
+  const breaker = await breakerConfig();
   for (const m of rows) {
     const secret = SECRET_EVENTS.includes(m.event ?? '');
+    const breakerChannel = breaker.enabled && isBreakerChannel(m.channel) ? m.channel : null;
+    if (breakerChannel) {
+      const admission = await admitSend(breakerChannel, breaker);
+      if (!admission.allow) {
+        await deferOutboxRow(m.id, admission.retryAt);
+        deferred++;
+        continue;
+      }
+    }
+    let providerSendFailed = false;
     try {
       const body = m.bodyEnc ? decrypt(m.bodyEnc) : m.body;
       if (body === REDACTED_BODY) throw new Error('secret content expired before delivery');
       const p = await providerFor(m.channel);
-      const res = await p.send({ recipient: m.recipient, subject: m.subject, body, secret, reference: m.id });
+      let res: { providerMessageId?: string } | void;
+      try {
+        res = await p.send({ recipient: m.recipient, subject: m.subject, body, secret, reference: m.id });
+      } catch (sendError) {
+        providerSendFailed = true; // only a real provider failure counts toward the breaker
+        throw sendError;
+      }
       // Once a real provider has accepted it, a message carrying a code or secret link is redacted at rest.
       // Delivery OTPs are never kept after hand-off to any driver (the buyer's staging display uses its own encrypted copy).
       const redact = secret && (!p.name.startsWith('log') || m.event === 'DEAL_DELIVERY_OTP');
@@ -87,9 +108,11 @@ export async function flushOutbound(limit = 50) {
         .set({ status: 'SENT', sentAt: new Date(), provider: p.name, attempts: m.attempts + 1, lockedAt: null, providerMessageId: res?.providerMessageId ?? null, bodyEnc: null, ...(redact ? { body: REDACTED_BODY } : {}) })
         .where(eq(outboundMessages.id, m.id));
       if (p.name === 'smtp') await recordProviderResult('SMTP', true);
+      if (breakerChannel) await recordBreakerSuccess(breakerChannel, breaker);
       sent++;
     } catch (e) {
       if (m.channel === 'EMAIL' && process.env.MAIL_DRIVER === 'smtp') await recordProviderResult('SMTP', false, e);
+      if (breakerChannel && providerSendFailed) await recordBreakerFailure(breakerChannel, breaker);
       const attempts = m.attempts + 1;
       const dead = attempts >= m.maxAttempts || (e instanceof Error && e.message === 'secret content expired before delivery');
       await db
@@ -112,7 +135,7 @@ export async function flushOutbound(limit = 50) {
   }
   // Expiry redaction also runs with every flush (the scheduled job alone depends on traffic on Vercel Hobby).
   await redactExpiredSecrets();
-  return { sent, failed, deadLettered, processed: rows.length };
+  return { sent, failed, deadLettered, deferred, processed: rows.length };
 }
 
 /**

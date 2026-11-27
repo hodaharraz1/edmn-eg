@@ -9,7 +9,7 @@ import { Alert, Badge, EmptyState } from '@/ui/feedback';
 export const metadata = { title: 'حركات مالية بانتظار معتمد' };
 
 const linkFor = (entityType: string, entityId: string, kind: string) =>
-  entityType === 'seller_order' ? `/admin/releases/${entityId}` : entityType === 'external_deal' ? `/admin/deals/${entityId}` : entityType === 'withdrawal' ? `/admin/withdrawals/${entityId}` : kind.startsWith('REFUND') ? '/admin/refunds?tab=' + (kind === 'REFUND_REVOCATION' ? 'payout' : 'requested') : '/admin/approvals';
+  entityType === 'wallet_topup' ? `/admin/wallet-topups/${entityId}` : entityType === 'seller_order' ? `/admin/releases/${entityId}` : entityType === 'external_deal' ? `/admin/deals/${entityId}` : entityType === 'withdrawal' ? `/admin/withdrawals/${entityId}` : kind.startsWith('REFUND') ? '/admin/refunds?tab=' + (kind === 'REFUND_REVOCATION' ? 'payout' : 'requested') : '/admin/approvals';
 
 export default async function Movements() {
   const { actor, allowed } = await adminWith(['finance.view', 'finance.movement.request']);

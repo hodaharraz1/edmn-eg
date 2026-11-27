@@ -138,8 +138,9 @@ void main() {
     for (var i = 0; i < 40; i++) {
       await tester.pump(const Duration(seconds: 1));
       if (find.byKey(const Key('join-deal')).evaluate().isEmpty &&
-          find.byType(Scrollable).evaluate().isNotEmpty)
+          find.byType(Scrollable).evaluate().isNotEmpty) {
         break;
+      }
     }
     await tester.scrollUntilVisible(
       find.byKey(const Key('deal-offer')),

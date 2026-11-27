@@ -44,7 +44,9 @@ export async function canReadPrivateFile(actor: Actor, fileId: string): Promise<
       if (hasPermission(actor, 'sellers.documents.view')) return !!actor.stepUpAt && Date.now() - actor.stepUpAt.getTime() < DOC_STEP_UP_MS;
       return one(sql`select 1 from seller_documents d join sellers s on s.id = d.seller_id where d.file_id = ${f.id} and s.owner_user_id = ${uid}`);
     case 'PAYMENT_PROOF':
-      if (hasPermission(actor, 'payments.view')) return true;
+      // SEC-04 L6: a proof of payment shows the payer's bank/InstaPay details. Staff may open it only with the
+      // permission AND a 2FA re-check inside the hour (same rule as identity scans); the submitter always can.
+      if (hasPermission(actor, 'payments.view')) return freshDocStepUp;
       return one(sql`select 1 from payment_submissions ps where ps.proof_file_id = ${f.id} and ps.submitted_by = ${uid}`);
     case 'SHIPPING_WAYBILL':
       if (hasPermission(actor, 'shipping.view')) return true;

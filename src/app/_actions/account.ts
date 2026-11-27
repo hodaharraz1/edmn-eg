@@ -191,6 +191,17 @@ export async function changePasswordAction(_p: ActionState, fd: FormData): Promi
   });
 }
 
+export async function marketingConsentAction(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const actor = await requireCustomer('/account/profile');
+  const res = await runAction(async () => {
+    const { setMarketingConsent } = await import('@/server/modules/customers/marketing');
+    const r = await setMarketingConsent(actor, str(fd, 'marketing') === 'on', 'WEB');
+    return { message: r.marketingOptIn ? 'هتوصلك عروضنا وأخبارنا. تقدر تلغيها من هنا في أي وقت.' : 'اتلغت رسائل التسويق. سحب الموافقة اتسجّل بتاريخه.' };
+  });
+  revalidatePath('/account/profile');
+  return res;
+}
+
 export async function updateProfileAction(_p: ActionState, fd: FormData): Promise<ActionState> {
   const actor = await requireCustomer('/account/profile');
   const name = str(fd, 'fullName');

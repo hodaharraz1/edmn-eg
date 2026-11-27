@@ -117,3 +117,26 @@ export const providerHealth = pgTable('provider_health', {
   lastErrorSafe: text(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Notification circuit breaker state (PKG-SEC-069), one row per outbound channel, coordinated through the database
+ * so every worker sees the same state. CLOSED = sending normally; OPEN = provider failing, sends are deferred until
+ * next_probe_at; HALF_OPEN = exactly one probe send holds probe_lease_until. Contains no message data.
+ */
+export const NOTIFICATION_BREAKER_CHANNELS = ['EMAIL', 'SMS'] as const;
+export const NOTIFICATION_BREAKER_STATES = ['CLOSED', 'OPEN', 'HALF_OPEN'] as const;
+export const notificationBreakers = pgTable(
+  'notification_breakers',
+  {
+    channel: text().primaryKey(),
+    state: text().notNull().default('CLOSED'),
+    consecutiveFailures: integer().notNull().default(0),
+    openedAt: ts(),
+    nextProbeAt: ts(),
+    probeLeaseUntil: ts(),
+    lastSuccessAt: ts(),
+    lastFailureAt: ts(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [enumCheck('notification_breakers_channel_chk', t.channel, NOTIFICATION_BREAKER_CHANNELS), enumCheck('notification_breakers_state_chk', t.state, NOTIFICATION_BREAKER_STATES)],
+);

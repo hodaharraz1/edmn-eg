@@ -95,8 +95,9 @@ export const searchProducts = defineRoute({
     sort: z.enum(SORTS).optional(),
     page: int(1, 500).optional(),
     pageSize: int(1, 48).optional(),
+    cursor: z.string().max(600).optional().meta({ description: 'Keyset cursor from the previous response nextCursor; preferred over page for page 2+.' }),
   }),
-  response: page(productCard),
+  response: page(productCard).extend({ nextCursor: z.string().nullable() }),
   handler: ({ query }) => publicProductSearch({ ...query, pageSize: query.pageSize ?? 24 }),
 });
 
