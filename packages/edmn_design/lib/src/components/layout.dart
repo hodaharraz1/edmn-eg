@@ -306,7 +306,8 @@ class _NavButton extends StatelessWidget {
               children: [
                 Badge(
                   isLabelVisible: (item.badge ?? 0) > 0,
-                  backgroundColor: EdmnColors.brandRed,
+                  backgroundColor: EdmnColors.accent,
+                  textColor: EdmnColors.onAccent,
                   label: Text('${item.badge}'),
                   child: Icon(
                     selected ? item.activeIcon : item.icon,

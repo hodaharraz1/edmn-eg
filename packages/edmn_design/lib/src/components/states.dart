@@ -338,7 +338,7 @@ void showEdmnMessage(
         content: Text(message),
         backgroundColor: error ? EdmnColors.error : EdmnColors.textPrimary,
         action: actionLabel != null && onAction != null
-            ? SnackBarAction(key: const Key('snack-action'), label: actionLabel, textColor: EdmnColors.accentCyan, onPressed: onAction)
+            ? SnackBarAction(key: const Key('snack-action'), label: actionLabel, textColor: EdmnColors.accent, onPressed: onAction)
             : null,
       ),
     );

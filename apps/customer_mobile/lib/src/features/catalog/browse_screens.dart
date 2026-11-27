@@ -274,7 +274,8 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
           onPressed: () => context.go('/cart'),
           icon: Badge(
             isLabelVisible: ref.watch(cartCountProvider) > 0,
-            backgroundColor: EdmnColors.brandRed,
+            backgroundColor: EdmnColors.accent,
+            textColor: EdmnColors.onAccent,
             label: Text('${ref.watch(cartCountProvider)}'),
             child: Icon(Icons.shopping_cart_outlined, semanticLabel: t.cartTitle),
           ),
@@ -310,6 +311,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                     child: EdmnPrimaryButton(
                       key: const Key('buy-now'),
                       label: t.buyNow,
+                      color: EdmnColors.accent,
                       icon: Icons.flash_on_rounded,
                       loading: _buying,
                       onPressed: _adding || _buying

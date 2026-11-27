@@ -479,7 +479,7 @@ class _HeroCard extends ConsumerWidget {
               gradient: LinearGradient(
                 begin: AlignmentDirectional.topCenter,
                 end: AlignmentDirectional.bottomCenter,
-                colors: [Color(0x00000000), Color(0xCC101826)],
+                colors: [EdmnColors.imageScrimTop, EdmnColors.imageScrimBottom],
                 stops: [0.45, 1.0],
               ),
             ),
@@ -577,8 +577,8 @@ class _DealBanner extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                 Container(
                   padding: const EdgeInsetsDirectional.symmetric(horizontal: EdmnSpacing.sm, vertical: EdmnSpacing.xxs),
-                  decoration: BoxDecoration(color: EdmnColors.accentCyan, borderRadius: BorderRadius.circular(EdmnRadii.small)),
-                  child: Text(t.protectedDealBannerTitle, style: EdmnType.section.copyWith(color: EdmnColors.primaryDeep, fontWeight: FontWeight.w800)),
+                  decoration: BoxDecoration(color: EdmnColors.accent, borderRadius: BorderRadius.circular(EdmnRadii.small)),
+                  child: Text(t.protectedDealBannerTitle, style: EdmnType.section.copyWith(color: EdmnColors.onAccent, fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(height: EdmnSpacing.xs),
                 Text(t.protectedDealBannerBody, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.onPrimary)),

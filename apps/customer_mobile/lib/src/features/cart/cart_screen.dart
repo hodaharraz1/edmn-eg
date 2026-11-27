@@ -135,7 +135,7 @@ class _SellerGroup extends StatelessWidget {
           const Icon(Icons.storefront_outlined, color: EdmnColors.primary, size: EdmnSizes.iconSm),
           const SizedBox(width: EdmnSpacing.xxs),
           Expanded(child: Text(g.store.name, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.primaryDark, fontWeight: FontWeight.w700))),
-          if (g.store.verified) const Icon(Icons.verified_rounded, color: EdmnColors.accentCyan, size: EdmnSizes.iconSm),
+          if (g.store.verified) const Icon(Icons.verified_rounded, color: EdmnColors.primary, size: EdmnSizes.iconSm),
         ]),
         const Divider(height: EdmnSpacing.md),
         for (final l in g.lines) _CartLine(line: l, busy: busy.contains(l.variantId), onQty: onQty),

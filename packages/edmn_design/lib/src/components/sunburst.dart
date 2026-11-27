@@ -27,7 +27,7 @@ class EdmnSunburstBackground extends StatelessWidget {
 class _RaysPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x14FFFFFF);
+    final paint = Paint()..color = EdmnColors.rayOverlay;
     final origin = Offset(size.width / 2, -size.height * 0.6);
     const rays = 18;
     for (var i = 0; i < rays; i += 2) {

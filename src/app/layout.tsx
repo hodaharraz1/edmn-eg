@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Edge-to-edge on notched phones; containers and fixed bars pad themselves with env(safe-area-inset-*).
   viewportFit: 'cover',
-  themeColor: '#0f3f8c',
+  themeColor: '#1c2a95',
 };
 
 /** Every page renders per request: the per-request nonce CSP (src/proxy.ts) can only stamp dynamically rendered HTML. */

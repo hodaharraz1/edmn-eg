@@ -79,8 +79,8 @@ class _DealsHubScreenState extends ConsumerState<DealsHubScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Container(
                     padding: const EdgeInsetsDirectional.symmetric(horizontal: EdmnSpacing.sm, vertical: EdmnSpacing.xxs),
-                    decoration: BoxDecoration(color: EdmnColors.accentCyan, borderRadius: BorderRadius.circular(EdmnRadii.small)),
-                    child: Text(t.protectedDeal, style: EdmnType.section.copyWith(color: EdmnColors.primaryDeep, fontWeight: FontWeight.w800)),
+                    decoration: BoxDecoration(color: EdmnColors.accent, borderRadius: BorderRadius.circular(EdmnRadii.small)),
+                    child: Text(t.protectedDeal, style: EdmnType.section.copyWith(color: EdmnColors.onAccent, fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(height: EdmnSpacing.xs),
                   Text(t.dealHubBody, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.onPrimary)),

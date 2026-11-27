@@ -101,11 +101,11 @@ class _FloatingNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBg = EdmnColors.primary;
+    const accentBg = EdmnColors.accent;
     final icon = Icon(
       selected ? item.activeIcon : item.icon,
       size: EdmnSizes.icon,
-      color: selected ? EdmnColors.onPrimary : EdmnColors.sunburstText,
+      color: selected ? EdmnColors.onAccent : EdmnColors.sunburstText,
     );
     final circle = AnimatedContainer(
       duration: reduceMotion ? Duration.zero : EdmnMotion.normal,

@@ -18,12 +18,13 @@ class EdmnPrimaryButton extends StatelessWidget {
   final IconData? icon;
   final bool loading;
 
-  /// Only the board's white "ابدأ الآن" on the blue splash overrides the color.
+  /// Only the white "ابدأ الآن" on the blue splash and the Acid Lime "اشتري دلوقتي" override the color.
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final onWhite = color == EdmnColors.surface;
+    final onLime = color == EdmnColors.accent;
     return FilledButton(
       onPressed: loading ? null : onPressed,
       style: color == null
@@ -32,7 +33,7 @@ class EdmnPrimaryButton extends StatelessWidget {
               backgroundColor: color,
               foregroundColor: onWhite
                   ? EdmnColors.primary
-                  : EdmnColors.onPrimary,
+                  : (onLime ? EdmnColors.onAccent : EdmnColors.onPrimary),
             ),
       child: loading
           ? const SizedBox.square(
@@ -284,7 +285,7 @@ class EdmnSearchBar extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(EdmnRadii.field),
           borderSide: BorderSide(
-            color: onDark ? EdmnColors.accentCyan : EdmnColors.primary,
+            color: onDark ? EdmnColors.accent : EdmnColors.primary,
             width: 1.5,
           ),
         ),

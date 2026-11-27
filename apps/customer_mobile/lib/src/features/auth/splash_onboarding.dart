@@ -32,7 +32,7 @@ class _Arc extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: EdmnColors.accentCyan.withValues(alpha: 0.08), width: 36)),
+        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: EdmnColors.accent.withValues(alpha: 0.08), width: 36)),
       );
 }
 
@@ -139,7 +139,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Text(t.haveAccount, style: EdmnType.body.copyWith(color: EdmnColors.onPrimary)),
                 TextButton(
                   onPressed: () => _finish('/sign-in'),
-                  child: Text(t.signIn, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.accentCyan, decoration: TextDecoration.underline, decorationColor: EdmnColors.accentCyan)),
+                  child: Text(t.signIn, style: EdmnType.bodyStrong.copyWith(color: EdmnColors.accent, decoration: TextDecoration.underline, decorationColor: EdmnColors.accent)),
                 ),
               ]),
               const SizedBox(height: EdmnSpacing.md),
