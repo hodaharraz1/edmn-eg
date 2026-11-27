@@ -52,10 +52,24 @@ const schema = z.object({
   APP_LINKS_ANDROID_SHA256: z.string().default(''),
   APP_LINKS_IOS_TEAM_ID: z.string().default(''),
   APP_LINKS_IOS_BUNDLE_ID: z.string().default('com.edmneg.edmnCustomer'),
-  SMS_DRIVER: z.enum(['log', 'http']).default('log'),
+  SMS_DRIVER: z.enum(['log', 'http', 'smsmisr']).default('log'),
   SMS_HTTP_URL: z.string().optional(),
   SMS_HTTP_TOKEN: z.string().optional(),
   SMS_SENDER_ID: z.string().default('EDMN'),
+  // NOTIFY-01: Egyptian provider driver (SMS Misr) + fallback + per-process rate limit.
+  SMS_MISR_USERNAME: z.string().optional(),
+  SMS_MISR_PASSWORD: z.string().optional(),
+  SMS_MISR_BASE_URL: z.string().default('https://smsmisr.com'),
+  SMS_FALLBACK_DRIVER: z.enum(['none', 'log', 'http']).default('none'),
+  SMS_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(600).default(60),
+  // NOTIFY-01: device-push keys from env so staging works the moment the keys are set. The admin-managed
+  // encrypted rows in device_push_credentials take precedence when both exist.
+  FCM_SERVICE_ACCOUNT_JSON_B64: z.string().optional(),
+  APNS_KEY_P8_B64: z.string().optional(),
+  APNS_KEY_ID: z.string().optional(),
+  APNS_TEAM_ID: z.string().optional(),
+  APNS_BUNDLE_ID: z.string().optional(),
+  APNS_SANDBOX: z.enum(['true', 'false']).optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   WORKER_POLL_MS: z.coerce.number().int().positive().default(5000),
 });
@@ -73,6 +87,7 @@ export function unsafeProductionConfig(e: Env, raw: Record<string, string | unde
   if (!e.APP_URL.startsWith('https://')) problems.push('APP_URL must be https in production');
   if (e.MAIL_DRIVER === 'smtp' && !e.SMTP_HOST) problems.push('SMTP_HOST required for smtp mail driver');
   if (e.SMS_DRIVER === 'http' && !e.SMS_HTTP_URL) problems.push('SMS_HTTP_URL required for http sms driver');
+  if (e.SMS_DRIVER === 'smsmisr' && (!e.SMS_MISR_USERNAME || !e.SMS_MISR_PASSWORD)) problems.push('SMS_MISR_USERNAME and SMS_MISR_PASSWORD required for the smsmisr driver');
   if (!e.EDMN_ENVIRONMENT) problems.push('EDMN_ENVIRONMENT must be set to "staging" or "production" for a production build');
   if (e.EDMN_ENVIRONMENT && !['staging', 'production'].includes(e.EDMN_ENVIRONMENT)) problems.push(`EDMN_ENVIRONMENT=${e.EDMN_ENVIRONMENT} is not allowed for a production build (use "staging" or "production")`);
   if (e.EDMN_ENVIRONMENT === 'production' && !raw.VERCEL && raw.TRUSTED_PROXY !== 'true') {

@@ -63,6 +63,87 @@ const httpSms = (): OutboundProvider => ({
   },
 });
 
+
+// ── NOTIFY-01: SMS Misr (مزوّد مصري) ─────────────────────────────────────────────────────────────────────────
+// POST {base}/api/SMS/ (form fields per the provider's API docs). The base URL is configurable so a provider
+// endpoint change is a config change, not a deploy. لم يتم التحقق: لم تُجرَ مكالمة فعلية للمزوّد.
+const smsMisr = (): OutboundProvider => ({
+  name: 'smsmisr',
+  async send(msg) {
+    const e = env();
+    const form = new URLSearchParams({
+      environment: '1', // live (2 = test)
+      username: e.SMS_MISR_USERNAME!,
+      password: e.SMS_MISR_PASSWORD!,
+      sender: e.SMS_SENDER_ID,
+      mobile: msg.recipient.replace(/\+/g, ''),
+      message: msg.body,
+      language: '2', // unicode (Arabic)
+      ...(msg.reference ? { reference: msg.reference } : {}),
+    });
+    const res = await fetch(`${e.SMS_MISR_BASE_URL}/api/SMS/`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form.toString(),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`SMS Misr responded ${res.status}`);
+    const json = (await res.json().catch(() => null)) as { SMSID?: unknown; id?: unknown } | null;
+    const id = json?.SMSID ?? json?.id;
+    return id != null ? { providerMessageId: String(id) } : {};
+  },
+});
+
+/** NOTIFY-01: per-process token bucket. Limits THIS process only; the provider's own limits still apply. */
+function rateLimited(inner: OutboundProvider, perMinute: number): OutboundProvider {
+  let tokens = perMinute;
+  let last = Date.now();
+  let chain: Promise<unknown> = Promise.resolve();
+  return {
+    name: inner.name,
+    send(msg) {
+      const run = async () => {
+        for (;;) {
+          const now = Date.now();
+          tokens = Math.min(perMinute, tokens + ((now - last) / 60_000) * perMinute);
+          last = now;
+          if (tokens >= 1) {
+            tokens -= 1;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, Math.ceil(((1 - tokens) / perMinute) * 60_000)));
+        }
+        return inner.send(msg);
+      };
+      // Serialize so two concurrent sends cannot spend the same token.
+      const out = chain.then(run, run);
+      chain = out.catch(() => {});
+      return out;
+    },
+  };
+}
+
+/** NOTIFY-01: primary driver with an optional one-shot fallback driver when the primary fails. */
+function smsProvider(): OutboundProvider {
+  const e = env();
+  const primary = e.SMS_DRIVER === 'smsmisr' ? smsMisr() : e.SMS_DRIVER === 'http' ? httpSms() : logProvider('SMS');
+  if (primary.name === 'log-SMS') return primary;
+  const limited = rateLimited(primary, e.SMS_RATE_LIMIT_PER_MINUTE);
+  if (e.SMS_FALLBACK_DRIVER === 'none') return limited;
+  const fallback = e.SMS_FALLBACK_DRIVER === 'http' ? httpSms() : logProvider('SMS');
+  return {
+    name: `${limited.name}+${fallback.name}`,
+    async send(msg) {
+      try {
+        return await limited.send(msg);
+      } catch (err) {
+        logger.warn('outbound.sms_fallback', { primary: limited.name, fallback: fallback.name, error: err instanceof Error ? err.message.slice(0, 120) : 'unknown' });
+        return fallback.send(msg);
+      }
+    },
+  };
+}
+
 let override: ((channel: string) => OutboundProvider) | null = null;
 /** Tests only: replace the delivery adapters (failure injection, capture). */
 export function setProviderOverride(fn: ((channel: string) => OutboundProvider) | null) {
@@ -74,9 +155,9 @@ export async function providerFor(channel: string): Promise<OutboundProvider> {
   const e = env();
   if (channel === 'EMAIL') return e.MAIL_DRIVER === 'smtp' ? smtpProvider() : logProvider('EMAIL');
   // Production never "delivers" through the log driver: the message fails visibly instead of being faked as SENT.
-  if (process.env.EDMN_ENVIRONMENT === 'production' && ((channel === 'SMS' && e.SMS_DRIVER !== 'http') || (channel === 'EMAIL' && e.MAIL_DRIVER !== 'smtp'))) {
+  if (process.env.EDMN_ENVIRONMENT === 'production' && ((channel === 'SMS' && e.SMS_DRIVER !== 'http' && e.SMS_DRIVER !== 'smsmisr') || (channel === 'EMAIL' && e.MAIL_DRIVER !== 'smtp'))) {
     throw new Error(`${channel} provider not configured in production`);
   }
-  if (channel === 'SMS') return e.SMS_DRIVER === 'http' ? httpSms() : logProvider('SMS');
+  if (channel === 'SMS') return e.SMS_DRIVER === 'log' ? logProvider('SMS') : smsProvider();
   throw new Error(`unknown channel ${channel}`);
 }

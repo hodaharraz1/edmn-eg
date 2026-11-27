@@ -7,6 +7,7 @@ import { db, type DbOrTx } from '@/server/db/client';
 import { devicePushCredentials, devicePushTokens, mobileDevices, users } from '@/server/db/schema';
 import { getSetting } from '@/server/modules/settings';
 import { logger } from '@/server/core/logger';
+import { env } from '@/server/core/env';
 import type { SenderDeps } from './device-push-senders';
 
 /**
@@ -153,10 +154,51 @@ export function setLiveSenderDeps(deps?: SenderDeps) {
 }
 
 /** Build the live senders from the encrypted credentials. Missing/invalid credentials FAIL CLOSED (no sender, no send). */
+/**
+ * NOTIFY-01: push credentials from env, so staging goes live the moment the keys are set (no admin round-trip).
+ * The admin-managed encrypted rows below take precedence when both exist. Values are base64 in env so newlines
+ * in PEM/JSON survive hosting dashboards. Never logged; a malformed value fails closed like a bad DB row.
+ */
+function envPushCredentials(): Array<{ provider: PushTokenProvider; credentials: unknown }> {
+  const e = env();
+  const out: Array<{ provider: PushTokenProvider; credentials: unknown }> = [];
+  if (e.FCM_SERVICE_ACCOUNT_JSON_B64) {
+    try {
+      out.push({ provider: 'FCM', credentials: JSON.parse(Buffer.from(e.FCM_SERVICE_ACCOUNT_JSON_B64, 'base64').toString('utf8')) });
+    } catch {
+      logger.warn('push.env_credentials_invalid', { provider: 'FCM' });
+    }
+  }
+  if (e.APNS_KEY_P8_B64 && e.APNS_KEY_ID && e.APNS_TEAM_ID && e.APNS_BUNDLE_ID) {
+    try {
+      out.push({
+        provider: 'APNS',
+        credentials: {
+          teamId: e.APNS_TEAM_ID,
+          keyId: e.APNS_KEY_ID,
+          bundleId: e.APNS_BUNDLE_ID,
+          privateKeyP8: Buffer.from(e.APNS_KEY_P8_B64, 'base64').toString('utf8'),
+          sandbox: e.APNS_SANDBOX === 'true',
+        },
+      });
+    } catch {
+      logger.warn('push.env_credentials_invalid', { provider: 'APNS' });
+    }
+  }
+  return out;
+}
+
 async function liveSenders(conn: DbOrTx): Promise<LiveSenders> {
   const rows = await conn.select().from(devicePushCredentials);
   const out: LiveSenders = {};
   const mod = await import('./device-push-senders');
+  for (const ec of envPushCredentials()) {
+    try {
+      out[ec.provider] = ec.provider === 'FCM' ? new mod.FcmDevicePushSender(mod.parseFcmCredentials(ec.credentials), liveDeps) : new mod.ApnsDevicePushSender(mod.parseApnsCredentials(ec.credentials), liveDeps);
+    } catch {
+      logger.warn('push.env_credentials_invalid', { provider: ec.provider });
+    }
+  }
   for (const r of rows) {
     try {
       const c = decryptJson<unknown>(r.secretEnc);
