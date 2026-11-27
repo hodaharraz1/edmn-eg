@@ -68,11 +68,12 @@ describe('security alert rules — fingerprinting and bounds', () => {
         return Array.isArray(v) ? v.join('') : String(v ?? c);
       }),
     );
-    expect(raw(0)).toContain("'1 hours'");
-    expect(raw(1)).toContain("'1 hours'");
-    expect(raw(48)).toContain("'48 hours'");
-    expect(raw(99999)).toContain("'168 hours'");
-    expect(raw(Number.NaN)).toContain("'1 hours'");
+    // SEC-04 L7: the interval is a bound integer (make_interval), never text pasted into SQL.
+    expect(raw(0)).toContain('"1"');
+    expect(raw(1)).toContain('"1"');
+    expect(raw(48)).toContain('"48"');
+    expect(raw(99999)).toContain('"168"');
+    expect(raw(Number.NaN)).toContain('"1"');
   });
 
   it('detection thresholds are deliberate positive constants', () => {

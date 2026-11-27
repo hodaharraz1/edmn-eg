@@ -55,8 +55,8 @@ describe('F-1 staff creation never yields a creator-known password; money roles 
     await db.insert(userRoles).values({ userId: mgrUser.id, roleCode: code });
     const manager = await adminActor(mgrUser.id, { stepUpAt: new Date() });
     const target = await makeUser({ staff: true });
-    await expect(setStaffRole(manager, 'grant', { userId: target.id, role: 'FINANCE_CHECKER', reason: 'منح صلاحية مالية', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط/);
-    await expect(createStaffUser(manager, { email: `x-${randomUUID().slice(0, 6)}@test.local`, phone: '+201199999999', fullName: 'محاولة', role: 'FINANCE_OPERATOR', reason: 'محاولة إنشاء مالي', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط/);
+    await expect(setStaffRole(manager, 'grant', { userId: target.id, role: 'FINANCE_CHECKER', reason: 'منح صلاحية مالية', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط|صلاحيات عليا/);
+    await expect(createStaffUser(manager, { email: `x-${randomUUID().slice(0, 6)}@test.local`, phone: '+201199999999', fullName: 'محاولة', role: 'FINANCE_OPERATOR', reason: 'محاولة إنشاء مالي', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط|صلاحيات عليا/);
   });
 });
 

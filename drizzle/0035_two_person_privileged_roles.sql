@@ -30,7 +30,8 @@ BEGIN
   IF NEW.target_user_id <> OLD.target_user_id OR NEW.role_code <> OLD.role_code OR NEW.requested_by <> OLD.requested_by OR NEW.reason <> OLD.reason THEN
     RAISE EXCEPTION 'privileged role request identity is immutable' USING ERRCODE = '42501';
   END IF;
-  IF OLD.status <> 'PENDING' AND NEW.status <> OLD.status THEN
+  -- A decision is final; the only later move is APPROVED -> CONSUMED (the approved grant being executed once).
+  IF OLD.status <> 'PENDING' AND NEW.status <> OLD.status AND NOT (OLD.status = 'APPROVED' AND NEW.status = 'CONSUMED') THEN
     RAISE EXCEPTION 'privileged role request is already decided' USING ERRCODE = '42501';
   END IF;
   IF NEW.status IN ('APPROVED','REJECTED') AND (NEW.decided_by IS NULL OR NEW.decided_by = NEW.requested_by OR NEW.decided_at IS NULL) THEN

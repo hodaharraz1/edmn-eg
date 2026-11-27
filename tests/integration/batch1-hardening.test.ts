@@ -50,7 +50,7 @@ import { confirmPayment, saveDestination, startReview, submitProof } from '@/ser
 import { closeDispute, openDispute, resolveDispute, setDisputeStatus } from '@/server/modules/postpurchase/disputes';
 import { activePayoutMethod, addPayoutMethod, assertVerifiedDestination, decideSeller, saveIdentity, saveStore, startApplication, submitApplication, uploadSellerDocument, verifyPayoutMethod } from '@/server/modules/sellers/service';
 import { effectiveDualControlThreshold, realMoneyEnabled, updateSetting } from '@/server/modules/settings';
-import { createStaffUser, setRolePermissions, setStaffRole, setStaffStatus } from '@/server/rbac/staff';
+import { createStaffUser, setRolePermissions, setStaffRole, setStaffStatus, requestPrivilegedRole, decidePrivilegedRoleRequest } from '@/server/rbac/staff';
 import { approveIdentity, checkout, makerRequest, ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, receiveAndRelease, sellerOrdersOf, shipIt, submitAndConfirm } from '../helpers/factory';
 
 /**
@@ -173,14 +173,18 @@ describe('C2 — roles.manage alone can never mint SUPER_ADMIN (or any privilege
     await expect(setRolePermissions(superAdmin, { role: code, permissions: ['dashboard.view', 'roles.manage'], reason: 'إنشاء دور إدارة صلاحيات' })).rejects.toThrow(/أكّد/);
     await setRolePermissions(superAdmin, { role: code, permissions: ['dashboard.view', 'roles.manage'], reason: 'إنشاء دور إدارة صلاحيات', confirmPrivileged: true });
     const u = await makeUser({ staff: true });
-    await setStaffRole(superAdmin, 'grant', { userId: u.id, role: code, reason: 'منح دور إدارة الصلاحيات', confirmPrivileged: true });
+    // SEC-04 M1: a privileged grant takes two super admins (one requests, a different one approves and executes).
+    const secondSuperAdmin = await makeAdmin(['SUPER_ADMIN']);
+    const req = await requestPrivilegedRole(superAdmin, { userId: u.id, role: code, reason: 'منح دور إدارة الصلاحيات' });
+    await decidePrivilegedRoleRequest(secondSuperAdmin, { requestId: req.id, approve: true });
+    await setStaffRole(secondSuperAdmin, 'grant', { userId: u.id, role: code, reason: 'منح دور إدارة الصلاحيات', confirmPrivileged: true, approvalRequestId: req.id });
     manager = await adminActor(u.id, { stepUpAt: new Date() });
     expect(manager.permissions.has('roles.manage')).toBe(true);
   });
 
   it('a non-super roles.manage holder cannot create a SUPER_ADMIN account — nothing is written', async () => {
     const e = email();
-    await expect(createStaffUser(manager, { email: e, phone: phone(), fullName: 'محاولة تصعيد', role: 'SUPER_ADMIN', reason: 'محاولة إنشاء مدير عام', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط/);
+    await expect(createStaffUser(manager, { email: e, phone: phone(), fullName: 'محاولة تصعيد', role: 'SUPER_ADMIN', reason: 'محاولة إنشاء مدير عام', confirmPrivileged: true })).rejects.toThrow(/للمدير العام فقط|صلاحيات عليا/);
     expect(await db.select().from(users).where(eq(users.email, e))).toHaveLength(0);
   });
 
@@ -201,13 +205,23 @@ describe('C2 — roles.manage alone can never mint SUPER_ADMIN (or any privilege
     expect(await db.select().from(users).where(eq(users.email, bad))).toHaveLength(0); // no orphan staff account
   });
 
-  it('a SUPER_ADMIN creates another SUPER_ADMIN only with fresh 2FA, explicit confirmation and a reason (audited)', async () => {
+  it('SEC-04 M1: a new SUPER_ADMIN takes two super admins — never created directly, granted only after a second approval', async () => {
     const base = { phone: phone(), fullName: 'مدير عام جديد', role: 'SUPER_ADMIN' };
-    await expect(createStaffUser(await noStepUp(superAdmin), { ...base, email: email(), reason: 'سبب إنشاء مدير عام جديد', confirmPrivileged: true })).rejects.toThrow(/تأكيد هويتك/);
-    await expect(createStaffUser(superAdmin, { ...base, email: email(), reason: 'سبب إنشاء مدير عام جديد' })).rejects.toThrow(/أكّد/);
-    await expect(createStaffUser(superAdmin, { ...base, email: email(), reason: 'قصير', confirmPrivileged: true })).rejects.toThrow(/سبب/);
-    const u = await createStaffUser(superAdmin, { ...base, email: email(), reason: 'تعيين مدير عام ثانٍ بقرار المالك', confirmPrivileged: true });
-    expect(await auditActions(u.id)).toContain('rbac.privileged_staff_created');
+    // Even with fresh 2FA, confirmation and a reason, an account is never CREATED with a privileged role.
+    const direct = email();
+    await expect(createStaffUser(superAdmin, { ...base, email: direct, reason: 'تعيين مدير عام ثانٍ بقرار المالك', confirmPrivileged: true })).rejects.toThrow(/صلاحيات عليا/);
+    expect(await db.select().from(users).where(eq(users.email, direct))).toHaveLength(0);
+    // The path: plain staff account → request by one super admin → approval and grant by a different one.
+    const u = await createStaffUser(superAdmin, { phone: phone(), fullName: 'مدير عام جديد', role: 'CATALOG_REVIEWER', email: email() });
+    const req = await requestPrivilegedRole(superAdmin, { userId: u.id, role: 'SUPER_ADMIN', reason: 'تعيين مدير عام ثانٍ بقرار المالك' });
+    await expect(decidePrivilegedRoleRequest(superAdmin, { requestId: req.id, approve: true })).rejects.toThrow();
+    const second = await makeAdmin(['SUPER_ADMIN']);
+    await decidePrivilegedRoleRequest(second, { requestId: req.id, approve: true });
+    await expect(setStaffRole(superAdmin, 'grant', { userId: u.id, role: 'SUPER_ADMIN', reason: 'تنفيذ الموافقة', confirmPrivileged: true, approvalRequestId: req.id })).rejects.toThrow(/شخص تاني/);
+    await setStaffRole(second, 'grant', { userId: u.id, role: 'SUPER_ADMIN', reason: 'تنفيذ الموافقة', confirmPrivileged: true, approvalRequestId: req.id });
+    expect(await db.select().from(userRoles).where(and(eq(userRoles.userId, u.id), eq(userRoles.roleCode, 'SUPER_ADMIN')))).toHaveLength(1);
+    // A consumed approval can never be replayed.
+    await expect(setStaffRole(second, 'grant', { userId: u.id, role: 'SUPER_ADMIN', reason: 'تنفيذ الموافقة', confirmPrivileged: true, approvalRequestId: req.id })).rejects.toThrow();
   });
 
   it('no alternate write path: staff roles are only assigned inside src/server/rbac/staff.ts (and dev seeds)', async () => {
@@ -621,11 +635,14 @@ describe('C8 — a PRODUCTION database / deployment refuses demo, E2E and test f
 
   it('a production build refuses staging fixture secrets, SEED_DEMO and EDMN_ENVIRONMENT=development', () => {
     const base = { NODE_ENV: 'production', EDMN_ENVIRONMENT: 'production', SESSION_SECRET: 'x'.repeat(40), DATA_ENCRYPTION_KEY: 'y'.repeat(40), APP_URL: 'https://edmn.example', MAIL_DRIVER: 'smtp', SMTP_HOST: 'smtp.example', SMS_DRIVER: 'http', SMS_HTTP_URL: 'https://sms.example' } as unknown as Env;
-    expect(unsafeProductionConfig(base, {})).toEqual([]);
-    expect(unsafeProductionConfig(base, { STAGING_TOTP_SECRET: 'ABC' }).join()).toMatch(/STAGING_TOTP_SECRET/);
-    expect(unsafeProductionConfig(base, { STAGING_ADMIN_PASSWORD: 'x', STAGING_DEMO_PASSWORD: 'y' })).toHaveLength(2);
-    expect(unsafeProductionConfig(base, { SEED_DEMO: 'true' }).join()).toMatch(/SEED_DEMO/);
-    expect(unsafeProductionConfig({ ...base, EDMN_ENVIRONMENT: 'development' } as Env, {}).join()).toMatch(/development is not allowed/);
+    // SEC-04 M2: a self-hosted production deployment must trust its own reverse proxy (TRUSTED_PROXY=true).
+    const proxy = { TRUSTED_PROXY: 'true' };
+    expect(unsafeProductionConfig(base, proxy)).toEqual([]);
+    expect(unsafeProductionConfig(base, {}).join()).toMatch(/TRUSTED_PROXY/);
+    expect(unsafeProductionConfig(base, { ...proxy, STAGING_TOTP_SECRET: 'ABC' }).join()).toMatch(/STAGING_TOTP_SECRET/);
+    expect(unsafeProductionConfig(base, { ...proxy, STAGING_ADMIN_PASSWORD: 'x', STAGING_DEMO_PASSWORD: 'y' })).toHaveLength(2);
+    expect(unsafeProductionConfig(base, { ...proxy, SEED_DEMO: 'true' }).join()).toMatch(/SEED_DEMO/);
+    expect(unsafeProductionConfig({ ...base, EDMN_ENVIRONMENT: 'development' } as Env, proxy).join()).toMatch(/development is not allowed/);
   });
 
   it('in production, public fixture passwords and the known demo TOTP secret are refused; TEST destinations cannot be created', async () => {
