@@ -1,0 +1,92 @@
+# Builds the Android App Bundles (AAB) for both apps and uploads them as workflow artifacts for manual upload
+# to the Google Play Console (internal testing track). Points at STAGING; Real Money stays OFF.
+#
+# Runs only when a commit on the integration branch has a message STARTING with "[play]", or manually once this
+# file is on the default branch.
+#
+# Owner setup (once), all in GitHub → Settings → Secrets and variables → Actions — never in code or chat:
+#   secret ANDROID_KEYSTORE_BASE64  (base64 of the release .jks — create it per docs/mobile/ANDROID_PLAY.md)
+#   secret EDMN_KEYSTORE_PASSWORD, EDMN_KEY_PASSWORD, in the protected 'play' environment
+#   variable EDMN_KEY_ALIAS (default: edmn-release)
+# Steps: docs/mobile/ANDROID_PLAY.md.
+name: Android Play AAB (staging)
+
+on:
+  push:
+    branches: [claude/instinct-integration]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-play
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, '[play]')
+    runs-on: ubuntu-latest
+    environment: play
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: customer_mobile
+          - app: admin_mobile
+    env:
+      KEY_ALIAS: ${{ vars.EDMN_KEY_ALIAS || 'edmn-release' }}
+    steps:
+      - name: Check owner setup
+        env:
+          HAS_KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+          HAS_KS_PW: ${{ secrets.EDMN_KEYSTORE_PASSWORD != '' }}
+          HAS_KEY_PW: ${{ secrets.EDMN_KEY_PASSWORD != '' }}
+        run: |
+          missing=0
+          [ "$HAS_KS" = "true" ] || { echo "::error::ANDROID_KEYSTORE_BASE64 is not configured (see docs/mobile/ANDROID_PLAY.md)"; missing=1; }
+          [ "$HAS_KS_PW" = "true" ] || { echo "::error::EDMN_KEYSTORE_PASSWORD is not configured"; missing=1; }
+          [ "$HAS_KEY_PW" = "true" ] || { echo "::error::EDMN_KEY_PASSWORD is not configured"; missing=1; }
+          exit $missing
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@dded0888837ed1f317902acf8c20df0ad188d165 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.47.8'
+          cache: true
+      - name: Materialize the release keystore (secrets never enter the repo)
+        working-directory: apps/${{ matrix.app }}/android
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PW: ${{ secrets.EDMN_KEYSTORE_PASSWORD }}
+          KEY_PW: ${{ secrets.EDMN_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KS_B64" | base64 -d > release-keystore.jks
+          {
+            echo "storeFile=$PWD/release-keystore.jks"
+            echo "storePassword=$KS_PW"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > keystore.properties
+          chmod 600 release-keystore.jks keystore.properties
+      - name: pub get
+        working-directory: apps/${{ matrix.app }}
+        run: flutter pub get
+      - name: Build the signed AAB (obfuscated, split debug info)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          flutter build appbundle --release \
+            --dart-define=EDMN_ENV=staging \
+            --obfuscate --split-debug-info=build/symbols
+      - name: Upload the AAB and debug symbols
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v4
+        with:
+          name: ${{ matrix.app }}-aab
+          path: |
+            apps/${{ matrix.app }}/build/app/outputs/bundle/release/app-release.aab
+            apps/${{ matrix.app }}/build/symbols/
+          retention-days: 14
