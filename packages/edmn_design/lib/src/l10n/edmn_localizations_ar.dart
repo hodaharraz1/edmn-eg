@@ -358,6 +358,12 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get addedToCart => 'اتضاف للسلة';
 
   @override
+  String get viewCart => 'شوف السلة';
+
+  @override
+  String get buyNow => 'اشتري دلوقتي';
+
+  @override
   String get protectedDealBannerTitle => 'أضمن صفقة';
 
   @override

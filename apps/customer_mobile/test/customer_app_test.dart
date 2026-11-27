@@ -773,6 +773,27 @@ void main() {
     expect(find.text('مش لاقيين اللي بتدور عليه'), findsOneWidget);
   });
 
+  testWidgets('product page: «اشتري دلوقتي» adds and opens the cart; «أضف إلى السلة» offers «شوف السلة»; cart icon in the header', (t) async {
+    final api = FakeMobileApi();
+    await _start(t, api, signedIn: true);
+    await _go(t, '/products/headphones');
+    expect(find.byKey(const Key('product-cart')), findsOneWidget);
+    await t.tap(find.byKey(const Key('add-to-cart')));
+    await t.pumpAndSettle();
+    expect(api.cartQty, 1);
+    expect(find.text('شوف السلة'), findsOneWidget);
+    await t.tap(find.byKey(const Key('snack-action')));
+    await t.pumpAndSettle();
+    expect(find.textContaining('السلة'), findsWidgets);
+    expect(find.byKey(const Key('buy-now')), findsNothing); // we left the product page for the cart
+    await _go(t, '/products/headphones');
+    await t.tap(find.byKey(const Key('buy-now')));
+    await t.pumpAndSettle();
+    expect(api.cartQty, 2);
+    expect(find.byKey(const Key('buy-now')), findsNothing);
+    expect(find.textContaining('السلة'), findsWidgets);
+  });
+
   testWidgets('a guest who taps "أضف" is sent to sign-in (the mobile cart belongs to an account)', (t) async {
     final api = FakeMobileApi();
     await _start(t, api);

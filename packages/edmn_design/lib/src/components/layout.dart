@@ -138,6 +138,9 @@ class EdmnHeader extends StatelessWidget {
   /// with navy titles/icons for contrast. Same layout either way.
   final bool sunburst;
 
+  /// Both sides get the same width (so the title stays centred), wide enough for every action.
+  double get _sideWidth => (EdmnSizes.minTouch + EdmnSpacing.xs) * (actions.isEmpty ? 1 : actions.length);
+
   @override
   Widget build(BuildContext context) => _HeaderBackground(
     sunburst: sunburst,
@@ -154,8 +157,8 @@ class EdmnHeader extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: EdmnSizes.minTouch + EdmnSpacing.xs,
-                    child: leading,
+                    width: _sideWidth,
+                    child: Align(alignment: AlignmentDirectional.centerStart, child: leading),
                   ),
                   Expanded(
                     child: Text(
@@ -169,7 +172,7 @@ class EdmnHeader extends StatelessWidget {
                     ),
                   ),
                   SizedBox(
-                    width: EdmnSizes.minTouch + EdmnSpacing.xs,
+                    width: _sideWidth,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: actions,

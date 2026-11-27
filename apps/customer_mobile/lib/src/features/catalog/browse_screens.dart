@@ -253,6 +253,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
   String? _variantId;
   int _qty = 1;
   bool _adding = false;
+  bool _buying = false;
 
   @override
   Widget build(BuildContext context) {
@@ -266,6 +267,18 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
     return EdmnAppScaffold(
       title: t.productTitle,
       actions: [
+        IconButton(
+          key: const Key('product-cart'),
+          tooltip: t.cartTitle,
+          color: EdmnColors.onPrimary,
+          onPressed: () => context.push('/cart'),
+          icon: Badge(
+            isLabelVisible: ref.watch(cartCountProvider) > 0,
+            backgroundColor: EdmnColors.brandRed,
+            label: Text('${ref.watch(cartCountProvider)}'),
+            child: Icon(Icons.shopping_cart_outlined, semanticLabel: t.cartTitle),
+          ),
+        ),
         if (p != null)
           Padding(
             padding: const EdgeInsetsDirectional.only(end: EdmnSpacing.xs),
@@ -274,19 +287,43 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
       ],
       bottomBar: variant == null
           ? null
-          : EdmnPrimaryButton(
-              key: const Key('add-to-cart'),
-              label: variant.available ? t.addToCart : t.unavailable,
-              icon: Icons.add_shopping_cart_rounded,
-              loading: _adding,
-              onPressed: !variant.available
-                  ? null
-                  : () async {
-                      setState(() => _adding = true);
-                      await addToCart(context, ref, variant.id, quantity: _qty);
-                      if (mounted) setState(() => _adding = false);
-                    },
-            ),
+          : !variant.available
+              ? EdmnPrimaryButton(key: const Key('add-to-cart'), label: t.unavailable, icon: Icons.add_shopping_cart_rounded, onPressed: null)
+              : Row(children: [
+                  Expanded(
+                    child: EdmnSecondaryButton(
+                      key: const Key('add-to-cart'),
+                      label: t.addToCart,
+                      icon: Icons.add_shopping_cart_rounded,
+                      loading: _adding,
+                      onPressed: _adding || _buying
+                          ? null
+                          : () async {
+                              setState(() => _adding = true);
+                              await addToCart(context, ref, variant.id, quantity: _qty);
+                              if (mounted) setState(() => _adding = false);
+                            },
+                    ),
+                  ),
+                  const SizedBox(width: EdmnSpacing.sm),
+                  Expanded(
+                    child: EdmnPrimaryButton(
+                      key: const Key('buy-now'),
+                      label: t.buyNow,
+                      icon: Icons.flash_on_rounded,
+                      loading: _buying,
+                      onPressed: _adding || _buying
+                          ? null
+                          : () async {
+                              // «اشتري دلوقتي»: add it, then straight to the cart review (shipping, totals, checkout).
+                              setState(() => _buying = true);
+                              final ok = await addToCart(context, ref, variant.id, quantity: _qty, quiet: true);
+                              if (mounted) setState(() => _buying = false);
+                              if (ok && context.mounted) context.push('/cart');
+                            },
+                    ),
+                  ),
+                ]),
       body: AsyncView(
         value: product,
         onRetry: () => ref.invalidate(productProvider(widget.slug)),

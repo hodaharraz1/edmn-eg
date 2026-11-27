@@ -746,6 +746,18 @@ abstract class EdmnLocalizations {
   /// **'اتضاف للسلة'**
   String get addedToCart;
 
+  /// No description provided for @viewCart.
+  ///
+  /// In ar, this message translates to:
+  /// **'شوف السلة'**
+  String get viewCart;
+
+  /// No description provided for @buyNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'اشتري دلوقتي'**
+  String get buyNow;
+
   /// No description provided for @protectedDealBannerTitle.
   ///
   /// In ar, this message translates to:

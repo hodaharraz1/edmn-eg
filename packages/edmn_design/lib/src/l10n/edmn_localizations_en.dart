@@ -363,6 +363,12 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get addedToCart => 'Added to cart';
 
   @override
+  String get viewCart => 'View cart';
+
+  @override
+  String get buyNow => 'Buy now';
+
+  @override
   String get protectedDealBannerTitle => 'Protected Deal';
 
   @override
