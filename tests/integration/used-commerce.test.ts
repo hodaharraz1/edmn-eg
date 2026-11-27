@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq, sql } from 'drizzle-orm';
 import { adminActor, customerActor } from '@/server/auth/actors';
 import { db } from '@/server/db/client';
@@ -157,6 +158,9 @@ const dealRow = async (id: string) => (await db.select().from(externalDeals).whe
 const snaps = (dealId: string) => db.select().from(conditionSnapshots).where(eq(conditionSnapshots.dealId, dealId));
 
 /* ───────────────────────── 1. Configuration ───────────────────────── */
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('used.safetyScore'));
 
 describe('used commerce — configurable category policy', () => {
   it('the V1 mobile policy is seeded as data and resolves for the category; other categories have none', async () => {

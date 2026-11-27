@@ -149,6 +149,7 @@ test('COD journey with a short courier statement: cash in by the actual amount, 
   await codJourney(browser, 500); // the courier remitted 5.00 EGP less than collected
 });
 
-test('teardown: cash on delivery goes back to disabled', async ({ browser }) => {
+// afterAll (not a test): in serial mode a failed journey skips the later tests, and a skipped teardown test would leave COD enabled.
+test.afterAll(async ({ browser }) => {
   await setting(browser, 'orders.codEnabled', 'false');
 });

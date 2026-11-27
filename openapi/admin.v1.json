@@ -573,6 +573,10 @@
                   },
                   "device": {
                     "$ref": "#/components/schemas/DeviceInfo"
+                  },
+                  "captchaToken": {
+                    "type": "string",
+                    "maxLength": 4096
                   }
                 },
                 "required": [

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { customerWalletEntries, financialApprovals, financialMovementRequests, journalEntries, journalLines, ledgerAccounts, walletTopups } from '@/server/db/schema';
@@ -39,6 +40,9 @@ async function deposit(c: Awaited<ReturnType<typeof makeCustomer>>, egp = '500',
 const makerRequestCredit = (topupId: string, amount: number, who: Actor = maker) =>
   requestMovement(who, 'WALLET_TOPUP_CREDIT', { entityId: topupId, amount, reason: 'تم التحقق من الإيصال في كشف الحساب' });
 const entriesOf = (topupId: string) => db.select().from(journalEntries).where(and(eq(journalEntries.entryType, 'WALLET_TOPUP_CREDIT'), eq(journalEntries.sourceId, topupId)));
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('wallet.topUpEnabled', 'payments.dailyReceiptLimit'));
 
 describe('PKG-WALLET-01 — flag gate (default closed)', () => {
   it('wallet.topUpEnabled defaults to false and every top-up path answers feature_disabled when off', async () => {

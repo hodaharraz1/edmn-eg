@@ -1,5 +1,6 @@
 import { createDecipheriv, randomUUID, scryptSync } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq } from 'drizzle-orm';
 import { register } from '@/server/auth/service';
 import { db } from '@/server/db/client';
@@ -40,6 +41,9 @@ function decryptExport(encBase64: string, passphrase: string): string {
   dec.setAuthTag(Buffer.from(env.tag, 'base64'));
   return Buffer.concat([dec.update(Buffer.from(env.data, 'base64')), dec.final()]).toString('utf8');
 }
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('orders.codEnabled'));
 
 describe('PRIVACY-01 — marketing consent', () => {
   it('sign-up defaults consent OFF and records no consent event', async () => {

@@ -1,7 +1,8 @@
 import { EventEmitter } from 'node:events';
 import { randomBytes, randomUUID, createPublicKey, createVerify } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { POST as loginRoute } from '@/app/api/v1/auth/login/route';
 import { POST as postPush } from '@/app/api/v1/me/devices/push-token/route';
 import { decryptJson } from '@/server/core/crypto';
@@ -66,6 +67,9 @@ afterEach(async () => {
   await db.delete(devicePushCredentials);
   for (const key of ['notifications.devicePushEnabled', 'notifications.devicePushDriver']) await db.delete(systemSettings).where(eq(systemSettings.key, key));
 });
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('notifications.devicePushEnabled', 'notifications.devicePushDriver'));
 
 describe('live device push senders (PKG-PUSH-02)', () => {
   it('credentials: step-up-gated, encrypted at rest, view shows metadata only — never the key', async () => {

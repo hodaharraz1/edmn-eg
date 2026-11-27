@@ -11,14 +11,14 @@ import { smsAvailable } from '@/server/core/runtime-env';
 import { DomainError, validation } from '@/server/core/errors';
 import { normalizeEgyptMobile } from '@/server/core/text';
 import { db } from '@/server/db/client';
-import { marketingConsentEvents, authTokens, sellers, sessions, users } from '@/server/db/schema';
-import { sendDirect } from '@/server/modules/notifications/notify';
+import { marketingConsentEvents, authTokens, riskFlags, sellers, sessions, users } from '@/server/db/schema';
+import { getSetting } from '@/server/modules/settings';
+import { notify, sendDirect } from '@/server/modules/notifications/notify';
+import { LOGIN_FAILURE_DECAY_HOURS, loginDelaySeconds, verifyCaptcha } from './login-throttle';
 import { CUSTOMER_POLICY, STAFF_POLICY, dummyVerify, hashPassword, passwordProblems, verifyPassword } from './password';
 import { enforce, hit } from './rate-limit';
 import { generateTotpSecret, matchTotpStep } from './totp';
 
-const MAX_FAILED = 8;
-const LOCK_MINUTES = 15;
 
 export interface RequestMeta {
   ip?: string | null;
@@ -90,7 +90,7 @@ export async function createSession(conn: Parameters<typeof audit>[0], userId: s
  * Credential login. Always issues a brand-new session id (prevents session fixation).
  * For ADMIN scope the session starts un-elevated (mfaVerifiedAt = null) until TOTP is verified.
  */
-export async function login(identifier: string, password: string, scope: Scope, meta: RequestMeta, opts: { ipLimit?: number } = {}) {
+export async function login(identifier: string, password: string, scope: Scope, meta: RequestMeta, opts: { ipLimit?: number; captchaToken?: string } = {}) {
   const ident = identifier.trim().toLowerCase().slice(0, 254);
   const phone = normalizeEgyptMobile(ident);
   // Mobile networks put many customers behind one carrier IP (CGNAT): the mobile API passes a higher per-IP ceiling and
@@ -99,6 +99,14 @@ export async function login(identifier: string, password: string, scope: Scope, 
   // Key on the canonical identifier so "010-1234-5678", "+20 10…" and Arabic digits share one bucket.
   await enforce(`login-id:${phone ?? ident}`, 10, 900);
   if (password.length > 256) throw new DomainError('UNAUTHENTICATED', 'بيانات الدخول غير صحيحة');
+  // SEC-194 (L3): optional CAPTCHA. The trigger is per identifier (not per account), so it never reveals whether an account exists.
+  const [delayAfter, delayMax, captchaMode] = await Promise.all([getSetting('auth.loginDelayAfterFailures'), getSetting('auth.loginDelayMaxSeconds'), getSetting('auth.captchaMode')]);
+  if (captchaMode !== 'off') {
+    const needed = captchaMode === 'always' || !(await hit(`login-captcha:${phone ?? ident}`, delayAfter, 900));
+    if (needed && !(await verifyCaptcha(opts.captchaToken, meta.ip))) {
+      throw new DomainError('VALIDATION', 'أكّد إنك مش روبوت وحاول تاني', undefined, { captcha: ['التحقق مطلوب'] });
+    }
+  }
   const [user] = await db
     .select()
     .from(users)
@@ -109,21 +117,42 @@ export async function login(identifier: string, password: string, scope: Scope, 
     await dummyVerify(password);
     throw generic;
   }
+  // lockedUntil is the end of the current escalating delay (SEC-194), not a hard lock: it only ever lasts seconds to minutes.
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     await dummyVerify(password);
-    throw generic; // same answer as a wrong password: a lock must not reveal that the account exists
+    throw generic; // same answer as a wrong password: a delay must not reveal that the account exists
   }
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     await db.transaction(async (tx) => {
-      // Atomic increment: parallel failures cannot all write the same count and dodge the lock.
+      // Atomic increment of the CONSECUTIVE-failure streak (a streak older than the decay window restarts at 1);
+      // parallel failures cannot all write the same count and dodge the delay.
       const [c] = await tx
         .update(users)
-        .set({ failedLoginCount: sql`${users.failedLoginCount} + 1` })
+        .set({
+          failedLoginCount: sql`case when ${users.lastFailedLoginAt} is null or ${users.lastFailedLoginAt} < now() - ${LOGIN_FAILURE_DECAY_HOURS} * interval '1 hour' then 1 else ${users.failedLoginCount} + 1 end`,
+          lastFailedLoginAt: new Date(),
+        })
         .where(eq(users.id, user.id))
         .returning({ n: users.failedLoginCount });
-      if (c && c.n >= MAX_FAILED) {
-        await tx.update(users).set({ failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) }).where(eq(users.id, user.id));
+      const delay = c ? loginDelaySeconds(c.n, delayAfter, delayMax) : 0;
+      if (c && delay > 0) {
+        const until = new Date(Date.now() + delay * 1000);
+        await tx.update(users).set({ lockedUntil: sql`greatest(coalesce(${users.lockedUntil}, ${until}), ${until})` }).where(eq(users.id, user.id));
+        // Alert: once when the first delay starts, and once when the ceiling is first reached.
+        if (c.n === delayAfter || (delay === delayMax && loginDelaySeconds(c.n - 1, delayAfter, delayMax) < delayMax)) {
+          await audit(tx, { ...anon(meta), userId: user.id }, { action: 'auth.login_delayed', entityType: 'user', entityId: user.id, newValues: { scope, failures: c.n, delaySeconds: delay } });
+          await notify(tx, {
+            event: 'ACCOUNT_SECURITY',
+            userIds: [user.id],
+            vars: { message: 'فيه محاولات دخول غلط كتير على حسابك. اتأخرت محاولات الدخول مؤقتًا. لو مش إنت، غيّر كلمة السر.' },
+            dedupeKey: `login-delay:${user.id}:${c.n}:${Math.floor(Date.now() / 3_600_000)}`,
+          });
+          const [open] = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'user'), eq(riskFlags.entityId, user.id), eq(riskFlags.code, 'LOGIN_BRUTE_FORCE'), eq(riskFlags.status, 'OPEN'))).limit(1);
+          if (!open) {
+            await tx.insert(riskFlags).values({ entityType: 'user', entityId: user.id, code: 'LOGIN_BRUTE_FORCE', severity: user.isStaff ? 'HIGH' : 'MEDIUM', note: 'محاولات دخول غلط متتالية على الحساب', meta: { failures: c.n, scope } });
+          }
+        }
       }
       await audit(tx, { ...anon(meta), userId: user.id }, { action: 'auth.login_failed', entityType: 'user', entityId: user.id, newValues: { scope } });
     });
@@ -134,7 +163,7 @@ export async function login(identifier: string, password: string, scope: Scope, 
   // Production never accepts a credential that is public in this repository (demo / test fixtures).
   if (isProductionDeployment() && PUBLIC_FIXTURE_PASSWORDS.includes(password)) throw generic;
   return db.transaction(async (tx) => {
-    await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
+    await tx.update(users).set({ failedLoginCount: 0, lockedUntil: null, lastFailedLoginAt: null, lastLoginAt: new Date() }).where(eq(users.id, user.id));
     const token = await createSession(tx, user.id, scope, meta);
     await audit(tx, { ...anon(meta), userId: user.id, type: isStaffScope(scope) ? 'ADMIN' : 'CUSTOMER' }, {
       action: isStaffScope(scope) ? 'auth.admin_login_password' : 'auth.login',
@@ -286,7 +315,7 @@ export async function resetPassword(token: string, newPassword: string, meta: Re
       .where(and(eq(authTokens.id, row.id), isNull(authTokens.usedAt)))
       .returning();
     if (!used.length) throw validation('الرابط ده اتستخدم قبل كده');
-    await tx.update(users).set({ passwordHash: hash, passwordChangedAt: new Date(), failedLoginCount: 0, lockedUntil: null }).where(eq(users.id, row.userId));
+    await tx.update(users).set({ passwordHash: hash, passwordChangedAt: new Date(), failedLoginCount: 0, lockedUntil: null, lastFailedLoginAt: null }).where(eq(users.id, row.userId));
     await tx.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.userId, row.userId), isNull(sessions.revokedAt)));
     await audit(tx, { ...anon(meta), userId: row.userId }, { action: 'auth.password_reset', entityType: 'user', entityId: row.userId });
   });

@@ -191,6 +191,19 @@ export const SETTINGS_SCHEMA = {
   /** Mobile apps (Phase 1): builds below these versions are told to update (GET /api/v1/app/config). */
   'mobile.minVersion.customer': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
   'mobile.minVersion.admin': z.string().regex(/^\d+\.\d+\.\d+$/).default('1.0.0'),
+  /**
+   * SEC-194 (L3): escalating login delay. After this many CONSECUTIVE wrong passwords on one account, the account waits
+   * 30s, 60s, 120s ... (doubling) before the next attempt is even checked. Replaces the old 8-failure / 15-minute hard lock.
+   */
+  'auth.loginDelayAfterFailures': z.number().int().min(3).max(20).default(5),
+  /** SEC-194 (L3): ceiling of the escalating login delay, in seconds (default 15 minutes). */
+  'auth.loginDelayMaxSeconds': z.number().int().min(30).max(3600).default(900),
+  /**
+   * SEC-194 (L3): CAPTCHA on login. 'off' (default); 'after_failures' = required after N attempts on the same
+   * identifier within 15 minutes (same N as the delay); 'always' = every login. Needs CAPTCHA_PROVIDER / CAPTCHA_SECRET
+   * in the environment (turning it on without them is refused). SENSITIVE.
+   */
+  'auth.captchaMode': z.enum(['off', 'after_failures', 'always']).default('off'),
   'uploads.maxImageMb': z.number().min(1).max(25).default(8),
   'uploads.maxDocumentMb': z.number().min(1).max(25).default(10),
 } as const;
@@ -228,6 +241,9 @@ export const SENSITIVE_SETTINGS: readonly SettingKey[] = [
   'used.safetyScore',
   'notifications.circuitBreaker',
   'notifications.devicePushEnabled',
+  'auth.captchaMode',
+  'auth.loginDelayAfterFailures',
+  'auth.loginDelayMaxSeconds',
 ];
 
 /** Owner policy: with real money, EVERY payout needs a second person (threshold 0 EGP). */
@@ -285,6 +301,10 @@ export async function updateSetting(actor: Actor, key: SettingKey, value: unknow
   const parsed = schema.safeParse(value);
   if (!parsed.success) throw validation('قيمة غير صالحة لهذا الإعداد');
   if (!reason || reason.trim().length < 3) throw validation('يجب ذكر سبب التعديل');
+  if (key === 'auth.captchaMode' && parsed.data !== 'off') {
+    const { captchaConfig } = await import('@/server/auth/login-throttle');
+    if (!captchaConfig()) throw validation('اضبط CAPTCHA_PROVIDER و CAPTCHA_SECRET في بيئة التشغيل قبل تفعيل CAPTCHA، وإلا الدخول هيتقفل على الكل.');
+  }
   if (key === 'payments.realMoneyEnabled' && parsed.data === true) {
     if (process.env.EDMN_ENVIRONMENT === 'staging') throw validation('لا يمكن تفعيل الأموال الحقيقية على بيئة تجريبية (Staging).');
     // Fail closed: every mandatory go-live control must pass (and the owner must still decide).

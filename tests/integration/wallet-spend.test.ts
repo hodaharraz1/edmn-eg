@@ -6,19 +6,24 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq, sql } from 'drizzle-orm';
+import { resetSettings } from '../helpers/settings';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
-import { customerWalletEntries, walletTopups } from '@/server/db/schema';
+import { customerWalletEntries, externalDeals, journalEntries, payments, refunds, walletTopups } from '@/server/db/schema';
 import { placeOrder } from '@/server/modules/commerce/orders';
 import { cartLines, addToCart } from '@/server/modules/commerce/cart';
 import { priceLines } from '@/server/modules/commerce/pricing';
 import { submitTopup, creditTopup } from '@/server/modules/finance/wallet-topups';
 import { requestMovement } from '@/server/modules/finance/movements';
 import { financialInvariants } from '@/server/modules/finance/controls';
-import { postEntry } from '@/server/modules/finance/ledger';
+import { accountBalance, postEntry, reconcile } from '@/server/modules/finance/ledger';
+import { approveRefund } from '@/server/modules/finance/refunds';
+import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
+import { claimInvitation, createDeal, inviteSeller, respondToOffer, saveDealStep, startDealPayment, submitSellerOffer } from '@/server/modules/deals/service';
+import { customerActor } from '@/server/auth/actors';
 import { updateSetting } from '@/server/modules/settings';
 import type { Actor } from '@/server/core/actor';
-import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, png, paymentOf } from '../helpers/factory';
+import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makeUser, png, paymentOf } from '../helpers/factory';
 
 let admin: Actor;
 beforeAll(async () => {
@@ -47,6 +52,41 @@ async function walletCheckout(c: Awaited<ReturnType<typeof makeCustomer>>, varia
   const priced = await priceLines(db, lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), c.address.governorateId);
   return placeOrder(c.actor, { addressId: c.address.id, paymentMethod: 'WALLET', checkoutKey: key, expectedTotal: priced.grandTotal });
 }
+
+const LOC = { governorateId: 2, city: 'الجيزة', street: 'شارع الهرم', lat: 29.98765, lng: 31.13456, accuracy: 20 };
+const walletBalance = async (userId: string) => (await db.select().from(customerWalletEntries).where(eq(customerWalletEntries.userId, userId))).reduce((x, e) => x + e.amount, 0);
+const dealPayment = async (dealId: string) => (await db.select().from(payments).where(eq(payments.dealId, dealId)))[0];
+
+/** The ledger stays green after the step: balanced, no projection drift, every invariant at zero. */
+async function expectLedgerGreen() {
+  const rec = await reconcile();
+  expect(rec.mismatches).toEqual([]);
+  expect(rec.trialBalanceOk).toBe(true);
+  const inv = await financialInvariants(db);
+  expect(inv.checks.filter((x) => x.count > 0)).toEqual([]);
+}
+
+/** A Protected Deal whose offer the buyer accepted (payment not started). The buyer is the given (wallet-funded) customer. */
+async function protectedDealOffered(buyer: Actor): Promise<string> {
+  const deal = await createDeal(buyer, { title: 'صفقة مدفوعة من المحفظة', description: 'جهاز بحالة جيدة جداً لاختبار الدفع من المحفظة', condition: 'NEW', quantity: 1 });
+  await saveDealStep(buyer, deal.id, 2, { unitPrice: '3000' });
+  await saveDealStep(buyer, deal.id, 3, { deliveryMethod: 'تسليم يد بيد', deliveryDeadline: new Date(Date.now() + 5 * 86400_000), inspectionDays: 2 });
+  await saveDealStep(buyer, deal.id, 5, { loc_governorateId: '1', loc_city: 'القاهرة', loc_street: 'شارع التحرير', loc_lat: '30.04442', loc_lng: '31.23571', loc_accuracy: '15' });
+  const { token } = await inviteSeller(buyer, deal.id, true);
+  const seller = customerActor((await makeUser({ identity: true })).id);
+  await claimInvitation(seller, token);
+  const { version } = await submitSellerOffer(
+    seller,
+    deal.id,
+    { details: { fullName: 'بائع الصفقة' }, location: LOC, payout: { type: 'INSTAPAY', holderName: 'بائع الصفقة', instapayAddress: 'wallet-deal@instapay' }, offer: { shippingFee: '0', deliveryMethod: 'شحن عبر شركة شحن', deliveryMinDays: 1, deliveryMaxDays: 3, processingDays: 1 }, returnPolicy: { type: 'NONE' } },
+    true,
+  );
+  await respondToOffer(buyer, deal.id, version, 'ACCEPT');
+  return deal.id;
+}
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('wallet.topUpEnabled'));
 
 describe('PKG-WALLET-02 wallet spend (لم يتم التحقق — يحتاج Postgres)', () => {
   it('flag off refuses WALLET checkout (feature_disabled)', async () => {
@@ -117,17 +157,61 @@ describe('PKG-WALLET-02 wallet spend (لم يتم التحقق — يحتاج Po
   });
 
   it('wallet deal funding credits DEAL_FUNDS_HELD and activates the deal', async () => {
-    // مغطاة كاملة في رحلة (4) بملف journeys-e2e02.test.ts بتحويل بنكي؛ هنا بنفس المسار بطريقة WALLET
     await updateSetting(admin, 'wallet.topUpEnabled', true, 'تفعيل الفلاج');
     const c = await fundedWallet('5000');
-    expect(c.user.id).toBeTruthy(); // placeholder: مسار الصفقة بالمحفظة — يُستكمل عند التشغيل الأول (نفس استدعاءات رحلة 4 مع startDealPayment(buyer, deal.id, 'WALLET'))
-  });
+    const heldBefore = await accountBalance(db, { code: 'DEAL_FUNDS_HELD' });
+    const walletBefore = await walletBalance(c.user.id);
+    const dealId = await protectedDealOffered(c.actor);
+    const p = await startDealPayment(c.actor, dealId, 'WALLET');
+    const pay = await dealPayment(dealId);
+    expect(pay.id).toBe(p.id);
+    expect(pay.method).toBe('WALLET');
+    expect(pay.status).toBe('CONFIRMED');
+    expect(pay.confirmedBy).toBe(c.user.id); // the buyer confirmed it himself (the documented WALLET exception)
+    const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, dealId));
+    expect(deal.status).toBe('ACTIVE');
+    expect(deal.buyerPays).toBe(pay.amountDue);
+    expect(await accountBalance(db, { code: 'DEAL_FUNDS_HELD' })).toBe(heldBefore + deal.buyerPays!); // DEAL_FUNDS_HELD goes up by exactly the deal total
+    expect(await walletBalance(c.user.id)).toBe(walletBefore - deal.buyerPays!);
+    const spend = (await db.select().from(customerWalletEntries).where(eq(customerWalletEntries.userId, c.user.id))).filter((e) => e.kind === 'SPEND');
+    expect(spend.reduce((x, e) => x + e.amount, 0)).toBe(-deal.buyerPays!);
+    const [entry] = await db.select().from(journalEntries).where(and(eq(journalEntries.sourceId, dealId), eq(journalEntries.entryType, 'WALLET_SPEND')));
+    expect(entry).toBeTruthy();
+    expect(entry.approvalId).toBeNull(); // spending one's own balance needs no staff review
+    await expectLedgerGreen();
+  }, 120_000);
 
-  it('deal dispute refund of a wallet-funded deal credits the wallet', async () => {
-    // مغطاة التعليمات في رأس الملف؛ الاستدعاءات: رحلة (5) مع startDealPayment 'WALLET' ثم resolveDispute FULL_REFUND
-    // ثم REFUND_APPROVAL بشخصين ← يجب أن تكتمل COMPLETED وتظهر SPEND_REVERSAL.
-    expect(true).toBe(true);
-  });
+  it('deal dispute refund of a wallet-funded deal returns to the wallet as SPEND_REVERSAL (two-person approval)', async () => {
+    await updateSetting(admin, 'wallet.topUpEnabled', true, 'تفعيل الفلاج');
+    const c = await fundedWallet('5000');
+    const dealId = await protectedDealOffered(c.actor);
+    await startDealPayment(c.actor, dealId, 'WALLET');
+    const walletAfterSpend = await walletBalance(c.user.id);
+    const heldAfterSpend = await accountBalance(db, { code: 'DEAL_FUNDS_HELD' });
+    const d = await openDispute(c.actor, { dealId, reasonCode: 'NOT_RECEIVED', description: 'لم يتم تسليم المنتج حتى الآن رغم الدفع من المحفظة' });
+    await resolveDispute(admin, d.id, { decision: 'FULL_REFUND', reasonCode: 'NOT_DELIVERED', note: 'لم يثبت التسليم — استرداد كامل للمحفظة' });
+    const [r] = await db.select().from(refunds).where(eq(refunds.dealId, dealId));
+    expect(r.status).toBe('REQUESTED');
+    expect(r.destinationSnapshot).toMatchObject({ method: 'WALLET' }); // back to the wallet, not to a bank account
+    // The refund needs two different staff members: a maker asks, a different checker approves.
+    const maker = await makeAdmin(['FINANCE_OPERATOR']);
+    const checker = await makeAdmin(['FINANCE_CHECKER']);
+    await expect(approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد بدون طلب سابق' })).rejects.toThrow();
+    expect(await walletBalance(c.user.id)).toBe(walletAfterSpend); // nothing moved before the second person
+    await requestMovement(maker, 'REFUND_APPROVAL', { entityId: r.id, amount: r.amount, reason: 'طلب اعتماد استرداد الصفقة للمحفظة' });
+    await expect(approveRefund(maker, r.id, { expectedAmount: r.amount, reason: 'نفس الشخص يعتمد' })).rejects.toThrow(); // the maker cannot approve his own request
+    await approveRefund(checker, r.id, { expectedAmount: r.amount, reason: 'اعتماد استرداد الصفقة للمحفظة' });
+    const [after] = await db.select().from(refunds).where(eq(refunds.id, r.id));
+    expect(after.status).toBe('COMPLETED'); // no external transfer: it went straight back
+    expect(await walletBalance(c.user.id)).toBe(walletAfterSpend + r.amount);
+    const reversal = (await db.select().from(customerWalletEntries).where(eq(customerWalletEntries.userId, c.user.id))).filter((e) => e.kind === 'SPEND_REVERSAL');
+    expect(reversal).toHaveLength(1);
+    expect(reversal[0].amount).toBe(r.amount);
+    expect(await accountBalance(db, { code: 'DEAL_FUNDS_HELD' })).toBe(heldAfterSpend - r.amount);
+    const [deal] = await db.select().from(externalDeals).where(eq(externalDeals.id, dealId));
+    expect(deal.status).toBe('REFUNDED');
+    await expectLedgerGreen();
+  }, 120_000);
 
   it('DB guard (0037): an unapproved WALLET_SPEND can only take money OUT of the payer\'s own wallet', async () => {
     const c = await fundedWallet('1000');

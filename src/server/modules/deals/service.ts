@@ -856,7 +856,17 @@ async function issueDeliveryOtpTx(tx: DbOrTx, actor: Actor, deal: Deal, auditAct
 }
 
 /** Total wrong-or-right guesses ever made on a deal's delivery codes. A security bound, not a business value. */
-const DEAL_OTP_LIFETIME_GUESSES = 30;
+export const DEAL_OTP_LIFETIME_GUESSES = 30;
+/**
+ * SEC-195 (L4): cumulative guess budget of ONE seller account across ALL deals in a rolling 24h. The per-deal rate limit
+ * (10 / 15 min) and the per-deal lifetime budget above do not stop one account working through many deals, so this one
+ * counts persisted failure audits (survives restarts and a Redis outage, unlike the rate-limit buckets).
+ */
+export const SELLER_OTP_DAILY_FAILURES = 40;
+async function sellerOtpFailures24h(tx: DbOrTx, userId: string): Promise<number> {
+  const r = await tx.execute<{ n: string }>(sql`select count(*)::text n from audit_logs where actor_user_id = ${userId} and action = 'deal.delivery_otp_failed' and created_at > now() - interval '24 hours'`);
+  return Number(r.rows[0]?.n ?? 0);
+}
 async function dealOtpGuesses(tx: DbOrTx, dealId: string): Promise<number> {
   const r = await tx.execute<{ n: string }>(sql`select coalesce(sum(attempts), 0)::text n from deal_delivery_otps where deal_id = ${dealId}`);
   return Number(r.rows[0]?.n ?? 0);
@@ -900,6 +910,8 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
     if (deal.status !== 'DELIVERED') return { ok: false, error: invalidState(deal.handoverVerifiedAt ? 'التسليم اتأكد مسبقًا' : 'مينفعش تتحقق من التسليم في حالة الصفقة دي') };
     // Lifetime guess budget per deal across ALL codes (F-10): regenerating never resets it.
     if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) return { ok: false, error: invalidState('عدد محاولات إدخال رمز الاستلام للصفقة دي خلص. كلّم الدعم لمراجعة التسليم.') };
+    // SEC-195: cumulative lock across deals for this seller account.
+    if ((await sellerOtpFailures24h(tx, userId)) >= SELLER_OTP_DAILY_FAILURES) return { ok: false, error: new DomainError('RATE_LIMITED', 'محاولات إدخال رموز الاستلام الغلط وصلت للحد اليومي. كلّم الدعم لمراجعة حسابك') };
     const [otp] = await tx.select().from(dealDeliveryOtps).where(ACTIVE_OTP(deal.id)).for('update');
     if (!otp || otp.buyerId !== deal.buyerId) return { ok: false, error: invalidState('لا يوجد رمز صالح. اطلب من المشتري رمزًا جديدًا') };
     const now = new Date();
@@ -916,6 +928,21 @@ export async function verifyDeliveryOtp(actor: Actor, dealId: string, code: stri
         .set({ attempts, lastAttemptAt: now, ...(locked ? { invalidatedAt: now, invalidReason: 'LOCKED' as const } : {}) })
         .where(eq(dealDeliveryOtps.id, otp.id));
       await audit(tx, actor, { action: 'deal.delivery_otp_failed', entityType: 'external_deal', entityId: deal.id, newValues: { otpId: otp.id, attempt: attempts, maxAttempts: otp.maxAttempts, locked } });
+      // SEC-195 (L4) — cumulative lock. (a) Per deal: when the lifetime budget is spent, the code is closed and the deal goes to
+      // Operations review (the same DELIVERY_EXCEPTION dispute + hold a party can open), instead of only refusing further guesses.
+      if ((await dealOtpGuesses(tx, deal.id)) >= DEAL_OTP_LIFETIME_GUESSES) {
+        await tx.update(dealDeliveryOtps).set({ invalidatedAt: now, invalidReason: 'CLOSED' }).where(and(eq(dealDeliveryOtps.id, otp.id), isNull(dealDeliveryOtps.invalidatedAt)));
+        await audit(tx, actor, { action: 'deal.delivery_otp_budget_exhausted', entityType: 'external_deal', entityId: deal.id, newValues: { guesses: DEAL_OTP_LIFETIME_GUESSES } });
+        await openDeliveryReview(tx, actor, deal, 'DELIVERY_EXCEPTION', 'استُنفدت كل محاولات إدخال رمز الاستلام للصفقة (قفل تراكمي) — مراجعة الإدارة مطلوبة');
+      }
+      // (b) Per seller account across deals: flag the account once when the daily budget is spent.
+      if ((await sellerOtpFailures24h(tx, userId)) >= SELLER_OTP_DAILY_FAILURES) {
+        const [open] = await tx.select({ id: riskFlags.id }).from(riskFlags).where(and(eq(riskFlags.entityType, 'user'), eq(riskFlags.entityId, userId), eq(riskFlags.code, 'DELIVERY_CODE_GUESSING'), eq(riskFlags.status, 'OPEN'))).limit(1);
+        if (!open) {
+          await tx.insert(riskFlags).values({ entityType: 'user', entityId: userId, code: 'DELIVERY_CODE_GUESSING', severity: 'HIGH', note: 'محاولات كتير غلط لإدخال رموز استلام صفقات في 24 ساعة', meta: { dealId: deal.id, limit: SELLER_OTP_DAILY_FAILURES } });
+          await audit(tx, actor, { action: 'deal.delivery_otp_daily_budget_exhausted', entityType: 'user', entityId: userId, newValues: { limit: SELLER_OTP_DAILY_FAILURES } });
+        }
+      }
       return {
         ok: false,
         error: validation(locked ? 'تم تجاوز عدد المحاولات. اطلب من المشتري رمزًا جديدًا' : `رمز الاستلام غير صحيح (فاضل ${otp.maxAttempts - attempts} محاولة)`),

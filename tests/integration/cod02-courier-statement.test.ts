@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { codRemittanceShortfalls, journalEntries, journalLines, ledgerAccounts } from '@/server/db/schema';
@@ -47,6 +48,9 @@ async function balanceOf(code: string) {
   const [a] = await db.select().from(ledgerAccounts).where(and(eq(ledgerAccounts.code, code), isNull(ledgerAccounts.sellerId)));
   return a?.balance ?? 0;
 }
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('orders.codEnabled'));
 
 describe('COD-02 — courier statement remittance and shortfall', () => {
   it('short statement: cash debited by the ACTUAL amount, the gap is a tracked receivable, sellers get full pending', async () => {

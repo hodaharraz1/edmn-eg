@@ -3126,9 +3126,9 @@ class ListWalletTopupsResponseMethodsItemDestinationsItem {
 }
 
 class LoginRequest {
-  const LoginRequest({required this.identifier, required this.password, required this.device});
+  const LoginRequest({required this.identifier, required this.password, required this.device, this.captchaToken});
 
-  factory LoginRequest.fromJson(Map<String, dynamic> json) => LoginRequest(identifier: json['identifier'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>));
+  factory LoginRequest.fromJson(Map<String, dynamic> json) => LoginRequest(identifier: json['identifier'] as String, password: json['password'] as String, device: DeviceInfo.fromJson(json['device'] as Map<String, dynamic>), captchaToken: json['captchaToken'] == null ? null : json['captchaToken'] as String);
 
   final String identifier;
 
@@ -3136,7 +3136,9 @@ class LoginRequest {
 
   final DeviceInfo device;
 
-  Map<String, dynamic> toJson() => {'identifier': identifier, 'password': password, 'device': device.toJson()};
+  final String? captchaToken;
+
+  Map<String, dynamic> toJson() => {'identifier': identifier, 'password': password, 'device': device.toJson(), if (captchaToken != null) 'captchaToken': captchaToken};
 }
 
 class MarkConversationSeenRequest {

@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { POST as adminLoginRoute } from '@/app/api/v1/admin/auth/login/route';
 import { POST as adminMfaEnrollRoute } from '@/app/api/v1/admin/auth/mfa/enroll/route';
 import { POST as adminMfaVerifyRoute } from '@/app/api/v1/admin/auth/mfa/verify/route';
@@ -79,6 +80,9 @@ async function deliveredCodOrder() {
 }
 
 type Item = { paymentId: string; orderNumber: string | null; customer: string | null; expectedAmount: number; shortfallAmount: number | null; statementRef: string | null };
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('orders.codEnabled'));
 
 describe('Admin App: COD monitor (read-only, payments.view)', () => {
   it('awaiting tab lists a delivered COD order; a short statement moves it to shortfalls with the exact gap', async () => {

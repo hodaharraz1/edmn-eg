@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { POST as adminLoginRoute } from '@/app/api/v1/admin/auth/login/route';
 import { POST as adminMfaEnrollRoute } from '@/app/api/v1/admin/auth/mfa/enroll/route';
 import { POST as adminMfaVerifyRoute } from '@/app/api/v1/admin/auth/mfa/verify/route';
@@ -59,6 +60,9 @@ afterEach(async () => {
   setDevicePushSender(); // back to the log driver
   await db.delete(systemSettings).where(eq(systemSettings.key, 'notifications.devicePushEnabled'));
 });
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('notifications.devicePushEnabled'));
 
 describe('device push tokens (PKG-PUSH-01)', () => {
   it('register → upsert → status → unregister through the real routes, bound to the session installation', async () => {

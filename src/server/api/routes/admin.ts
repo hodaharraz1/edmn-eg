@@ -35,7 +35,7 @@ export const adminLogin = defineRoute({
   auth: 'none',
   rate: 'auth',
   errors: ['unauthenticated', 'rate_limited'],
-  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo }),
+  body: z.object({ identifier: z.string().trim().min(3).max(200), password: z.string().min(1).max(200), device: deviceInfo, captchaToken: z.string().max(4096).optional() }),
   response: sessionResult,
   handler: ({ body, meta }) => mobileLogin({ ...body, app: 'ADMIN' }, meta),
 });

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { inventoryReservations, journalEntries, journalLines, ledgerAccounts, orderItems, orders, productVariants, refunds } from '@/server/db/schema';
@@ -45,6 +46,9 @@ async function invariantRowsFor(code: string, ids: string[]) {
   const rows = (inv.checks.find((c) => c.code === code)?.sample ?? []) as Record<string, unknown>[];
   return rows.filter((r) => Object.values(r).some((v) => ids.includes(String(v))));
 }
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('orders.codEnabled', 'orders.codFee', 'orders.codMaxAmount'));
 
 describe('COD-01 — placement guards', () => {
   it('COD is OFF by default: placement is refused in Arabic', async () => {

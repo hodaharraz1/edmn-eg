@@ -25,7 +25,10 @@ export const users = pgTable(
     passwordChangedAt: ts(),
     lastLoginAt: ts(),
     failedLoginCount: integer().notNull().default(0),
+    /** End of the current escalating login delay (SEC-194); not a hard lock. */
     lockedUntil: ts(),
+    /** Time of the last wrong password in the current streak; a streak older than 24h restarts. */
+    lastFailedLoginAt: ts(),
     closedAt: ts(),
     anonymizedAt: ts(),
     /** Marketing messages consent. OFF by default; the customer can withdraw it anytime. Every change is in marketing_consent_events. */

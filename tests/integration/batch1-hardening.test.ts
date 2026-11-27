@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { adminActor, customerActor, sellerActor } from '@/server/auth/actors';
 import { login, verifyTotpForUser } from '@/server/auth/service';
@@ -83,6 +84,9 @@ async function shippedOrder(price = 400_00, buyer?: Awaited<ReturnType<typeof ma
 const disputeText = 'المنتج المستلم مختلف تماماً عن الوصف المعروض في الإعلان';
 
 /* ═══════════════════════════ C1 — dispute resolution & holds ═══════════════════════════ */
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('withdrawals.dualControlThreshold', 'fees.ownerApproved', 'fees.buyerShareBps', 'payments.realMoneyEnabled'));
+
 describe('C1 — a dispute (financial hold) leaves the open states only through a formal decision', () => {
   it('a generic status edit can never resolve or close an open dispute, and the hold stays', async () => {
     const { c, so } = await shippedOrder();

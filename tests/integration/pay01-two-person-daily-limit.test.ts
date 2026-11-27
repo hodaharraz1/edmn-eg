@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { financialApprovals, payments } from '@/server/db/schema';
@@ -29,6 +30,9 @@ async function freshSubmittedProof(claimedEgp?: string) {
   );
   return { c, order, pay, submission };
 }
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('payments.dailyReceiptLimit'));
 
 describe('PAY-01 — payment confirmation is two-person (reviewer ≠ confirmer)', () => {
   it('confirmation without a started review is refused', async () => {

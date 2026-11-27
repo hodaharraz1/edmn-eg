@@ -305,13 +305,16 @@ describe('authentication (AUTH-01, AUTH-02, AUTH-06, 2FA)', () => {
     else process.env.VERCEL = prev;
   });
 
-  it('SEC-AU-2: parallel wrong passwords still lock the account (atomic counter); a lock looks like a wrong password', async () => {
+  it('SEC-AU-2 (SEC-194 L3): parallel wrong passwords start an escalating delay (atomic counter); a delay looks like a wrong password; no hard lock', async () => {
     const u = await makeUser();
     const meta = { ip: `10.9.${Math.floor(Math.random() * 200)}.${Math.floor(Math.random() * 200)}` };
     await Promise.allSettled(Array.from({ length: 8 }, () => login(u.email!, 'wrong-password', 'WEB', meta)));
     const [row] = await db.select().from(users).where(eq(users.id, u.id));
-    expect(row.lockedUntil && row.lockedUntil > new Date()).toBe(true);
-    await expect(login(u.email!, 'Test@12345', 'WEB', meta)).rejects.toThrow(/بيانات الدخول غير صحيحة/);
+    expect(row.failedLoginCount).toBe(8); // atomic: all 8 counted, none lost (no reset to 0 as the old lock did)
+    expect(row.lastFailedLoginAt).toBeTruthy();
+    expect(row.lockedUntil && row.lockedUntil > new Date()).toBe(true); // the delay window
+    expect(row.lockedUntil!.getTime() - Date.now()).toBeLessThanOrEqual(15 * 60_000); // bounded by the ceiling, never a 15-min-per-8 hard lock that grows unbounded
+    await expect(login(u.email!, 'Test@12345', 'WEB', meta)).rejects.toThrow(/بيانات الدخول غير صحيحة/); // right password is also delayed, same generic error
   });
 
   it('SEC-AU-3: open-redirect payloads are neutralised', () => {

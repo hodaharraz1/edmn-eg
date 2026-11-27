@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, afterAll } from 'vitest';
+import { resetSettings } from '../helpers/settings';
 import { eq } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { codRemittanceShortfalls } from '@/server/db/schema';
@@ -39,6 +40,9 @@ async function deliveredCodOrder() {
   const pay = await paymentOf(order.id);
   return { order, so, pay };
 }
+
+// Shared settings this file changes go back to their defaults, even when a test fails midway (Q3, PKG-FOLLOWUP-01).
+afterAll(() => resetSettings('orders.codEnabled'));
 
 describe('COD-03 — write-off of a courier shortfall needs finance.release on both parties', () => {
   async function openShortfall(gap: number) {

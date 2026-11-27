@@ -152,12 +152,12 @@ export interface MobileSessionResult {
 }
 
 export async function mobileLogin(
-  input: { identifier: string; password: string; app: MobileApp; device: DeviceInput },
+  input: { identifier: string; password: string; app: MobileApp; device: DeviceInput; captchaToken?: string },
   meta: RequestMeta,
 ): Promise<MobileSessionResult> {
   const device = deviceSchema.parse(input.device);
   const scope = scopeForApp(input.app);
-  const res = await login(input.identifier, input.password, scope, { ...meta, channel: scope }, { ipLimit: 300 });
+  const res = await login(input.identifier, input.password, scope, { ...meta, channel: scope }, { ipLimit: 300, captchaToken: input.captchaToken });
   const bound = await bindDevice(res.token, res.user.id, input.app, device, { ...meta, channel: scope });
   return {
     user: { id: res.user.id, fullName: res.user.fullName, isStaff: res.user.isStaff },
