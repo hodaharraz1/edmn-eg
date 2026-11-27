@@ -116,7 +116,6 @@ class _SunburstHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = EdmnLocalizations.of(context);
-    final cartCount = ref.watch(cartCountProvider);
     return EdmnSunburstBackground(
       child: SafeArea(
         bottom: false,
@@ -125,14 +124,7 @@ class _SunburstHeader extends ConsumerWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
               const Expanded(child: _LocationPill()),
-              _CircleButton(
-                key: const Key('home-cart'),
-                icon: Icons.shopping_cart_outlined,
-                badge: cartCount,
-                tooltip: t.cartTitle,
-                onTap: () => context.go('/cart'),
-              ),
-              const SizedBox(width: EdmnSpacing.xs),
+              // The cart lives in the bottom bar (tab + count badge); no second cart button up here (owner feedback).
               _CircleButton(
                 key: const Key('home-account'),
                 icon: Icons.person_outline_rounded,
@@ -209,17 +201,16 @@ class _LocationPill extends ConsumerWidget {
 }
 
 class _CircleButton extends StatelessWidget {
-  const _CircleButton({super.key, required this.icon, required this.tooltip, required this.onTap, this.badge = 0, this.filled = false});
+  const _CircleButton({super.key, required this.icon, required this.tooltip, required this.onTap, this.filled = false});
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
-  final int badge;
   final bool filled;
 
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: badge > 0 ? '$tooltip ($badge)' : tooltip,
+        label: tooltip,
         excludeSemantics: true,
         child: InkWell(
           onTap: onTap,
@@ -239,22 +230,6 @@ class _CircleButton extends StatelessWidget {
                   decoration: const BoxDecoration(color: EdmnColors.surface, shape: BoxShape.circle, boxShadow: EdmnShadows.card),
                   child: Icon(icon, color: filled ? EdmnColors.brandRed : EdmnColors.primary, size: EdmnSizes.icon),
                 ),
-                if (badge > 0)
-                  PositionedDirectional(
-                    top: -4,
-                    end: -4,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: EdmnColors.brandRed,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: EdmnColors.surface, width: 2),
-                      ),
-                      child: Text(badge > 99 ? '99+' : '$badge', style: EdmnType.caption.copyWith(color: EdmnColors.onPrimary, fontWeight: FontWeight.w800, height: 1.1)),
-                    ),
-                  ),
               ],
             ),
           ),
