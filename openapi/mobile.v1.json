@@ -7440,7 +7440,8 @@
                       "ETISALAT_CASH",
                       "WE_PAY",
                       "BM_WALLET",
-                      "COD"
+                      "COD",
+                      "WALLET"
                     ]
                   }
                 },
@@ -13340,7 +13341,8 @@
                       "ETISALAT_CASH",
                       "WE_PAY",
                       "BM_WALLET",
-                      "COD"
+                      "COD",
+                      "WALLET"
                     ]
                   },
                   "checkoutKey": {
@@ -14059,7 +14061,8 @@
                         "ETISALAT_CASH",
                         "WE_PAY",
                         "BM_WALLET",
-                        "COD"
+                        "COD",
+                        "WALLET"
                       ]
                     },
                     "status": {
@@ -33923,7 +33926,8 @@
                     "ETISALAT_CASH",
                     "WE_PAY",
                     "BM_WALLET",
-                    "COD"
+                    "COD",
+                    "WALLET"
                   ]
                 },
                 "nameAr": {
@@ -35166,7 +35170,8 @@
               "ETISALAT_CASH",
               "WE_PAY",
               "BM_WALLET",
-              "COD"
+              "COD",
+              "WALLET"
             ]
           },
           "status": {

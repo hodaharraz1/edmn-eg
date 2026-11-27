@@ -253,6 +253,13 @@
       "when": 1796053017676,
       "tag": "0035_two_person_privileged_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1796139417676,
+      "tag": "0036_wallet_spend",
+      "breakpoints": true
     }
   ]
 }

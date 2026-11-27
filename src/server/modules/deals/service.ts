@@ -743,10 +743,18 @@ export async function startDealPayment(actor: Actor, dealId: string, method: Pay
       }
       return existing;
     }
-    const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
-    if (!m?.isEnabled) throw validation('طريقة الدفع دي مش متاحة');
-    const dests = await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
-    if (!dests.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي');
+    // PKG-WALLET-02: wallet funding — gated by wallet.topUpEnabled, no transfer destinations.
+    const isWallet = method === 'WALLET';
+    if (isWallet) {
+      if (!(await getSetting('wallet.topUpEnabled', tx))) throw validation('الدفع من المحفظة مش متاح حاليًا');
+    } else {
+      const [m] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, method));
+      if (!m?.isEnabled) throw validation('طريقة الدفع دي مش متاحة');
+    }
+    const dests = isWallet
+      ? []
+      : await tx.select().from(paymentDestinations).where(and(eq(paymentDestinations.methodCode, method), offeredDestinations(await realMoneyEnabled(tx)))).orderBy(asc(paymentDestinations.sortOrder));
+    if (!isWallet && !dests.length) throw validation('طريقة الدفع دي مش جاهزة دلوقتي');
     const hours = await getSetting('payments.paymentWindowHours', tx);
     const [p] = await tx
       .insert(payments)
@@ -755,13 +763,18 @@ export async function startDealPayment(actor: Actor, dealId: string, method: Pay
         payerUserId: deal.buyerId,
         isTest: !(await realMoneyEnabled(tx)),
         method,
-        destinationId: dests[0].id,
-        destinationSnapshot: dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
+        destinationId: isWallet ? null : dests[0].id,
+        destinationSnapshot: isWallet ? [] : dests.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: deal.buyerPays!,
         dueAt: new Date(Date.now() + hours * 3600_000),
       })
       .returning();
     await recordTransition(tx, actor, 'payment', p.id, null, 'AWAITING_PAYMENT');
+    // PKG-WALLET-02: wallet funding settles inside this transaction (rolls back on low balance).
+    if (isWallet) {
+      const { payDealWithWallet } = await import('@/server/modules/finance/wallet-spend');
+      await payDealWithWallet(tx, actor, deal, p);
+    }
     return p;
   });
 }
@@ -1270,7 +1283,9 @@ export async function approveDealRefundTx(tx: DbOrTx, actor: Actor, refund: type
   const [deal] = await tx.select().from(externalDeals).where(eq(externalDeals.id, refund.dealId!)).for('update');
   if (deal.status !== 'REFUND_PENDING') throw invalidState('حالة الصفقة لا تسمح بالاسترداد');
   if (refund.amount !== deal.buyerPays) throw invalidState('مبلغ الاسترداد لا يطابق المبلغ المحجوز');
-  await postEntry(tx, actor, {
+  // PKG-WALLET-02: a wallet-paid deal is refunded to the wallet (SPEND_REVERSAL), not a payable + staff transfer.
+  const toWallet = (refund.destinationSnapshot as { method?: string } | null)?.method === 'WALLET';
+  const { entryId: dealRefundEntryId } = await postEntry(tx, actor, {
     entryType: 'DEAL_REFUND',
     sourceType: 'external_deal',
     sourceId: deal.id,
@@ -1279,9 +1294,15 @@ export async function approveDealRefundTx(tx: DbOrTx, actor: Actor, refund: type
     approvalId,
     lines: [
       { account: { code: 'DEAL_FUNDS_HELD' }, debit: deal.buyerPays! },
-      { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
+      { account: { code: toWallet ? 'CUSTOMER_WALLETS' : 'CUSTOMER_REFUNDS_PAYABLE' }, credit: deal.buyerPays! },
     ],
   });
+  if (toWallet) {
+    const { lockWalletUser } = await import('@/server/modules/finance/wallet-spend');
+    await lockWalletUser(tx, refund.customerId);
+    const { customerWalletEntries } = await import('@/server/db/schema');
+    await tx.insert(customerWalletEntries).values({ userId: refund.customerId, journalEntryId: dealRefundEntryId, amount: refund.amount, kind: 'SPEND_REVERSAL' });
+  }
   await moveDeal(tx, actor, deal, 'REFUNDED', {}, 'اعتماد الاسترداد');
 }
 

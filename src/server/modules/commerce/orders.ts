@@ -120,9 +120,13 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     // Cash on delivery has no company destination: the courier collects at the door. Every other
     // method still needs an enabled method row with at least one offered destination.
     const isCod = d.paymentMethod === 'COD';
+    // PKG-WALLET-02: paying from the wallet balance — gated by wallet.topUpEnabled, no transfer destinations.
+    const isWallet = d.paymentMethod === 'WALLET';
     let destinations: (typeof paymentDestinations.$inferSelect)[] = [];
     if (isCod) {
       if (!(await getSetting('orders.codEnabled', tx))) throw validation('الدفع عند الاستلام مش متاح دلوقتي');
+    } else if (isWallet) {
+      if (!(await getSetting('wallet.topUpEnabled', tx))) throw validation('الدفع من المحفظة مش متاح حاليًا');
     } else {
       const [method] = await tx.select().from(paymentMethods).where(eq(paymentMethods.code, d.paymentMethod));
       if (!method?.isEnabled) throw validation('طريقة الدفع دي مش متاحة دلوقتي');
@@ -318,8 +322,8 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
         isTest: !(await realMoneyEnabled(tx)),
         method: d.paymentMethod,
         status: isCod ? 'COD_PENDING' : 'AWAITING_PAYMENT',
-        destinationId: isCod ? null : destinations[0].id,
-        destinationSnapshot: isCod ? [] : destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
+        destinationId: isCod || isWallet ? null : destinations[0].id,
+        destinationSnapshot: isCod || isWallet ? [] : destinations.map((x) => ({ label: x.label, details: x.details, instructions: x.instructionsAr, isTest: x.isTest })),
         amountDue: order.grandTotal,
         dueAt,
       })
@@ -327,7 +331,12 @@ async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof 
     await transitionNew(tx, actor, 'payment', payment.id, isCod ? 'COD_PENDING' : 'AWAITING_PAYMENT');
     await clearVariants(tx, customerId, lines.map((l) => l.variantId));
     // Cash-on-delivery orders cannot expire unpaid — fulfilment starts at once, below.
-    if (!isCod) await enqueueJob(tx, 'orders.expire', { orderId: order.id }, { runAt: new Date(dueAt.getTime() + 60_000) });
+    if (!isCod && !isWallet) await enqueueJob(tx, 'orders.expire', { orderId: order.id }, { runAt: new Date(dueAt.getTime() + 60_000) });
+    // PKG-WALLET-02: wallet payment settles inside this transaction (fails loudly and rolls back on low balance).
+    if (isWallet) {
+      const { payOrderWithWallet } = await import('@/server/modules/finance/wallet-spend');
+      await payOrderWithWallet(tx, actor, order, payment);
+    }
     if (isCod) {
       // No money has moved and no ledger entry exists yet: the courier company's cash is a receivable
       // recorded only when staff confirm the remittance (two people). Stock stays RESERVED until delivery.

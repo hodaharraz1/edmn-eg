@@ -185,7 +185,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select entry_type, source_id, count(*) n from journal_entries
-        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL','WALLET_TOPUP_CREDIT')
+        where entry_type in ('ORDER_PAYMENT','SELLER_RELEASE','DEAL_PAYMENT','DEAL_SETTLEMENT','DEAL_REFUND','WITHDRAWAL_RESERVE','WITHDRAWAL_PAID','WITHDRAWAL_REVERSAL','WITHDRAWAL_RETURNED','DEAL_PAYOUT_PAID','REFUND_REVERSAL','WALLET_TOPUP_CREDIT','WALLET_SPEND')
         group by entry_type, source_id having count(*) > 1`,
     ),
   );
@@ -239,7 +239,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
       sql`select r.id, r.status from refunds r where
         (r.approval_id is not null and r.deal_id is null and not exists (select 1 from journal_entries e where e.idempotency_key = 'refund:' || r.id))
         or (r.approval_id is not null and r.deal_id is not null and not exists (select 1 from journal_entries e where e.source_id = r.deal_id::text and e.entry_type in ('DEAL_REFUND','DEAL_SETTLEMENT')))
-        or (r.status in ('COMPLETED','PAID') and not exists (select 1 from journal_entries e where e.entry_type = 'REFUND_PAID' and e.source_id = r.id::text))`,
+        or (r.status in ('COMPLETED','PAID') and coalesce(r.destination_snapshot->>'method','') <> 'WALLET' and not exists (select 1 from journal_entries e where e.entry_type = 'REFUND_PAID' and e.source_id = r.id::text))`,
     ),
   );
   add(
@@ -248,6 +248,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
     await rows(
       conn,
       sql`select e.id, e.entry_type from journal_entries e where e.approval_id is null
+        and e.entry_type <> 'WALLET_SPEND'
         and e.created_at > coalesce((select min(created_at) from financial_approvals), 'infinity'::timestamptz)`,
     ),
   );

@@ -7,7 +7,7 @@ import type { RefundReasonCode, ResponsibleParty } from '@/server/db/schema';
 import { forbidden, invalidState, notFound, validation } from '@/server/core/errors';
 import { proportion } from '@/server/core/money';
 import { db, type DbOrTx } from '@/server/db/client';
-import { journalEntries, journalLines, ledgerAccounts, orderItems, orders, paymentSubmissions, payments, refundItems, refunds, sellerOrders, statusHistory, users } from '@/server/db/schema';
+import { customerWalletEntries, journalEntries, journalLines, ledgerAccounts, orderItems, orders, paymentSubmissions, payments, refundItems, refunds, sellerOrders, statusHistory, users } from '@/server/db/schema';
 import { notify } from '@/server/modules/notifications/notify';
 import { takeMovementRequest, completeMovementRequest } from './movements';
 import { storeUpload } from '@/server/storage/uploads';
@@ -192,6 +192,8 @@ export async function requestRefundTx(tx: DbOrTx, actor: Actor, input: RefundReq
 /** Authoritative refund destination: back through the ORIGINAL payment method / payer reference. */
 export async function originalPaymentDestination(tx: DbOrTx, payment: typeof payments.$inferSelect | undefined | null) {
   if (!payment) return null;
+  // PKG-WALLET-02: a wallet-paid order/deal is refunded to the wallet — no bank destination, no staff transfer.
+  if (payment.method === 'WALLET') return { method: 'WALLET', details: 'محفظة أضمن', reference: payment.id };
   const [sub] = await tx.select().from(paymentSubmissions).where(and(eq(paymentSubmissions.paymentId, payment.id), eq(paymentSubmissions.status, 'ACCEPTED')));
   return { method: payment.method, paymentId: payment.id, payerName: sub?.payerName ?? null, payerReference: sub?.reference ?? null };
 }
@@ -241,16 +243,19 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
         destinationSnapshot: r.destinationSnapshot as Record<string, unknown>,
         dualControl: { requestedBy: mreq.requestedBy },
       });
+      const dealToWallet = (r.destinationSnapshot as { method?: string } | null)?.method === 'WALLET';
       await approveDealRefundTx(tx, actor, r, approval.id);
       await completeMovementRequest(tx, actor, mreq, approval.id);
       await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', input.reason);
+      if (dealToWallet) await transition(tx, actor, refundMachine, r.id, 'APPROVED', 'COMPLETED', 'اترجع المبلغ لمحفظة العميل مباشرة — لا يوجد تحويل خارجي');
       await tx
         .update(refunds)
-        .set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
+        .set({ status: dealToWallet ? 'COMPLETED' : 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
         .where(eq(refunds.id, r.id));
       await audit(tx, actor, { action: 'refund.approved', entityType: 'refund', entityId: r.id, newValues: { approvalId: approval.id, amount: r.amount, dealId: r.dealId }, reason: input.reason });
       return { alreadyApproved: false, approvalId: approval.id };
     }
+    const toWallet = (r.destinationSnapshot as { method?: string } | null)?.method === 'WALLET';
     const [so] = await tx.select().from(sellerOrders).where(eq(sellerOrders.id, r.sellerOrderId)).for('update');
     await lockSellerFunds(tx, so.sellerId); // B2 lock order: funds lock before the approval/ledger writes
     await assertNotSelfDealing(tx, actor, so.sellerId);
@@ -271,7 +276,7 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
     // Fallback for refund records created before components existed: proportional fee reversal.
     const commission = r.principalAmount + r.shippingAmount + r.buyerFeeRefund > 0 ? r.buyerFeeRefund + r.sellerFeeReversal : r.commissionReversal;
     const liability = r.amount - commission;
-    await postEntry(tx, actor, {
+    const { entryId: refundEntryId } = await postEntry(tx, actor, {
       entryType: 'REFUND',
       sourceType: 'seller_order',
       sourceId: so.id,
@@ -281,16 +286,23 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
       lines: [
         { account: { code: released ? 'SELLER_AVAILABLE' : 'SELLER_PENDING', sellerId: so.sellerId }, debit: liability, memo: 'seller liability' },
         { account: { code: released ? 'COMMISSION_REVENUE' : 'COMMISSION_DEFERRED' }, debit: commission, memo: 'fee reversal (buyer + seller share)' },
-        { account: { code: 'CUSTOMER_REFUNDS_PAYABLE' }, credit: r.amount },
+        // PKG-WALLET-02: wallet-paid → credited back to the customer's wallet (SPEND_REVERSAL), not a payable.
+        { account: { code: toWallet ? 'CUSTOMER_WALLETS' : 'CUSTOMER_REFUNDS_PAYABLE' }, credit: r.amount },
       ],
     });
+    if (toWallet) {
+      const { lockWalletUser } = await import('./wallet-spend');
+      await lockWalletUser(tx, r.customerId);
+      await tx.insert(customerWalletEntries).values({ userId: r.customerId, journalEntryId: refundEntryId, amount: r.amount, kind: 'SPEND_REVERSAL' });
+    }
     // The ledger now carries the seller liability (DR SELLER_AVAILABLE): the refund's hold is consumed.
     if (released) await consumeRefundHold(tx, actor, r.id);
     await transition(tx, actor, refundMachine, r.id, r.status, 'APPROVED', input.reason);
+    if (toWallet) await transition(tx, actor, refundMachine, r.id, 'APPROVED', 'COMPLETED', 'اترجع المبلغ لمحفظة العميل مباشرة — لا يوجد تحويل خارجي');
     // The destination is frozen with the approval: the payout goes exactly there or not at all.
     await tx
       .update(refunds)
-      .set({ status: 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
+      .set({ status: toWallet ? 'COMPLETED' : 'APPROVED', approvalId: approval.id, approvedBy: actor.userId, approvedAt: new Date(), approvedDestination: r.destinationSnapshot, destinationApprovedBy: actor.userId, destinationReapprovalRequired: false })
       .where(eq(refunds.id, r.id));
     await tx.update(sellerOrders).set({ refundedTotal: so.refundedTotal + r.amount }).where(eq(sellerOrders.id, so.id));
     const lines = await tx.select().from(refundItems).where(eq(refundItems.refundId, r.id));
@@ -299,7 +311,13 @@ export async function approveRefund(actor: Actor, refundId: string, input: { exp
       await tx.update(orderItems).set({ refundedQuantity: it.refundedQuantity + l.quantity }).where(eq(orderItems.id, it.id));
     }
     await audit(tx, actor, { action: 'refund.approved', entityType: 'refund', entityId: r.id, newValues: { approvalId: approval.id, amount: r.amount, sellerLiability: liability, feeReversal: commission, released }, reason: input.reason });
-    await notify(tx, { event: 'REFUND_UPDATED', userIds: [r.customerId], vars: { status: 'تم اعتماد الاسترداد وهو بانتظار التحويل', amount: formatEGP(r.amount) }, link: '/account', dedupeKey: `refund:${r.id}:approved` });
+    await notify(tx, {
+      event: 'REFUND_UPDATED',
+      userIds: [r.customerId],
+      vars: { status: toWallet ? 'اترجع المبلغ لرصيد محفظتك' : 'تم اعتماد الاسترداد وهو بانتظار التحويل', amount: formatEGP(r.amount) },
+      link: '/account',
+      dedupeKey: `refund:${r.id}:approved`,
+    });
     return { alreadyApproved: false, approvalId: approval.id };
   });
 }

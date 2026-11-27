@@ -21,16 +21,16 @@ type SellerOrder = typeof sellerOrders.$inferSelect;
  * 4. Refund paid out (separate approval):      DR CUSTOMER_REFUNDS_PAYABLE / CR PLATFORM_CASH
  * Every entry executes an operation-specific Admin approval (financial_approvals).
  */
-export async function postSellerOrderPayment(tx: DbOrTx, actor: Actor, paymentId: string, so: SellerOrder, approvalId: string) {
+export async function postSellerOrderPayment(tx: DbOrTx, actor: Actor, paymentId: string, so: SellerOrder, approvalId: string | null, opts?: { debitAccount?: 'PLATFORM_CASH' | 'CUSTOMER_WALLETS'; entryType?: string }) {
   return postEntry(tx, actor, {
-    entryType: 'ORDER_PAYMENT',
+    entryType: opts?.entryType ?? 'ORDER_PAYMENT',
     sourceType: 'seller_order',
     sourceId: so.id,
     idempotencyKey: `payment:${paymentId}:so:${so.id}`,
     description: `تأكيد دفع الطلب الفرعي ${so.suffix}`,
     approvalId,
     lines: [
-      { account: { code: 'PLATFORM_CASH' }, debit: so.grossTotal, memo: 'customer payment (products + shipping + buyer fee)' },
+      { account: { code: opts?.debitAccount ?? 'PLATFORM_CASH' }, debit: so.grossTotal, memo: opts?.debitAccount === 'CUSTOMER_WALLETS' ? 'customer wallet spend (products + shipping + buyer fee)' : 'customer payment (products + shipping + buyer fee)' },
       { account: { code: 'SELLER_PENDING', sellerId: so.sellerId }, credit: so.sellerNet, memo: 'seller payable (pending): products + shipping − seller fee' },
       // The fee is shown as its two components (deferred until the Admin release recognizes it).
       ...(so.buyerFeeTotal + so.sellerFeeTotal === so.commissionTotal && so.commissionTotal > 0

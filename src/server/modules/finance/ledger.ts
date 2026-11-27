@@ -109,7 +109,12 @@ export async function postEntry(tx: DbOrTx, actor: Actor, input: PostInput): Pro
     .from(journalEntries)
     .where(eq(journalEntries.idempotencyKey, input.idempotencyKey));
   if (existing) return { entryId: existing.id, created: false };
-  if (!input.approvalId) throw new DomainError('FORBIDDEN', 'لا يمكن تسجيل أي حركة مالية بدون موافقة صريحة من الإدارة');
+  if (!input.approvalId) {
+    // PKG-WALLET-02 (owner brief): spending a customer's OWN wallet balance needs no staff review — no outside
+    // money arrives (the deposit was credited two-person); the spend is audited and mirrored in the sub-ledger.
+    // Mirrored at DB level by edmn_journal_requires_approval (0036). Everything else still requires approval.
+    if (input.entryType !== 'WALLET_SPEND') throw new DomainError('FORBIDDEN', 'لا يمكن تسجيل أي حركة مالية بدون موافقة صريحة من الإدارة');
+  }
 
   const lines = input.lines.filter((l) => (l.debit ?? 0) !== 0 || (l.credit ?? 0) !== 0);
   let dr = 0;
