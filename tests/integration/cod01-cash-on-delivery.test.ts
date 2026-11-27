@@ -9,7 +9,7 @@ import { priceLines } from '@/server/modules/commerce/pricing';
 import { cancelSellerOrder, confirmReceipt, recordShipmentException, resolveShipmentException } from '@/server/modules/commerce/fulfilment';
 import { recordCodRemittance } from '@/server/modules/payments/service';
 import { startDealPayment } from '@/server/modules/deals/service';
-import { updateSetting } from '@/server/modules/settings';
+import { settingDefault, updateSetting } from '@/server/modules/settings';
 import type { Actor } from '@/server/core/actor';
 import { financialInvariants } from '@/server/modules/finance/controls';
 import { ensurePaymentSetup, makeAdmin, makeCustomer, makeProduct, makeSeller, makerRequest, paymentOf, sellerOrdersOf, shipIt } from '../helpers/factory';
@@ -48,6 +48,9 @@ async function invariantRowsFor(code: string, ids: string[]) {
 
 describe('COD-01 — placement guards', () => {
   it('COD is OFF by default: placement is refused in Arabic', async () => {
+    // The default is OFF; other files share the settings table, so pin the default state instead of trusting file order.
+    expect(settingDefault('orders.codEnabled')).toBe(false);
+    await updateSetting(admin, 'orders.codEnabled', false, 'الوضع الافتراضي للاختبار');
     const s = await makeSeller(admin);
     const p = await makeProduct(s.actor, admin, { stock: 3 });
     const c = await makeCustomer();

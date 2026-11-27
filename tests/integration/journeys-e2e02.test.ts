@@ -88,6 +88,7 @@ async function releaseToSeller(buyer: Actor, soId: string) {
 // Journey (3) turns the shared wallet flag on: close it again so other test files see the default (off).
 afterAll(async () => {
   await updateSetting(admin, 'wallet.topUpEnabled', false, 'إعادة الفلاج للوضع الافتراضي بعد الاختبار');
+  await updateSetting(admin, 'orders.codEnabled', false, 'إعادة الدفع عند الاستلام للوضع الافتراضي بعد الاختبار');
 });
 
 describe('PKG-E2E-02 (1) — رحلة السوق الكاملة: تاجرين ← تأكيد ← شحن ← استلام ← إتاحة ← سحب', () => {
