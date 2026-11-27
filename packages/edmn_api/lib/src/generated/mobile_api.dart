@@ -5248,9 +5248,9 @@ class SaveSellerStoreSettingsRequest {
 }
 
 class SearchProductsResponse {
-  const SearchProductsResponse({required this.items, required this.page, required this.pageSize, required this.total, required this.pages});
+  const SearchProductsResponse({required this.items, required this.page, required this.pageSize, required this.total, required this.pages, required this.nextCursor});
 
-  factory SearchProductsResponse.fromJson(Map<String, dynamic> json) => SearchProductsResponse(items: (json['items'] as List).map((e) => ProductCard.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), pageSize: (json['pageSize'] as num).toInt(), total: (json['total'] as num).toInt(), pages: (json['pages'] as num).toInt());
+  factory SearchProductsResponse.fromJson(Map<String, dynamic> json) => SearchProductsResponse(items: (json['items'] as List).map((e) => ProductCard.fromJson(e as Map<String, dynamic>)).toList(), page: (json['page'] as num).toInt(), pageSize: (json['pageSize'] as num).toInt(), total: (json['total'] as num).toInt(), pages: (json['pages'] as num).toInt(), nextCursor: json['nextCursor'] as String?);
 
   final List<ProductCard> items;
 
@@ -5262,7 +5262,9 @@ class SearchProductsResponse {
 
   final int pages;
 
-  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'total': total, 'pages': pages};
+  final String? nextCursor;
+
+  Map<String, dynamic> toJson() => {'items': items.map((e) => e.toJson()).toList(), 'page': page, 'pageSize': pageSize, 'total': total, 'pages': pages, 'nextCursor': nextCursor};
 }
 
 class SellerApplication {

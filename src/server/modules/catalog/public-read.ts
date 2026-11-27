@@ -77,7 +77,7 @@ export async function publicProductSearch(query: SearchQuery & { storeSlug?: str
   // A store filter only ever narrows to a publicly visible store; an unknown or hidden store is an empty page.
   if (storeSlug) {
     const store = await publicStoreBySlug(storeSlug);
-    if (!store) return { items: [], page: 1, pageSize: rest.pageSize ?? 24, total: 0, pages: 0 };
+    if (!store) return { items: [], page: 1, pageSize: rest.pageSize ?? 24, total: 0, pages: 0, nextCursor: null };
     rest.sellerId = store.seller.id;
   } else {
     delete rest.sellerId;
@@ -89,6 +89,7 @@ export async function publicProductSearch(query: SearchQuery & { storeSlug?: str
     pageSize: r.pageSize,
     total: r.total,
     pages: r.pages,
+    nextCursor: r.nextCursor,
   };
 }
 

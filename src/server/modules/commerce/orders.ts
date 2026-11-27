@@ -57,6 +57,21 @@ export function orderLabel(number: number, suffix?: string) {
  *  - one parent order + one seller sub-order per seller; immutable item & commission snapshots
  *  - inventory reserved with conditional updates (cannot oversell the last unit)
  */
+/**
+ * PKG-PERF-01 (P3): checkout must not queue behind a hot product. Every checkout transaction caps how long it may
+ * wait for a row/advisory lock (2.5 s) and how long it may run (15 s), and a lock timeout/deadlock is reported as a
+ * clear "nothing was reserved, try again" conflict instead of a raw 500 or an open connection. The reservation is
+ * all-or-nothing inside the transaction, so a refused checkout leaves no partial order and no ledger entry.
+ */
+const CHECKOUT_LOCK_TIMEOUT_MS = 2_500;
+const CHECKOUT_STATEMENT_TIMEOUT_MS = 15_000;
+const LOCK_CONTENTION_CODES = new Set(['55P03', '40P01', '57014']);
+
+function isLockContention(e: unknown): boolean {
+  const code = (e as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && LOCK_CONTENTION_CODES.has(code);
+}
+
 export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSchema>) {
   const customerId = requireUser(actor);
   // A closed shop says so first (before form validation or identity requirements).
@@ -72,12 +87,18 @@ export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSch
   } catch (e) {
     // The customer has now been shown the current prices: accept them so the next review passes.
     if (e instanceof DomainError && e.code === 'CONFLICT') await acknowledgePrices(db, { userId: customerId });
+    if (isLockContention(e)) {
+      throw new DomainError('CONFLICT', 'المنتج عليه طلبات كتير في نفس اللحظة. مفيش أي حجز اتعمل ولا أي مبلغ اتخصم — جرّب تأكيد الطلب تاني بعد لحظات');
+    }
     throw e;
   }
 }
 
 async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof checkoutSchema>) {
   return db.transaction(async (tx) => {
+    // P3: bound the wait for a lock instead of holding a request open behind a hot row.
+    await tx.execute(sql`set local lock_timeout = ${`${CHECKOUT_LOCK_TIMEOUT_MS}ms`}`);
+    await tx.execute(sql`set local statement_timeout = ${`${CHECKOUT_STATEMENT_TIMEOUT_MS}ms`}`);
     // Serialize concurrent checkouts of the same customer, then check idempotency.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'checkout:' + customerId}))`);
     const [dupe] = await tx.select().from(orders).where(and(eq(orders.customerId, customerId), eq(orders.checkoutKey, d.checkoutKey)));

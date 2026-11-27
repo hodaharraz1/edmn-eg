@@ -1871,6 +1871,16 @@
             }
           },
           {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Keyset cursor from the previous response nextCursor; preferred over page for page 2+.",
+            "schema": {
+              "type": "string",
+              "maxLength": 600
+            }
+          },
+          {
             "name": "X-EDMN-Installation",
             "in": "header",
             "required": false,
@@ -1914,6 +1924,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     }
                   },
                   "required": [
@@ -1921,7 +1937,8 @@
                     "page",
                     "pageSize",
                     "total",
-                    "pages"
+                    "pages",
+                    "nextCursor"
                   ]
                 }
               }
