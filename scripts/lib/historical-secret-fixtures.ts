@@ -18,6 +18,10 @@ const REVIEWED = [
   { commit: 'f351571957fa5cf9934e581cf20cf3cc216ba61a', file: 'src/app/admin/(console)/notifications/page.tsx',
     lineHash: 'f09d525604f86d548bdb7387bc515690cba35903fab706d448c4819d36945e70',
     rules: ['private-key-block'] },
+  // PKG-INFRA-01 v3: a commented pooler URL with literal <user>:<pass> PLACEHOLDERS (no credential); replaced in 2c36367.
+  { commit: 'cdf9cb961368d39143eccfb3c8725c19b1b883c1', file: 'deploy/compose/docker-compose.extra.yml',
+    lineHash: '248a69ca6c289cd7a2e3021d8ab4f04f3dee3bf3654ad639566eb5c7b7123d5e',
+    rules: ['postgres-url-with-password'] },
 ];
 
 export function reviewedHistoricalFixture(commit: string, file: string, line: string, rule: string): boolean {

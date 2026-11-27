@@ -12,7 +12,6 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate } from 'k6/metrics';
-import exec from 'k6/execution';
 
 const BASE = __ENV.BASE_URL || 'http://127.0.0.1:3000';
 // Fixtures (perf/README.md §2): a LIVE product, a variant with stock, an approved test customer.
