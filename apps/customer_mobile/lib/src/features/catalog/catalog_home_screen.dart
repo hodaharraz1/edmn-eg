@@ -224,19 +224,38 @@ class _CircleButton extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           customBorder: const CircleBorder(),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: filled ? EdmnColors.surface : EdmnColors.surface.withValues(alpha: 0.75),
-              shape: BoxShape.circle,
-              boxShadow: EdmnShadows.card,
-            ),
-            child: Badge(
-              isLabelVisible: badge > 0,
-              backgroundColor: EdmnColors.brandRed,
-              label: Text('$badge'),
-              child: Icon(icon, color: filled ? EdmnColors.brandRed : EdmnColors.sunburstText, size: EdmnSizes.icon),
+          // Solid white circle with the icon dead-centre; the count is a small red dot pinned to the circle's top
+          // corner (owner feedback 2026-11-27: the translucent circle with a floating badge looked broken).
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(color: EdmnColors.surface, shape: BoxShape.circle, boxShadow: EdmnShadows.card),
+                  child: Icon(icon, color: filled ? EdmnColors.brandRed : EdmnColors.primary, size: EdmnSizes.icon),
+                ),
+                if (badge > 0)
+                  PositionedDirectional(
+                    top: -4,
+                    end: -4,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: EdmnColors.brandRed,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: EdmnColors.surface, width: 2),
+                      ),
+                      child: Text(badge > 99 ? '99+' : '$badge', style: EdmnType.caption.copyWith(color: EdmnColors.onPrimary, fontWeight: FontWeight.w800, height: 1.1)),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
