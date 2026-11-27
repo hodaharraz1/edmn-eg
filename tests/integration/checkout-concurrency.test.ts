@@ -42,15 +42,17 @@ describe('PERF-01/P3 — 200 concurrent checkouts on one variant', () => {
     const p = await makeProduct(seller.actor, admin, { stock: STOCK, price: 10000 });
 
     // Every buyer prepares their cart and reads their expected total before the race starts.
-    const buyers = await Promise.all(
-      Array.from({ length: BUYERS }, async () => {
-        const c = await makeCustomer();
-        await addToCart({ userId: c.user.id }, p.variantId, 1);
-        const lines = await cartLines(db, { userId: c.user.id });
-        const priced = await priceLines(db, lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), c.address.governorateId);
-        return { c, expectedTotal: priced.grandTotal, checkoutKey: randomUUID() };
-      }),
-    );
+    // Setup is NOT the race: build the 200 buyers in small batches so account creation (password hashing, several
+    // inserts each) does not exhaust the connection pool before the race even starts.
+    const prepare = async () => {
+      const c = await makeCustomer();
+      await addToCart({ userId: c.user.id }, p.variantId, 1);
+      const lines = await cartLines(db, { userId: c.user.id });
+      const priced = await priceLines(db, lines.map((l) => ({ variantId: l.variantId, quantity: l.quantity })), c.address.governorateId);
+      return { c, expectedTotal: priced.grandTotal, checkoutKey: randomUUID() };
+    };
+    const buyers: Awaited<ReturnType<typeof prepare>>[] = [];
+    for (let i = 0; i < BUYERS; i += 8) buyers.push(...(await Promise.all(Array.from({ length: Math.min(8, BUYERS - i) }, prepare))));
 
     // The race: every buyer retries the SAME checkoutKey until the order lands or stock is honestly gone.
     const attempt = async (b: (typeof buyers)[number]): Promise<{ ok: boolean; orderId?: string; error?: unknown }> => {

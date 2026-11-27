@@ -97,8 +97,8 @@ export async function placeOrder(actor: Actor, input: z.input<typeof checkoutSch
 async function placeOrderTx(actor: Actor, customerId: string, d: z.infer<typeof checkoutSchema>) {
   return db.transaction(async (tx) => {
     // P3: bound the wait for a lock instead of holding a request open behind a hot row.
-    await tx.execute(sql`set local lock_timeout = ${`${CHECKOUT_LOCK_TIMEOUT_MS}ms`}`);
-    await tx.execute(sql`set local statement_timeout = ${`${CHECKOUT_STATEMENT_TIMEOUT_MS}ms`}`);
+    // SET cannot take a bind parameter; set_config(..., is_local => true) is the parameterised SET LOCAL.
+    await tx.execute(sql`select set_config('lock_timeout', ${String(CHECKOUT_LOCK_TIMEOUT_MS)}, true), set_config('statement_timeout', ${String(CHECKOUT_STATEMENT_TIMEOUT_MS)}, true)`);
     // Serialize concurrent checkouts of the same customer, then check idempotency.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'checkout:' + customerId}))`);
     const [dupe] = await tx.select().from(orders).where(and(eq(orders.customerId, customerId), eq(orders.checkoutKey, d.checkoutKey)));

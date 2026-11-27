@@ -42,7 +42,7 @@ class CatalogHomeScreen extends ConsumerWidget {
                 ref.invalidate(featuredProductsProvider);
                 ref.invalidate(latestProductsProvider);
                 ref.invalidate(categoriesProvider);
-                await ref.read(featuredProductsProvider.future).catchError((_) => const SearchProductsResponse(items: [], page: 1, pageSize: 0, total: 0, pages: 0));
+                await ref.read(featuredProductsProvider.future).catchError((_) => const SearchProductsResponse(items: [], page: 1, pageSize: 0, total: 0, pages: 0, nextCursor: null));
               },
               child: CustomScrollView(
                 key: const PageStorageKey('home'),

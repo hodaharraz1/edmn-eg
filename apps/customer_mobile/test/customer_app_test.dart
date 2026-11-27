@@ -480,7 +480,7 @@ class FakeMobileApi extends MobileApi {
           ProductCard(id: 'p1', slug: 'headphones', titleAr: 'سماعة لاسلكية', condition: 'NEW', usedGrade: null, minPricePiastres: 125050, compareAtPricePiastres: null,
               inStock: true, ratingAvg: 4.5, ratingCount: 3, store: const ProductCardStore(name: 'متجر القاهرة', slug: 'cairo', verified: true), imageUrl: null, defaultVariantId: 'v1', variantCount: 1),
         ],
-        page: 1, pageSize: pageSize, total: 1, pages: 1,
+        page: 1, pageSize: pageSize, total: 1, pages: 1, nextCursor: null,
       );
 
   @override
