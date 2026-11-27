@@ -101,11 +101,13 @@ class _FloatingNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const accentBg = EdmnColors.accent;
+    // Owner decision (PKG-THEME-01 review): a lime circle on the frosted white bar is almost invisible (1.09:1),
+    // so the active tab is a Cobalt circle carrying a lime icon (6.19:1), keeping lime as the 10% accent.
+    const accentBg = EdmnColors.primary;
     final icon = Icon(
       selected ? item.activeIcon : item.icon,
       size: EdmnSizes.icon,
-      color: selected ? EdmnColors.onAccent : EdmnColors.sunburstText,
+      color: selected ? EdmnColors.accent : EdmnColors.sunburstText,
     );
     final circle = AnimatedContainer(
       duration: reduceMotion ? Duration.zero : EdmnMotion.normal,

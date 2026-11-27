@@ -64,7 +64,7 @@ void main() {
     expect(tapped, [2, 3]);
   });
 
-  testWidgets('the active tab carries the lime accent circle; the others stay transparent', (t) async {
+  testWidgets('the active tab is a Cobalt circle (lime icon); the others stay transparent', (t) async {
     await t.pumpWidget(_host(currentIndex: 2, onTap: (_) {}));
     final circles = t
         .widgetList<AnimatedContainer>(
@@ -72,7 +72,7 @@ void main() {
         )
         .map((c) => (c.decoration as BoxDecoration).color)
         .toList();
-    expect(circles, [Colors.transparent, Colors.transparent, EdmnColors.accent, Colors.transparent]);
+    expect(circles, [Colors.transparent, Colors.transparent, EdmnColors.primary, Colors.transparent]);
   });
 
   testWidgets('every tab meets the 48px touch-target minimum', (t) async {
