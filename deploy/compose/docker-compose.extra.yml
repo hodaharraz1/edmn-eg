@@ -43,5 +43,5 @@ services:
       retries: 5
 
 # Set on the web/worker service to route through the pooler:
-#   DATABASE_URL: postgresql://<user>:<pass>@pgbouncer:5432/<db>
+#   DATABASE_URL: postgresql://user:pass@pgbouncer:5432/<db>   (placeholders)
 # Keep migrations on the direct connection (DATABASE_URL_UNPOOLED) — DDL and advisory locks need a session.

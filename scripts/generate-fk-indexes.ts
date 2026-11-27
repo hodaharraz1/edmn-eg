@@ -32,7 +32,7 @@ for (const table of Object.values(schema)) {
   } catch {
     continue; // not a pgTable (enums, relations helpers, types)
   }
-  const indexPrefixes = config.indexes.map((ix) => ix.config.columns.map((c) => ('name' in c ? snake(c.name) : String(c))));
+  const indexPrefixes = config.indexes.map((ix) => ix.config.columns.map((c) => ('name' in c ? snake(c.name ?? '') : String(c))));
   for (const fk of config.foreignKeys) {
     const ref = fk.reference();
     const localCols = ref.columns.map((c) => snake(c.name));
