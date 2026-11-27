@@ -101,7 +101,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({String? captchaToken}) async {
     if (!_form.currentState!.validate()) return;
     setState(() {
       _busy = true;
@@ -109,7 +109,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     });
     try {
       final store = ref.read(sessionStoreProvider);
-      await ref.read(mobileApiProvider).login(identifier: _identifier.text.trim(), password: _password.text, device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion));
+      await ref.read(mobileApiProvider).login(identifier: _identifier.text.trim(), password: _password.text, device: deviceInfo(await store.installationId(), ref.read(buildConfigProvider).appVersion), captchaToken: captchaToken);
       ref.read(signedInProvider.notifier).set(true);
       ref.invalidate(profileProvider);
       // Push token registration (PKG-PUSH-01): no-op until a push SDK is wired — the default provider has no token.
@@ -127,7 +127,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         if (next != null && next.isNotEmpty) context.push(next);
       }
     } catch (e) {
-      setState(() => _error = e);
+      // SEC-194: the server asks for a CAPTCHA only when its setting requires one. Show it, then retry the SAME sign-in
+      // once with the token. A second refusal (or closing the challenge) shows the error instead of looping.
+      if (e is ApiFailure && e.captchaRequired && captchaToken == null && mounted) {
+        final token = await ref.read(captchaSolverProvider)(context, captchaPageUrl(ref.read(buildConfigProvider).apiBaseUrl));
+        if (token != null && mounted) {
+          await _submit(captchaToken: token);
+          return;
+        }
+      }
+      if (mounted) setState(() => _error = e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

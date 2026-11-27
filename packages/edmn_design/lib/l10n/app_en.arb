@@ -1393,5 +1393,8 @@
   "searchHintPhones": "iPhone 15",
   "searchHintWatches": "Casio watch",
   "searchHintConsoles": "PlayStation 5",
-  "searchHintAppliances": "Tornado washer"
+  "searchHintAppliances": "Tornado washer",
+  "captchaTitle": "Confirm you are not a robot",
+  "captchaRequiredError": "We need to confirm you are not a robot before sign-in. Complete the check and try again.",
+  "captchaLoadFailed": "The check could not load. Check your connection and try again."
 }

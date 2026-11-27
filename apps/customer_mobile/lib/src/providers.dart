@@ -7,6 +7,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Composition root. Every dependency is a provider so tests (and previews) override it — no globals.
 final buildConfigProvider = Provider<BuildConfig>((ref) => BuildConfig.fromDefines());
+
+/// SEC-194: shows the server's CAPTCHA challenge (a web view of the server-hosted page) and returns its token. Tests override it.
+final captchaSolverProvider = Provider<CaptchaSolver>((ref) => showCaptchaChallenge);
 final telemetryProvider = Provider<Telemetry>((ref) => Telemetry());
 
 /// Customer App credentials live in their own namespace: they are never shared with the Admin App.

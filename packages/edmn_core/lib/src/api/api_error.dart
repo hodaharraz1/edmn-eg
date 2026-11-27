@@ -37,7 +37,7 @@ enum ApiErrorCode {
 /// A failed API call, mapped once in the HTTP layer. UI code switches on [code]; [reference] is shown to the user for
 /// support on internal errors; [detail] is a server-side fallback text only.
 class ApiFailure implements Exception {
-  const ApiFailure({required this.code, this.status, this.detail, this.reference, this.retryAfter, this.fieldIssues = const []});
+  const ApiFailure({required this.code, this.status, this.detail, this.reference, this.retryAfter, this.fieldIssues = const [], this.fieldErrors = const {}});
 
   final ApiErrorCode code;
   final int? status;
@@ -45,6 +45,14 @@ class ApiFailure implements Exception {
   final String? reference;
   final Duration? retryAfter;
   final List<({String path, String code})> fieldIssues;
+
+  /// Server-side per-field reasons (`fieldErrors` of the problem document), keyed by field name.
+  final Map<String, List<String>> fieldErrors;
+
+  /// The server wants a CAPTCHA answer with this login (SEC-194): it answers `validation_failed` with a `captcha`
+  /// field error both when the token is missing and when it did not verify. The apps then show the challenge and
+  /// retry the same request with `captchaToken`.
+  bool get captchaRequired => code == ApiErrorCode.validationFailed && fieldErrors.containsKey('captcha');
 
   bool get isRetryable => code == ApiErrorCode.network || code == ApiErrorCode.rateLimited || code == ApiErrorCode.idempotencyInProgress || (status ?? 0) >= 500;
 
@@ -58,6 +66,12 @@ class ApiFailure implements Exception {
         for (final i in (data['issues'] as List? ?? const []))
           if (i is Map) (path: '${i['path']}', code: '${i['code']}'),
       ];
+      final rawFields = data['fieldErrors'];
+      final fields = <String, List<String>>{
+        if (rawFields is Map)
+          for (final e in rawFields.entries)
+            if (e.key is String && e.value is List) e.key as String: [for (final m in e.value as List) '$m'],
+      };
       return ApiFailure(
         code: ApiErrorCode.fromWire(data['code'] as String),
         status: res.statusCode,
@@ -65,6 +79,7 @@ class ApiFailure implements Exception {
         reference: data['reference'] as String?,
         retryAfter: retry == null ? null : Duration(seconds: retry),
         fieldIssues: issues,
+        fieldErrors: fields,
       );
     }
     return ApiFailure(code: ApiErrorCode.unknown, status: res.statusCode, retryAfter: retry == null ? null : Duration(seconds: retry));

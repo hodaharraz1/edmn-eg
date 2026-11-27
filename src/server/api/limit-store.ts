@@ -16,6 +16,19 @@ export interface LimitStore {
   hit(key: string, limit: number, windowSeconds: number): Promise<boolean>;
   /** Drop expired buckets (memory) or no-op (redis expires keys itself). */
   prune(): Promise<void>;
+  /**
+   * PKG-FOLLOWUP-02: read-only view of the counters whose key starts with one of `prefixes` and whose count is at
+   * least `minCount`, highest first, at most `max`. This is what admin screens use instead of querying a table:
+   * the counters live here, not in PostgreSQL.
+   */
+  scan(prefixes: string[], minCount: number, max: number): Promise<CounterReading[]>;
+}
+
+export interface CounterReading {
+  key: string;
+  count: number;
+  /** Start of the fixed window (ms since epoch) when the store knows it; null for Redis, which only keeps a TTL. */
+  windowStart: number | null;
 }
 
 const windowStartOf = (windowSeconds: number, now = Date.now()) => Math.floor(now / (windowSeconds * 1000)) * windowSeconds * 1000;
@@ -52,6 +65,14 @@ export class MemoryLimitStore implements LimitStore {
     }
   }
 
+  async scan(prefixes: string[], minCount: number, max: number): Promise<CounterReading[]> {
+    const out: CounterReading[] = [];
+    for (const [key, b] of this.buckets) {
+      if (b.count >= minCount && prefixes.some((p) => key.startsWith(p))) out.push({ key, count: b.count, windowStart: b.windowStart });
+    }
+    return out.sort((a, b) => b.count - a.count).slice(0, max);
+  }
+
   get size(): number {
     return this.buckets.size;
   }
@@ -64,8 +85,8 @@ export class MemoryLimitStore implements LimitStore {
 export class RedisLimitStore implements LimitStore {
   readonly kind = 'redis' as const;
   private socket: import('node:net').Socket | null = null;
-  private buffer = '';
-  private waiters: Array<(value: string | Error) => void> = [];
+  private buffer: Buffer = Buffer.alloc(0);
+  private waiters: Array<(value: RespValue | Error) => void> = [];
   private connecting: Promise<void> | null = null;
 
   constructor(private readonly url: URL) {}
@@ -84,7 +105,7 @@ export class RedisLimitStore implements LimitStore {
       };
       socket.once('error', onError);
       socket.on('data', (chunk: Buffer) => {
-        this.buffer += chunk.toString('utf8');
+        this.buffer = Buffer.concat([this.buffer, chunk]);
         this.drain();
       });
       socket.on('close', () => {
@@ -108,24 +129,20 @@ export class RedisLimitStore implements LimitStore {
     return this.connecting;
   }
 
-  /** Resolve complete RESP replies already buffered ('+OK', ':1', '-ERR', '$n'). */
+  /** Resolve every complete RESP reply already buffered: '+OK', ':1', '-ERR', '$n' bulk, '*n' array (SCAN). */
   private drain() {
     for (;;) {
-      const line = this.buffer.indexOf('\r\n');
-      if (line < 0) return;
-      const head = this.buffer.slice(0, line);
+      const parsed = parseResp(this.buffer, 0);
+      if (!parsed) return;
+      this.buffer = this.buffer.subarray(parsed.next);
       const waiter = this.waiters.shift();
-      if (!waiter) {
-        this.buffer = this.buffer.slice(line + 2);
-        continue;
-      }
-      this.buffer = this.buffer.slice(line + 2);
-      waiter(head.startsWith('-') ? new Error(head.slice(1)) : head.replace(/^[:+]/, ''));
+      if (!waiter) continue;
+      waiter(parsed.value);
     }
   }
 
-  private send(args: string[]): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
+  private send(args: string[]): Promise<RespValue> {
+    return new Promise<RespValue>((resolve, reject) => {
       const socket = this.socket;
       if (!socket) return reject(new Error('redis not connected'));
       this.waiters.push((v) => (v instanceof Error ? reject(v) : resolve(v)));
@@ -133,7 +150,7 @@ export class RedisLimitStore implements LimitStore {
     });
   }
 
-  private async command(args: string[]): Promise<string> {
+  private async command(args: string[]): Promise<RespValue> {
     await this.connect();
     return this.send(args);
   }
@@ -148,6 +165,63 @@ export class RedisLimitStore implements LimitStore {
   async prune(): Promise<void> {
     /* Redis expires its own keys (PEXPIRE); nothing to sweep here. */
   }
+
+  /** SCAN (never KEYS: it does not block the server) for each prefix, then GET the counters found. Bounded. */
+  async scan(prefixes: string[], minCount: number, max: number): Promise<CounterReading[]> {
+    const found: CounterReading[] = [];
+    for (const prefix of prefixes) {
+      let cursor = '0';
+      let rounds = 0;
+      do {
+        const reply = await this.command(['SCAN', cursor, 'MATCH', `edmn:rl:${prefix}*`, 'COUNT', '500']);
+        if (!Array.isArray(reply) || reply.length !== 2 || !Array.isArray(reply[1])) throw new Error('redis scan: unexpected reply');
+        cursor = String(reply[0]);
+        for (const k of reply[1]) {
+          if (typeof k !== 'string') continue;
+          const value = await this.command(['GET', k]);
+          const count = Number(value);
+          if (Number.isFinite(count) && count >= minCount) found.push({ key: k.slice('edmn:rl:'.length), count, windowStart: null });
+        }
+        rounds += 1;
+      } while (cursor !== '0' && rounds < 200 && found.length < max * 4);
+    }
+    return found.sort((a, b) => b.count - a.count).slice(0, max);
+  }
+}
+
+export type RespValue = string | null | RespValue[];
+
+/** Parse one RESP reply at `offset`; null while the buffer holds only part of it. Errors come back as a thrown-later Error value. */
+export function parseResp(buf: Buffer, offset: number): { value: RespValue | Error; next: number } | null {
+  if (offset >= buf.length) return null;
+  const type = String.fromCharCode(buf[offset]);
+  const eol = buf.indexOf('\r\n', offset);
+  if (eol < 0) return null;
+  const head = buf.toString('utf8', offset + 1, eol);
+  const afterHead = eol + 2;
+  if (type === '+' || type === ':') return { value: head, next: afterHead };
+  if (type === '-') return { value: new Error(head), next: afterHead };
+  if (type === '$') {
+    const len = Number(head);
+    if (len < 0) return { value: null, next: afterHead };
+    if (buf.length < afterHead + len + 2) return null;
+    return { value: buf.toString('utf8', afterHead, afterHead + len), next: afterHead + len + 2 };
+  }
+  if (type === '*') {
+    const n = Number(head);
+    if (n < 0) return { value: null, next: afterHead };
+    const items: RespValue[] = [];
+    let at = afterHead;
+    for (let i = 0; i < n; i += 1) {
+      const item = parseResp(buf, at);
+      if (!item) return null;
+      if (item.value instanceof Error) return { value: item.value, next: item.next };
+      items.push(item.value);
+      at = item.next;
+    }
+    return { value: items, next: at };
+  }
+  return { value: new Error(`redis: unexpected reply type ${type}`), next: eol + 2 };
 }
 
 let selected: LimitStore | null = null;

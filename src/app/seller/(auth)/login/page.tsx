@@ -8,6 +8,8 @@ import { Field, Input } from '@/ui/form';
 import { currentUser } from '@/server/web/session';
 import { sellerContextForUser } from '@/server/modules/sellers/service';
 import { safeNext } from '@/server/web/action';
+import { loadCaptchaPublic } from '@/server/auth/captcha-public';
+import { LoginCaptcha } from '@/ui/captcha-widget';
 
 export const metadata: Metadata = { title: 'دخول البائعين' };
 
@@ -16,6 +18,7 @@ export default async function SellerLoginPage(props: PageProps<'/seller/login'>)
   // `returnTo` is accepted as an alias of `next`; both are validated (internal relative paths only).
   const next = safeNext(typeof sp.next === 'string' ? sp.next : typeof sp.returnTo === 'string' ? sp.returnTo : null, '/seller');
   const user = await currentUser();
+  const captcha = await loadCaptchaPublic();
   if (user) redirect((await sellerContextForUser(user.id)) ? next : '/seller/register');
   return (
     <>
@@ -29,6 +32,7 @@ export default async function SellerLoginPage(props: PageProps<'/seller/login'>)
         <Field label="كلمة المرور" htmlFor="password" required>
           <Input id="password" name="password" type="password" autoComplete="current-password" required />
         </Field>
+        <LoginCaptcha config={captcha} />
         <div className="flex flex-wrap justify-between gap-2 text-sm">
           <Link href={marketHref('/contact#cant-sign-in')} className="text-brand-700 hover:underline" data-testid="login-help">مش قادر تدخل؟ كلّم الدعم</Link>
           <Link href="/forgot-password" className="text-brand-700 hover:underline">نسيت كلمة المرور؟</Link>

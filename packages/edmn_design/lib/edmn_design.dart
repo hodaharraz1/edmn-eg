@@ -12,6 +12,7 @@ export 'src/components/layout.dart';
 export 'src/components/media.dart';
 export 'src/components/states.dart';
 export 'src/components/status.dart';
+export 'src/captcha_challenge.dart';
 export 'src/errors.dart';
 export 'src/l10n/edmn_localizations.dart';
 export 'src/locale.dart';

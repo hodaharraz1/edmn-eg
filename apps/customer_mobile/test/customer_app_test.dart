@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:edmn_api/mobile.dart';
 import 'package:edmn_core/edmn_core.dart';
-import 'package:edmn_design/edmn_design.dart' show EdmnBackButton, EdmnBottomNavigation, EdmnSaveButton, EdmnThumb;
+import 'package:edmn_design/edmn_design.dart' show CaptchaSolver, EdmnBackButton, EdmnBottomNavigation, EdmnSaveButton, EdmnThumb;
 import 'package:edmn_customer/src/app.dart';
 import 'package:edmn_customer/src/features/messages/messages_screens.dart';
 import 'package:edmn_customer/src/common/file_pick.dart';
@@ -499,8 +499,16 @@ class FakeMobileApi extends MobileApi {
   @override
   Future<ListProductReviewsResponse> productReviews(String slug) async => const ListProductReviewsResponse(items: []);
 
+  /// SEC-194: when set, sign-in is refused (the way the server does) until the request carries a captchaToken.
+  bool captchaRequired = false;
+  final loginCaptchaTokens = <String?>[];
+
   @override
-  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device}) async {
+  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device, String? captchaToken}) async {
+    loginCaptchaTokens.add(captchaToken);
+    if (captchaRequired && captchaToken != 'solved-token') {
+      throw const ApiFailure(code: ApiErrorCode.validationFailed, status: 422, fieldErrors: {'captcha': ['التحقق مطلوب']});
+    }
     if (loginError != null) throw loginError!;
     return SessionResult(
         user: const SessionResultUser(id: 'u', fullName: 'عميل', isStaff: false),
@@ -676,7 +684,8 @@ class _FakeSaver implements FileSaverService {
 }
 final _saver = _FakeSaver();
 
-Widget _app(FakeMobileApi api, {bool signedIn = false}) => ProviderScope(overrides: [
+Widget _app(FakeMobileApi api, {bool signedIn = false, CaptchaSolver? solver}) => ProviderScope(overrides: [
+      if (solver != null) captchaSolverProvider.overrideWithValue(solver),
       buildConfigProvider.overrideWithValue(_config),
       sessionStoreProvider.overrideWithValue(MemorySessionStore()),
       appPrefsProvider.overrideWithValue(MemoryAppPrefs({'onboarded': '1'})),
@@ -693,11 +702,11 @@ class _AlwaysSignedIn extends SignedIn {
   void set(bool v) {}
 }
 
-Future<void> _start(WidgetTester t, FakeMobileApi api, {bool signedIn = false}) async {
+Future<void> _start(WidgetTester t, FakeMobileApi api, {bool signedIn = false, CaptchaSolver? solver}) async {
   t.view.physicalSize = const Size(1170, 2532);
   t.view.devicePixelRatio = 3;
   addTearDown(t.view.reset);
-  await t.pumpWidget(_app(api, signedIn: signedIn));
+  await t.pumpWidget(_app(api, signedIn: signedIn, solver: solver));
   await t.pumpAndSettle();
 }
 
@@ -829,6 +838,52 @@ void main() {
     await t.tap(find.byKey(const Key('sign-in')));
     await t.pumpAndSettle();
     expect(find.textContaining('سجّل دخولك'), findsWidgets);
+  });
+
+  testWidgets('SEC-194: no CAPTCHA is shown or sent while the server does not ask for one', (t) async {
+    var solverCalls = 0;
+    final api = FakeMobileApi();
+    await _start(t, api, solver: (context, url) async {
+      solverCalls++;
+      return 'solved-token';
+    });
+    await _go(t, '/account/devices');
+    await t.enterText(find.byKey(const Key('identifier')), 'a@b.c');
+    await t.enterText(find.byKey(const Key('password')), 'x');
+    await t.tap(find.byKey(const Key('sign-in')));
+    await t.pumpAndSettle();
+    expect(solverCalls, 0);
+    expect(api.loginCaptchaTokens, [null]);
+  });
+
+  testWidgets('SEC-194: when the server asks, the app shows the CAPTCHA and retries the same sign-in with the token', (t) async {
+    Uri? shown;
+    final api = FakeMobileApi()..captchaRequired = true;
+    await _start(t, api, solver: (context, url) async {
+      shown = url;
+      return 'solved-token';
+    });
+    await _go(t, '/account/devices');
+    await t.enterText(find.byKey(const Key('identifier')), 'a@b.c');
+    await t.enterText(find.byKey(const Key('password')), 'x');
+    await t.tap(find.byKey(const Key('sign-in')));
+    await t.pumpAndSettle();
+    expect(shown?.path, '/captcha/mobile');
+    expect(api.loginCaptchaTokens, [null, 'solved-token']);
+    expect(find.byKey(const Key('sign-in')), findsNothing); // signed in: the sign-in screen is gone
+  });
+
+  testWidgets('SEC-194: closing the CAPTCHA does not sign in and shows the reason', (t) async {
+    final api = FakeMobileApi()..captchaRequired = true;
+    await _start(t, api, solver: (context, url) async => null);
+    await _go(t, '/account/devices');
+    await t.enterText(find.byKey(const Key('identifier')), 'a@b.c');
+    await t.enterText(find.byKey(const Key('password')), 'x');
+    await t.tap(find.byKey(const Key('sign-in')));
+    await t.pumpAndSettle();
+    expect(api.loginCaptchaTokens, [null]);
+    expect(find.textContaining('مش روبوت'), findsWidgets);
+    expect(find.byKey(const Key('sign-in')), findsOneWidget);
   });
 
   testWidgets('cart → checkout: the server total is sent as expected total, and a retry reuses ONE checkout key', (t) async {

@@ -3854,4 +3854,15 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
 
   @override
   String get searchHintAppliances => 'غسالة تورنيدو';
+
+  @override
+  String get captchaTitle => 'تأكيد إنك مش روبوت';
+
+  @override
+  String get captchaRequiredError =>
+      'محتاجين نتأكد إنك مش روبوت قبل الدخول. كمّل التحقق وجرّب تاني.';
+
+  @override
+  String get captchaLoadFailed =>
+      'تعذّر تحميل التحقق. اتأكد من الاتصال وحاول تاني.';
 }

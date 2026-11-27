@@ -8,6 +8,8 @@ import 'l10n/edmn_localizations.dart';
 String apiErrorMessage(BuildContext context, Object error) {
   final t = EdmnLocalizations.of(context);
   if (error is! ApiFailure) return t.errorUnknown;
+  // SEC-194: the server asked for a CAPTCHA and the user did not finish it (the sign-in screens run the challenge first).
+  if (error.captchaRequired) return t.captchaRequiredError;
   final base = switch (error.code) {
     ApiErrorCode.validationFailed => t.errorValidation,
     ApiErrorCode.unauthenticated => t.errorUnauthenticated,

@@ -11,6 +11,7 @@
   ],
   "git": {
     "deploymentEnabled": {
+      "followup-02": false,
       "claude/edmn-mobile-integration": false,
       "codex/mobile-audit-fixes": false,
       "claude/mobile-phase6-notifications": false,

@@ -7345,6 +7345,24 @@ abstract class EdmnLocalizations {
   /// In ar, this message translates to:
   /// **'غسالة تورنيدو'**
   String get searchHintAppliances;
+
+  /// No description provided for @captchaTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد إنك مش روبوت'**
+  String get captchaTitle;
+
+  /// No description provided for @captchaRequiredError.
+  ///
+  /// In ar, this message translates to:
+  /// **'محتاجين نتأكد إنك مش روبوت قبل الدخول. كمّل التحقق وجرّب تاني.'**
+  String get captchaRequiredError;
+
+  /// No description provided for @captchaLoadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذّر تحميل التحقق. اتأكد من الاتصال وحاول تاني.'**
+  String get captchaLoadFailed;
 }
 
 class _EdmnLocalizationsDelegate

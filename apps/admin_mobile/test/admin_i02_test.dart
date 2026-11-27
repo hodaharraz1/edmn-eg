@@ -18,7 +18,7 @@ class _Api extends AdminApi {
   bool replyRefused = false;
 
   @override
-  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device}) async => SessionResult(
+  Future<SessionResult> login({required String identifier, required String password, required DeviceInfo device, String? captchaToken}) async => SessionResult(
       user: const SessionResultUser(id: 'a', fullName: 'مسؤول', isStaff: true),
       tokens: TokenPair(accessToken: 'em1.a.b', accessTokenExpiresAt: '2030-01-01T00:00:00Z', refreshToken: 'r' * 40, sessionExpiresAt: '2030-01-01T00:00:00Z'),
       deviceId: 'd',
