@@ -563,6 +563,12 @@ class EdmnLocalizationsAr extends EdmnLocalizations {
   String get stepAddress => 'العنوان';
 
   @override
+  String get shippingFromStores => 'الشحن من كل متجر';
+
+  @override
+  String get freeShipping => 'شحن مجاني';
+
+  @override
   String get stepDelivery => 'التوصيل';
 
   @override

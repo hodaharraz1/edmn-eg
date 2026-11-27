@@ -173,6 +173,8 @@
   "signInToCheckout": "Sign in to checkout",
   "checkoutTitle": "Checkout",
   "stepAddress": "Address",
+  "shippingFromStores": "Shipping from each store",
+  "freeShipping": "Free shipping",
   "stepDelivery": "Delivery",
   "stepPayment": "Payment",
   "stepConfirm": "Confirm",

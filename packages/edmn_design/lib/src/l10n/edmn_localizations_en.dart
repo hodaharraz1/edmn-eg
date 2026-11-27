@@ -569,6 +569,12 @@ class EdmnLocalizationsEn extends EdmnLocalizations {
   String get stepAddress => 'Address';
 
   @override
+  String get shippingFromStores => 'Shipping from each store';
+
+  @override
+  String get freeShipping => 'Free shipping';
+
+  @override
   String get stepDelivery => 'Delivery';
 
   @override

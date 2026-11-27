@@ -839,10 +839,12 @@ void main() {
     expect(find.byKey(const Key('grand-total')), findsOneWidget);
     await t.tap(find.byKey(const Key('checkout')));
     await t.pumpAndSettle();
-    for (var i = 0; i < 2; i++) {
-      await t.tap(find.byKey(const Key('checkout-next')));
-      await t.pumpAndSettle();
-    }
+    // Step 1 «التوصيل»: address and per-store shipping on one screen (no separate «العنوان» step).
+    expect(find.text('عنوان التوصيل'), findsOneWidget);
+    expect(find.text('الشحن من كل متجر'), findsOneWidget);
+    expect(find.text('العنوان'), findsNothing);
+    await t.tap(find.byKey(const Key('checkout-next')));
+    await t.pumpAndSettle();
     // Payment step: only server-enabled methods; nothing is preselected.
     expect(find.text('إنستاباي'), findsOneWidget);
     expect(find.text('الدفع عند الاستلام'), findsNothing);

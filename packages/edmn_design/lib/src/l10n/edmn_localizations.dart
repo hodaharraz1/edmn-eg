@@ -1136,6 +1136,18 @@ abstract class EdmnLocalizations {
   /// **'العنوان'**
   String get stepAddress;
 
+  /// No description provided for @shippingFromStores.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشحن من كل متجر'**
+  String get shippingFromStores;
+
+  /// No description provided for @freeShipping.
+  ///
+  /// In ar, this message translates to:
+  /// **'شحن مجاني'**
+  String get freeShipping;
+
   /// No description provided for @stepDelivery.
   ///
   /// In ar, this message translates to:

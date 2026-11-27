@@ -223,6 +223,8 @@
   "signInToCheckout": "سجّل دخولك علشان تكمل الشراء",
   "checkoutTitle": "إتمام الطلب",
   "stepAddress": "العنوان",
+  "shippingFromStores": "الشحن من كل متجر",
+  "freeShipping": "شحن مجاني",
   "stepDelivery": "التوصيل",
   "stepPayment": "الدفع",
   "stepConfirm": "تأكيد",
