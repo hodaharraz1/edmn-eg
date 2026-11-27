@@ -12,7 +12,7 @@
  *  6) إلغاء الطلب في كل حالة مسموحة.
  */
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { db } from '@/server/db/client';
 import { customerWalletEntries, externalDeals, refunds, sellerOrders, walletTopups, withdrawalRequests } from '@/server/db/schema';
@@ -29,7 +29,7 @@ import { requestWithdrawal, approveWithdrawal, markWithdrawalProcessing, markWit
 import { submitTopup, creditTopup } from '@/server/modules/finance/wallet-topups';
 import { requestRefundTx, approveRefund } from '@/server/modules/finance/refunds';
 import { openDispute, resolveDispute } from '@/server/modules/postpurchase/disputes';
-import { createDeal, saveDealStep, inviteSeller, claimInvitation, submitSellerOffer, respondToOffer, startDealPayment, markDealDelivered, confirmDealReceipt, releaseDeal } from '@/server/modules/deals/service';
+import { createDeal, saveDealStep, inviteSeller, claimInvitation, submitSellerOffer, respondToOffer, startDealPayment, markDealDelivered, confirmDealReceipt, releaseDeal, deliveryOtpForBuyer, verifyDeliveryOtp } from '@/server/modules/deals/service';
 import { updateSetting } from '@/server/modules/settings';
 import { customerActor } from '@/server/auth/actors';
 import type { Actor } from '@/server/core/actor';
@@ -85,6 +85,11 @@ async function releaseToSeller(buyer: Actor, soId: string) {
   await releaseSellerOrder(await makeAdmin(['FINANCE_CHECKER']), soId, { expectedSellerAmount: pos.pending, reason: 'اعتماد الإتاحة في الاختبار' });
 }
 
+// Journey (3) turns the shared wallet flag on: close it again so other test files see the default (off).
+afterAll(async () => {
+  await updateSetting(admin, 'wallet.topUpEnabled', false, 'إعادة الفلاج للوضع الافتراضي بعد الاختبار');
+});
+
 describe('PKG-E2E-02 (1) — رحلة السوق الكاملة: تاجرين ← تأكيد ← شحن ← استلام ← إتاحة ← سحب', () => {
   it('تمشي من الطلب لحد السحب بموافقة شخصين، والدفتر متوازن في كل خطوة', async () => {
     const { s1, s2, c, order } = await multiSellerCheckout();
@@ -107,7 +112,7 @@ describe('PKG-E2E-02 (1) — رحلة السوق الكاملة: تاجرين �
     for (const s of [s1, s2]) {
       const sellerId = s.actor.sellerId!;
       const available = await accountBalance(db, { code: 'SELLER_AVAILABLE', sellerId });
-      const { withdrawal } = await requestWithdrawal(s.actor, { amount: available / 100, clientKey: randomUUID() });
+      const { withdrawal } = await requestWithdrawal(s.actor, { amount: available, clientKey: randomUUID() }) // a number is piastres;
       await approveWithdrawal(await makeAdmin(['FINANCE_CHECKER']), withdrawal.id);
       await markWithdrawalProcessing(await makeAdmin(['FINANCE_OPERATOR']), withdrawal.id);
       await markWithdrawalPaid(await makeAdmin(['FINANCE_OPERATOR']), withdrawal.id, `REF-${randomUUID().slice(0, 8)}`);
@@ -146,7 +151,7 @@ describe('PKG-E2E-02 (3) — إيداع المحفظة بشخصين ← الدف
     const [t0] = await db.select().from(walletTopups).where(eq(walletTopups.id, topup.id));
     expect(t0.status).toBe('PENDING_REVIEW');
     await requestMovement(await makeAdmin(['FINANCE_OPERATOR']), 'WALLET_TOPUP_CREDIT', { entityId: topup.id, amount: t0.amount, reason: 'طلب قيد الإيداع في الاختبار' });
-    await creditTopup(await makeAdmin(['FINANCE_CHECKER']), topup.id, 'قيد الإيداع بعد مطابقة الإيصال');
+    await creditTopup(await makeAdmin(['PAYMENT_REVIEWER']), topup.id, 'قيد الإيداع بعد مطابقة الإيصال');
     await expectLedgerGreen();
     const bal = async () => (await db.select().from(customerWalletEntries).where(eq(customerWalletEntries.userId, c.user.id))).reduce((s, e) => s + e.amount, 0);
     expect(await bal()).toBe(5000_00);
@@ -168,7 +173,7 @@ describe('PKG-E2E-02 (3) — إيداع المحفظة بشخصين ← الدف
     const [so] = await sellerOrdersOf(order.id);
     const items = await itemsOf(so.id);
     const refund = await requestRefundTx(db, admin, {
-      sourceType: 'ORDER_CANCELLATION', sourceId: `e2e02-${randomUUID()}`, sellerOrderId: so.id,
+      sourceType: 'ORDER_CANCELLATION', sourceId: randomUUID(), sellerOrderId: so.id,
       reason: 'استرجاع رحلة المحفظة في الاختبار — سبب طويل كافٍ',
       items: [{ orderItemId: items[0].id, quantity: items[0].quantity }],
     });
@@ -207,6 +212,9 @@ describe('PKG-E2E-02 (4) — الصفقة المحمية كاملة', () => {
     await expectLedgerGreen();
 
     await markDealDelivered(seller, deal.id, 'تم التسليم يد بيد');
+    // delivery is confirmed with the buyer's one-time code first (the seller enters it at hand-over)
+    const otp = await deliveryOtpForBuyer(buyer, deal.id);
+    await verifyDeliveryOtp(seller, deal.id, otp!.testCode!);
     await confirmDealReceipt(buyer, deal.id);
     const [fresh] = await db.select().from(externalDeals).where(eq(externalDeals.id, deal.id));
     const remaining = fresh.buyerPays! - fresh.pendingBuyerRefund;

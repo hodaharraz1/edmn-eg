@@ -47,7 +47,7 @@ async function recordSpend(tx: DbOrTx, userId: string, journalEntryId: string, a
  * transfer (moveOrderTo → PAID, commit reservations, per-SO postings, SLAs, notifications), with the debit on
  * CUSTOMER_WALLETS and SPEND sub-ledger rows. Idempotent via the ledger idempotency keys.
  */
-export async function payOrderWithWallet(tx: DbOrTx, actor: Actor, order: { id: string; number: string; grandTotal: number }, payment: Payment) {
+export async function payOrderWithWallet(tx: DbOrTx, actor: Actor, order: { id: string; number: string | number; grandTotal: number }, payment: Payment) {
   const payer = payment.payerUserId;
   await lockWalletUser(tx, payer);
   await assertWalletSpendable(tx, payer, payment.amountDue);
@@ -88,7 +88,7 @@ export async function payOrderWithWallet(tx: DbOrTx, actor: Actor, order: { id: 
 }
 
 /** Fund a Protected Deal from the wallet: Dr CUSTOMER_WALLETS / Cr DEAL_FUNDS_HELD (what a confirmed transfer credits). */
-export async function payDealWithWallet(tx: DbOrTx, actor: Actor, deal: { id: string; number: string; buyerId: string; sellerUserId: string | null; buyerPays: number | null }, payment: Payment) {
+export async function payDealWithWallet(tx: DbOrTx, actor: Actor, deal: { id: string; number: string | number; buyerId: string; sellerUserId: string | null; buyerPays: number | null }, payment: Payment) {
   const payer = payment.payerUserId;
   await lockWalletUser(tx, payer);
   await assertWalletSpendable(tx, payer, payment.amountDue);

@@ -74,7 +74,8 @@ export interface PostInput {
   guards?: { account: AccountRef; min: number }[];
   reversesEntryId?: string;
   /** The operation-specific Admin approval this entry executes. Mandatory (DB trigger enforces it too). */
-  approvalId: string;
+  /** Required for every entry type except WALLET_SPEND (a customer's own balance; DB-guarded by 0036/0037). */
+  approvalId: string | null;
 }
 
 async function ensureAccount(tx: DbOrTx, ref: AccountRef): Promise<string> {

@@ -84,14 +84,16 @@ export async function sellerStatement(sellerId: string, limit = 300, conn: Pick<
     const legacy = x.so_source !== 'ENGINE';
     const commission = Number(x.so_commission ?? 0);
     const buyerFee = Number(x.so_buyer_fee ?? 0);
-    const sellerFee = x.entry_type === 'ORDER_PAYMENT' ? (legacy && buyerFee + Number(x.so_seller_fee ?? 0) !== commission ? commission - buyerFee : Number(x.so_seller_fee ?? 0)) : 0;
-    const gross = x.entry_type === 'ORDER_PAYMENT' ? Number(x.so_merch ?? 0) + Number(x.so_ship ?? 0) : 0;
+    // A wallet-paid order (WALLET_SPEND, PKG-WALLET-02) is the same sale as a transfer-paid one for the seller.
+    const isSale = x.entry_type === 'ORDER_PAYMENT' || (x.entry_type === 'WALLET_SPEND' && x.source_type === 'seller_order');
+    const sellerFee = isSale ? (legacy && buyerFee + Number(x.so_seller_fee ?? 0) !== commission ? commission - buyerFee : Number(x.so_seller_fee ?? 0)) : 0;
+    const gross = isSale ? Number(x.so_merch ?? 0) + Number(x.so_ship ?? 0) : 0;
     const payoutCost = x.entry_type === 'WITHDRAWAL_PAID' && x.wd_payer === 'SELLER_PAYS' ? Math.min(Number(x.wd_actual_cost ?? x.wd_cost ?? 0), Number(x.wd_cost ?? 0)) : 0;
     return {
       entryId: x.entry_id,
       date: x.created_at,
       type: x.entry_type,
-      description: DESCRIPTIONS[x.entry_type] ?? x.description,
+      description: DESCRIPTIONS[isSale ? 'ORDER_PAYMENT' : x.entry_type] ?? x.description,
       reference: x.wd_number ? `سحب #${x.wd_number}` : x.so_ref ? `طلب ${x.so_ref}` : (REFERENCE_FALLBACK[x.source_type] ?? '—'),
       orderRef: x.so_ref,
       grossSale: gross,

@@ -212,7 +212,7 @@ export async function financialInvariants(conn: DbOrTx = db): Promise<{ ok: bool
       // on the payment itself, posted when staff record the courier's remittance (seller orders are PAID at placement).
       sql`select p.id payment_id, so.id seller_order_id from payments p join seller_orders so on so.order_id = p.order_id
         where p.status = 'CONFIRMED' and p.method <> 'COD' and so.paid_at is not null
-          and not exists (select 1 from journal_entries e where e.entry_type = 'ORDER_PAYMENT' and e.source_id = so.id::text)
+          and not exists (select 1 from journal_entries e where e.entry_type in ('ORDER_PAYMENT','WALLET_SPEND') and e.source_id = so.id::text)
         union all
         select p.id payment_id, null seller_order_id from payments p
         where p.status = 'CONFIRMED' and p.method = 'COD'
