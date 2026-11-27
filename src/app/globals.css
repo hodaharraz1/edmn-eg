@@ -375,3 +375,27 @@
   mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 86%, transparent 100%), linear-gradient(to bottom, transparent 0, #000 9%, #000 85%, transparent 100%);
   mask-composite: intersect;
 }
+
+/* UX-02: 48px touch targets on coarse pointers (fingers, not mice). Inline links ignore width/height, so this
+   only enlarges block-level controls; inputs keep their padding and grow to 48px tall. */
+@media (pointer: coarse) {
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  summary,
+  select,
+  input,
+  textarea {
+    min-height: 48px;
+  }
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='link'],
+  summary {
+    min-width: 48px;
+  }
+}

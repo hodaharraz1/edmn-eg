@@ -20,7 +20,13 @@ class AdminApp extends ConsumerWidget {
         theme: edmnTheme(),
         routerConfig: ref.watch(routerProvider),
         // Staff screens show TOTP secrets, personal data and money queues: hidden whenever the app is not in front.
-        builder: (context, child) => EdmnPrivacyShield(child: _DeviceIntegrityGate(child: child ?? const SizedBox.shrink())),
+        // UX-02: support the OS font-size setting without letting huge text break layouts.
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.85, maxScaleFactor: 1.35),
+          ),
+          child: EdmnPrivacyShield(child: _DeviceIntegrityGate(child: child ?? const SizedBox.shrink())),
+        ),
       );
 }
 

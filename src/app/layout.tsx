@@ -7,6 +7,7 @@ import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
 import '@fontsource/ibm-plex-sans-arabic/latin-400.css';
 import '@fontsource/ibm-plex-sans-arabic/latin-600.css';
 import './globals.css';
+import { OfflineBanner } from '@/ui/offline-banner';
 
 const APP_URL = process.env.APP_URL ?? 'http://localhost:3000';
 /** Staging deployments are public but must never be indexed and must be visibly marked as test environments. */
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
           تخطَّ إلى المحتوى
         </a>
+        <OfflineBanner />
         {children}
       </body>
     </html>
