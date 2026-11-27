@@ -33,15 +33,15 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 
 | الحالة | العدد |
 |---|---|
-| PASS | 113 |
-| IN PROGRESS | 55 |
+| PASS | 114 |
+| IN PROGRESS | 59 |
 | NOT TESTED | 24 |
 | EXCEPTION (مقترح) | 4 |
 | N/A (مقترح) | 3 |
 | FAIL | 2 |
-| **المجموع** | **201** |
+| **المجموع** | **206** |
 
-> **تدقيق العدّاد (PKG-SEC-04، 27/11):** الجدول قبل الحزمة كان 183 صفًا ومجموع الحالات 183 بالفعل (103+49+22+4+3+2)، فالعدّاد كان متسقًا عند الرأس `1a83482`. الأرقام فوق بعد إضافة 18 ضابطًا جديدًا (SEC-184…SEC-201) ورفع SEC-136 من PASS إلى IN PROGRESS.
+> **تدقيق العدّاد (PKG-SEC-04، 27/11):** الجدول قبل الحزمة كان 183 صفًا ومجموع الحالات 183 بالفعل (103+49+22+4+3+2)، فالعدّاد كان متسقًا عند الرأس `1a83482`. الأرقام فوق بعد إضافة 23 ضابطًا جديدًا (SEC-184…SEC-206) ورفع SEC-136 من PASS إلى IN PROGRESS.
 
 ## القسم 1: الحوكمة وإدارة المخاطر
 
@@ -339,3 +339,8 @@ SEC-120 أصبح PASS بعد تصحيح خطأ v1.0: الأسرار S7–S10 ل�
 | SEC-199 | نعم | P1 | المطور | **IN PROGRESS** | **PERF-01/P4 — بحث وفهارس.** الفهارس موجودة (`products_search_gin`، `products_search_trgm`). وفي v3 اتعمل: keyset pagination بمؤشر مرتبط ببصمة الفلاتر (`src/server/modules/catalog/search-cursor.ts`، معامل `cursor` في `/api/v1/catalog/products` و`nextCursor` في الرد، و`page` باقي للويب)، والعدّ بقى مكاش 60 ثانية لكل مجموعة فلاتر (`src/server/modules/catalog/count-cache.ts`) بدل `count(*)` مع كل صفحة. **تحقق جزئي بدون قاعدة:** eslint نظيف + اختبار منطق وحدة `tests/unit/search-pagination.test.ts` (اتفحص يدويًا بـtsx، 9/9). **لم يتم التحقق:** لم يُشغّل على قاعدة بيانات حقيقية |
 | SEC-200 | نعم | P2 | المطور | **IN PROGRESS** | **PERF-01/P5 — فهارس الـFK.** في v3: `scripts/generate-fk-indexes.ts` بيقرأ مخطط drizzle نفسه (322 FK) ويقارن بالفهارس المعلنة ويكتب `scripts/sql/fk-indexes.sql` — 213 فهرس `create index if not exists` (109 مغطاة أصلًا). ملف تشغيلي idempotent وexpand-only، مش migration في الـjournal عمدًا. **اتحقق:** المولّد اتشغّل وأنتج الملف. **لم يتم التحقق:** لم يُطبَّق على قاعدة (مفيش PostgreSQL) — الأمر: `psql "$DATABASE_URL" -f scripts/sql/fk-indexes.sql`. تنبيه: الفهرسة مبنية على المخطط TS؛ فهرس اتعمل يدويًا في قاعدة باسم مختلف ممكن يتكرر بنفس العمود (ضررها صفر، مساحة بس) |
 | SEC-201 | نعم | P2 | المطور | **IN PROGRESS** | **PERF-01 — سكربتات الضغط.** في v3 اتكتبت فعلًا: `perf/k6-api.js` + `perf/README.md` + `npm run perf:k6` — ستة مسارات (تصفح، بحث بمتابعة الـcursor، كروت، دخول، إتمام طلب متزامن 200 محاولة، رفع إيصال) مع thresholds لـp50/p95/p99 ونسبة أخطاء، وبتشتغل بأمر واحد محليًا. **لم يتم التحقق:** k6 مش مثبت ومفيش سيرفر في بيئة العمل، فالسكربت لم يُشغّل ومفيش أي رقم أداء — الأمر: `BASE_URL=http://127.0.0.1:3000 npm run perf:k6` |
+| SEC-202 | نعم | P1 | المطور | **IN PROGRESS** | **INFRA-01 — بنية الإنتاج.** `deploy/compose/docker-compose.extra.yml`: Redis + PgBouncer فوق الـcompose القائم (web/worker/postgres/clamav). **لم يتم التحقق:** `docker compose config` و`up` لم يُشغّلا (مفيش docker في بيئة العمل) |
+| SEC-203 | نعم | P1 | المطور | **IN PROGRESS** | **INFRA-01 — مقاييس.** `/api/metrics` (Prometheus، محمي بـ`METRICS_TOKEN` ويرجّع 404 لو مش مضبوط): جاهزية، ذاكرة، وظايف فاشلة/متأخرة، عمر فحص الدفتر. **لم يتم التحقق:** المسار لم يُطلب من سيرفر شغّال |
+| SEC-204 | نعم | P1 | المطور | **IN PROGRESS** | **INFRA-01 — تنبيهات.** `ops/prometheus/edmn-alerts.yml` (توقف، عدم جاهزية، 5xx، p95، دفتر غير سليم، فحص قديم، طابور واقف، ديسك، نسخ احتياطي فاشل) + `alertmanager.example.yml` لبريد وتليجرام. **لم يتم التحقق:** `promtool check rules` لم يُشغّل |
+| SEC-205 | نعم | P1 | المطور | **IN PROGRESS** | **INFRA-01 — PITR واسترجاع.** `deploy/scripts/pitr-setup.sh` (WAL-G: أرشفة WAL + نسخة أساسية يومية) و`restore-pitr.sh` (استرجاع لنقطة زمنية في مجلد منفصل ونسخة مؤقتة). **لم يتم التحقق:** مفيش PostgreSQL ولا سيرفر ولا bucket، فمفيش تمرين استرجاع فعلي. ده الضابط اللي بوابته لسه ❌ في SECURITY_RELEASE_GATE |
+| SEC-206 | نعم | P2 | المطور | PASS | **INFRA-01 — دليل التكبير.** `docs/runbooks/SCALING_10K.md`: سلّم أربع مراحل، التكلفة التقديرية بالدولار والجنيه، والأوامر اللي بتطلع الأرقام الحقيقية. **تنبيه:** التكلفة تقدير تصميم مش عرض سعر |
